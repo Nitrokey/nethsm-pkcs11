@@ -1,10 +1,11 @@
-package main
+package core
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/niclabs/dtc/v3/config"
 	"testing"
+
+	"p11nethsm/config"
 )
 
 const TestFirstTokenLabel = "TCBHSM"

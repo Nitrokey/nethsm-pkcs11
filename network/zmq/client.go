@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/niclabs/dtc/v3/config"
 	"github.com/niclabs/dtcnode/v3/message"
 	"github.com/pebbe/zmq4"
+	"p11nethsm/config"
 )
 
 // The domain of the ZMQ connection. This value must be the same in the server, or it will not work.

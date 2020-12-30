@@ -1,4 +1,4 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
@@ -7,11 +7,13 @@ import "C"
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/niclabs/dtc/v3/config"
-	"github.com/spf13/viper"
 	"log"
 	"sync"
+
+	"p11nethsm/config"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/spf13/viper"
 )
 
 // Sqlite3DB is a wrapper over a sql.Sqlite3DB object, complying with storage

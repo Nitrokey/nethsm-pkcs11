@@ -1,4 +1,4 @@
-package main
+package core
 
 const CreateTokenTable = `
     CREATE TABLE IF NOT EXISTS token (

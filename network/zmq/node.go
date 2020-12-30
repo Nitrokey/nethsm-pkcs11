@@ -5,9 +5,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/niclabs/dtc/v3/config"
 	"github.com/niclabs/dtcnode/v3/message"
 	"github.com/pebbe/zmq4"
+	"p11nethsm/config"
 )
 
 // NodeState represents a code for the state of the node

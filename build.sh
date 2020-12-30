@@ -1,1 +1,1 @@
-go build -o dtc.so -buildmode=c-shared -v "$@"
+go build -o p11nethsm.so -buildmode=c-shared -v "$@"

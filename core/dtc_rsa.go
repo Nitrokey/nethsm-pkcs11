@@ -1,8 +1,9 @@
-package main
+package core
 
 import (
-	"github.com/niclabs/tcrsa"
 	"log"
+
+	"github.com/niclabs/tcrsa"
 )
 
 // RSACreateKey creates a new key and saves its shares distributed among all the nodes.
@@ -10,7 +11,7 @@ func (dtc *DTC) RSACreateKey(keyID string, bitSize int, exponent int) (*tcrsa.Ke
 	dtc.Lock()
 	defer dtc.Unlock()
 	log.Printf("Creating new key with bitsize=%d, threshold=%d and nodes=%d", bitSize, dtc.Threshold, dtc.Nodes)
-	keyShares, keyMeta, err := tcrsa.NewKey(bitSize, dtc.Threshold, dtc.Nodes, &tcrsa.KeyMetaArgs{E:exponent})
+	keyShares, keyMeta, err := tcrsa.NewKey(bitSize, dtc.Threshold, dtc.Nodes, &tcrsa.KeyMetaArgs{E: exponent})
 	if err != nil {
 		return nil, err
 	}

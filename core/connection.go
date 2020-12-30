@@ -1,10 +1,11 @@
-package main
+package core
 
 import (
 	"fmt"
-	"github.com/niclabs/dtc/v3/config"
-	"github.com/niclabs/dtc/v3/network"
-	"github.com/niclabs/dtc/v3/network/zmq"
+
+	"p11nethsm/config"
+	"p11nethsm/network"
+	"p11nethsm/network/zmq"
 )
 
 // Creates a new connection of type "connType". Currently only zmq is implemented.

@@ -1,4 +1,4 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
@@ -6,7 +6,8 @@ package main
 import "C"
 import (
 	"fmt"
-	"github.com/niclabs/dtc/v3/config"
+
+	"p11nethsm/config"
 )
 
 type Storage interface {

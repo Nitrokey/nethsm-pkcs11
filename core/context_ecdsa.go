@@ -1,4 +1,4 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
@@ -9,12 +9,14 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/niclabs/dtc/v3/utils"
-	"github.com/niclabs/dtcnode/v3/message"
-	"github.com/niclabs/tcecdsa"
 	"io"
 	"log"
 	"math/big"
+
+	"p11nethsm/utils"
+
+	"github.com/niclabs/dtcnode/v3/message"
+	"github.com/niclabs/tcecdsa"
 )
 
 type ECDSASignContext struct {
@@ -54,7 +56,7 @@ func (context *ECDSASignContext) SignatureLength() int {
 	// ASN.1 has overhead so we multiply it by 3 instead of two
 	// (it is not so costly, and on signaturefinal we correct the final size)
 	// of the signature
-	return 3 * int((context.pubKey.Params().BitSize + 7) / 8)
+	return 3 * int((context.pubKey.Params().BitSize+7)/8)
 }
 
 func (context *ECDSASignContext) Update(data []byte) error {
@@ -242,7 +244,6 @@ func createECDSAPrivateKey(keyID string, skAttrs Attributes, pk *ecdsa.PublicKey
 		&Attribute{C.CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
 		&Attribute{C.CKA_START_DATE, make([]byte, 8)},
 		&Attribute{C.CKA_END_DATE, make([]byte, 8)},
-
 	)
 	skAttrs.Set(
 		// ECDSA Public Key

@@ -1,4 +1,4 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
@@ -7,7 +7,8 @@ import "C"
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/niclabs/dtc/v3/utils"
+
+	"p11nethsm/utils"
 )
 
 // SignContext represents a structure which groups parameters that allow to sign

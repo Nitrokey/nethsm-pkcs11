@@ -1,11 +1,11 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
 */
 import "C"
 import (
-	"github.com/niclabs/dtc/v3/config"
+	"p11nethsm/config"
 )
 
 // Application contains the essential parts of the HSM

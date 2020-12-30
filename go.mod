@@ -1,4 +1,4 @@
-module github.com/niclabs/dtc/v3
+module p11nethsm
 
 go 1.12
 

@@ -1,4 +1,4 @@
-package main
+package core
 
 /*
 #include "pkcs11go.h"
@@ -8,14 +8,16 @@ import (
 	"crypto"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/niclabs/dtc/v3/utils"
-	"github.com/niclabs/tcrsa"
 	"hash"
 	"log"
 	"math/rand"
 	"sync"
 	"unsafe"
+
+	"p11nethsm/utils"
+
+	"github.com/google/uuid"
+	"github.com/niclabs/tcrsa"
 )
 
 const AttrTypeKeyHandler = 1 << 31
@@ -606,7 +608,7 @@ func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (p
 		err = NewError("Session.GenerateRSAKeyPair", "Exponent size should not be greater than 64 bits", C.CKR_ARGUMENTS_BAD)
 		return
 	}
-	copy(extendedExpAttr[8 - len(exponentAttr.Value):], exponentAttr.Value)
+	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
 	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
 	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
 	keyMeta, err = dtc.RSACreateKey(keyID, int(bitSize), int(exponent))

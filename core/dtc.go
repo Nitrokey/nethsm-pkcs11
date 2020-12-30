@@ -1,12 +1,13 @@
-package main
+package core
 
 import "C"
 import (
 	"fmt"
 	"sync"
 
-	"github.com/niclabs/dtc/v3/config"
-	"github.com/niclabs/dtc/v3/network"
+	"p11nethsm/config"
+	"p11nethsm/network"
+
 	"github.com/spf13/viper"
 )
 

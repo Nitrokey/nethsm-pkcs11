@@ -3,10 +3,10 @@ package pkcs11_test
 import (
 	"fmt"
 	"github.com/miekg/pkcs11"
-	"github.com/niclabs/dtc/v3/utils"
 	"log"
 	"math/big"
 	"os"
+	"p11nethsm/utils"
 	"testing"
 )
 
