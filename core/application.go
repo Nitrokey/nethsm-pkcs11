@@ -5,58 +5,84 @@ package core
 */
 import "C"
 import (
+	"context"
+	"os"
 	"p11nethsm/config"
+	"p11nethsm/openapi"
+	"strings"
 )
 
 // Application contains the essential parts of the HSM
 type Application struct {
 	Storage Storage        // Storage saves the HSM objects.
-	DTC     *DTC           // DTC is in charge of communication with the nodes.
 	Slots   []*Slot        // Represents the slots of the HSM
 	Config  *config.Config // has the complete configuration of the HSM
+	Service *openapi.DefaultApiService
 }
 
 // NewApplication returns a new application, using the configuration defined in the config file.
-func NewApplication() (app *Application, err error) {
+func NewApplication() (App *Application, err error) {
 	conf, err := config.GetConfig()
 	if err != nil {
 		return
 	}
-	db, err := NewDatabase(conf.Criptoki.DatabaseType)
+	db, err := NewDatabase(conf.Cryptoki.DatabaseType)
 	if err != nil {
 		err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
 		return
 	}
-	if err = db.Init(conf.Criptoki.Slots); err != nil {
+	if err = db.Init(conf.Cryptoki.Slots); err != nil {
 		err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
 		return
 	}
-	slots := make([]*Slot, len(conf.Criptoki.Slots))
-	dtc, err := NewDTC(conf.DTC)
-	if err != nil {
-		return
-	}
+	slots := make([]*Slot, len(conf.Cryptoki.Slots))
 
-	app = &Application{
+	apiConf := openapi.NewConfiguration()
+	apiConf.Servers[0].Variables = map[string]openapi.ServerVariable{"URL": {}}
+	apiConf.Servers[0].URL = "{URL}"
+	service := openapi.NewAPIClient(apiConf).DefaultApi
+
+	App = &Application{
 		Storage: db,
 		Slots:   slots,
 		Config:  conf,
-		DTC:     dtc,
+		Service: service,
 	}
-	for i, slotConf := range conf.Criptoki.Slots {
+	for i, slotConf := range conf.Cryptoki.Slots {
+		password := slotConf.Password
+		if prefix := "env:"; strings.HasPrefix(password, prefix) {
+			password = os.Getenv(strings.TrimPrefix(password, prefix))
+		}
+		basicAuth := openapi.BasicAuth{
+			UserName: slotConf.User,
+			Password: password,
+		}
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		ctx = context.WithValue(ctx, openapi.ContextServerVariables, map[string]string{
+			"URL": slotConf.URL,
+		})
+		ctx = context.WithValue(ctx, openapi.ContextBasicAuth, basicAuth)
+
 		slot := &Slot{
 			ID:          C.CK_SLOT_ID(i),
-			Application: app,
+			description: slotConf.Description,
+			Application: App,
 			Sessions:    make(Sessions, 0),
+			ctx:         ctx,
+			ctxCancel:   ctxCancel,
 		}
-		var token *Token
-		token, err = db.GetToken(slotConf.Label)
-		if err != nil {
-			err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-			return
-		}
-		slot.InsertToken(token)
 		slots[i] = slot
+
+		r, e := App.Service.HealthReadyGet(slot.ctx).Execute()
+		if e == nil && r.StatusCode < 300 {
+			var token *Token
+			token, err = db.GetToken(slotConf.Label)
+			if err != nil {
+				err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
+				return
+			}
+			slot.InsertToken(token)
+		}
 	}
 	return
 }

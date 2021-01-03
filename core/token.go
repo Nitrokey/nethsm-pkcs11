@@ -8,7 +8,6 @@ package core
 import "C"
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -78,50 +77,42 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", C.CKR_ARGUMENTS_BAD)
 	}
 
-	manufacturerID := token.slot.Application.Config.Criptoki.ManufacturerID
-	if len(manufacturerID) > 32 {
-		manufacturerID = manufacturerID[:32]
+	apiInfo, r, err := App.Service.InfoGet(token.slot.ctx).Execute()
+	if err != nil {
+		return NewAPIError("token.GetInfo", "InfoGet", r, err)
 	}
 
-	manufacturerID += strings.Repeat(" ", 32-len(manufacturerID))
-	cManufacturerID := C.CBytes([]byte(manufacturerID))
-	defer C.free(unsafe.Pointer(cManufacturerID))
-	C.memcpy(unsafe.Pointer(&info.manufacturerID[0]), cManufacturerID, 32)
-
-	model := token.slot.Application.Config.Criptoki.Model
-	if len(model) > 16 {
-		model = model[:16]
-	}
-	model += strings.Repeat(" ", 16-len(model))
-	cModel := C.CBytes([]byte(model))
-	defer C.free(unsafe.Pointer(cModel))
-	C.memcpy(unsafe.Pointer(&info.model[0]), cModel, 16)
-
-	serialNumber := token.slot.Application.Config.Criptoki.SerialNumber
-	if len(serialNumber) > 16 {
-		serialNumber = serialNumber[:16]
+	apiSystemInfo, r, err := App.Service.SystemInfoGet(token.slot.ctx).Execute()
+	if err != nil {
+		return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
 	}
 
-	serialNumber += strings.Repeat(" ", 16-len(serialNumber))
-	cSerial := C.CBytes([]byte(model))
-	defer C.free(unsafe.Pointer(cSerial))
-	C.memcpy(unsafe.Pointer(&info.serialNumber[0]), cSerial, 16)
+	str2Buf(apiInfo.Vendor, &info.manufacturerID)
+	str2Buf(apiInfo.Product, &info.model)
+	serialNumber := "12345"
+	str2Buf(serialNumber, &info.serialNumber)
+
+	var hwVerMaj, hwVerMin, fwVerMaj, fwVerMin C.uchar
+	s, _ := apiSystemInfo["hardwareVersion"].(string)
+	fmt.Sscanf(s, "%d.%d", &hwVerMaj, &hwVerMin)
+	s, _ = apiSystemInfo["firmwareVersion"].(string)
+	fmt.Sscanf(s, "%d.%d", &fwVerMaj, &fwVerMin)
 
 	info.flags = C.CK_ULONG(token.tokenFlags)
-	info.ulMaxSessionCount = C.CK_ULONG(token.slot.Application.Config.Criptoki.MaxSessionCount)
+	info.ulMaxSessionCount = C.CK_ULONG(App.Config.Cryptoki.MaxSessionCount)
 	info.ulSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxRwSessionCount = C.CK_ULONG(token.slot.Application.Config.Criptoki.MaxSessionCount)
+	info.ulMaxRwSessionCount = C.CK_ULONG(App.Config.Cryptoki.MaxSessionCount)
 	info.ulRwSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxPinLen = C.CK_ULONG(token.slot.Application.Config.Criptoki.MaxPinLength)
-	info.ulMinPinLen = C.CK_ULONG(token.slot.Application.Config.Criptoki.MinPinLength)
+	info.ulMaxPinLen = C.CK_ULONG(App.Config.Cryptoki.MaxPinLength)
+	info.ulMinPinLen = C.CK_ULONG(App.Config.Cryptoki.MinPinLength)
 	info.ulTotalPublicMemory = C.CK_UNAVAILABLE_INFORMATION
 	info.ulFreePublicMemory = C.CK_UNAVAILABLE_INFORMATION
 	info.ulTotalPrivateMemory = C.CK_UNAVAILABLE_INFORMATION
 	info.ulFreePrivateMemory = C.CK_UNAVAILABLE_INFORMATION
-	info.hardwareVersion.major = 2
-	info.hardwareVersion.minor = 40
-	info.firmwareVersion.major = 2
-	info.firmwareVersion.minor = 40
+	info.hardwareVersion.major = hwVerMaj
+	info.hardwareVersion.minor = hwVerMin
+	info.firmwareVersion.major = fwVerMaj
+	info.firmwareVersion.minor = fwVerMin
 
 	now := time.Now()
 	cTimeStr := C.CString(now.Format("20060102150405") + "00")

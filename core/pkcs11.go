@@ -9,6 +9,7 @@ extern CK_FUNCTION_LIST functionList;
 import "C"
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -17,8 +18,23 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	libManufacturerID = "Nitrokey GmbH"
+	libDescription    = "NetHSM PKCS#11 module"
+	libVersionMajor   = 0
+	libVersionMinor   = 1
+)
+
 func init() {
-	logPath := viper.GetString("dtc.logfile")
+	viper.SetConfigName("p11nethsm-config")
+	viper.AddConfigPath("./")
+	viper.AddConfigPath("$HOME/.nitrokey")
+	viper.AddConfigPath("/etc/nitrokey/")
+	if err := viper.ReadInConfig(); err != nil {
+		panic(fmt.Errorf("config file problem %v", err))
+	}
+	logPath := viper.GetString("logfile")
+	log.SetPrefix("[p11nethsm] ")
 	if logPath != "" {
 		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
@@ -36,17 +52,41 @@ func ErrorToRV(err error) C.CK_RV {
 	if err == nil {
 		return C.CKR_OK
 	}
-	log.Printf("%+v\n", err)
+	//log.Printf("%+v\n", err)
 	switch err.(type) {
-	case TcbError:
-		tcb := err.(TcbError)
-		log.Printf("[%s] %s [Code %d]\n", tcb.Who, tcb.Description, int(tcb.Code))
-		return C.CK_RV(tcb.Code)
+	case P11Error:
+		p11err := err.(P11Error)
+		log.Printf("[%s] %s [Code %d]\n", p11err.Who, p11err.Description, int(p11err.Code))
+		return C.CK_RV(p11err.Code)
 	default:
 		code := C.CKR_GENERAL_ERROR
 		log.Printf("[General error] %+v [Code %d]\n", err, int(code))
 		return C.CK_RV(code)
 	}
+}
+
+func str2Buf(s string, buffer interface{}) {
+	var length int
+	var pBuffer unsafe.Pointer
+	if b, ok := buffer.(*[16]C.uchar); ok {
+		length = 16
+		pBuffer = unsafe.Pointer(&b[0])
+	} else if b, ok := buffer.(*[32]C.uchar); ok {
+		length = 32
+		pBuffer = unsafe.Pointer(&b[0])
+	} else if b, ok := buffer.(*[64]C.uchar); ok {
+		length = 64
+		pBuffer = unsafe.Pointer(&b[0])
+	} else {
+		log.Panicf("strBuf: buffer type %T not supported", buffer)
+	}
+	if len(s) > length {
+		s = s[:length]
+	}
+	s += strings.Repeat(" ", length-len(s))
+	cBytes := C.CBytes([]byte(s))
+	defer C.free(unsafe.Pointer(cBytes))
+	C.memcpy(pBuffer, cBytes, (C.size_t)(length))
 }
 
 //export C_Initialize
@@ -57,13 +97,13 @@ func C_Initialize(pInitArgs C.CK_VOID_PTR) C.CK_RV {
 		return C.CKR_CRYPTOKI_ALREADY_INITIALIZED
 	}
 	cInitArgs := (*C.CK_C_INITIALIZE_ARGS)(unsafe.Pointer(pInitArgs))
-	if (cInitArgs.flags&C.CKF_OS_LOCKING_OK == 0) || (cInitArgs.pReserved != nil) {
+	if cInitArgs != nil && (cInitArgs.flags&C.CKF_OS_LOCKING_OK == 0 || cInitArgs.pReserved != nil) {
 		return C.CKR_ARGUMENTS_BAD
 	}
 	var err error
 	log.Printf("Creating new app")
 	App, err = NewApplication()
-	log.Printf("Created new app")
+	//log.Printf("Created new app with %d slots.", len(App.Slots))
 	return ErrorToRV(err)
 }
 
@@ -75,9 +115,6 @@ func C_Finalize(pReserved C.CK_VOID_PTR) C.CK_RV {
 	}
 	if pReserved != nil {
 		return C.CKR_ARGUMENTS_BAD
-	}
-	if err := App.DTC.Connection.Close(); err != nil {
-		log.Printf("error clossing connection: %s", err)
 	}
 	App = nil
 	return C.CKR_OK
@@ -147,30 +184,15 @@ func C_GetInfo(pInfo C.CK_INFO_PTR) C.CK_RV {
 	}
 	info := (*C.CK_INFO)(unsafe.Pointer(pInfo))
 
-	manufacturer := App.Config.Criptoki.ManufacturerID
-	if len(manufacturer) > 32 {
-		manufacturer = manufacturer[:32]
-	}
-	manufacturer += strings.Repeat(" ", 32-len(manufacturer))
-	cManufacturerID := C.CString(manufacturer)
-	defer C.free(unsafe.Pointer(cManufacturerID))
-	C.memcpy(unsafe.Pointer(&info.manufacturerID[0]), unsafe.Pointer(cManufacturerID), 32)
-
-	description := App.Config.Criptoki.Description
-	if len(description) > 32 {
-		description = description[:32]
-	}
-	description += strings.Repeat(" ", 32-len(description))
-	cDescription := C.CString(manufacturer)
-	defer C.free(unsafe.Pointer(cDescription))
-	C.memcpy(unsafe.Pointer(&info.libraryDescription[0]), unsafe.Pointer(cDescription), 32)
+	log.Printf("%v", &info.manufacturerID[0])
+	str2Buf(libManufacturerID, &info.manufacturerID)
+	str2Buf(libDescription, &info.libraryDescription)
 
 	info.flags = 0
 	info.cryptokiVersion.major = 2
 	info.cryptokiVersion.minor = 40
-	info.libraryVersion.major = 2
-	info.libraryVersion.minor = 0
-
+	info.libraryVersion.major = libVersionMajor
+	info.libraryVersion.minor = libVersionMinor
 	return C.CKR_OK
 }
 
@@ -224,6 +246,7 @@ func C_GetSlotList(tokenPresent C.CK_BBOOL, pSlotList C.CK_SLOT_ID_PTR, pulCount
 	}
 
 	*pulCount = C.CK_ULONG(bufSize)
+	log.Printf("Slots: %d", *pulCount)
 	return C.CKR_OK
 }
 
@@ -244,6 +267,7 @@ func C_GetSlotInfo(slotId C.CK_SLOT_ID, pInfo C.CK_SLOT_INFO_PTR) C.CK_RV {
 	if err != nil {
 		return ErrorToRV(err)
 	}
+	//log.Printf("pInfo: %v", *pInfo)
 	return C.CKR_OK
 }
 
@@ -268,6 +292,7 @@ func C_GetTokenInfo(slotId C.CK_SLOT_ID, pInfo C.CK_TOKEN_INFO_PTR) C.CK_RV {
 	if err != nil {
 		return ErrorToRV(err)
 	}
+	//log.Printf("pInfo: %v", *pInfo)
 	return C.CKR_OK
 }
 
@@ -446,16 +471,20 @@ func C_FindObjectsInit(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PT
 	if App == nil {
 		return C.CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	if pTemplate == nil {
+	log.Printf("Template: %v\n", pTemplate)
+	if ulCount > 0 && pTemplate == nil {
 		return C.CKR_ARGUMENTS_BAD
 	}
 	session, err := App.GetSession(hSession)
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	attrs, err := CToAttributes(pTemplate, ulCount)
-	if err != nil {
-		return ErrorToRV(err)
+	var attrs Attributes
+	if ulCount > 0 {
+		attrs, err = CToAttributes(pTemplate, ulCount)
+		if err != nil {
+			return ErrorToRV(err)
+		}
 	}
 	err = session.FindObjectsInit(attrs)
 	if err != nil {

@@ -45,15 +45,9 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 		return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
 	}
 
-	dtc, err := session.GetDTC()
-	if err != nil {
-		return nil, err
-	}
-
 	switch mechanism.Type {
 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
 		c := &SignContextRSA{
-			dtc:       dtc,
 			randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
@@ -70,7 +64,6 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 			return nil, NewError("NewSignContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
 		}
 		c := &ECDSASignContext{
-			dtc:       dtc,
 			randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
@@ -105,15 +98,9 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 		return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
 	}
 
-	dtc, err := session.GetDTC()
-	if err != nil {
-		return nil, err
-	}
-
 	switch mechanism.Type {
 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
 		c := &VerifyContextRSA{
-			dtc:       dtc,
 			randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
@@ -130,7 +117,6 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 			return nil, NewError("NewVerifyContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
 		}
 		c := &ECDSAVerifyContext{
-			dtc:       dtc,
 			randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,

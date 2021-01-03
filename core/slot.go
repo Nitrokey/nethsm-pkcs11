@@ -7,8 +7,8 @@ package core
 */
 import "C"
 import (
+	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"unsafe"
 )
@@ -16,10 +16,13 @@ import (
 // Slot represents a HSM slot. It has an ID and it can have a connected Token.
 type Slot struct {
 	ID          C.CK_SLOT_ID // ID of slot
+	description string
 	flags       uint64       // Flags related to the slot
 	token       *Token       // Token connected to slot. It could be nil
 	Sessions    Sessions     // Sessions accessing to the slot
 	Application *Application // Application that created the slot.
+	ctx         context.Context
+	ctxCancel   context.CancelFunc
 	sync.Mutex
 }
 
@@ -90,29 +93,23 @@ func (slot *Slot) GetInfo(pInfo C.CK_SLOT_INFO_PTR) error {
 	}
 	info := (*C.CK_SLOT_INFO)(unsafe.Pointer(pInfo))
 
-	description := slot.Application.Config.Criptoki.Description
-	if len(description) > 64 {
-		description = description[:64]
+	description := slot.description
+	if slot.description == "" {
+		description = "Nitrokey NetHSM"
 	}
-	description += strings.Repeat(" ", 64-len(description)) // spaces
-	cDescription := C.CBytes([]byte(description))
-	defer C.free(unsafe.Pointer(cDescription))
-	C.memcpy(unsafe.Pointer(&info.slotDescription[0]), cDescription, 64)
+	str2Buf(description, &info.slotDescription)
+	str2Buf(libManufacturerID, &info.manufacturerID)
 
-	manufacturerID := slot.Application.Config.Criptoki.ManufacturerID
-	if len(manufacturerID) > 64 {
-		manufacturerID = manufacturerID[:64]
+	slot.flags = C.CKF_REMOVABLE_DEVICE
+	if slot.token != nil {
+		slot.flags |= C.CKF_TOKEN_PRESENT
 	}
-	manufacturerID += strings.Repeat(" ", 32-len(manufacturerID))
-	cManufacturerID := C.CBytes([]byte(manufacturerID))
-	defer C.free(unsafe.Pointer(cManufacturerID))
-	C.memcpy(unsafe.Pointer(&info.manufacturerID[0]), cManufacturerID, 32)
 
 	pInfo.flags = C.CK_ULONG(slot.flags)
-	pInfo.hardwareVersion.major = 2
-	pInfo.hardwareVersion.minor = 40
-	pInfo.firmwareVersion.major = 2
-	pInfo.firmwareVersion.minor = 40
+	pInfo.hardwareVersion.major = 0
+	pInfo.hardwareVersion.minor = 0
+	pInfo.firmwareVersion.major = 0
+	pInfo.firmwareVersion.minor = 0
 	return nil
 }
 

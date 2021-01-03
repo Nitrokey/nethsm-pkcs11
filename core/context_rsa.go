@@ -18,7 +18,6 @@ import (
 )
 
 type SignContextRSA struct {
-	dtc         *DTC
 	randSrc     io.Reader
 	keyMeta     *tcrsa.KeyMeta // Key Metainfo used in signing.
 	mechanism   *Mechanism     // Mechanism used to sign in a Sign session.
@@ -28,7 +27,6 @@ type SignContextRSA struct {
 }
 
 type VerifyContextRSA struct {
-	dtc         *DTC
 	randSrc     io.Reader
 	keyMeta     *tcrsa.KeyMeta // Key Metainfo used in sign verification.
 	mechanism   *Mechanism     // Mechanism used to verify a signature in a Verify session.
@@ -57,7 +55,7 @@ func (context *SignContextRSA) Update(data []byte) error {
 }
 
 func (context *SignContextRSA) Final() ([]byte, error) {
-	prepared, err := context.mechanism.Prepare(
+	_ /*prepared*/, err := context.mechanism.Prepare(
 		context.randSrc,
 		context.keyMeta.PublicKey.Size(),
 		context.data,
@@ -65,7 +63,9 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	signature, err := context.dtc.RSASignData(context.keyID, context.keyMeta, prepared)
+	// XXX signature, err := context.dtc.RSASignData(context.keyID,
+	// context.keyMeta, prepared)
+	var signature []byte
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,20 @@
+#logfile: /tmp/p11nethsm.log
+cryptoki:
+  manufacturerid: Nitrokey GmbH
+  model: NetHSM Mark A
+  serialnumber: "12345"
+  maxsessioncount: 5
+  databasetype: sqlite3
+  slots:
+  - label: NetHSM1
+    description: NetHSM Zone A
+    url: "https://nethsmdemo.nitrokey.com/api/v1"
+    user: "admin"
+    password: "env:NETHSM_PASS"
+  - label: NetHSM2
+    #description: NetHSM Zone B
+    url: "https://nethsmdemo.nitrokey.com/api/v2"
+    user: "admin"
+    password: "env:NETHSM_PASS"
+sqlite3:
+ path: "db.sqlite3"

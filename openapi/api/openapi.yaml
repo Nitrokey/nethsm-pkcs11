@@ -1,0 +1,2246 @@
+openapi: 3.0.1
+info:
+  title: NitroHSM
+  version: v1
+servers:
+- url: /
+paths:
+  /info:
+    get:
+      description: Information about the vendor, product, version.
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                vendor: Nitrokey UG
+                product: NitroHSM
+                version: v1
+              schema:
+                $ref: '#/components/schemas/SystemInformation'
+          description: ""
+  /health/alive:
+    get:
+      description: Retrieve wether NitroHSM is alive (powered up). This corresponds
+        to the state <i>Locked</i> or <i>Unprovisioned</i>.
+      responses:
+        "200":
+          content: {}
+          description: Yes, it is alive.
+        "412":
+          content: {}
+          description: Not locked or unprovisioned (in operational state).
+  /health/ready:
+    get:
+      description: Retrieve wether NitroHSM is alive and ready to take traffic. This
+        corresponds to the state <i>Operational</i>.
+      responses:
+        "200":
+          content: {}
+          description: Yes, it is alive and ready.
+        "412":
+          content: {}
+          description: Not alive and ready (not in operational state).
+  /health/state:
+    get:
+      description: Retrieve the state of NitroHSM.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  state: Unprovisioned
+                type: object
+          description: ""
+  /metrics:
+    get:
+      description: 'Get metrics. Precondition: NitroHSM is <i>Operational</i> and
+        a <b>R-Metrics</b> can be authenticated.'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  keyOperations: 1132412
+                  someOtherMetric: 2222
+                type: object
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /provision:
+    post:
+      description: Initial provisioning, only available in <i>Unprovisioned</i> state.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object'
+        content:
+          application/json:
+            schema:
+              example:
+                unlockPassphrase: UnlockPassphrase
+                adminPassphrase: Administrator
+                systemTime: 2018-10-30T11:20:50Z
+              properties:
+                unlockPassphrase:
+                  minLength: 1
+                  type: string
+                adminPassphrase:
+                  minLength: 1
+                  type: string
+                systemTime:
+                  type: string
+              required:
+              - adminPassphrase
+              - systemTime
+              - unlockPassphrase
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Provisioning was successful, NitroHSM is <i>Operational</i>
+            now.
+        "400":
+          content: {}
+          description: Malformed request data (e.g. malformed time, weak passphrase).
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Unprovisioned</i>).
+      x-codegen-request-body-name: body
+  /unlock:
+    post:
+      description: Brings a <i>Locked</i> NitroHSM into <i>Operational</i> state.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_1'
+        content:
+          application/json:
+            schema:
+              example:
+                passphrase: UnlockPassphrase
+              properties:
+                passphrase:
+                  minLength: 1
+                  type: string
+              required:
+              - passphrase
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Unlock was successful, NitroHSM is <i>Operational</i> now.
+        "403":
+          content: {}
+          description: Unlock failed (access denied).
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Locked</i>).
+      x-codegen-request-body-name: body
+  /lock:
+    post:
+      description: Brings an <i>Operational</i> NitroHSM into <i>Locked</i> state.
+      responses:
+        "204":
+          content: {}
+          description: Lock was successful, NitroHSM is <i>Locked</i> now.
+        "403":
+          content: {}
+          description: Lock failed (access denied).
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /random:
+    post:
+      description: 'Retrieve cryptographically strong random bytes from NitroHSM.
+        Precondition: NitroHSM is <i>Operational</i> and a <b>R-Operator</b> can be
+        authenticated.'
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_2'
+        content:
+          application/json:
+            schema:
+              example:
+                length: 5
+              properties:
+                length:
+                  maximum: 1024
+                  minimum: 1
+                  type: integer
+              required:
+              - length
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+          description: Successful request for <i>length</i> random bytes.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys:
+    get:
+      description: Get a list of the identifiers of all keys that are currently stored
+        in NitroHSM. Separate requests need to be made to request the individual key
+        data.
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+              - key: key1
+              - key: key2
+              - key: gz78ijhbhuij
+              schema:
+                $ref: '#/components/schemas/KeyList'
+          description: Successful request for the list of keys.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    post:
+      description: Import a private key into NitroHSM and let NitroHSM generate a
+        KeyID. The public key will be automatically derived.
+      parameters:
+      - in: query
+        name: purpose
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-pem-file:
+            schema:
+              example:
+                purpose: Sign
+                algorithm: RSA
+                key:
+                  primeP: frtz7u89gft89uz
+                  primeQ: FhJQl11CiY0ifRHXeAqFh4rdSl6
+                  publicExponent: w367rg90jhj0asdf98gz
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  key: I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K
+                type: object
+          description: Successful import of a private key. The response contains a
+            Location header, e.g. "https://nitrohsm.local/v1/keys/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K".
+        "400":
+          content: {}
+          description: Bad request (specified properties are invalid).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/generate:
+    post:
+      description: Generate a pair of public and private key and store it in NitroHSM.
+        KeyID is optional as a parameter and will be generated by NitroHSM if not
+        present.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_3'
+        content:
+          application/json:
+            schema:
+              example:
+                purpose: Sign
+                algorithm: RSA
+                length: 2048
+                id: myKey2
+              properties:
+                purpose:
+                  $ref: '#/components/schemas/KeyPurpose'
+                algorithm:
+                  $ref: '#/components/schemas/KeyAlgorithm'
+                length:
+                  type: string
+                id:
+                  maxLength: 128
+                  minLength: 1
+                  pattern: ^[a-zA-Z0-9]+$
+                  type: string
+              required:
+              - algorithm
+              - purpose
+              type: object
+        required: true
+      responses:
+        "201":
+          content: {}
+          description: Successful creation of new public and private key pair. Set
+            Location header to the new KeyID.
+        "400":
+          content: {}
+          description: Bad request (specified properties are invalid).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/{KeyID}:
+    delete:
+      description: Delete a pair of public and private key.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Key was successfully deleted.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    get:
+      description: Retrieve the public key.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                purpose: Sign
+                algorithm: RSA
+                key:
+                  modulus: FhJQl11CiY0ifRHXeAqFh4rdSl6
+                  publicExponent: FhJQl11CiY0ifRHXeAqFh4rdSl6
+                operations: 242
+              schema:
+                $ref: '#/components/schemas/PublicKey'
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Import a private key into NitroHSM and store it under the <i>KeyID</i>
+        path. The public key will be automatically derived.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateKey'
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful import of a private key.
+        "400":
+          content: {}
+          description: Bad request (specified properties are invalid).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "409":
+          content: {}
+          description: Conflict, key already exists for this keyID.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/{KeyID}/public.pem:
+    get:
+      description: Retrieve public key in PEM format.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN PUBLIC KEY-----
+                  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx7ghfro+VEepYmy2V7HP
+                  n5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iRXzeza7DMjrQptzKsfSy6
+                  dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm2XP12Cqx0wsYGIoJlWHb
+                  Gb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMBB9h+2Bxc4BxaPKMm15JR
+                  1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqRhdk1P6r/vqOVKrxVupDq
+                  Kkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEuggit32tV16JXCZjnYePAvt
+                  NwIDAQAB
+                  -----END PUBLIC KEY-----
+                type: object
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /keys/{KeyID}/csr.pem:
+    post:
+      description: Retrieve a certificate signing request in PEM format.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example: '{countryName=DE, stateOrProvinceName=, localityName=Berlin,
+                organizationName=Nitrokey, organizationalUnitName=, commonName=nitrohsm.local,
+                emailAddress=info@nitrokey.com}'
+              type: string
+        required: true
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE REQUEST-----
+                  MIICqTCCAZECAQAwZDFiMAkGA1UEBgwCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK
+                  DAhOaXRyb2tleTAVBgNVBAMMDm5pdHJvaHNtLmxvY2FsMB4GCSqGSIb3DQEJAQwR
+                  aW5mb0BuaXRyb2tleS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
+                  AQDHuCF+uj5UR6libLZXsc+fk9JF2YbPF7BymbPFO2tnXQHKBsSqE+wCvh9Yj2kb
+                  uJFfN7NrsMyOtCm3Mqx9LLp0EWZIRl6v6EnG452EEb8VfqmPBGtmls5DHKv5pOUT
+                  eObZc/XYKrHTCxgYigmVYdsZv3QgDH3Ol1hCAeglnjHmKazm+juHem48TJXJwkfl
+                  8wEH2H7YHFzgHFo8oybXklHUHtOgHeDXpIljYHW39qo2apIFkLgc/V8K5JsGbzc6
+                  CpGF2TU/qv++o5UqvFW6kOoqR1x/91EGJBqUn21BtVuz045h9Dqfbka8lO8a2o4S
+                  6CCK3fa1XXolcJmOdh48C+03AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAT7y5
+                  5HI8HYlfjwoZnRBgrGdaCnfnJ48Z4wSk/kHSgD/hc98gXJOLp7jTO7Q+M5QkLBqr
+                  Hgy58B/axJv1wBLbxZF9c4AhpobH6XV2aiXSNWqBAmvFv8UkzNnTe1gOJQ1nOnes
+                  qaUzF3py58xj3oHGAcp9NvGRINXnFMI+A2Ol5WsDcdm619Y3+ew0xeKx0jAmawMo
+                  EZnI6sIt46WYumGBHAkjuDVjyYbfbkZ6vFZaEMm9ZdJn0aGDkgEqyEIoFVnLMYBg
+                  Ouc61jzQoXcn5E/dgNldy9ZR1ZulYV2M8qnMDq+tlFPAd9X0S/GRNCxyoHEBsXnW
+                  Ud0iQXvGb/9jciOVuw==
+                  -----END CERTIFICATE REQUEST-----
+                type: object
+          description: Successful generation of certificate signing request.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/{KeyID}/decrypt:
+    post:
+      description: Decrypt an encrypted message with the secret key.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_4'
+        content:
+          application/json:
+            schema:
+              example:
+                mode: RAW
+                encrypted: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
+              properties:
+                mode:
+                  enum:
+                  - RAW
+                  - PKCS1
+                  - OAEP_MD5
+                  - OAEP_SHA1
+                  - OAEP_SHA224
+                  - OAEP_SHA256
+                  - OAEP_SHA384
+                  - OAEP_SHA512
+                  type: string
+                encrypted:
+                  type: string
+              required:
+              - encrypted
+              - mode
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+          description: ""
+        "400":
+          content: {}
+          description: Bad Request, e.g. invalid encryption mode.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/{KeyID}/sign:
+    post:
+      description: Sign a message with the secret key.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_5'
+        content:
+          application/json:
+            schema:
+              example:
+                mode: PKCS1
+                message: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
+              properties:
+                mode:
+                  enum:
+                  - PKCS1
+                  - PSS_MD5
+                  - PSS_SHA1
+                  - PSS_SHA224
+                  - PSS_SHA256
+                  - PSS_SHA384
+                  - PSS_SHA512
+                  - ED25519
+                  type: string
+                message:
+                  type: string
+              required:
+              - message
+              - mode
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_2'
+          description: ""
+        "400":
+          content: {}
+          description: Bad Request, e.g. invalid signing mode.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Key for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /keys/{KeyID}/cert:
+    delete:
+      description: Delete the certificate.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Successful deletion of a certificate.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Certificate with this KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    get:
+      description: Retrieve stored certificate. The content-type header will display
+        the media type of the stored data.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE-----
+                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                  35mqzHn+FjWq0eAtpzhO5Q==
+                  -----END CERTIFICATE-----
+                type: object
+            application/x-x509-ca-cert:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE-----
+                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                  35mqzHn+FjWq0eAtpzhO5Q==
+                  -----END CERTIFICATE-----
+                type: object
+            application/pgp-keys:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE-----
+                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                  35mqzHn+FjWq0eAtpzhO5Q==
+                  -----END CERTIFICATE-----
+                type: object
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: Certificate for KeyID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Store a certificate. Maximum size 1MB. The content-type header
+        provides the media type.
+      parameters:
+      - in: path
+        name: KeyID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-pem-file:
+            schema:
+              example: |
+                -----BEGIN CERTIFICATE-----
+                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                35mqzHn+FjWq0eAtpzhO5Q==
+                -----END CERTIFICATE-----
+              type: object
+          application/x-x509-ca-cert:
+            schema:
+              example: |
+                -----BEGIN CERTIFICATE-----
+                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                35mqzHn+FjWq0eAtpzhO5Q==
+                -----END CERTIFICATE-----
+              type: object
+          application/pgp-keys:
+            schema:
+              example: |
+                -----BEGIN CERTIFICATE-----
+                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                35mqzHn+FjWq0eAtpzhO5Q==
+                -----END CERTIFICATE-----
+              type: object
+        required: true
+      responses:
+        "201":
+          content: {}
+          description: Successful import of a certificate.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "409":
+          content: {}
+          description: Conflict, certificate already exists for this KeyID.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /users:
+    get:
+      description: Get a list of all user ids that have accounts on NitroHSM.
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+              - user: admin
+              - user: backup
+              - user: metrics
+              - user: operator
+              schema:
+                $ref: '#/components/schemas/UserList'
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    post:
+      description: Create a new user on NitroHSM. The user-ID is generated by NitroHSM.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        "201":
+          content: {}
+          description: Successful creation of user. The response contains a Location
+            header, e.g. "https://nitrohsm.local/v1/users/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K".
+        "400":
+          content: {}
+          description: Bad request (specified properties are invalid, e.g. weak passphrase).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /users/{UserID}:
+    delete:
+      description: Delete a user from keyfender.
+      parameters:
+      - in: path
+        name: UserID
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Successful deletion of user.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: User not found for this user-ID.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    get:
+      description: 'Get user info: name and role.'
+      parameters:
+      - in: path
+        name: UserID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_3'
+          description: ""
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: User for UserID not found.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Create a user on keyfender.
+      parameters:
+      - in: path
+        name: UserID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        "201":
+          content: {}
+          description: Successful creation of user.
+        "400":
+          content: {}
+          description: Bad request (specified properties are invalid, e.g. weak passphrase).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "409":
+          content: {}
+          description: Conflict - user already exists for this user-ID.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /users/{UserID}/passphrase:
+    post:
+      description: Update the passphrase.
+      parameters:
+      - in: path
+        name: UserID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_6'
+        content:
+          application/json:
+            schema:
+              example:
+                passphrase: Some cool new passphrase
+              properties:
+                passphrase:
+                  minLength: 1
+                  type: string
+              required:
+              - passphrase
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful change of passphrase.
+        "400":
+          content: {}
+          description: Bad request - weak passphrase.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "404":
+          content: {}
+          description: User not found for this user-ID.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/unlock-passphrase:
+    put:
+      description: Update the unlock passphrase.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_7'
+        content:
+          application/json:
+            schema:
+              example:
+                passphrase: This is my unlock passphrase
+              properties:
+                passphrase:
+                  minLength: 1
+                  type: string
+              required:
+              - passphrase
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful change of passphrase.
+        "400":
+          content: {}
+          description: Bad request - weak passphrase.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/unattended-boot:
+    get:
+      description: 'Read unattended boot configuration: is it on or off?'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  status: "off"
+                type: object
+          description: Successful read of unattended boot configuration.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: 'Configure unattended boot: switch it on or off (flip the switch).'
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_8'
+        content:
+          application/json:
+            schema:
+              example:
+                status: "on"
+              properties:
+                status:
+                  enum:
+                  - "on"
+                  - "off"
+                  type: string
+              required:
+              - status
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful change of unattended boot mode.
+        "400":
+          content: {}
+          description: Bad request - invalid status setting.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/tls/public.pem:
+    get:
+      description: Get public key for NitroHSMs https API.
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN PUBLIC KEY-----
+                  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAseU3o1Ix2euXUi50ht/m
+                  pDYnE2J4maJrIOLmDrmz+jv20hsRvPsWnKevYZqEYmvQFNO2Mv9DB5MZfnJ3jL3A
+                  q71Ls1wqOnW9++bZAvqvEVUtlHh05Rz9k1Ga32/OaHHEZj+lG9PlKI8y63K+sKZL
+                  uDYiVy1/gzARjpf2hCmTyQSAvtcA07WXAqorNI8mhcbIhnrGCeKfB8HYJ1T3uk2l
+                  XrwXehVaw9KZzg7KuRO0Qnk+IfR6LZjiKiEB9malzqSx3N20vibI672bMR+fqID2
+                  oC+ovNOEdRhPlCnztaY1HsnDhJt8MDTjlVGveCElvesuSVnNVHmVugDjEYTU1KV3
+                  TwIDAQAB
+                  -----END PUBLIC KEY-----
+                type: object
+          description: Successful retrieval of public key.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /config/tls/cert.pem:
+    get:
+      description: Get certificate for NitroHSMs https API.
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE-----
+                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                  35mqzHn+FjWq0eAtpzhO5Q==
+                  -----END CERTIFICATE-----
+                type: object
+          description: Successful retrieval of certificate.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Set certificate for NitroHSMs https API e.g. to replace self-signed
+        intital certificate.
+      requestBody:
+        content:
+          application/x-pem-file:
+            schema:
+              example: |
+                -----BEGIN CERTIFICATE-----
+                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+                35mqzHn+FjWq0eAtpzhO5Q==
+                -----END CERTIFICATE-----
+              type: string
+        required: true
+      responses:
+        "201":
+          content: {}
+          description: Successfully set certificate.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/tls/csr.pem:
+    put:
+      description: Get NitroHSM certificate signing request e.g. to replace self-signed
+        intital certificate.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example: '{countryName=DE, stateOrProvinceName=, localityName=Berlin,
+                organizationName=Nitrokey, organizationalUnitName=, commonName=nitrohsm.local,
+                emailAddress=info@nitrokey.com}'
+              type: string
+        required: true
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                example: |
+                  -----BEGIN CERTIFICATE REQUEST-----
+                  MIICUjCCAToCAQAwDTELMAkGA1UEBhMCZGUwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+                  DwAwggEKAoIBAQCx5TejUjHZ65dSLnSG3+akNicTYniZomsg4uYOubP6O/bSGxG8
+                  +xacp69hmoRia9AU07Yy/0MHkxl+cneMvcCrvUuzXCo6db375tkC+q8RVS2UeHTl
+                  HP2TUZrfb85occRmP6Ub0+UojzLrcr6wpku4NiJXLX+DMBGOl/aEKZPJBIC+1wDT
+                  tZcCqis0jyaFxsiGesYJ4p8HwdgnVPe6TaVevBd6FVrD0pnODsq5E7RCeT4h9Hot
+                  mOIqIQH2ZqXOpLHc3bS+JsjrvZsxH5+ogPagL6i804R1GE+UKfO1pjUeycOEm3ww
+                  NOOVUa94ISW96y5JWc1UeZW6AOMRhNTUpXdPAgMBAAGgADANBgkqhkiG9w0BAQsF
+                  AAOCAQEAqA+22efrmbc1l+rnBtqeHJJWPZybRFDhqxkUoMAOMLIgd92TM6mnzlYu
+                  RmKZr2ExlbODOnaJJVcnbq2XYuHPiWYjhNFLTJ4bHJzo2yq+UUB0d409jQ0zkgVw
+                  CqfSauVZq7gqLLJ67KqqDDzJtsWEjeuJxIRh+cKPre1vtQp4uCncwRXOymxzaoTg
+                  KdJ6vwLLEkLVKwk1NEuvMe4IAa2+CtWf2z/jjoEKBeg/rxoFUwAmIxp/vWsZaDmY
+                  K0X2haYIM4Ihz+tTbAPlO/hMAs/spxYvmWu46BpBpX4naxhOKJzpwO2NeZtZkjL6
+                  7wSAdo8xe7eWf/eaMebITfIRfgyczA==
+                  -----END CERTIFICATE REQUEST-----
+                type: object
+          description: Successful generation of certificate signing request.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/network:
+    get:
+      description: Get network configuration. IP address, netmask, router.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  ipAddress: 192.168.1.1
+                  netmask: 255.255.255.0
+                  gateway: 0.0.0.0
+                type: object
+          description: Successful retrieval of network configuration.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Configure network.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_9'
+        content:
+          application/json:
+            schema:
+              example:
+                ipAddress: 10.0.0.23
+                netmask: 255.255.255.0
+                gateway: 10.0.0.1
+              properties:
+                ipAddress:
+                  type: string
+                netmask:
+                  type: string
+                gateway:
+                  type: string
+              required:
+              - gateway
+              - ipAddress
+              - netmask
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Succesful update of network configuration.
+        "400":
+          content: {}
+          description: Bad request - invalid input format.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/logging:
+    get:
+      description: Get logging configuration. Protocol is always syslog over UDP.
+        Configurable are IP adress and port, log level.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  ipAddress: 0.0.0.0
+                  port: 514
+                  logLevel: info
+                type: object
+          description: Successful retrieval of logging configuration.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Configure log level and destination.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_10'
+        content:
+          application/json:
+            schema:
+              example:
+                ipAddress: 10.0.0.42
+                port: 514
+                logLevel: info
+              properties:
+                ipAddress:
+                  type: string
+                port:
+                  type: string
+                logLevel:
+                  enum:
+                  - debug
+                  - info
+                  - warn
+                  - error
+                  type: string
+              required:
+              - ipAddress
+              - logLevel
+              - port
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Succesful update of logging configuration.
+        "400":
+          content: {}
+          description: Bad request - invalid input format.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/backup-passphrase:
+    put:
+      description: Update the backup passphrase.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_11'
+        content:
+          application/json:
+            schema:
+              example:
+                passphrase: This is my backup passphrase
+              properties:
+                passphrase:
+                  minLength: 1
+                  type: string
+              required:
+              - passphrase
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful change of passphrase.
+        "400":
+          content: {}
+          description: Bad request - weak passphrase.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /config/time:
+    get:
+      description: Get system time.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  time: 2018-10-30T11:20:50Z
+                type: object
+          description: Successful retrieval of system time.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+    put:
+      description: Configure system time.
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_12'
+        content:
+          application/json:
+            schema:
+              example:
+                time: 2018-10-30T11:20:50Z
+              properties:
+                time:
+                  type: string
+              required:
+              - time
+              type: object
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Succesful update of system time.
+        "400":
+          content: {}
+          description: Bad request - invalid input format.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /system/info:
+    get:
+      description: Get detailed system information, including firmware version, system
+        software version, hardware version.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  firmwareVersion: "1"
+                  softwareVersion: "1.7"
+                  hardwareVersion: 2.2.2
+                type: object
+          description: Successful retrieval of system information.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /system/reboot:
+    post:
+      description: Reboot NitroHSM.
+      responses:
+        "204":
+          content: {}
+          description: About to reboot NitroHSM.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /system/shutdown:
+    post:
+      description: Shut down NitroHSM.
+      responses:
+        "204":
+          content: {}
+          description: About to shut down NitroHSM.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /system/reset:
+    post:
+      description: Reset NitroHSM to factory settings.
+      responses:
+        "204":
+          content: {}
+          description: About to reset NitroHSM.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+  /system/update:
+    post:
+      description: Update NitroHSM software.
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              example: encrypted backup
+              type: string
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                example:
+                  releaseNotes: Some new feature is available.
+                type: object
+          description: Successfully verified update image (authenticity, integrity,
+            and version number).
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "409":
+          content: {}
+          description: Conflict - Major version downgrade is not allowed.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i>).
+      x-codegen-request-body-name: body
+  /system/commit-update:
+    post:
+      description: Commit update of NitroHSM software.
+      responses:
+        "204":
+          content: {}
+          description: About to update NitroHSM.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i> or
+            update image is not present - call /update first).
+  /system/cancel-update:
+    post:
+      description: Cancel update of NitroHSM software.
+      responses:
+        "204":
+          content: {}
+          description: Update successfully cancelled.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i> or
+            update image is not present - call /update first).
+  /system/backup:
+    post:
+      description: Back up the key store to a backup file.
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                example: encrypted backup
+                type: object
+          description: Successful retrieval of backup data.
+        "401":
+          content: {}
+          description: Authentication required but none provided.
+        "403":
+          content: {}
+          description: Access denied.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Operational</i> or
+            <i>Backup Passphrase</i> was not set).
+  /system/restore:
+    post:
+      description: Restore the key store from a backup file. Only available in <i>Unprovisioned</i>
+        state.
+      parameters:
+      - in: query
+        name: backupPassphrase
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: systemTime
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              example: encrypted backup
+              type: string
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: Successful restore from backup data.
+        "400":
+          content: {}
+          description: Bad request - restore did not apply.
+        "412":
+          content: {}
+          description: Precondition failed (NitroHSM was not <i>Unprovisioned</i>).
+      x-codegen-request-body-name: body
+components:
+  requestBodies:
+    inline_object_1:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_1'
+      required: true
+    inline_object_9:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_9'
+      required: true
+    inline_object_10:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_10'
+      required: true
+    inline_object_8:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_8'
+      required: true
+    inline_object_7:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_7'
+      required: true
+    inline_object_12:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_12'
+      required: true
+    inline_object_6:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_6'
+      required: true
+    inline_object_11:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_11'
+      required: true
+    inline_object_5:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_5'
+      required: true
+    inline_object_4:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_4'
+      required: true
+    inline_object_3:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_3'
+      required: true
+    inline_object_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_2'
+      required: true
+    inline_object:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object'
+      required: true
+  schemas:
+    Passphrase:
+      minLength: 1
+      type: string
+    ID:
+      maxLength: 128
+      minLength: 1
+      pattern: ^[a-zA-Z0-9]+$
+      type: string
+    UserRole:
+      enum:
+      - Administrator
+      - Operator
+      - Metrics
+      - Backup
+      type: string
+    User:
+      example:
+        realName: Jane User
+        role: Administrator
+        passphrase: My cool passphrase
+      properties:
+        realname:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        passphrase:
+          minLength: 1
+          type: string
+      required:
+      - passphrase
+      - realname
+      - role
+      type: object
+    KeyList:
+      items:
+        properties:
+          key:
+            $ref: '#/components/schemas/ID'
+        required:
+        - key
+        type: object
+      type: array
+    UserList:
+      items:
+        properties:
+          user:
+            $ref: '#/components/schemas/ID'
+        required:
+        - user
+        type: object
+      type: array
+    KeyPurpose:
+      enum:
+      - Sign
+      - Decrypt
+      - SignAndDecrypt
+      type: string
+    KeyAlgorithm:
+      enum:
+      - RSA
+      - ED25519
+      type: string
+    PrivateKey:
+      example:
+        purpose: Sign
+        algorithm: RSA
+        key:
+          primeP: frtz7u89gft89uz
+          primeQ: FhJQl11CiY0ifRHXeAqFh4rdSl6
+          publicExponent: w367rg90jhj0asdf98gz
+      properties:
+        purpose:
+          $ref: '#/components/schemas/KeyPurpose'
+        algorithm:
+          $ref: '#/components/schemas/KeyAlgorithm'
+        key:
+          $ref: '#/components/schemas/PrivateKey_key'
+      required:
+      - algorithm
+      - key
+      - purpose
+      type: object
+    PublicKey:
+      example:
+        operations: 0
+        key:
+          publicExponent: publicExponent
+          data: data
+          modulus: modulus
+      properties:
+        purpose:
+          $ref: '#/components/schemas/KeyPurpose'
+        algorithm:
+          $ref: '#/components/schemas/KeyAlgorithm'
+        key:
+          $ref: '#/components/schemas/PublicKey_key'
+        operations:
+          type: integer
+      required:
+      - algorithm
+      - key
+      - operations
+      - purpose
+      type: object
+    DistinguishedName:
+      properties:
+        countryName:
+          type: string
+        stateOrProvinceName:
+          type: string
+        localityName:
+          type: string
+        organizationName:
+          type: string
+        organizationalUnitName:
+          type: string
+        commonName:
+          type: string
+        emailAddress:
+          type: string
+      required:
+      - commonName
+      - countryName
+      - emailAddress
+      - localityName
+      - organizationName
+      - organizationalUnitName
+      - stateOrProvinceName
+      type: object
+    SystemInformation:
+      example:
+        product: product
+        vendor: vendor
+        version: version
+      properties:
+        vendor:
+          type: string
+        product:
+          type: string
+        version:
+          type: string
+      required:
+      - product
+      - vendor
+      - version
+      type: object
+    inline_object:
+      example:
+        unlockPassphrase: UnlockPassphrase
+        adminPassphrase: Administrator
+        systemTime: 2018-10-30T11:20:50Z
+      properties:
+        unlockPassphrase:
+          minLength: 1
+          type: string
+        adminPassphrase:
+          minLength: 1
+          type: string
+        systemTime:
+          type: string
+      required:
+      - adminPassphrase
+      - systemTime
+      - unlockPassphrase
+      type: object
+    inline_object_1:
+      example:
+        passphrase: UnlockPassphrase
+      properties:
+        passphrase:
+          minLength: 1
+          type: string
+      required:
+      - passphrase
+      type: object
+    inline_object_2:
+      example:
+        length: 5
+      properties:
+        length:
+          maximum: 1024
+          minimum: 1
+          type: integer
+      required:
+      - length
+      type: object
+    inline_response_200:
+      example:
+        random: VGhlIHE=
+      properties:
+        random:
+          type: string
+      required:
+      - random
+      type: object
+    inline_object_3:
+      example:
+        purpose: Sign
+        algorithm: RSA
+        length: 2048
+        id: myKey2
+      properties:
+        purpose:
+          $ref: '#/components/schemas/KeyPurpose'
+        algorithm:
+          $ref: '#/components/schemas/KeyAlgorithm'
+        length:
+          type: string
+        id:
+          maxLength: 128
+          minLength: 1
+          pattern: ^[a-zA-Z0-9]+$
+          type: string
+      required:
+      - algorithm
+      - purpose
+      type: object
+    inline_object_4:
+      example:
+        mode: RAW
+        encrypted: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
+      properties:
+        mode:
+          enum:
+          - RAW
+          - PKCS1
+          - OAEP_MD5
+          - OAEP_SHA1
+          - OAEP_SHA224
+          - OAEP_SHA256
+          - OAEP_SHA384
+          - OAEP_SHA512
+          type: string
+        encrypted:
+          type: string
+      required:
+      - encrypted
+      - mode
+      type: object
+    inline_response_200_1:
+      example:
+        decrypted: IBCS8Sc4NkG/O+kqInz7mq/+Pr+5eJUJ/QpfwMp7pPjLn02U7ggyUrxJfN97MChHGekvGEK4Q1LCJ2juHTgjxJ94/QoEAN0dWZ7x3NxjlUgw7yBm7ylldVvToum3lWOVo3wPm5ozSGxpslrqgz2Rid9+uH5ytV8//CrkMOlqlUoj0DWMYbp/sUbYDGwG8lcfvKua67AxT3X/exSKCAwBuxPBr2p3DCTHepdmZCyexL809ZvBRopOQ41ve9X1jXqKzihrCPeoCwEok06EGYhPt3/EKFoer401S0MYtz5J1BvO1cv7ITDOYUCG4Ze8aXEjtnt6MMRx4jY7IqssYO8GrA==
+      properties:
+        decrypted:
+          type: string
+      required:
+      - decrypted
+      type: object
+    inline_object_5:
+      example:
+        mode: PKCS1
+        message: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
+      properties:
+        mode:
+          enum:
+          - PKCS1
+          - PSS_MD5
+          - PSS_SHA1
+          - PSS_SHA224
+          - PSS_SHA256
+          - PSS_SHA384
+          - PSS_SHA512
+          - ED25519
+          type: string
+        message:
+          type: string
+      required:
+      - message
+      - mode
+      type: object
+    inline_response_200_2:
+      example:
+        signature: n4geMX1g8zcfipfcmn+XjM1ccWZULemAa0cuYoh1aXG9UhbE6f54NMp4NjboLf63SQyieJYjjV8q+/o1rFlkZCtKtHAheds+g90zdjOMmXFlXyBTKMhGOSHuleGz0c99x7Alg19KN9wB3Jj2niwweBOR/F4Qv0mdBUv+oO8uPl6vM1fS4tX/VJoCZkDnZzL8duKRNFT0SNQZ+ryLiqQMG53fEPhTplK/wK0Cco8JAYCMh9cxSzpBoCEO+9woxoBGehAjHuLxs6ed6q08W67leuibxZ8c6Q6upmwDlca/gSw0y4w1VIxxts2PORZdNsTWcr3lojcNgWXJcfAqF9/n4A==
+      properties:
+        signature:
+          type: string
+      required:
+      - signature
+      type: object
+    inline_response_200_3:
+      example:
+        realName: Jane User
+        role: Administrator
+      properties:
+        realName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+      required:
+      - realName
+      - role
+      type: object
+    inline_object_6:
+      example:
+        passphrase: Some cool new passphrase
+      properties:
+        passphrase:
+          minLength: 1
+          type: string
+      required:
+      - passphrase
+      type: object
+    inline_object_7:
+      example:
+        passphrase: This is my unlock passphrase
+      properties:
+        passphrase:
+          minLength: 1
+          type: string
+      required:
+      - passphrase
+      type: object
+    inline_object_8:
+      example:
+        status: "on"
+      properties:
+        status:
+          enum:
+          - "on"
+          - "off"
+          type: string
+      required:
+      - status
+      type: object
+    inline_object_9:
+      example:
+        ipAddress: 10.0.0.23
+        netmask: 255.255.255.0
+        gateway: 10.0.0.1
+      properties:
+        ipAddress:
+          type: string
+        netmask:
+          type: string
+        gateway:
+          type: string
+      required:
+      - gateway
+      - ipAddress
+      - netmask
+      type: object
+    inline_object_10:
+      example:
+        ipAddress: 10.0.0.42
+        port: 514
+        logLevel: info
+      properties:
+        ipAddress:
+          type: string
+        port:
+          type: string
+        logLevel:
+          enum:
+          - debug
+          - info
+          - warn
+          - error
+          type: string
+      required:
+      - ipAddress
+      - logLevel
+      - port
+      type: object
+    inline_object_11:
+      example:
+        passphrase: This is my backup passphrase
+      properties:
+        passphrase:
+          minLength: 1
+          type: string
+      required:
+      - passphrase
+      type: object
+    inline_object_12:
+      example:
+        time: 2018-10-30T11:20:50Z
+      properties:
+        time:
+          type: string
+      required:
+      - time
+      type: object
+    PrivateKey_key:
+      properties:
+        primeP:
+          type: string
+        primeQ:
+          type: string
+        publicExponent:
+          type: string
+        data:
+          type: string
+      type: object
+    PublicKey_key:
+      example:
+        publicExponent: publicExponent
+        data: data
+        modulus: modulus
+      properties:
+        modulus:
+          type: string
+        publicExponent:
+          type: string
+        data:
+          type: string
+      type: object
+x-basePath: '{host}/api/{version}'
+x-original-swagger-version: "2.0"

@@ -20,7 +20,6 @@ import (
 )
 
 type ECDSASignContext struct {
-	dtc         *DTC
 	randSrc     io.Reader
 	keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in signing.
 	pubKey      *ecdsa.PublicKey // Public Key used in signing.
@@ -31,7 +30,6 @@ type ECDSASignContext struct {
 }
 
 type ECDSAVerifyContext struct {
-	dtc         *DTC
 	randSrc     io.Reader
 	keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in sign verification.
 	pubKey      *ecdsa.PublicKey // Public Key used in signing verification.
@@ -65,7 +63,7 @@ func (context *ECDSASignContext) Update(data []byte) error {
 }
 
 func (context *ECDSASignContext) Final() ([]byte, error) {
-	prepared, err := context.mechanism.Prepare(
+	_ /*prepared*/, err := context.mechanism.Prepare(
 		context.randSrc,
 		context.SignatureLength(),
 		context.data,
@@ -75,18 +73,19 @@ func (context *ECDSASignContext) Final() ([]byte, error) {
 	}
 	log.Printf("Signing data with key of curve=%s and id=%s", context.keyMeta.CurveName, context.keyID)
 	// Round 1
-	sig, err := context.dtc.ECDSASignData(context.keyID, context.keyMeta, prepared)
-	if err != nil {
-		return nil, err
-	}
-	if err = verifyECDSA(
-		context.mechanism,
-		context.pubKey,
-		context.data,
-		sig,
-	); err != nil {
-		return nil, err
-	}
+	var sig []byte
+	// XXX sig, err := context.dtc.ECDSASignData(context.keyID, context.keyMeta, prepared)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if err = verifyECDSA(
+	// 	context.mechanism,
+	// 	context.pubKey,
+	// 	context.data,
+	// 	sig,
+	// ); err != nil {
+	// 	return nil, err
+	// }
 	return sig, nil
 }
 

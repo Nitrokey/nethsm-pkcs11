@@ -160,7 +160,6 @@ func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
 	if object, err := token.GetObject(hObject); err != nil {
 		return err
 	} else {
-
 		// Is it secure to allow the server to delete the keys? Suspended by now.
 		attr := object.FindAttribute(AttrTypeKeyHandler) // Key ID
 		if attr != nil {
@@ -169,11 +168,7 @@ func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
 			if privateAttr != nil {
 				isPrivate := C.CK_BBOOL(privateAttr.Value[0]) == C.CK_TRUE
 				if isPrivate {
-					dtc, err := session.GetDTC()
-					if err != nil {
-						return err
-					}
-					err = dtc.RSADeleteKey(keyID)
+					// XXX delete key
 					if err != nil {
 						return err
 					}
@@ -342,19 +337,6 @@ func (session *Session) Logout() error {
 		token.Logout()
 	}
 	return nil
-}
-
-// GetDTC returns DTC struct to session, checking step by step if all the objects necessary to retrieve the struct are defined.
-func (session *Session) GetDTC() (*DTC, error) {
-	if session.Slot == nil {
-		return nil, NewError("Session.GetDTC", "slot null", C.CKR_DEVICE_ERROR)
-	} else if session.Slot.Application == nil {
-		return nil, NewError("Session.GetDTC", "application null in slot", C.CKR_DEVICE_ERROR)
-
-	} else if session.Slot.Application.DTC == nil {
-		return nil, NewError("Session.GetDTC", "dtc null in application", C.CKR_DEVICE_ERROR)
-	}
-	return session.Slot.Application.DTC, nil
 }
 
 // GenerateKeyPair creates a public and a private key, or an error if it fails.
@@ -556,29 +538,22 @@ func (session *Session) SeedRandom(seed []byte) {
 }
 
 func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) (pkAttrs, skAttrs Attributes, err error) {
-	dtc, err := session.GetDTC()
-	if err != nil {
-		return nil, nil, err
-	}
 	keyID := uuid.New().String()
 	curveParams, err := pkTemplate.GetAttributeByType(C.CKA_EC_PARAMS)
 	if err != nil {
 		err = NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("error getting curve: %s", err), C.CKR_TEMPLATE_INCOMPLETE)
 		return
 	}
-	curveName, err := utils.ASN1ToCurveName(curveParams.Value)
+	_ /*curveName*/, err = utils.ASN1ToCurveName(curveParams.Value)
 	if err != nil {
 		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
 	}
-	keyMeta, ecPK, err := dtc.ECDSACreateKey(keyID, curveName)
+	// create key
+	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil, nil)
 	if err != nil {
 		return
 	}
-	pk, err := createECDSAPublicKey(keyID, pkTemplate, ecPK, keyMeta)
-	if err != nil {
-		return
-	}
-	sk, err := createECDSAPrivateKey(keyID, skTemplate, ecPK, keyMeta)
+	sk, err := createECDSAPrivateKey(keyID, skTemplate, nil, nil)
 	if err != nil {
 		return
 	}
@@ -586,10 +561,6 @@ func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) 
 }
 
 func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (pk, sk Attributes, err error) {
-	dtc, err := session.GetDTC()
-	if err != nil {
-		return nil, nil, err
-	}
 	var keyMeta *tcrsa.KeyMeta
 	keyID := uuid.New().String()
 	bitSizeAttr, err := pkTemplate.GetAttributeByType(C.CKA_MODULUS_BITS)
@@ -611,10 +582,7 @@ func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (p
 	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
 	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
 	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
-	keyMeta, err = dtc.RSACreateKey(keyID, int(bitSize), int(exponent))
-	if err != nil {
-		return
-	}
+	// XXX create key
 	pk, err = createRSAPublicKey(keyID, pkTemplate, keyMeta)
 	if err != nil {
 		return

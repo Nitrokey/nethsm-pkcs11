@@ -1,10 +1,9 @@
-.idea
-./dtc
-./config.yml
-dtc.so
+p11nethsm
+p11nethsm.so
 db.sqlite3
-dtc.h
+p11nethsm.h
 /tests/pkcs11-test/config*
 /tests/pkcs11-test/dtc-config.yaml
 /tests/dns-tools/dtc/config/
 /tests/dns-tools/dtcnode/config/
+*~

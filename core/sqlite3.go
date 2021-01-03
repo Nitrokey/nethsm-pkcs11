@@ -27,7 +27,7 @@ type Sqlite3DB struct {
 // Returns the defined sqlite3 configuration.
 func GetSqlite3Config() (*config.Sqlite3Config, error) {
 	var conf config.Sqlite3Config
-	err := viper.UnmarshalKey("dtc.sqlite3", &conf)
+	err := viper.UnmarshalKey("sqlite3", &conf)
 	if err != nil {
 		return nil, err
 	}
@@ -116,11 +116,10 @@ func (db *Sqlite3DB) GetToken(label string) (token *Token, err error) {
 	if err != nil {
 		return
 	}
-	token = &Token{
-		Label:   label,
-		Pin:     pin,
-		SoPin:   soPin,
-		Objects: make(CryptoObjects, 0),
+
+	token, err = NewToken(label, pin, soPin)
+	if err != nil {
+		return
 	}
 
 	attrsStmt, err := db.Prepare(GetCryptoObjectAttrsQuery)
