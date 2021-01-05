@@ -566,7 +566,7 @@ func C_SetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 
 //export C_GetAttributeValue
 func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDLE, pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) C.CK_RV {
-	log.Printf("Called: C_GetAttributeValue\n")
+	log.Printf("Called: C_GetAttributeValue, session:%v, object:%v\n", hSession, hObject)
 	if App == nil {
 		return C.CKR_CRYPTOKI_NOT_INITIALIZED
 	}
@@ -578,6 +578,7 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 	if err != nil {
 		return ErrorToRV(err)
 	}
+	log.Printf("Obj Attr: %+v", object.Attributes)
 	if err := object.CopyAttributes(pTemplate, ulCount); err != nil {
 		return ErrorToRV(err)
 	}

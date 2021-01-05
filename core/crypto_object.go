@@ -6,7 +6,8 @@ package core
 import "C"
 import (
 	"bytes"
-	"fmt"
+	"log"
+	"math"
 	"unsafe"
 )
 
@@ -30,12 +31,12 @@ type CryptoObjects []*CryptoObject
 
 // Transforms a C version of a cryptoobject in a CryptoObject Golang struct.
 func CToCryptoObject(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (*CryptoObject, error) {
-	attrSlice, err := CToAttributes(pAttributes, ulCount)
+	attrMap, err := CToAttributes(pAttributes, ulCount)
 	if err != nil {
 		return nil, err
 	}
 	var coType CryptoObjectType
-	tokenAttr, ok := attrSlice[C.CKA_TOKEN]
+	tokenAttr, ok := attrMap[C.CKA_TOKEN]
 	if !ok {
 		return nil, NewError("CToCryptoObject", "Token attribute not found", C.CKR_ATTRIBUTE_VALUE_INVALID)
 	}
@@ -47,7 +48,7 @@ func CToCryptoObject(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (*Crypt
 	}
 	object := &CryptoObject{
 		Type:       coType,
-		Attributes: attrSlice,
+		Attributes: attrMap,
 	}
 	return object, nil
 }
@@ -108,7 +109,11 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	if pTemplate == nil {
 		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
-	templateSlice := (*[1 << 30]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
+	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
+
+	log.Printf("templateSlice:%+v", templateSlice)
+
+	missingAttr := false
 
 	for i := 0; i < len(templateSlice); i++ {
 		src := object.FindAttribute(templateSlice[i]._type)
@@ -118,10 +123,13 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 				return err
 			}
 		} else {
-			return NewError("CryptoObject.CopyAttributes", fmt.Sprintf(
-				"Attribute number %d does not exist: %d", i, templateSlice[i]._type,
-			), C.CKR_ARGUMENTS_BAD)
+			missingAttr = true
+			log.Printf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
+			templateSlice[i].ulValueLen = C.CK_UNAVAILABLE_INFORMATION
 		}
+	}
+	if missingAttr {
+		return NewError("CopyAttributes", "Some attributes were missing", C.CKR_ATTRIBUTE_TYPE_INVALID)
 	}
 	return nil
 }

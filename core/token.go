@@ -7,7 +7,9 @@ package core
 */
 import "C"
 import (
+	"errors"
 	"fmt"
+	"p11nethsm/openapi"
 	"sync"
 	"time"
 	"unsafe"
@@ -23,13 +25,21 @@ const (
 	Public
 )
 
+var nextObjectHandle = func() func() C.CK_OBJECT_HANDLE {
+	var lastObjectHandle = C.CK_OBJECT_HANDLE(0)
+	return func() C.CK_OBJECT_HANDLE {
+		lastObjectHandle++
+		return lastObjectHandle
+	}
+}()
+
 // A token of the PKCS11 device.
 type Token struct {
 	sync.Mutex
 	Label         string
 	Pin           string
 	SoPin         string
-	Objects       CryptoObjects
+	_objects      CryptoObjects
 	tokenFlags    uint64
 	securityLevel SecurityLevel
 	loggedIn      bool
@@ -59,7 +69,79 @@ func (token *Token) Equals(token2 *Token) bool {
 	return token.Label == token2.Label &&
 		token.Pin == token2.Pin &&
 		token.SoPin == token2.SoPin &&
-		token.Objects.Equals(token2.Objects)
+		token._objects.Equals(token2._objects)
+}
+
+func (token *Token) GetObjects() (objects CryptoObjects, err error) {
+	if token._objects != nil {
+		objects = token._objects
+		return
+	}
+	keys, r, e := App.Service.KeysGet(token.slot.ctx).Execute()
+	if e != nil {
+		err = NewAPIError("token.GetObjects", "KeysGet", r, err)
+		return
+	}
+	for _, k := range keys {
+		keyID, ok := k["key"].(string)
+		if !ok {
+			err = NewAPIError("token.GetObjects", "KeysGet", r, errors.New("Invalid JSON response"))
+			return
+		}
+		key, r, e := App.Service.KeysKeyIDGet(token.slot.ctx, keyID).Execute()
+		if e != nil {
+			err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
+			return
+		}
+		object := CryptoObject{}
+		object.Type = TokenObject
+		object.Handle = nextObjectHandle()
+		object.Attributes = Attributes{}
+		object.Attributes.Set(
+			&Attribute{C.CKA_LABEL, []byte(keyID)},
+			&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
+			&Attribute{C.CKA_ID, nil},
+			&Attribute{C.CKA_SUBJECT, nil},
+			&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
+			&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_PRIVATE, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_TOKEN, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
+		)
+		switch key.Algorithm {
+		case openapi.RSA:
+			object.Attributes.Set(
+				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
+				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
+				&Attribute{C.CKA_DECRYPT, []byte{C.CK_TRUE}},
+				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
+				&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
+			)
+		case openapi.ED25519:
+			object.Attributes.Set(
+				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
+				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_DECRYPT, boolToArr(C.CK_FALSE)},
+				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+				&Attribute{C.CKA_EC_POINT, []byte(key.Key.GetData())},
+			)
+		}
+		token.AddObject(&object)
+	}
+	objects = token._objects
+	return
 }
 
 func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
@@ -211,7 +293,7 @@ func (token *Token) Logout() {
 func (token *Token) AddObject(object *CryptoObject) {
 	token.Lock()
 	defer token.Unlock()
-	token.Objects = append(token.Objects, object)
+	token._objects = append(token._objects, object)
 }
 
 // Returns the label of the token (should remove. Label is a public property!
@@ -223,7 +305,7 @@ func (token *Token) GetLabel() string {
 func (token *Token) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, error) {
 	token.Lock()
 	defer token.Unlock()
-	for _, object := range token.Objects {
+	for _, object := range token._objects {
 		if object.Handle == handle {
 			return object, nil
 		}
@@ -236,7 +318,7 @@ func (token *Token) DeleteObject(handle C.CK_OBJECT_HANDLE) error {
 	token.Lock()
 	defer token.Unlock()
 	objPos := -1
-	for i, object := range token.Objects {
+	for i, object := range token._objects {
 		if object.Handle == handle {
 			objPos = i
 			break
@@ -245,7 +327,7 @@ func (token *Token) DeleteObject(handle C.CK_OBJECT_HANDLE) error {
 	if objPos == -1 {
 		return NewError("Token.DeleteObject", fmt.Sprintf("object not found with id %v", handle), C.CKR_OBJECT_HANDLE_INVALID)
 	}
-	token.Objects = append(token.Objects[:objPos], token.Objects[objPos+1:]...)
+	token._objects = append(token._objects[:objPos], token._objects[objPos+1:]...)
 	return nil
 }
 

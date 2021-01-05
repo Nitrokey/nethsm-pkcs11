@@ -86,7 +86,7 @@ func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
 
 	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
 	if err != nil {
-		return nil, NewError("Session.CreateObject", "is_token attr not defined", C.CKR_ARGUMENTS_BAD)
+		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
 	}
 
 	isToken := isTokenAttr.Value[0] != 0
@@ -196,13 +196,15 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 	}
 
 	if len(attrs) == 0 {
-		session.foundObjects = make([]C.CK_OBJECT_HANDLE, len(token.Objects))
-		for i, object := range token.Objects {
+		objects, _ := token.GetObjects()
+		session.foundObjects = make([]C.CK_OBJECT_HANDLE, len(objects))
+		for i, object := range objects {
 			session.foundObjects[i] = object.Handle
 		}
 	} else {
-		session.foundObjects = make([]C.CK_OBJECT_HANDLE, 0)
-		for _, object := range token.Objects {
+		objects, _ := token.GetObjects()
+		session.foundObjects = nil
+		for _, object := range objects {
 			if object.Match(attrs) {
 				session.foundObjects = append(session.foundObjects, object.Handle)
 			}

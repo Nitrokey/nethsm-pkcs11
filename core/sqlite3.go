@@ -83,7 +83,8 @@ func (db *Sqlite3DB) SaveToken(token *Token) error {
 		return err
 	}
 	// Saving the CryptoObjects
-	for _, object := range token.Objects {
+	objects, _ := token.GetObjects()
+	for _, object := range objects {
 		if object.Handle == 0 {
 			actualHandle, err := db.GetMaxHandle()
 			if err != nil {
@@ -156,7 +157,7 @@ func (db *Sqlite3DB) GetToken(label string) (token *Token, err error) {
 		}
 	}
 	for _, object := range objects {
-		token.Objects = append(token.Objects, object)
+		token.AddObject(object)
 	}
 	return
 }

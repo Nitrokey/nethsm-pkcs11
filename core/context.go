@@ -142,3 +142,7 @@ func ulongToArr(n C.ulong) []byte {
 	binary.LittleEndian.PutUint64(arr, uint64(n))
 	return arr
 }
+
+func boolToArr(n C.CK_BBOOL) []byte {
+	return []byte{byte(n)}
+}

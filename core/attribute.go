@@ -8,6 +8,7 @@ package core
 import "C"
 import (
 	"bytes"
+	"fmt"
 	"unsafe"
 )
 
@@ -93,7 +94,7 @@ func (attribute *Attribute) ToC(cDst C.CK_ATTRIBUTE_PTR) error {
 		C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(cValue), cValueLen)
 		C.free(unsafe.Pointer(cValue))
 	} else {
-		return NewError("Attribute.ToC", "Buffer too small", C.CKR_BUFFER_TOO_SMALL)
+		return NewError("Attribute.ToC", fmt.Sprintf("Buffer too small: %d, need %d", cDst.ulValueLen, len(attribute.Value)), C.CKR_BUFFER_TOO_SMALL)
 	}
 	return nil
 }
