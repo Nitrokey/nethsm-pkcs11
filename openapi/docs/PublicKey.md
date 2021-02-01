@@ -4,16 +4,16 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Purpose** | [**KeyPurpose**](KeyPurpose.md) |  | 
+**Mechanisms** | [**[]KeyMechanism**](KeyMechanism.md) |  | 
 **Algorithm** | [**KeyAlgorithm**](KeyAlgorithm.md) |  | 
-**Key** | [**PublicKeyKey**](PublicKey_key.md) |  | 
+**Key** | [**KeyPublicData**](KeyPublicData.md) |  | 
 **Operations** | **int32** |  | 
 
 ## Methods
 
 ### NewPublicKey
 
-`func NewPublicKey(purpose KeyPurpose, algorithm KeyAlgorithm, key PublicKeyKey, operations int32, ) *PublicKey`
+`func NewPublicKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPublicData, operations int32, ) *PublicKey`
 
 NewPublicKey instantiates a new PublicKey object
 This constructor will assign default values to properties that have it defined,
@@ -28,24 +28,24 @@ NewPublicKeyWithDefaults instantiates a new PublicKey object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetPurpose
+### GetMechanisms
 
-`func (o *PublicKey) GetPurpose() KeyPurpose`
+`func (o *PublicKey) GetMechanisms() []KeyMechanism`
 
-GetPurpose returns the Purpose field if non-nil, zero value otherwise.
+GetMechanisms returns the Mechanisms field if non-nil, zero value otherwise.
 
-### GetPurposeOk
+### GetMechanismsOk
 
-`func (o *PublicKey) GetPurposeOk() (*KeyPurpose, bool)`
+`func (o *PublicKey) GetMechanismsOk() (*[]KeyMechanism, bool)`
 
-GetPurposeOk returns a tuple with the Purpose field if it's non-nil, zero value otherwise
+GetMechanismsOk returns a tuple with the Mechanisms field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetPurpose
+### SetMechanisms
 
-`func (o *PublicKey) SetPurpose(v KeyPurpose)`
+`func (o *PublicKey) SetMechanisms(v []KeyMechanism)`
 
-SetPurpose sets Purpose field to given value.
+SetMechanisms sets Mechanisms field to given value.
 
 
 ### GetAlgorithm
@@ -70,20 +70,20 @@ SetAlgorithm sets Algorithm field to given value.
 
 ### GetKey
 
-`func (o *PublicKey) GetKey() PublicKeyKey`
+`func (o *PublicKey) GetKey() KeyPublicData`
 
 GetKey returns the Key field if non-nil, zero value otherwise.
 
 ### GetKeyOk
 
-`func (o *PublicKey) GetKeyOk() (*PublicKeyKey, bool)`
+`func (o *PublicKey) GetKeyOk() (*KeyPublicData, bool)`
 
 GetKeyOk returns a tuple with the Key field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetKey
 
-`func (o *PublicKey) SetKey(v PublicKeyKey)`
+`func (o *PublicKey) SetKey(v KeyPublicData)`
 
 SetKey sets Key field to given value.
 

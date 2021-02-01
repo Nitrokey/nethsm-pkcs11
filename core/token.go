@@ -7,7 +7,6 @@ package core
 */
 import "C"
 import (
-	"errors"
 	"fmt"
 	"p11nethsm/openapi"
 	"sync"
@@ -79,18 +78,14 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 	}
 	keys, r, e := App.Service.KeysGet(token.slot.ctx).Execute()
 	if e != nil {
-		err = NewAPIError("token.GetObjects", "KeysGet", r, err)
+		err = NewAPIError("token.GetObjects", "KeysGet", r, e)
 		return
 	}
 	for _, k := range keys {
-		keyID, ok := k["key"].(string)
-		if !ok {
-			err = NewAPIError("token.GetObjects", "KeysGet", r, errors.New("Invalid JSON response"))
-			return
-		}
+		keyID := k.GetKey()
 		key, r, e := App.Service.KeysKeyIDGet(token.slot.ctx, keyID).Execute()
 		if e != nil {
-			err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
+			err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, e)
 			return
 		}
 		object := CryptoObject{}
@@ -175,9 +170,9 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	str2Buf(serialNumber, &info.serialNumber)
 
 	var hwVerMaj, hwVerMin, fwVerMaj, fwVerMin C.uchar
-	s, _ := apiSystemInfo["hardwareVersion"].(string)
+	s := apiSystemInfo.HardwareVersion
 	fmt.Sscanf(s, "%d.%d", &hwVerMaj, &hwVerMin)
-	s, _ = apiSystemInfo["firmwareVersion"].(string)
+	s = apiSystemInfo.FirmwareVersion
 	fmt.Sscanf(s, "%d.%d", &fwVerMaj, &fwVerMin)
 
 	info.flags = C.CK_ULONG(token.tokenFlags)

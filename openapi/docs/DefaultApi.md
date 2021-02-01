@@ -1,6 +1,6 @@
 # \DefaultApi
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *https://nethsmdemo.nitrokey.com/api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -79,7 +79,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject11("Passphrase_example") // InlineObject11 | 
+    body := *openapiclient.NewBackupPassphraseConfig("Passphrase_example") // BackupPassphraseConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -102,7 +102,7 @@ Other parameters are passed through a pointer to a apiConfigBackupPassphrasePutR
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject11**](InlineObject11.md) |  | 
+ **body** | [**BackupPassphraseConfig**](BackupPassphraseConfig.md) |  | 
 
 ### Return type
 
@@ -110,7 +110,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -124,7 +124,7 @@ No authorization required
 
 ## ConfigLoggingGet
 
-> map[string]interface{} ConfigLoggingGet(ctx).Execute()
+> LoggingConfig ConfigLoggingGet(ctx).Execute()
 
 
 
@@ -151,7 +151,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigLoggingGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigLoggingGet`: map[string]interface{}
+    // response from `ConfigLoggingGet`: LoggingConfig
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigLoggingGet`: %v\n", resp)
 }
 ```
@@ -167,11 +167,11 @@ Other parameters are passed through a pointer to a apiConfigLoggingGetRequest st
 
 ### Return type
 
-**map[string]interface{}**
+[**LoggingConfig**](LoggingConfig.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -204,7 +204,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject10("IpAddress_example", "Port_example", "LogLevel_example") // InlineObject10 | 
+    body := *openapiclient.NewLoggingConfig("IpAddress_example", int32(123), "LogLevel_example") // LoggingConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -227,7 +227,7 @@ Other parameters are passed through a pointer to a apiConfigLoggingPutRequest st
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject10**](InlineObject10.md) |  | 
+ **body** | [**LoggingConfig**](LoggingConfig.md) |  | 
 
 ### Return type
 
@@ -235,7 +235,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -249,7 +249,7 @@ No authorization required
 
 ## ConfigNetworkGet
 
-> map[string]interface{} ConfigNetworkGet(ctx).Execute()
+> NetworkConfig ConfigNetworkGet(ctx).Execute()
 
 
 
@@ -276,7 +276,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigNetworkGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigNetworkGet`: map[string]interface{}
+    // response from `ConfigNetworkGet`: NetworkConfig
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigNetworkGet`: %v\n", resp)
 }
 ```
@@ -292,11 +292,11 @@ Other parameters are passed through a pointer to a apiConfigNetworkGetRequest st
 
 ### Return type
 
-**map[string]interface{}**
+[**NetworkConfig**](NetworkConfig.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -329,7 +329,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject9("IpAddress_example", "Netmask_example", "Gateway_example") // InlineObject9 | 
+    body := *openapiclient.NewNetworkConfig("IpAddress_example", "Netmask_example", "Gateway_example") // NetworkConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -352,7 +352,7 @@ Other parameters are passed through a pointer to a apiConfigNetworkPutRequest st
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject9**](InlineObject9.md) |  | 
+ **body** | [**NetworkConfig**](NetworkConfig.md) |  | 
 
 ### Return type
 
@@ -360,7 +360,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -374,7 +374,7 @@ No authorization required
 
 ## ConfigTimeGet
 
-> map[string]interface{} ConfigTimeGet(ctx).Execute()
+> TimeConfig ConfigTimeGet(ctx).Execute()
 
 
 
@@ -401,7 +401,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigTimeGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigTimeGet`: map[string]interface{}
+    // response from `ConfigTimeGet`: TimeConfig
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigTimeGet`: %v\n", resp)
 }
 ```
@@ -417,11 +417,11 @@ Other parameters are passed through a pointer to a apiConfigTimeGetRequest struc
 
 ### Return type
 
-**map[string]interface{}**
+[**TimeConfig**](TimeConfig.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -450,11 +450,12 @@ import (
     "context"
     "fmt"
     "os"
+    "time"
     openapiclient "./openapi"
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject12("Time_example") // InlineObject12 | 
+    body := *openapiclient.NewTimeConfig(time.Now()) // TimeConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -477,7 +478,7 @@ Other parameters are passed through a pointer to a apiConfigTimePutRequest struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject12**](InlineObject12.md) |  | 
+ **body** | [**TimeConfig**](TimeConfig.md) |  | 
 
 ### Return type
 
@@ -485,7 +486,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -546,12 +547,12 @@ Other parameters are passed through a pointer to a apiConfigTlsCertPemGetRequest
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/x-pem-file
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -579,7 +580,7 @@ import (
 )
 
 func main() {
-    body := "body_example" // string | 
+    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -602,7 +603,7 @@ Other parameters are passed through a pointer to a apiConfigTlsCertPemPutRequest
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **string** |  | 
+ **body** | **map[string]interface{}** |  | 
 
 ### Return type
 
@@ -610,11 +611,11 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
-- **Content-Type**: application/x-pem-file
+- **Content-Type**: application/json
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -643,7 +644,7 @@ import (
 )
 
 func main() {
-    body := "body_example" // string | 
+    body := *openapiclient.NewDistinguishedName("CountryName_example", "StateOrProvinceName_example", "LocalityName_example", "OrganizationName_example", "OrganizationalUnitName_example", "CommonName_example", "EmailAddress_example") // DistinguishedName |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -668,7 +669,7 @@ Other parameters are passed through a pointer to a apiConfigTlsCsrPemPutRequest 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **string** |  | 
+ **body** | [**DistinguishedName**](DistinguishedName.md) |  | 
 
 ### Return type
 
@@ -676,12 +677,12 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: application/x-pem-file
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -737,12 +738,12 @@ Other parameters are passed through a pointer to a apiConfigTlsPublicPemGetReque
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/x-pem-file
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -751,7 +752,7 @@ No authorization required
 
 ## ConfigUnattendedBootGet
 
-> map[string]interface{} ConfigUnattendedBootGet(ctx).Execute()
+> UnattendedBootConfig ConfigUnattendedBootGet(ctx).Execute()
 
 
 
@@ -778,7 +779,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigUnattendedBootGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigUnattendedBootGet`: map[string]interface{}
+    // response from `ConfigUnattendedBootGet`: UnattendedBootConfig
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigUnattendedBootGet`: %v\n", resp)
 }
 ```
@@ -794,11 +795,11 @@ Other parameters are passed through a pointer to a apiConfigUnattendedBootGetReq
 
 ### Return type
 
-**map[string]interface{}**
+[**UnattendedBootConfig**](UnattendedBootConfig.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -831,7 +832,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject8("Status_example") // InlineObject8 | 
+    body := *openapiclient.NewUnattendedBootConfig("Status_example") // UnattendedBootConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -854,7 +855,7 @@ Other parameters are passed through a pointer to a apiConfigUnattendedBootPutReq
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject8**](InlineObject8.md) |  | 
+ **body** | [**UnattendedBootConfig**](UnattendedBootConfig.md) |  | 
 
 ### Return type
 
@@ -862,7 +863,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -895,7 +896,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject7("Passphrase_example") // InlineObject7 | 
+    body := *openapiclient.NewUnlockPassphraseConfig("Passphrase_example") // UnlockPassphraseConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -918,7 +919,7 @@ Other parameters are passed through a pointer to a apiConfigUnlockPassphrasePutR
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject7**](InlineObject7.md) |  | 
+ **body** | [**UnlockPassphraseConfig**](UnlockPassphraseConfig.md) |  | 
 
 ### Return type
 
@@ -926,7 +927,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1058,7 +1059,7 @@ No authorization required
 
 ## HealthStateGet
 
-> map[string]interface{} HealthStateGet(ctx).Execute()
+> HealthStateData HealthStateGet(ctx).Execute()
 
 
 
@@ -1085,7 +1086,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.HealthStateGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `HealthStateGet`: map[string]interface{}
+    // response from `HealthStateGet`: HealthStateData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.HealthStateGet`: %v\n", resp)
 }
 ```
@@ -1101,7 +1102,7 @@ Other parameters are passed through a pointer to a apiHealthStateGetRequest stru
 
 ### Return type
 
-**map[string]interface{}**
+[**HealthStateData**](HealthStateData.md)
 
 ### Authorization
 
@@ -1119,7 +1120,7 @@ No authorization required
 
 ## InfoGet
 
-> SystemInformation InfoGet(ctx).Execute()
+> InfoData InfoGet(ctx).Execute()
 
 
 
@@ -1146,7 +1147,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.InfoGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `InfoGet`: SystemInformation
+    // response from `InfoGet`: InfoData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.InfoGet`: %v\n", resp)
 }
 ```
@@ -1162,7 +1163,7 @@ Other parameters are passed through a pointer to a apiInfoGetRequest struct via 
 
 ### Return type
 
-[**SystemInformation**](SystemInformation.md)
+[**InfoData**](InfoData.md)
 
 ### Authorization
 
@@ -1199,7 +1200,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject3(openapiclient.KeyPurpose("Sign"), openapiclient.KeyAlgorithm("RSA")) // InlineObject3 | 
+    body := *openapiclient.NewKeyGenerateRequestData([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA")) // KeyGenerateRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1222,7 +1223,7 @@ Other parameters are passed through a pointer to a apiKeysGeneratePostRequest st
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject3**](InlineObject3.md) |  | 
+ **body** | [**KeyGenerateRequestData**](KeyGenerateRequestData.md) |  | 
 
 ### Return type
 
@@ -1230,7 +1231,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1244,7 +1245,7 @@ No authorization required
 
 ## KeysGet
 
-> []map[string]interface{} KeysGet(ctx).Execute()
+> []KeyItem KeysGet(ctx).Execute()
 
 
 
@@ -1271,7 +1272,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysGet`: []map[string]interface{}
+    // response from `KeysGet`: []KeyItem
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysGet`: %v\n", resp)
 }
 ```
@@ -1287,11 +1288,11 @@ Other parameters are passed through a pointer to a apiKeysGetRequest struct via 
 
 ### Return type
 
-**[]map[string]interface{}**
+[**[]KeyItem**](KeyItem.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1359,7 +1360,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1429,12 +1430,12 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/x-pem-file, application/x-x509-ca-cert, application/pgp-keys
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -1463,7 +1464,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := map[string]interface{}(Object) // map[string]interface{} | 
+    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1499,11 +1500,11 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
-- **Content-Type**: application/x-pem-file, application/x-x509-ca-cert, application/pgp-keys
+- **Content-Type**: application/json
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -1533,7 +1534,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := "body_example" // string | 
+    body := *openapiclient.NewDistinguishedName("CountryName_example", "StateOrProvinceName_example", "LocalityName_example", "OrganizationName_example", "OrganizationalUnitName_example", "CommonName_example", "EmailAddress_example") // DistinguishedName |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1563,7 +1564,7 @@ Other parameters are passed through a pointer to a apiKeysKeyIDCsrPemPostRequest
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | **string** |  | 
+ **body** | [**DistinguishedName**](DistinguishedName.md) |  | 
 
 ### Return type
 
@@ -1571,12 +1572,12 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: application/x-pem-file
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -1585,7 +1586,7 @@ No authorization required
 
 ## KeysKeyIDDecryptPost
 
-> InlineResponse2001 KeysKeyIDDecryptPost(ctx, keyID).Body(body).Execute()
+> DecryptData KeysKeyIDDecryptPost(ctx, keyID).Body(body).Execute()
 
 
 
@@ -1605,7 +1606,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewInlineObject4("Mode_example", "Encrypted_example") // InlineObject4 | 
+    body := *openapiclient.NewDecryptRequestData("Mode_example", "Encrypted_example") // DecryptRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1614,7 +1615,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysKeyIDDecryptPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysKeyIDDecryptPost`: InlineResponse2001
+    // response from `KeysKeyIDDecryptPost`: DecryptData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysKeyIDDecryptPost`: %v\n", resp)
 }
 ```
@@ -1635,15 +1636,15 @@ Other parameters are passed through a pointer to a apiKeysKeyIDDecryptPostReques
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | [**InlineObject4**](InlineObject4.md) |  | 
+ **body** | [**DecryptRequestData**](DecryptRequestData.md) |  | 
 
 ### Return type
 
-[**InlineResponse2001**](inline_response_200_1.md)
+[**DecryptData**](DecryptData.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1711,7 +1712,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1781,7 +1782,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1851,12 +1852,12 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/x-pem-file
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -1885,7 +1886,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewPrivateKey(openapiclient.KeyPurpose("Sign"), openapiclient.KeyAlgorithm("RSA"), *openapiclient.NewPrivateKeyKey()) // PrivateKey | 
+    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1921,7 +1922,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -1935,7 +1936,7 @@ No authorization required
 
 ## KeysKeyIDSignPost
 
-> InlineResponse2002 KeysKeyIDSignPost(ctx, keyID).Body(body).Execute()
+> SignData KeysKeyIDSignPost(ctx, keyID).Body(body).Execute()
 
 
 
@@ -1955,7 +1956,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewInlineObject5("Mode_example", "Message_example") // InlineObject5 | 
+    body := *openapiclient.NewSignRequestData("Mode_example", "Message_example") // SignRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1964,7 +1965,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysKeyIDSignPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysKeyIDSignPost`: InlineResponse2002
+    // response from `KeysKeyIDSignPost`: SignData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysKeyIDSignPost`: %v\n", resp)
 }
 ```
@@ -1985,15 +1986,15 @@ Other parameters are passed through a pointer to a apiKeysKeyIDSignPostRequest s
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | [**InlineObject5**](InlineObject5.md) |  | 
+ **body** | [**SignRequestData**](SignRequestData.md) |  | 
 
 ### Return type
 
-[**InlineResponse2002**](inline_response_200_2.md)
+[**SignData**](SignData.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2007,7 +2008,7 @@ No authorization required
 
 ## KeysPost
 
-> map[string]interface{} KeysPost(ctx).Purpose(purpose).Body(body).Execute()
+> KeyItem KeysPost(ctx).Mechanisms(mechanisms).Body(body).Execute()
 
 
 
@@ -2026,17 +2027,17 @@ import (
 )
 
 func main() {
-    purpose := "purpose_example" // string | 
-    body := map[string]interface{}(Object) // map[string]interface{} | 
+    mechanisms := []openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")} // []KeyMechanism |  (optional)
+    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
-    resp, r, err := api_client.DefaultApi.KeysPost(context.Background()).Purpose(purpose).Body(body).Execute()
+    resp, r, err := api_client.DefaultApi.KeysPost(context.Background()).Mechanisms(mechanisms).Body(body).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysPost`: map[string]interface{}
+    // response from `KeysPost`: KeyItem
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysPost`: %v\n", resp)
 }
 ```
@@ -2052,20 +2053,20 @@ Other parameters are passed through a pointer to a apiKeysPostRequest struct via
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **purpose** | **string** |  | 
- **body** | **map[string]interface{}** |  | 
+ **mechanisms** | [**[]KeyMechanism**](KeyMechanism.md) |  | 
+ **body** | [**PrivateKey**](PrivateKey.md) |  | 
 
 ### Return type
 
-**map[string]interface{}**
+[**KeyItem**](KeyItem.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
-- **Content-Type**: application/x-pem-file
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -2120,7 +2121,7 @@ Other parameters are passed through a pointer to a apiLockPostRequest struct via
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2134,7 +2135,7 @@ No authorization required
 
 ## MetricsGet
 
-> map[string]interface{} MetricsGet(ctx).Execute()
+> string MetricsGet(ctx).Execute()
 
 
 
@@ -2161,7 +2162,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.MetricsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `MetricsGet`: map[string]interface{}
+    // response from `MetricsGet`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.MetricsGet`: %v\n", resp)
 }
 ```
@@ -2177,11 +2178,11 @@ Other parameters are passed through a pointer to a apiMetricsGetRequest struct v
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2210,11 +2211,12 @@ import (
     "context"
     "fmt"
     "os"
+    "time"
     openapiclient "./openapi"
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject("UnlockPassphrase_example", "AdminPassphrase_example", "SystemTime_example") // InlineObject | 
+    body := *openapiclient.NewProvisionRequestData("UnlockPassphrase_example", "AdminPassphrase_example", time.Now()) // ProvisionRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2237,7 +2239,7 @@ Other parameters are passed through a pointer to a apiProvisionPostRequest struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject**](InlineObject.md) |  | 
+ **body** | [**ProvisionRequestData**](ProvisionRequestData.md) |  | 
 
 ### Return type
 
@@ -2259,7 +2261,7 @@ No authorization required
 
 ## RandomPost
 
-> InlineResponse200 RandomPost(ctx).Body(body).Execute()
+> RandomData RandomPost(ctx).Body(body).Execute()
 
 
 
@@ -2278,7 +2280,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject2(int32(123)) // InlineObject2 | 
+    body := *openapiclient.NewRandomRequestData(int32(123)) // RandomRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2287,7 +2289,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.RandomPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `RandomPost`: InlineResponse200
+    // response from `RandomPost`: RandomData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.RandomPost`: %v\n", resp)
 }
 ```
@@ -2303,15 +2305,15 @@ Other parameters are passed through a pointer to a apiRandomPostRequest struct v
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject2**](InlineObject2.md) |  | 
+ **body** | [**RandomRequestData**](RandomRequestData.md) |  | 
 
 ### Return type
 
-[**InlineResponse200**](inline_response_200.md)
+[**RandomData**](RandomData.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2372,12 +2374,12 @@ Other parameters are passed through a pointer to a apiSystemBackupPostRequest st
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/octet-stream
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -2431,7 +2433,7 @@ Other parameters are passed through a pointer to a apiSystemCancelUpdatePostRequ
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2490,7 +2492,7 @@ Other parameters are passed through a pointer to a apiSystemCommitUpdatePostRequ
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2504,7 +2506,7 @@ No authorization required
 
 ## SystemInfoGet
 
-> map[string]interface{} SystemInfoGet(ctx).Execute()
+> SystemInfo SystemInfoGet(ctx).Execute()
 
 
 
@@ -2531,7 +2533,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.SystemInfoGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `SystemInfoGet`: map[string]interface{}
+    // response from `SystemInfoGet`: SystemInfo
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.SystemInfoGet`: %v\n", resp)
 }
 ```
@@ -2547,11 +2549,11 @@ Other parameters are passed through a pointer to a apiSystemInfoGetRequest struc
 
 ### Return type
 
-**map[string]interface{}**
+[**SystemInfo**](SystemInfo.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2610,7 +2612,7 @@ Other parameters are passed through a pointer to a apiSystemRebootPostRequest st
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2669,7 +2671,7 @@ Other parameters are passed through a pointer to a apiSystemResetPostRequest str
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2698,13 +2700,14 @@ import (
     "context"
     "fmt"
     "os"
+    "time"
     openapiclient "./openapi"
 )
 
 func main() {
     backupPassphrase := "backupPassphrase_example" // string | 
-    systemTime := "systemTime_example" // string | 
-    body := "body_example" // string | 
+    systemTime := time.Now() // time.Time | 
+    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2728,8 +2731,8 @@ Other parameters are passed through a pointer to a apiSystemRestorePostRequest s
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **backupPassphrase** | **string** |  | 
- **systemTime** | **string** |  | 
- **body** | **string** |  | 
+ **systemTime** | **time.Time** |  | 
+ **body** | **map[string]interface{}** |  | 
 
 ### Return type
 
@@ -2741,7 +2744,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: application/octet-stream
+- **Content-Type**: application/json
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -2796,7 +2799,7 @@ Other parameters are passed through a pointer to a apiSystemShutdownPostRequest 
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -2810,7 +2813,7 @@ No authorization required
 
 ## SystemUpdatePost
 
-> map[string]interface{} SystemUpdatePost(ctx).Body(body).Execute()
+> SystemUpdateData SystemUpdatePost(ctx).Body(body).Execute()
 
 
 
@@ -2829,7 +2832,7 @@ import (
 )
 
 func main() {
-    body := "body_example" // string | 
+    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2838,7 +2841,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.SystemUpdatePost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `SystemUpdatePost`: map[string]interface{}
+    // response from `SystemUpdatePost`: SystemUpdateData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.SystemUpdatePost`: %v\n", resp)
 }
 ```
@@ -2854,19 +2857,19 @@ Other parameters are passed through a pointer to a apiSystemUpdatePostRequest st
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **string** |  | 
+ **body** | **map[string]interface{}** |  | 
 
 ### Return type
 
-**map[string]interface{}**
+[**SystemUpdateData**](SystemUpdateData.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
-- **Content-Type**: application/octet-stream
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -2895,7 +2898,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewInlineObject1("Passphrase_example") // InlineObject1 | 
+    body := *openapiclient.NewUnlockRequestData("Passphrase_example") // UnlockRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2918,7 +2921,7 @@ Other parameters are passed through a pointer to a apiUnlockPostRequest struct v
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**InlineObject1**](InlineObject1.md) |  | 
+ **body** | [**UnlockRequestData**](UnlockRequestData.md) |  | 
 
 ### Return type
 
@@ -2940,7 +2943,7 @@ No authorization required
 
 ## UsersGet
 
-> []map[string]interface{} UsersGet(ctx).Execute()
+> []UserItem UsersGet(ctx).Execute()
 
 
 
@@ -2967,7 +2970,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.UsersGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `UsersGet`: []map[string]interface{}
+    // response from `UsersGet`: []UserItem
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.UsersGet`: %v\n", resp)
 }
 ```
@@ -2983,11 +2986,11 @@ Other parameters are passed through a pointer to a apiUsersGetRequest struct via
 
 ### Return type
 
-**[]map[string]interface{}**
+[**[]UserItem**](UserItem.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -3020,7 +3023,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewUser("Realname_example", openapiclient.UserRole("Administrator"), "Passphrase_example") // User | 
+    body := *openapiclient.NewUserPostData("RealName_example", openapiclient.UserRole("Administrator"), "Passphrase_example") // UserPostData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -3043,7 +3046,7 @@ Other parameters are passed through a pointer to a apiUsersPostRequest struct vi
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | [**User**](User.md) |  | 
+ **body** | [**UserPostData**](UserPostData.md) |  | 
 
 ### Return type
 
@@ -3051,7 +3054,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -3119,7 +3122,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -3133,7 +3136,7 @@ No authorization required
 
 ## UsersUserIDGet
 
-> InlineResponse2003 UsersUserIDGet(ctx, userID).Execute()
+> UserData UsersUserIDGet(ctx, userID).Execute()
 
 
 
@@ -3161,7 +3164,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.UsersUserIDGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `UsersUserIDGet`: InlineResponse2003
+    // response from `UsersUserIDGet`: UserData
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.UsersUserIDGet`: %v\n", resp)
 }
 ```
@@ -3185,11 +3188,11 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**InlineResponse2003**](inline_response_200_3.md)
+[**UserData**](UserData.md)
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -3223,7 +3226,7 @@ import (
 
 func main() {
     userID := "userID_example" // string | 
-    body := *openapiclient.NewInlineObject6("Passphrase_example") // InlineObject6 | 
+    body := *openapiclient.NewUserPassphrasePostData("Passphrase_example") // UserPassphrasePostData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -3251,7 +3254,7 @@ Other parameters are passed through a pointer to a apiUsersUserIDPassphrasePostR
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | [**InlineObject6**](InlineObject6.md) |  | 
+ **body** | [**UserPassphrasePostData**](UserPassphrasePostData.md) |  | 
 
 ### Return type
 
@@ -3259,7 +3262,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
@@ -3293,7 +3296,7 @@ import (
 
 func main() {
     userID := "userID_example" // string | 
-    body := *openapiclient.NewUser("Realname_example", openapiclient.UserRole("Administrator"), "Passphrase_example") // User | 
+    body := *openapiclient.NewUserPostData("RealName_example", openapiclient.UserRole("Administrator"), "Passphrase_example") // UserPostData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -3321,7 +3324,7 @@ Other parameters are passed through a pointer to a apiUsersUserIDPutRequest stru
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | [**User**](User.md) |  | 
+ **body** | [**UserPostData**](UserPostData.md) |  | 
 
 ### Return type
 
@@ -3329,7 +3332,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-No authorization required
+[basic](../README.md#basic)
 
 ### HTTP request headers
 
