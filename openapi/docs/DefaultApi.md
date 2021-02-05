@@ -500,7 +500,7 @@ Name | Type | Description  | Notes
 
 ## ConfigTlsCertPemGet
 
-> map[string]interface{} ConfigTlsCertPemGet(ctx).Execute()
+> string ConfigTlsCertPemGet(ctx).Execute()
 
 
 
@@ -527,7 +527,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigTlsCertPemGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigTlsCertPemGet`: map[string]interface{}
+    // response from `ConfigTlsCertPemGet`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigTlsCertPemGet`: %v\n", resp)
 }
 ```
@@ -543,7 +543,7 @@ Other parameters are passed through a pointer to a apiConfigTlsCertPemGetRequest
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -580,7 +580,7 @@ import (
 )
 
 func main() {
-    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
+    body := "body_example" // string |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -603,7 +603,7 @@ Other parameters are passed through a pointer to a apiConfigTlsCertPemPutRequest
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **map[string]interface{}** |  | 
+ **body** | **string** |  | 
 
 ### Return type
 
@@ -625,7 +625,7 @@ Name | Type | Description  | Notes
 
 ## ConfigTlsCsrPemPut
 
-> map[string]interface{} ConfigTlsCsrPemPut(ctx).Body(body).Execute()
+> string ConfigTlsCsrPemPut(ctx).Body(body).Execute()
 
 
 
@@ -653,7 +653,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigTlsCsrPemPut``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigTlsCsrPemPut`: map[string]interface{}
+    // response from `ConfigTlsCsrPemPut`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigTlsCsrPemPut`: %v\n", resp)
 }
 ```
@@ -673,7 +673,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -691,7 +691,7 @@ Name | Type | Description  | Notes
 
 ## ConfigTlsPublicPemGet
 
-> map[string]interface{} ConfigTlsPublicPemGet(ctx).Execute()
+> string ConfigTlsPublicPemGet(ctx).Execute()
 
 
 
@@ -718,7 +718,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ConfigTlsPublicPemGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ConfigTlsPublicPemGet`: map[string]interface{}
+    // response from `ConfigTlsPublicPemGet`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ConfigTlsPublicPemGet`: %v\n", resp)
 }
 ```
@@ -734,7 +734,7 @@ Other parameters are passed through a pointer to a apiConfigTlsPublicPemGetReque
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -1374,7 +1374,7 @@ Name | Type | Description  | Notes
 
 ## KeysKeyIDCertGet
 
-> map[string]interface{} KeysKeyIDCertGet(ctx, keyID).Execute()
+> string KeysKeyIDCertGet(ctx, keyID).Execute()
 
 
 
@@ -1402,7 +1402,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysKeyIDCertGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysKeyIDCertGet`: map[string]interface{}
+    // response from `KeysKeyIDCertGet`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysKeyIDCertGet`: %v\n", resp)
 }
 ```
@@ -1426,7 +1426,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -1464,7 +1464,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := map[string]interface{}(Object) // map[string]interface{} |  (optional)
+    body := "body_example" // string |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1492,7 +1492,7 @@ Other parameters are passed through a pointer to a apiKeysKeyIDCertPutRequest st
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **body** | **map[string]interface{}** |  | 
+ **body** | **string** |  | 
 
 ### Return type
 
@@ -1514,7 +1514,7 @@ Name | Type | Description  | Notes
 
 ## KeysKeyIDCsrPemPost
 
-> map[string]interface{} KeysKeyIDCsrPemPost(ctx, keyID).Body(body).Execute()
+> string KeysKeyIDCsrPemPost(ctx, keyID).Body(body).Execute()
 
 
 
@@ -1543,7 +1543,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysKeyIDCsrPemPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysKeyIDCsrPemPost`: map[string]interface{}
+    // response from `KeysKeyIDCsrPemPost`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysKeyIDCsrPemPost`: %v\n", resp)
 }
 ```
@@ -1568,7 +1568,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -1796,7 +1796,7 @@ Name | Type | Description  | Notes
 
 ## KeysKeyIDPublicPemGet
 
-> map[string]interface{} KeysKeyIDPublicPemGet(ctx, keyID).Execute()
+> string KeysKeyIDPublicPemGet(ctx, keyID).Execute()
 
 
 
@@ -1824,7 +1824,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.KeysKeyIDPublicPemGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `KeysKeyIDPublicPemGet`: map[string]interface{}
+    // response from `KeysKeyIDPublicPemGet`: string
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.KeysKeyIDPublicPemGet`: %v\n", resp)
 }
 ```
@@ -1848,7 +1848,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+**string**
 
 ### Authorization
 
@@ -2135,7 +2135,7 @@ Other parameters are passed through a pointer to a apiLockPostRequest struct via
 
 ## MetricsGet
 
-> string MetricsGet(ctx).Execute()
+> map[string]interface{} MetricsGet(ctx).Execute()
 
 
 
@@ -2162,7 +2162,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.MetricsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `MetricsGet`: string
+    // response from `MetricsGet`: map[string]interface{}
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.MetricsGet`: %v\n", resp)
 }
 ```
@@ -2178,7 +2178,7 @@ Other parameters are passed through a pointer to a apiMetricsGetRequest struct v
 
 ### Return type
 
-**string**
+**map[string]interface{}**
 
 ### Authorization
 
@@ -2327,7 +2327,7 @@ Name | Type | Description  | Notes
 
 ## SystemBackupPost
 
-> map[string]interface{} SystemBackupPost(ctx).Execute()
+> SystemBackupPost(ctx).Execute()
 
 
 
@@ -2354,8 +2354,6 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.SystemBackupPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `SystemBackupPost`: map[string]interface{}
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.SystemBackupPost`: %v\n", resp)
 }
 ```
 
@@ -2370,7 +2368,7 @@ Other parameters are passed through a pointer to a apiSystemBackupPostRequest st
 
 ### Return type
 
-**map[string]interface{}**
+ (empty response body)
 
 ### Authorization
 
@@ -2379,7 +2377,7 @@ Other parameters are passed through a pointer to a apiSystemBackupPostRequest st
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

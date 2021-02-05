@@ -195,6 +195,11 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		return err
 	}
 
+	log.Printf("Attributes:\n")
+	for k, v := range attrs {
+		log.Printf("0x%x: %v", k, v)
+	}
+
 	if len(attrs) == 0 {
 		objects, _ := token.GetObjects()
 		session.foundObjects = make([]C.CK_OBJECT_HANDLE, len(objects))

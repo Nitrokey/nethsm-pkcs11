@@ -283,34 +283,7 @@ paths:
       x-amf-requestPayloads:
       - mediaType: application/x-pem-file
         schema:
-          example: |
-            -----BEGIN RSA PRIVATE KEY-----
-            MIIEpAIBAAKCAQEAseU3o1Ix2euXUi50ht/mpDYnE2J4maJrIOLmDrmz+jv20hsR
-            vPsWnKevYZqEYmvQFNO2Mv9DB5MZfnJ3jL3Aq71Ls1wqOnW9++bZAvqvEVUtlHh0
-            5Rz9k1Ga32/OaHHEZj+lG9PlKI8y63K+sKZLuDYiVy1/gzARjpf2hCmTyQSAvtcA
-            07WXAqorNI8mhcbIhnrGCeKfB8HYJ1T3uk2lXrwXehVaw9KZzg7KuRO0Qnk+IfR6
-            LZjiKiEB9malzqSx3N20vibI672bMR+fqID2oC+ovNOEdRhPlCnztaY1HsnDhJt8
-            MDTjlVGveCElvesuSVnNVHmVugDjEYTU1KV3TwIDAQABAoIBAQClSL5QDX9p5R28
-            apMz+XYW3oWh2h0JScHVVVvBFMNm3S3vet0ZRAV3Wcl2mxUjSN6Vazte2JKTyBWo
-            yXvQFUGdj4x1Qk2t8VWqZYr93KKqLQTjbKPXd/8WUHzf2sbhfcqn4bxrRY4mCB6c
-            aglIocm6hvmTHB/caN33KbQOiX7ZBbwoZG3AKgoJU3SMXnVUfQzl/xnVrWLKESqm
-            5kL0OTGLP091jZyMhcceh54RIuaJjPU4opL0bm46DLeQE4z20GfGCcRK/CUt4bNc
-            c0wvuOyyzGI5p7QB/HCUJqR33m9ydwDkqC4vrORDxpMaSRNerpoGA+cNHREULh2P
-            gaPydXq5AoGBAN3xIhci5LpIVvscNjPyxD6WQq5EZx251IzTnwQ/5E/+qxfYHvwe
-            qAuLJ2+QvNQBuNKk85jwZsfUgPR6kku9dOt3n61lnrBRgGcqWnR0j8/NbpVe1qOe
-            WArLeijpKKnCZ6uwpE6NND398dCmm3WLZZH64+1eLT8PbX/AIzId5zyzAoGBAM0x
-            vWEsKi4pjNMBdaawJMbHEoDmMuib4t+FkbHDkqqSe/OIkHZ9tDQuHWpzDHmb30Na
-            KNwQSNLwu3QK64z1NcjZUJFmu0+3NxSyI/EvNA9tiGCT5iSonsz04oa51AYt+IK5
-            7JjMjo128INrQwtRFSYHx3hoVVW06tZNE037NiD1AoGABqeNOx5bt04l9X+CDIqx
-            4aKFu03nvZdtzQ8nTGxR/ygGnz9mpm6Q4U+5zfmL/9tRXFd/yk0i98jiWPI34rd6
-            gvjiO8O5P1YiQHWforBAA54IO8hNLTi5MRGqxwE+q+BdVWOFeal4MIelsXjdXmfg
-            ksDwBpT1TFe9E8CCDaWh4ksCgYAhHCiR2H2J61x04+RnHD8i8BZ1RC/sxtKp/LSQ
-            uZ0d9vsXRe8Bn7EHRnWqqpvVt6gkBxVWxS3rE7s7s1Nk8GBYY3CTtb790vOJXGFe
-            Vp6Q6ry50MOvIKJXMiCnWq7yvFJATd32nfNWsl2G5zTvS4sdEt5F+Jfkd4f5QoCd
-            8a4/TQKBgQDEdY3XTibkDt80zUFIP6RRAyfM6p2grk+o08De0BBZD/1GX9V9ARNT
-            bC3+2qXXDYGxbMWgsoqsQTREJD78+sdD3q+IfIc1m7XvuIgyLMAalm+Kd1HlUF/J
-            7VCKjgchT0OKwmi0d52TEOiz6U35Jv4GWBstsh1KVpHYiTnwnhAwKg==
-            -----END RSA PRIVATE KEY-----
+          $ref: '#/definitions/PemPrivateKey'
       x-role:
       - Administrator
       x-state:
@@ -476,17 +449,7 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN PUBLIC KEY-----
-                  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx7ghfro+VEepYmy2V7HP
-                  n5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iRXzeza7DMjrQptzKsfSy6
-                  dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm2XP12Cqx0wsYGIoJlWHb
-                  Gb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMBB9h+2Bxc4BxaPKMm15JR
-                  1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqRhdk1P6r/vqOVKrxVupDq
-                  Kkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEuggit32tV16JXCZjnYePAvt
-                  NwIDAQAB
-                  -----END PUBLIC KEY-----
-                type: object
+                $ref: '#/components/schemas/PemPublicKey'
           description: ""
           x-amf-mediaType: application/x-pem-file
         "401":
@@ -528,25 +491,7 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN CERTIFICATE REQUEST-----
-                  MIICpzCCAY8CAQAwYjFgMAkGA1UEBgwCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK
-                  DAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEMEWlu
-                  Zm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
-                  x7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR
-                  Xzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm
-                  2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB
-                  B9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR
-                  hdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg
-                  it32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAGTXJciq
-                  FMdQeobMDjGgnzR30HC77rJ/Bdu9rqpAtjUcL05K2ufma/gXvPCl1WYEr8JJ3aiA
-                  r2ebitcvm+qwXLsBe68o5bSXxMe6PigyuB0lSijB6MeItMxsVFPbKvDk7Hj4ad2P
-                  M6aaAixRcJi9eIA93yKmpPXyUcycW0wjQU6CeV/aMN9kLLbxzEgf0it5QXY7nexu
-                  2no32GHFbLiI8GoMvuPEgeks3qBtrxKwTOdKWAFDAgEiXZ8m4zN0V66J3zurMzzr
-                  tJ6G/JEFGy1sITUatqSxqR4A5eGsV9ktFWZbtwRihuCNIVIQ8d9Up5CWFLWExwNS
-                  ZxGNJ4YEMwKYf6s=
-                  -----END CERTIFICATE REQUEST-----
-                type: object
+                $ref: '#/components/schemas/PemCSR'
           description: Successful generation of certificate signing request.
           x-amf-mediaType: application/x-pem-file
         "401":
@@ -704,76 +649,14 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN CERTIFICATE-----
-                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-                  35mqzHn+FjWq0eAtpzhO5Q==
-                  -----END CERTIFICATE-----
-                type: object
+                $ref: '#/components/schemas/PemCert'
           description: ""
           x-amf-mediaType: application/x-pem-file
           x-amf-responsePayloads:
           - mediaType: application/x-x509-ca-cert
-            schema:
-              example: |
-                some binary data here
           - mediaType: application/pgp-keys
             schema:
-              example: |
-                -----BEGIN PGP PRIVATE KEY BLOCK-----
-                Version: GnuPG v2
-
-                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-                35mqzHn+FjWq0eAtpzhO5Q==
-                -----END PGP PRIVATE KEY BLOCK-----
+              $ref: '#/definitions/PGPPrivateKey'
         "401":
           content: {}
           description: Authentication required but none provided.
@@ -807,36 +690,7 @@ paths:
         content:
           application/json:
             schema:
-              example: |
-                -----BEGIN CERTIFICATE-----
-                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-                35mqzHn+FjWq0eAtpzhO5Q==
-                -----END CERTIFICATE-----
-              type: object
+              $ref: '#/components/schemas/PemCert'
         required: false
       responses:
         "201":
@@ -858,42 +712,9 @@ paths:
       - basic: []
       x-amf-requestPayloads:
       - mediaType: application/x-x509-ca-cert
-        schema:
-          example: |
-            some binary data here
       - mediaType: application/pgp-keys
         schema:
-          example: |
-            -----BEGIN PGP PRIVATE KEY BLOCK-----
-            Version: GnuPG v2
-
-            MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-            ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-            MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-            SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-            6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-            MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-            P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-            u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-            nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-            fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-            aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-            TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-            /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-            mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-            GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-            e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-            ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-            nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-            M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-            NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-            FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-            AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-            QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-            Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-            3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-            35mqzHn+FjWq0eAtpzhO5Q==
-            -----END PGP PRIVATE KEY BLOCK-----
+          $ref: '#/definitions/PGPPrivateKey'
       x-role:
       - Administrator
       x-state:
@@ -1211,17 +1032,7 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN PUBLIC KEY-----
-                  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAseU3o1Ix2euXUi50ht/m
-                  pDYnE2J4maJrIOLmDrmz+jv20hsRvPsWnKevYZqEYmvQFNO2Mv9DB5MZfnJ3jL3A
-                  q71Ls1wqOnW9++bZAvqvEVUtlHh05Rz9k1Ga32/OaHHEZj+lG9PlKI8y63K+sKZL
-                  uDYiVy1/gzARjpf2hCmTyQSAvtcA07WXAqorNI8mhcbIhnrGCeKfB8HYJ1T3uk2l
-                  XrwXehVaw9KZzg7KuRO0Qnk+IfR6LZjiKiEB9malzqSx3N20vibI672bMR+fqID2
-                  oC+ovNOEdRhPlCnztaY1HsnDhJt8MDTjlVGveCElvesuSVnNVHmVugDjEYTU1KV3
-                  TwIDAQAB
-                  -----END PUBLIC KEY-----
-                type: object
+                $ref: '#/components/schemas/PemPublicKey'
           description: Successful retrieval of public key.
           x-amf-mediaType: application/x-pem-file
         "401":
@@ -1247,36 +1058,7 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN CERTIFICATE-----
-                  MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-                  ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-                  MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-                  SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-                  6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-                  MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-                  P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-                  u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-                  nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-                  fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-                  aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-                  TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-                  /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-                  mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-                  GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-                  e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-                  ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-                  nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-                  M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-                  NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-                  FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-                  AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-                  QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-                  Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-                  3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-                  35mqzHn+FjWq0eAtpzhO5Q==
-                  -----END CERTIFICATE-----
-                type: object
+                $ref: '#/components/schemas/PemCert'
           description: Successful retrieval of certificate.
           x-amf-mediaType: application/x-pem-file
         "401":
@@ -1301,36 +1083,7 @@ paths:
         content:
           application/json:
             schema:
-              example: |
-                -----BEGIN CERTIFICATE-----
-                MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
-                ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
-                MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
-                SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
-                6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
-                MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
-                P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
-                u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
-                nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
-                fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
-                aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
-                TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
-                /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
-                mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
-                GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
-                e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
-                ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
-                nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
-                M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
-                NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
-                FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
-                AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
-                QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
-                Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
-                3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
-                35mqzHn+FjWq0eAtpzhO5Q==
-                -----END CERTIFICATE-----
-              type: object
+              $ref: '#/components/schemas/PemCert'
         required: false
       responses:
         "201":
@@ -1367,23 +1120,7 @@ paths:
           content:
             application/json:
               schema:
-                example: |
-                  -----BEGIN CERTIFICATE REQUEST-----
-                  MIICUjCCAToCAQAwDTELMAkGA1UEBhMCZGUwggEiMA0GCSqGSIb3DQEBAQUAA4IB
-                  DwAwggEKAoIBAQCx5TejUjHZ65dSLnSG3+akNicTYniZomsg4uYOubP6O/bSGxG8
-                  +xacp69hmoRia9AU07Yy/0MHkxl+cneMvcCrvUuzXCo6db375tkC+q8RVS2UeHTl
-                  HP2TUZrfb85occRmP6Ub0+UojzLrcr6wpku4NiJXLX+DMBGOl/aEKZPJBIC+1wDT
-                  tZcCqis0jyaFxsiGesYJ4p8HwdgnVPe6TaVevBd6FVrD0pnODsq5E7RCeT4h9Hot
-                  mOIqIQH2ZqXOpLHc3bS+JsjrvZsxH5+ogPagL6i804R1GE+UKfO1pjUeycOEm3ww
-                  NOOVUa94ISW96y5JWc1UeZW6AOMRhNTUpXdPAgMBAAGgADANBgkqhkiG9w0BAQsF
-                  AAOCAQEAqA+22efrmbc1l+rnBtqeHJJWPZybRFDhqxkUoMAOMLIgd92TM6mnzlYu
-                  RmKZr2ExlbODOnaJJVcnbq2XYuHPiWYjhNFLTJ4bHJzo2yq+UUB0d409jQ0zkgVw
-                  CqfSauVZq7gqLLJ67KqqDDzJtsWEjeuJxIRh+cKPre1vtQp4uCncwRXOymxzaoTg
-                  KdJ6vwLLEkLVKwk1NEuvMe4IAa2+CtWf2z/jjoEKBeg/rxoFUwAmIxp/vWsZaDmY
-                  K0X2haYIM4Ihz+tTbAPlO/hMAs/spxYvmWu46BpBpX4naxhOKJzpwO2NeZtZkjL6
-                  7wSAdo8xe7eWf/eaMebITfIRfgyczA==
-                  -----END CERTIFICATE REQUEST-----
-                type: object
+                $ref: '#/components/schemas/PemCSR'
           description: Successful generation of certificate signing request.
           x-amf-mediaType: application/x-pem-file
         "401":
@@ -1708,7 +1445,6 @@ paths:
         content:
           application/json:
             schema:
-              example: encrypted backup
               type: object
         required: false
       responses:
@@ -1790,11 +1526,7 @@ paths:
       description: Back up the key store to a backup file.
       responses:
         "200":
-          content:
-            application/json:
-              schema:
-                example: encrypted backup
-                type: object
+          content: {}
           description: Successful retrieval of backup data.
           x-amf-mediaType: application/octet-stream
         "401":
@@ -1833,7 +1565,6 @@ paths:
         content:
           application/json:
             schema:
-              example: encrypted backup
               type: object
         required: false
       responses:
@@ -1920,10 +1651,10 @@ components:
       - mode
       type: object
     MetricsData:
-      example: |
+      example:
         keyOperations: 1132412
         someOtherMetric: 2222
-      type: string
+      type: object
     SystemUpdateData:
       example:
         releaseNotes: Some new feature is available.
@@ -1984,11 +1715,41 @@ components:
       required:
       - user
       type: object
+    PemPrivateKey:
+      example: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEpAIBAAKCAQEAseU3o1Ix2euXUi50ht/mpDYnE2J4maJrIOLmDrmz+jv20hsR
+        vPsWnKevYZqEYmvQFNO2Mv9DB5MZfnJ3jL3Aq71Ls1wqOnW9++bZAvqvEVUtlHh0
+        5Rz9k1Ga32/OaHHEZj+lG9PlKI8y63K+sKZLuDYiVy1/gzARjpf2hCmTyQSAvtcA
+        07WXAqorNI8mhcbIhnrGCeKfB8HYJ1T3uk2lXrwXehVaw9KZzg7KuRO0Qnk+IfR6
+        LZjiKiEB9malzqSx3N20vibI672bMR+fqID2oC+ovNOEdRhPlCnztaY1HsnDhJt8
+        MDTjlVGveCElvesuSVnNVHmVugDjEYTU1KV3TwIDAQABAoIBAQClSL5QDX9p5R28
+        apMz+XYW3oWh2h0JScHVVVvBFMNm3S3vet0ZRAV3Wcl2mxUjSN6Vazte2JKTyBWo
+        yXvQFUGdj4x1Qk2t8VWqZYr93KKqLQTjbKPXd/8WUHzf2sbhfcqn4bxrRY4mCB6c
+        aglIocm6hvmTHB/caN33KbQOiX7ZBbwoZG3AKgoJU3SMXnVUfQzl/xnVrWLKESqm
+        5kL0OTGLP091jZyMhcceh54RIuaJjPU4opL0bm46DLeQE4z20GfGCcRK/CUt4bNc
+        c0wvuOyyzGI5p7QB/HCUJqR33m9ydwDkqC4vrORDxpMaSRNerpoGA+cNHREULh2P
+        gaPydXq5AoGBAN3xIhci5LpIVvscNjPyxD6WQq5EZx251IzTnwQ/5E/+qxfYHvwe
+        qAuLJ2+QvNQBuNKk85jwZsfUgPR6kku9dOt3n61lnrBRgGcqWnR0j8/NbpVe1qOe
+        WArLeijpKKnCZ6uwpE6NND398dCmm3WLZZH64+1eLT8PbX/AIzId5zyzAoGBAM0x
+        vWEsKi4pjNMBdaawJMbHEoDmMuib4t+FkbHDkqqSe/OIkHZ9tDQuHWpzDHmb30Na
+        KNwQSNLwu3QK64z1NcjZUJFmu0+3NxSyI/EvNA9tiGCT5iSonsz04oa51AYt+IK5
+        7JjMjo128INrQwtRFSYHx3hoVVW06tZNE037NiD1AoGABqeNOx5bt04l9X+CDIqx
+        4aKFu03nvZdtzQ8nTGxR/ygGnz9mpm6Q4U+5zfmL/9tRXFd/yk0i98jiWPI34rd6
+        gvjiO8O5P1YiQHWforBAA54IO8hNLTi5MRGqxwE+q+BdVWOFeal4MIelsXjdXmfg
+        ksDwBpT1TFe9E8CCDaWh4ksCgYAhHCiR2H2J61x04+RnHD8i8BZ1RC/sxtKp/LSQ
+        uZ0d9vsXRe8Bn7EHRnWqqpvVt6gkBxVWxS3rE7s7s1Nk8GBYY3CTtb790vOJXGFe
+        Vp6Q6ry50MOvIKJXMiCnWq7yvFJATd32nfNWsl2G5zTvS4sdEt5F+Jfkd4f5QoCd
+        8a4/TQKBgQDEdY3XTibkDt80zUFIP6RRAyfM6p2grk+o08De0BBZD/1GX9V9ARNT
+        bC3+2qXXDYGxbMWgsoqsQTREJD78+sdD3q+IfIc1m7XvuIgyLMAalm+Kd1HlUF/J
+        7VCKjgchT0OKwmi0d52TEOiz6U35Jv4GWBstsh1KVpHYiTnwnhAwKg==
+        -----END RSA PRIVATE KEY-----
+      type: string
     NetworkConfig:
       example:
-        ipAddress: 192.168.1.1
+        ipAddress: 10.0.0.23
         netmask: 255.255.255.0
-        gateway: 0.0.0.0
+        gateway: 10.0.0.1
       properties:
         ipAddress:
           type: string
@@ -2098,6 +1859,26 @@ components:
       - key
       - mechanisms
       type: object
+    PemCSR:
+      example: |
+        -----BEGIN CERTIFICATE REQUEST-----
+        MIICpzCCAY8CAQAwYjFgMAkGA1UEBgwCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK
+        DAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEMEWlu
+        Zm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
+        x7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR
+        Xzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm
+        2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB
+        B9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR
+        hdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg
+        it32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAGTXJciq
+        FMdQeobMDjGgnzR30HC77rJ/Bdu9rqpAtjUcL05K2ufma/gXvPCl1WYEr8JJ3aiA
+        r2ebitcvm+qwXLsBe68o5bSXxMe6PigyuB0lSijB6MeItMxsVFPbKvDk7Hj4ad2P
+        M6aaAixRcJi9eIA93yKmpPXyUcycW0wjQU6CeV/aMN9kLLbxzEgf0it5QXY7nexu
+        2no32GHFbLiI8GoMvuPEgeks3qBtrxKwTOdKWAFDAgEiXZ8m4zN0V66J3zurMzzr
+        tJ6G/JEFGy1sITUatqSxqR4A5eGsV9ktFWZbtwRihuCNIVIQ8d9Up5CWFLWExwNS
+        ZxGNJ4YEMwKYf6s=
+        -----END CERTIFICATE REQUEST-----
+      type: string
     DecryptRequestData:
       example:
         mode: RAW
@@ -2139,10 +1920,53 @@ components:
       - realName
       - role
       type: object
+    PemCert:
+      example: |
+        -----BEGIN CERTIFICATE-----
+        MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+        ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+        MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+        SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+        6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+        MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+        P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+        u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+        nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+        fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+        aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+        TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+        /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+        mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+        GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+        e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+        ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+        nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+        M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+        NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+        FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+        AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+        QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+        Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+        3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+        35mqzHn+FjWq0eAtpzhO5Q==
+        -----END CERTIFICATE-----
+      type: string
     KeyMechanisms:
       items:
         $ref: '#/components/schemas/KeyMechanism'
       type: array
+    PemPublicKey:
+      example: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx7ghfro+VEepYmy2V7HP
+        n5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iRXzeza7DMjrQptzKsfSy6
+        dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm2XP12Cqx0wsYGIoJlWHb
+        Gb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMBB9h+2Bxc4BxaPKMm15JR
+        1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqRhdk1P6r/vqOVKrxVupDq
+        Kkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEuggit32tV16JXCZjnYePAvt
+        NwIDAQAB
+        -----END PUBLIC KEY-----
+      type: string
     LoggingConfig:
       example:
         ipAddress: 0.0.0.0
@@ -2264,6 +2088,39 @@ components:
       - Metrics
       - Backup
       type: string
+    PGPPrivateKey:
+      example: |
+        -----BEGIN PGP PRIVATE KEY BLOCK-----
+        Version: GnuPG v2
+
+        MIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo
+        ZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0
+        MDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG
+        SIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN
+        6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ
+        MJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz
+        P8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa
+        u9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2
+        nMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb
+        fPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n
+        aI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF
+        TkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M
+        /Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2
+        mMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3
+        GZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo
+        e1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl
+        ItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3
+        nj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl
+        M5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl
+        NFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS
+        FhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t
+        AOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD
+        QtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63
+        Pa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh
+        3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO
+        35mqzHn+FjWq0eAtpzhO5Q==
+        -----END PGP PRIVATE KEY BLOCK-----
+      type: string
     PublicKey:
       example:
         mechanisms:
@@ -2292,7 +2149,7 @@ components:
       type: object
     UnattendedBootConfig:
       example:
-        status: false
+        status: true
       properties:
         status:
           type: string

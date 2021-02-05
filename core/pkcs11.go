@@ -895,36 +895,43 @@ func C_GenerateRandom(hSession C.CK_SESSION_HANDLE, pRandomData C.CK_BYTE_PTR, u
 
 //export C_GetMechanismList
 func C_GetMechanismList(C.CK_SLOT_ID, C.CK_MECHANISM_TYPE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_GetMechanismList")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_GetMechanismInfo
 func C_GetMechanismInfo(C.CK_SLOT_ID, C.CK_MECHANISM_TYPE, C.CK_MECHANISM_INFO_PTR) C.CK_RV {
+	log.Printf("Called: C_GetMechanismInfo")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_GetOperationState
 func C_GetOperationState(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_GetOperationState")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_SetOperationState
 func C_SetOperationState(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_OBJECT_HANDLE, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_SetOperationState")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_CopyObject
 func C_CopyObject(C.CK_SESSION_HANDLE, C.CK_OBJECT_HANDLE, C.CK_ATTRIBUTE_PTR, C.CK_ULONG, C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
+	log.Printf("Called: C_CopyObject")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_GetObjectSize
 func C_GetObjectSize(C.CK_SESSION_HANDLE, C.CK_OBJECT_HANDLE, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_GetObjectSize")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_EncryptInit
 func C_EncryptInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_EncryptInit")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -936,16 +943,19 @@ func C_Encrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
 
 //export C_EncryptUpdate
 func C_EncryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_EncryptUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_EncryptFinal
 func C_EncryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_EncryptFinal")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DecryptInit
 func C_DecryptInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_DecryptInit")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -957,71 +967,85 @@ func C_Decrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
 
 //export C_DecryptUpdate
 func C_DecryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DecryptFinal
 func C_DecryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptFinal")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DigestUpdate
 func C_DigestUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG) C.CK_RV {
+	log.Printf("Called: C_DigestUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DigestKey
 func C_DigestKey(C.CK_SESSION_HANDLE, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_DigestKey")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DigestFinal
 func C_DigestFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DigestFinal")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_SignRecoverInit
 func C_SignRecoverInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_SignRecoverInit")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_SignRecover
 func C_SignRecover(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_SignRecover")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_VerifyRecoverInit
 func C_VerifyRecoverInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_VerifyRecoverInit")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_VerifyRecover
 func C_VerifyRecover(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_VerifyRecover")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DigestEncryptUpdate
 func C_DigestEncryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DigestEncryptUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DecryptDigestUpdate
 func C_DecryptDigestUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptDigestUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_SignEncryptUpdate
 func C_SignEncryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_SignEncryptUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_DecryptVerifyUpdate
 func C_DecryptVerifyUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptVerifyUpdate")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_GenerateKey
 func C_GenerateKey(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_ATTRIBUTE_PTR, C.CK_ULONG, C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
+	log.Printf("Called: C_GenerateKey")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -1045,16 +1069,19 @@ func C_DeriveKey(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE, C.
 
 //export C_GetFunctionStatus
 func C_GetFunctionStatus(C.CK_SESSION_HANDLE) C.CK_RV {
-	return C.CKR_FUNCTION_NOT_PARALLEL
+	log.Printf("Called: C_GetFunctionStatus")
+	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_CancelFunction
 func C_CancelFunction(C.CK_SESSION_HANDLE) C.CK_RV {
-	return C.CKR_FUNCTION_NOT_PARALLEL
+	log.Printf("Called: C_CancelFunction")
+	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_WaitForSlotEvent
 func C_WaitForSlotEvent(C.CK_FLAGS, C.CK_SLOT_ID_PTR, C.CK_VOID_PTR) C.CK_RV {
+	log.Printf("Called: C_WaitForSlotEvent")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 

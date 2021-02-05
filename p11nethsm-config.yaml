@@ -1,4 +1,4 @@
-logfile: /tmp/p11nethsm.log
+#logfile: /tmp/p11nethsm.log
 cryptoki:
   manufacturerid: Nitrokey GmbH
   model: NetHSM Mark A

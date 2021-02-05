@@ -732,7 +732,7 @@ type ApiConfigTlsCertPemGetRequest struct {
 }
 
 
-func (r ApiConfigTlsCertPemGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiConfigTlsCertPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTlsCertPemGetExecute(r)
 }
 
@@ -751,16 +751,16 @@ func (a *DefaultApiService) ConfigTlsCertPemGet(ctx _context.Context) ApiConfigT
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) ConfigTlsCertPemGetExecute(r ApiConfigTlsCertPemGetRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) ConfigTlsCertPemGetExecute(r ApiConfigTlsCertPemGetRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ConfigTlsCertPemGet")
@@ -831,10 +831,10 @@ func (a *DefaultApiService) ConfigTlsCertPemGetExecute(r ApiConfigTlsCertPemGetR
 type ApiConfigTlsCertPemPutRequest struct {
 	ctx _context.Context
 	ApiService *DefaultApiService
-	body *map[string]interface{}
+	body *string
 }
 
-func (r ApiConfigTlsCertPemPutRequest) Body(body map[string]interface{}) ApiConfigTlsCertPemPutRequest {
+func (r ApiConfigTlsCertPemPutRequest) Body(body string) ApiConfigTlsCertPemPutRequest {
 	r.body = &body
 	return r
 }
@@ -937,7 +937,7 @@ func (r ApiConfigTlsCsrPemPutRequest) Body(body DistinguishedName) ApiConfigTlsC
 	return r
 }
 
-func (r ApiConfigTlsCsrPemPutRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiConfigTlsCsrPemPutRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTlsCsrPemPutExecute(r)
 }
 
@@ -956,16 +956,16 @@ func (a *DefaultApiService) ConfigTlsCsrPemPut(ctx _context.Context) ApiConfigTl
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) ConfigTlsCsrPemPutExecute(r ApiConfigTlsCsrPemPutRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) ConfigTlsCsrPemPutExecute(r ApiConfigTlsCsrPemPutRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ConfigTlsCsrPemPut")
@@ -1041,7 +1041,7 @@ type ApiConfigTlsPublicPemGetRequest struct {
 }
 
 
-func (r ApiConfigTlsPublicPemGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiConfigTlsPublicPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTlsPublicPemGetExecute(r)
 }
 
@@ -1060,16 +1060,16 @@ func (a *DefaultApiService) ConfigTlsPublicPemGet(ctx _context.Context) ApiConfi
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) ConfigTlsPublicPemGetExecute(r ApiConfigTlsPublicPemGetRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) ConfigTlsPublicPemGetExecute(r ApiConfigTlsPublicPemGetRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ConfigTlsPublicPemGet")
@@ -2123,7 +2123,7 @@ type ApiKeysKeyIDCertGetRequest struct {
 }
 
 
-func (r ApiKeysKeyIDCertGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiKeysKeyIDCertGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDCertGetExecute(r)
 }
 
@@ -2144,16 +2144,16 @@ func (a *DefaultApiService) KeysKeyIDCertGet(ctx _context.Context, keyID string)
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) KeysKeyIDCertGetExecute(r ApiKeysKeyIDCertGetRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) KeysKeyIDCertGetExecute(r ApiKeysKeyIDCertGetRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.KeysKeyIDCertGet")
@@ -2226,10 +2226,10 @@ type ApiKeysKeyIDCertPutRequest struct {
 	ctx _context.Context
 	ApiService *DefaultApiService
 	keyID string
-	body *map[string]interface{}
+	body *string
 }
 
-func (r ApiKeysKeyIDCertPutRequest) Body(body map[string]interface{}) ApiKeysKeyIDCertPutRequest {
+func (r ApiKeysKeyIDCertPutRequest) Body(body string) ApiKeysKeyIDCertPutRequest {
 	r.body = &body
 	return r
 }
@@ -2336,7 +2336,7 @@ func (r ApiKeysKeyIDCsrPemPostRequest) Body(body DistinguishedName) ApiKeysKeyID
 	return r
 }
 
-func (r ApiKeysKeyIDCsrPemPostRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiKeysKeyIDCsrPemPostRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDCsrPemPostExecute(r)
 }
 
@@ -2357,16 +2357,16 @@ func (a *DefaultApiService) KeysKeyIDCsrPemPost(ctx _context.Context, keyID stri
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) KeysKeyIDCsrPemPostExecute(r ApiKeysKeyIDCsrPemPostRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) KeysKeyIDCsrPemPostExecute(r ApiKeysKeyIDCsrPemPostRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.KeysKeyIDCsrPemPost")
@@ -2758,7 +2758,7 @@ type ApiKeysKeyIDPublicPemGetRequest struct {
 }
 
 
-func (r ApiKeysKeyIDPublicPemGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiKeysKeyIDPublicPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDPublicPemGetExecute(r)
 }
 
@@ -2779,16 +2779,16 @@ func (a *DefaultApiService) KeysKeyIDPublicPemGet(ctx _context.Context, keyID st
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
+ * @return string
  */
-func (a *DefaultApiService) KeysKeyIDPublicPemGetExecute(r ApiKeysKeyIDPublicPemGetRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) KeysKeyIDPublicPemGetExecute(r ApiKeysKeyIDPublicPemGetRequest) (string, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  string
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.KeysKeyIDPublicPemGet")
@@ -3286,7 +3286,7 @@ type ApiMetricsGetRequest struct {
 }
 
 
-func (r ApiMetricsGetRequest) Execute() (string, *_nethttp.Response, error) {
+func (r ApiMetricsGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
 	return r.ApiService.MetricsGetExecute(r)
 }
 
@@ -3305,16 +3305,16 @@ func (a *DefaultApiService) MetricsGet(ctx _context.Context) ApiMetricsGetReques
 
 /*
  * Execute executes the request
- * @return string
+ * @return map[string]interface{}
  */
-func (a *DefaultApiService) MetricsGetExecute(r ApiMetricsGetRequest) (string, *_nethttp.Response, error) {
+func (a *DefaultApiService) MetricsGetExecute(r ApiMetricsGetRequest) (map[string]interface{}, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  string
+		localVarReturnValue  map[string]interface{}
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.MetricsGet")
@@ -3595,7 +3595,7 @@ type ApiSystemBackupPostRequest struct {
 }
 
 
-func (r ApiSystemBackupPostRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
+func (r ApiSystemBackupPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemBackupPostExecute(r)
 }
 
@@ -3614,21 +3614,19 @@ func (a *DefaultApiService) SystemBackupPost(ctx _context.Context) ApiSystemBack
 
 /*
  * Execute executes the request
- * @return map[string]interface{}
  */
-func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest) (map[string]interface{}, *_nethttp.Response, error) {
+func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  map[string]interface{}
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.SystemBackupPost")
 	if err != nil {
-		return localVarReturnValue, nil, GenericOpenAPIError{error: err.Error()}
+		return nil, GenericOpenAPIError{error: err.Error()}
 	}
 
 	localVarPath := localBasePath + "/system/backup"
@@ -3647,7 +3645,7 @@ func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest
 	}
 
 	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{"application/json"}
+	localVarHTTPHeaderAccepts := []string{}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
@@ -3656,19 +3654,19 @@ func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest
 	}
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
-		return localVarReturnValue, nil, err
+		return nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(req)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarReturnValue, localVarHTTPResponse, err
+		return localVarHTTPResponse, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	localVarHTTPResponse.Body = _ioutil.NopCloser(bytes.NewBuffer(localVarBody))
 	if err != nil {
-		return localVarReturnValue, localVarHTTPResponse, err
+		return localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -3676,19 +3674,10 @@ func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
 		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
+		return localVarHTTPResponse, newErr
 	}
 
-	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	return localVarReturnValue, localVarHTTPResponse, nil
+	return localVarHTTPResponse, nil
 }
 
 type ApiSystemCancelUpdatePostRequest struct {
