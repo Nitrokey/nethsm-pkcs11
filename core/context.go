@@ -72,7 +72,7 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 		if err := c.Init(keyMetaAttr.Value); err != nil {
 			return nil, err
 		}
-		pk, err := utils.ASN1BytesToPubKey(c.keyMeta.Curve(), pkAttr.Value)
+		pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
 		if err != nil {
 			return nil, NewError("NewSignContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
 		}
@@ -125,7 +125,7 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 		if err := c.Init(keyMetaAttr.Value); err != nil {
 			return nil, err
 		}
-		pk, err := utils.ASN1BytesToPubKey(c.keyMeta.Curve(), pkAttr.Value)
+		pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
 		if err != nil {
 			return nil, NewError("NewVerifyContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
 		}

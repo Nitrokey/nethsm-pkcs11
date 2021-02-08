@@ -9,30 +9,27 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"encoding/binary"
-	"fmt"
 	"io"
-	"reflect"
-
-	"github.com/niclabs/dtcnode/v3/message"
-	"github.com/niclabs/tcrsa"
+	"unsafe"
 )
 
 type SignContextRSA struct {
 	randSrc     io.Reader
-	keyMeta     *tcrsa.KeyMeta // Key Metainfo used in signing.
-	mechanism   *Mechanism     // Mechanism used to sign in a Sign session.
-	keyID       string         // Key ID used in signing.
-	data        []byte         // Data to sign.
-	initialized bool           // // True if the user executed a Sign method and it has not finished yet.
+	pubKey      rsa.PublicKey
+	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
+	keyID       string     // Key ID used in signing.
+	data        []byte     // Data to sign.
+	initialized bool       // // True if the user executed a Sign method and it has not finished yet.
 }
 
 type VerifyContextRSA struct {
-	randSrc     io.Reader
-	keyMeta     *tcrsa.KeyMeta // Key Metainfo used in sign verification.
-	mechanism   *Mechanism     // Mechanism used to verify a signature in a Verify session.
-	keyID       string         // Key ID used in sign verification.
-	data        []byte         // Data to verify.
-	initialized bool           // True if the user executed a Verify method and it has not finished yet.
+	randSrc io.Reader
+	// keyMeta     *tcrsa.KeyMeta // Key Metainfo used in sign verification.
+	pubKey      rsa.PublicKey
+	mechanism   *Mechanism // Mechanism used to verify a signature in a Verify session.
+	keyID       string     // Key ID used in sign verification.
+	data        []byte     // Data to verify.
+	initialized bool       // True if the user executed a Verify method and it has not finished yet.
 }
 
 func (context *SignContextRSA) Initialized() bool {
@@ -40,13 +37,13 @@ func (context *SignContextRSA) Initialized() bool {
 }
 
 func (context *SignContextRSA) Init(metaBytes []byte) (err error) {
-	context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
+	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
 	context.initialized = true
 	return
 }
 
 func (context *SignContextRSA) SignatureLength() int {
-	return context.keyMeta.PublicKey.Size()
+	return context.pubKey.Size()
 }
 
 func (context *SignContextRSA) Update(data []byte) error {
@@ -57,7 +54,7 @@ func (context *SignContextRSA) Update(data []byte) error {
 func (context *SignContextRSA) Final() ([]byte, error) {
 	_ /*prepared*/, err := context.mechanism.Prepare(
 		context.randSrc,
-		context.keyMeta.PublicKey.Size(),
+		context.pubKey.Size(),
 		context.data,
 	)
 	if err != nil {
@@ -71,7 +68,7 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	}
 	if err = verifyRSA(
 		context.mechanism,
-		context.keyMeta.PublicKey,
+		context.pubKey,
 		context.data,
 		signature,
 	); err != nil {
@@ -85,13 +82,13 @@ func (context *VerifyContextRSA) Initialized() bool {
 }
 
 func (context *VerifyContextRSA) Init(metaBytes []byte) (err error) {
-	context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
+	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
 	context.initialized = true
 	return
 }
 
 func (context *VerifyContextRSA) Length() int {
-	return context.keyMeta.PublicKey.Size()
+	return context.pubKey.Size()
 }
 
 func (context *VerifyContextRSA) Update(data []byte) error {
@@ -102,7 +99,7 @@ func (context *VerifyContextRSA) Update(data []byte) error {
 func (context *VerifyContextRSA) Final(signature []byte) error {
 	return verifyRSA(
 		context.mechanism,
-		context.keyMeta.PublicKey,
+		context.pubKey,
 		context.data,
 		signature,
 	)
@@ -151,15 +148,15 @@ func verifyRSA(mechanism *Mechanism, pubKey crypto.PublicKey, data []byte, signa
 	return
 }
 
-func createRSAPublicKey(keyID string, pkAttrs Attributes, keyMeta *tcrsa.KeyMeta) (Attributes, error) {
+func createRSAPublicKey(keyID string, pkAttrs Attributes, key *rsa.PublicKey) (Attributes, error) {
 
-	eBytes := make([]byte, reflect.TypeOf(keyMeta.PublicKey.E).Size())
-	binary.BigEndian.PutUint64(eBytes, uint64(keyMeta.PublicKey.E)) // Exponent is BigNumber
+	eBytes := make([]byte, unsafe.Sizeof(key.E))
+	binary.BigEndian.PutUint64(eBytes, uint64(key.E)) // Exponent is BigNumber
 
-	encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
-	if err != nil {
-		return nil, NewError("Session.createRSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
-	}
+	// encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
+	// if err != nil {
+	// 	return nil, NewError("Session.createRSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+	// }
 
 	// This fields are defined in SoftHSM implementation
 	pkAttrs.SetIfUndefined(
@@ -189,25 +186,25 @@ func createRSAPublicKey(keyID string, pkAttrs Attributes, keyMeta *tcrsa.KeyMeta
 
 	pkAttrs.Set(
 		// E and N from PK
-		&Attribute{C.CKA_MODULUS, keyMeta.PublicKey.N.Bytes()},
+		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
 
 		// Custom Fields
 		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
-		&Attribute{AttrTypeKeyMeta, encodedKeyMeta},
+		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
 	return pkAttrs, nil
 }
 
-func createRSAPrivateKey(keyID string, skAttrs Attributes, keyMeta *tcrsa.KeyMeta) (Attributes, error) {
+func createRSAPrivateKey(keyID string, skAttrs Attributes, key *rsa.PublicKey) (Attributes, error) {
 
-	eBytes := make([]byte, reflect.TypeOf(keyMeta.PublicKey.E).Size())
-	binary.BigEndian.PutUint64(eBytes, uint64(keyMeta.PublicKey.E))
+	eBytes := make([]byte, unsafe.Sizeof(key.E))
+	binary.BigEndian.PutUint64(eBytes, uint64(key.E))
 
-	encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
-	if err != nil {
-		return nil, NewError("Session.createRSAPrivateKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
-	}
+	// encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
+	// if err != nil {
+	// 	return nil, NewError("Session.createRSAPrivateKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+	// }
 
 	// This fields are defined in SoftHSM implementation
 	skAttrs.SetIfUndefined(
@@ -243,11 +240,11 @@ func createRSAPrivateKey(keyID string, skAttrs Attributes, keyMeta *tcrsa.KeyMet
 
 	skAttrs.Set(
 		// E and N from PK
-		&Attribute{C.CKA_MODULUS, keyMeta.PublicKey.N.Bytes()},
+		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
 
 		// Custom Fields
 		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
-		&Attribute{AttrTypeKeyMeta, encodedKeyMeta},
+		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
 	return skAttrs, nil

@@ -8,20 +8,16 @@ import "C"
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
 
 	"p11nethsm/utils"
-
-	"github.com/niclabs/dtcnode/v3/message"
-	"github.com/niclabs/tcecdsa"
 )
 
 type ECDSASignContext struct {
-	randSrc     io.Reader
-	keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in signing.
+	randSrc io.Reader
+	// keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in signing.
 	pubKey      *ecdsa.PublicKey // Public Key used in signing.
 	mechanism   *Mechanism       // Mechanism used to sign in a Sign session.
 	keyID       string           // Key ID used in signing.
@@ -30,8 +26,8 @@ type ECDSASignContext struct {
 }
 
 type ECDSAVerifyContext struct {
-	randSrc     io.Reader
-	keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in sign verification.
+	randSrc io.Reader
+	// keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in sign verification.
 	pubKey      *ecdsa.PublicKey // Public Key used in signing verification.
 	mechanism   *Mechanism       // Mechanism used to verify a signature in a Verify session.
 	keyID       string           // Key ID used in sign verification.
@@ -44,7 +40,7 @@ func (context *ECDSASignContext) Initialized() bool {
 }
 
 func (context *ECDSASignContext) Init(metaBytes []byte) (err error) {
-	context.keyMeta, err = message.DecodeECDSAKeyMeta(metaBytes)
+	// context.keyMeta, err = message.DecodeECDSAKeyMeta(metaBytes)
 	context.initialized = true
 	return
 }
@@ -71,7 +67,7 @@ func (context *ECDSASignContext) Final() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Signing data with key of curve=%s and id=%s", context.keyMeta.CurveName, context.keyID)
+	log.Printf("Signing data with key of curve=%s and id=%s", context.pubKey.Curve, context.keyID)
 	// Round 1
 	var sig []byte
 	// XXX sig, err := context.dtc.ECDSASignData(context.keyID, context.keyMeta, prepared)
@@ -94,7 +90,7 @@ func (context *ECDSAVerifyContext) Initialized() bool {
 }
 
 func (context *ECDSAVerifyContext) Init(metaBytes []byte) (err error) {
-	context.keyMeta, err = message.DecodeECDSAKeyMeta(metaBytes)
+	// context.keyMeta, err = message.DecodeECDSAKeyMeta(metaBytes)
 	context.initialized = true
 	return
 }
@@ -155,12 +151,12 @@ func verifyECDSA(mechanism *Mechanism, pubKey crypto.PublicKey, data []byte, sig
 	return
 }
 
-func createECDSAPublicKey(keyID string, pkAttrs Attributes, pk *ecdsa.PublicKey, keyMeta *tcecdsa.KeyMeta) (Attributes, error) {
+func createECDSAPublicKey(keyID string, pkAttrs Attributes, pk *ecdsa.PublicKey /*, keyMeta *tcecdsa.KeyMeta*/) (Attributes, error) {
 
-	encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
-	if err != nil {
-		return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
-	}
+	// encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
+	// if err != nil {
+	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+	// }
 
 	ecPointSerialized, err := utils.PubKeyToASN1Bytes(pk)
 	if err != nil {
@@ -197,18 +193,18 @@ func createECDSAPublicKey(keyID string, pkAttrs Attributes, pk *ecdsa.PublicKey,
 
 		// Custom fields
 		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
-		&Attribute{AttrTypeKeyMeta, encodedKeyMeta},
+		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
 	return pkAttrs, nil
 }
 
-func createECDSAPrivateKey(keyID string, skAttrs Attributes, pk *ecdsa.PublicKey, keyMeta *tcecdsa.KeyMeta) (Attributes, error) {
+func createECDSAPrivateKey(keyID string, skAttrs Attributes, pk *ecdsa.PublicKey /*, keyMeta *tcecdsa.KeyMeta*/) (Attributes, error) {
 
-	encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
-	if err != nil {
-		return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
-	}
+	// encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
+	// if err != nil {
+	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+	// }
 
 	ecPointSerialized, err := utils.PubKeyToASN1Bytes(pk)
 	if err != nil {
@@ -249,7 +245,7 @@ func createECDSAPrivateKey(keyID string, skAttrs Attributes, pk *ecdsa.PublicKey
 		&Attribute{C.CKA_EC_POINT, ecPointSerialized},
 		// Custom Fields
 		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
-		&Attribute{AttrTypeKeyMeta, encodedKeyMeta},
+		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
 	return skAttrs, nil

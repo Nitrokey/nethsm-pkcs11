@@ -14,7 +14,7 @@ import (
 
 // Application contains the essential parts of the HSM
 type Application struct {
-	Storage Storage        // Storage saves the HSM objects.
+	// Storage Storage        // Storage saves the HSM objects.
 	Slots   []*Slot        // Represents the slots of the HSM
 	Config  *config.Config // has the complete configuration of the HSM
 	Service *openapi.DefaultApiService
@@ -26,15 +26,15 @@ func NewApplication() (App *Application, err error) {
 	if err != nil {
 		return
 	}
-	db, err := NewDatabase(conf.Cryptoki.DatabaseType)
-	if err != nil {
-		err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-		return
-	}
-	if err = db.Init(conf.Cryptoki.Slots); err != nil {
-		err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-		return
-	}
+	// db, err := NewDatabase(conf.Cryptoki.DatabaseType)
+	// if err != nil {
+	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
+	// 	return
+	// }
+	// if err = db.Init(conf.Cryptoki.Slots); err != nil {
+	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
+	// 	return
+	// }
 	slots := make([]*Slot, len(conf.Cryptoki.Slots))
 
 	apiConf := openapi.NewConfiguration()
@@ -43,7 +43,7 @@ func NewApplication() (App *Application, err error) {
 	service := openapi.NewAPIClient(apiConf).DefaultApi
 
 	App = &Application{
-		Storage: db,
+		// Storage: db,
 		Slots:   slots,
 		Config:  conf,
 		Service: service,
@@ -76,7 +76,7 @@ func NewApplication() (App *Application, err error) {
 		r, e := App.Service.HealthReadyGet(slot.ctx).Execute()
 		if e == nil && r.StatusCode < 300 {
 			var token *Token
-			token, err = db.GetToken(slotConf.Label)
+			token, err = NewToken(slotConf.Label, "1234", "1234")
 			if err != nil {
 				err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
 				return

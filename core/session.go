@@ -6,6 +6,7 @@ package core
 import "C"
 import (
 	"crypto"
+	"crypto/rsa"
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -17,7 +18,6 @@ import (
 	"p11nethsm/utils"
 
 	"github.com/google/uuid"
-	"github.com/niclabs/tcrsa"
 )
 
 const AttrTypeKeyHandler = 1 << 31
@@ -138,10 +138,10 @@ func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
 		switch keyType {
 		case C.CKK_RSA, C.CKK_EC:
 			token.AddObject(object)
-			err := session.Slot.Application.Storage.SaveToken(token)
-			if err != nil {
-				return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
-			}
+			// err := session.Slot.Application.Storage.SaveToken(token)
+			// if err != nil {
+			// 	return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
+			// }
 			return object, nil
 		default:
 			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
@@ -177,10 +177,10 @@ func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
 			}
 		}
 		_ = token.DeleteObject(hObject)
-		err := session.Slot.Application.Storage.SaveToken(token)
-		if err != nil {
-			return NewError("Session.DestroyObject", err.Error(), C.CKR_DEVICE_ERROR)
-		}
+		// err := session.Slot.Application.Storage.SaveToken(token)
+		// if err != nil {
+		// 	return NewError("Session.DestroyObject", err.Error(), C.CKR_DEVICE_ERROR)
+		// }
 		return nil
 	}
 }
@@ -216,23 +216,23 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		}
 	}
 
-	// If the object was not found. We need to reload the database, because the object could have been created by another instance.
-	if len(session.foundObjects) == 0 && !session.refreshedToken {
-		session.refreshedToken = true
-		slot := session.Slot
-		token, err := slot.GetToken()
-		if err != nil {
-			return err
-		}
-		db := slot.Application.Storage
-		newToken, err := db.GetToken(token.Label)
-		if err != nil {
-			return NewError("Session.FindObjectsInit", err.Error(), C.CKR_DEVICE_ERROR)
-		}
-		newToken.CopyState(token)
-		slot.InsertToken(newToken)
-		return session.FindObjectsInit(attrs)
-	}
+	// // If the object was not found. We need to reload the database, because the object could have been created by another instance.
+	// if len(session.foundObjects) == 0 && !session.refreshedToken {
+	// 	session.refreshedToken = true
+	// 	slot := session.Slot
+	// 	token, err := slot.GetToken()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	db := slot.Application.Storage
+	// 	newToken, err := db.GetToken(token.Label)
+	// 	if err != nil {
+	// 		return NewError("Session.FindObjectsInit", err.Error(), C.CKR_DEVICE_ERROR)
+	// 	}
+	// 	newToken.CopyState(token)
+	// 	slot.InsertToken(newToken)
+	// 	return session.FindObjectsInit(attrs)
+	// }
 
 	// TODO: Verify access permissions
 	session.findInitialized = true
@@ -288,10 +288,10 @@ func (session *Session) SaveObject(object *CryptoObject) error {
 		return err
 	}
 	token.AddObject(object)
-	err = session.Slot.Application.Storage.SaveToken(token)
-	if err != nil {
-		return err
-	}
+	// err = session.Slot.Application.Storage.SaveToken(token)
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -556,11 +556,11 @@ func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) 
 		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
 	}
 	// create key
-	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil, nil)
+	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil /*, nil*/)
 	if err != nil {
 		return
 	}
-	sk, err := createECDSAPrivateKey(keyID, skTemplate, nil, nil)
+	sk, err := createECDSAPrivateKey(keyID, skTemplate, nil /*, nil*/)
 	if err != nil {
 		return
 	}
@@ -568,7 +568,7 @@ func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) 
 }
 
 func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (pk, sk Attributes, err error) {
-	var keyMeta *tcrsa.KeyMeta
+	var key *rsa.PublicKey
 	keyID := uuid.New().String()
 	bitSizeAttr, err := pkTemplate.GetAttributeByType(C.CKA_MODULUS_BITS)
 	if err != nil {
@@ -590,11 +590,11 @@ func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (p
 	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
 	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
 	// XXX create key
-	pk, err = createRSAPublicKey(keyID, pkTemplate, keyMeta)
+	pk, err = createRSAPublicKey(keyID, pkTemplate, key)
 	if err != nil {
 		return
 	}
-	sk, err = createRSAPrivateKey(keyID, skTemplate, keyMeta)
+	sk, err = createRSAPrivateKey(keyID, skTemplate, key)
 	if err != nil {
 		return
 	}
