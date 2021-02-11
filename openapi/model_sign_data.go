@@ -17,7 +17,10 @@ import (
 // SignData struct for SignData
 type SignData struct {
 	Signature string `json:"signature"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _SignData SignData
 
 // NewSignData instantiates a new SignData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o SignData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["signature"] = o.Signature
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *SignData) UnmarshalJSON(bytes []byte) (err error) {
+	varSignData := _SignData{}
+
+	if err = json.Unmarshal(bytes, &varSignData); err == nil {
+		*o = SignData(varSignData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "signature")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableSignData struct {

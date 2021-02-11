@@ -17,7 +17,10 @@ import (
 // BackupPassphraseConfig struct for BackupPassphraseConfig
 type BackupPassphraseConfig struct {
 	Passphrase string `json:"passphrase"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _BackupPassphraseConfig BackupPassphraseConfig
 
 // NewBackupPassphraseConfig instantiates a new BackupPassphraseConfig object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o BackupPassphraseConfig) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["passphrase"] = o.Passphrase
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *BackupPassphraseConfig) UnmarshalJSON(bytes []byte) (err error) {
+	varBackupPassphraseConfig := _BackupPassphraseConfig{}
+
+	if err = json.Unmarshal(bytes, &varBackupPassphraseConfig); err == nil {
+		*o = BackupPassphraseConfig(varBackupPassphraseConfig)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "passphrase")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableBackupPassphraseConfig struct {

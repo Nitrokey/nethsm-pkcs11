@@ -16,15 +16,18 @@ import (
 
 // SignRequestData struct for SignRequestData
 type SignRequestData struct {
-	Mode string `json:"mode"`
+	Mode SignMode `json:"mode"`
 	Message string `json:"message"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _SignRequestData SignRequestData
 
 // NewSignRequestData instantiates a new SignRequestData object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSignRequestData(mode string, message string, ) *SignRequestData {
+func NewSignRequestData(mode SignMode, message string, ) *SignRequestData {
 	this := SignRequestData{}
 	this.Mode = mode
 	this.Message = message
@@ -40,9 +43,9 @@ func NewSignRequestDataWithDefaults() *SignRequestData {
 }
 
 // GetMode returns the Mode field value
-func (o *SignRequestData) GetMode() string {
+func (o *SignRequestData) GetMode() SignMode {
 	if o == nil  {
-		var ret string
+		var ret SignMode
 		return ret
 	}
 
@@ -51,7 +54,7 @@ func (o *SignRequestData) GetMode() string {
 
 // GetModeOk returns a tuple with the Mode field value
 // and a boolean to check if the value has been set.
-func (o *SignRequestData) GetModeOk() (*string, bool) {
+func (o *SignRequestData) GetModeOk() (*SignMode, bool) {
 	if o == nil  {
 		return nil, false
 	}
@@ -59,7 +62,7 @@ func (o *SignRequestData) GetModeOk() (*string, bool) {
 }
 
 // SetMode sets field value
-func (o *SignRequestData) SetMode(v string) {
+func (o *SignRequestData) SetMode(v SignMode) {
 	o.Mode = v
 }
 
@@ -95,7 +98,30 @@ func (o SignRequestData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["message"] = o.Message
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *SignRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varSignRequestData := _SignRequestData{}
+
+	if err = json.Unmarshal(bytes, &varSignRequestData); err == nil {
+		*o = SignRequestData(varSignRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "mode")
+		delete(additionalProperties, "message")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableSignRequestData struct {

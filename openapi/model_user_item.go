@@ -17,7 +17,10 @@ import (
 // UserItem struct for UserItem
 type UserItem struct {
 	User string `json:"user"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _UserItem UserItem
 
 // NewUserItem instantiates a new UserItem object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o UserItem) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["user"] = o.User
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *UserItem) UnmarshalJSON(bytes []byte) (err error) {
+	varUserItem := _UserItem{}
+
+	if err = json.Unmarshal(bytes, &varUserItem); err == nil {
+		*o = UserItem(varUserItem)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "user")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableUserItem struct {

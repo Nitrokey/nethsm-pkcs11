@@ -95,7 +95,7 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 		object.Attributes.Set(
 			&Attribute{C.CKA_LABEL, []byte(keyID)},
 			&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-			&Attribute{C.CKA_ID, nil},
+			&Attribute{C.CKA_ID, []byte(keyID)},
 			&Attribute{C.CKA_SUBJECT, nil},
 			&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
 			&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
@@ -109,7 +109,7 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 			&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
 		)
 		switch key.Algorithm {
-		case openapi.RSA:
+		case openapi.KEYALGORITHM_RSA:
 			object.Attributes.Set(
 				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
 				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
@@ -121,7 +121,7 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 				&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
 				&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
 			)
-		case openapi.ED25519:
+		case openapi.KEYALGORITHM_ED25519:
 			object.Attributes.Set(
 				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
 				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
@@ -159,29 +159,28 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 		return NewAPIError("token.GetInfo", "InfoGet", r, err)
 	}
 
-	apiSystemInfo, r, err := App.Service.SystemInfoGet(token.slot.ctx).Execute()
-	if err != nil {
-		return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
-	}
+	// apiSystemInfo, r, err := App.Service.SystemInfoGet(token.slot.ctx).Execute()
+	// if err != nil {
+	// 	return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
+	// }
 
 	str2Buf(apiInfo.Vendor, &info.manufacturerID)
 	str2Buf(apiInfo.Product, &info.model)
-	serialNumber := "12345"
 	str2Buf(serialNumber, &info.serialNumber)
 
 	var hwVerMaj, hwVerMin, fwVerMaj, fwVerMin C.uchar
-	s := apiSystemInfo.HardwareVersion
-	fmt.Sscanf(s, "%d.%d", &hwVerMaj, &hwVerMin)
-	s = apiSystemInfo.FirmwareVersion
-	fmt.Sscanf(s, "%d.%d", &fwVerMaj, &fwVerMin)
+	// s := apiSystemInfo.HardwareVersion
+	// fmt.Sscanf(s, "%d.%d", &hwVerMaj, &hwVerMin)
+	// s = apiSystemInfo.FirmwareVersion
+	// fmt.Sscanf(s, "%d.%d", &fwVerMaj, &fwVerMin)
 
 	info.flags = C.CK_ULONG(token.tokenFlags)
-	info.ulMaxSessionCount = C.CK_ULONG(App.Config.Cryptoki.MaxSessionCount)
+	info.ulMaxSessionCount = C.CK_ULONG(App.Config.MaxSessionCount)
 	info.ulSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxRwSessionCount = C.CK_ULONG(App.Config.Cryptoki.MaxSessionCount)
+	info.ulMaxRwSessionCount = C.CK_ULONG(App.Config.MaxSessionCount)
 	info.ulRwSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxPinLen = C.CK_ULONG(App.Config.Cryptoki.MaxPinLength)
-	info.ulMinPinLen = C.CK_ULONG(App.Config.Cryptoki.MinPinLength)
+	info.ulMaxPinLen = C.CK_ULONG(maxPinLength)
+	info.ulMinPinLen = C.CK_ULONG(minPinLength)
 	info.ulTotalPublicMemory = C.CK_UNAVAILABLE_INFORMATION
 	info.ulFreePublicMemory = C.CK_UNAVAILABLE_INFORMATION
 	info.ulTotalPrivateMemory = C.CK_UNAVAILABLE_INFORMATION

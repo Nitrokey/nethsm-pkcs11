@@ -20,7 +20,10 @@ type SystemInfo struct {
 	SoftwareVersion string `json:"softwareVersion"`
 	HardwareVersion string `json:"hardwareVersion"`
 	BuildTag string `json:"buildTag"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _SystemInfo SystemInfo
 
 // NewSystemInfo instantiates a new SystemInfo object
 // This constructor will assign default values to properties that have it defined,
@@ -153,7 +156,32 @@ func (o SystemInfo) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["buildTag"] = o.BuildTag
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *SystemInfo) UnmarshalJSON(bytes []byte) (err error) {
+	varSystemInfo := _SystemInfo{}
+
+	if err = json.Unmarshal(bytes, &varSystemInfo); err == nil {
+		*o = SystemInfo(varSystemInfo)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "firmwareVersion")
+		delete(additionalProperties, "softwareVersion")
+		delete(additionalProperties, "hardwareVersion")
+		delete(additionalProperties, "buildTag")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableSystemInfo struct {

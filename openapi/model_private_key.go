@@ -19,7 +19,10 @@ type PrivateKey struct {
 	Mechanisms []KeyMechanism `json:"mechanisms"`
 	Algorithm KeyAlgorithm `json:"algorithm"`
 	Key KeyPrivateData `json:"key"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _PrivateKey PrivateKey
 
 // NewPrivateKey instantiates a new PrivateKey object
 // This constructor will assign default values to properties that have it defined,
@@ -124,7 +127,31 @@ func (o PrivateKey) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["key"] = o.Key
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *PrivateKey) UnmarshalJSON(bytes []byte) (err error) {
+	varPrivateKey := _PrivateKey{}
+
+	if err = json.Unmarshal(bytes, &varPrivateKey); err == nil {
+		*o = PrivateKey(varPrivateKey)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "mechanisms")
+		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "key")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullablePrivateKey struct {

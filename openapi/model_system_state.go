@@ -20,9 +20,9 @@ type SystemState string
 
 // List of SystemState
 const (
-	UNPROVISIONED SystemState = "Unprovisioned"
-	LOCKED SystemState = "Locked"
-	OPERATIONAL SystemState = "Operational"
+	SYSTEMSTATE_UNPROVISIONED SystemState = "Unprovisioned"
+	SYSTEMSTATE_LOCKED SystemState = "Locked"
+	SYSTEMSTATE_OPERATIONAL SystemState = "Operational"
 )
 
 func (v *SystemState) UnmarshalJSON(src []byte) error {

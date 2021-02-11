@@ -8,25 +8,23 @@ import "C"
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"io"
-	"log"
 	"math/big"
 
 	"p11nethsm/utils"
 )
 
 type ECDSASignContext struct {
-	randSrc io.Reader
+	// randSrc io.Reader
 	// keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in signing.
-	pubKey      *ecdsa.PublicKey // Public Key used in signing.
-	mechanism   *Mechanism       // Mechanism used to sign in a Sign session.
-	keyID       string           // Key ID used in signing.
-	data        []byte           // Data to sign.
-	initialized bool             // // True if the user executed a Sign method and it has not finished yet.
+	// pubKey      *ecdsa.PublicKey // Public Key used in signing.
+	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
+	keyID       string     // Key ID used in signing.
+	data        []byte     // Data to sign.
+	initialized bool       // // True if the user executed a Sign method and it has not finished yet.
 }
 
 type ECDSAVerifyContext struct {
-	randSrc io.Reader
+	// randSrc io.Reader
 	// keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in sign verification.
 	pubKey      *ecdsa.PublicKey // Public Key used in signing verification.
 	mechanism   *Mechanism       // Mechanism used to verify a signature in a Verify session.
@@ -50,7 +48,8 @@ func (context *ECDSASignContext) SignatureLength() int {
 	// ASN.1 has overhead so we multiply it by 3 instead of two
 	// (it is not so costly, and on signaturefinal we correct the final size)
 	// of the signature
-	return 3 * int((context.pubKey.Params().BitSize+7)/8)
+	// return 3 * int((context.pubKey.Params().BitSize+7)/8)
+	return 0
 }
 
 func (context *ECDSASignContext) Update(data []byte) error {
@@ -59,15 +58,15 @@ func (context *ECDSASignContext) Update(data []byte) error {
 }
 
 func (context *ECDSASignContext) Final() ([]byte, error) {
-	_ /*prepared*/, err := context.mechanism.Prepare(
-		context.randSrc,
-		context.SignatureLength(),
-		context.data,
-	)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Signing data with key of curve=%s and id=%s", context.pubKey.Curve, context.keyID)
+	// _ /*prepared*/, err := context.mechanism.Prepare(
+	// 	context.randSrc,
+	// 	context.SignatureLength(),
+	// 	context.data,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// log.Printf("Signing data with key of curve=%s and id=%s", context.pubKey.Curve, context.keyID)
 	// Round 1
 	var sig []byte
 	// XXX sig, err := context.dtc.ECDSASignData(context.keyID, context.keyMeta, prepared)
@@ -138,7 +137,7 @@ func verifyECDSA(mechanism *Mechanism, pubKey crypto.PublicKey, data []byte, sig
 		// https://www.oasis-open.org/committees/download.php/50389/CKM_ECDSA_FIPS_186_4_v03.pdf Section 2.3.1
 		// >>> For signatures passed to a token for verification, the signature may have a shorter length
 		// >>> but must be composed as specified before.
-		big.NewInt(0).SetBytes(signature[:len(signature)])
+		big.NewInt(0).SetBytes(signature[:])
 		r := big.NewInt(0).SetBytes(signature[:len(signature)/2])
 		s := big.NewInt(0).SetBytes(signature[len(signature)/2:])
 		if !ecdsa.Verify(ecdsaPK, hash, r, s) {
@@ -192,7 +191,7 @@ func createECDSAPublicKey(keyID string, pkAttrs Attributes, pk *ecdsa.PublicKey 
 		&Attribute{C.CKA_EC_POINT, ecPointSerialized},
 
 		// Custom fields
-		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
+		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
 		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
@@ -244,7 +243,7 @@ func createECDSAPrivateKey(keyID string, skAttrs Attributes, pk *ecdsa.PublicKey
 		// ECDSA Public Key
 		&Attribute{C.CKA_EC_POINT, ecPointSerialized},
 		// Custom Fields
-		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
+		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
 		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 

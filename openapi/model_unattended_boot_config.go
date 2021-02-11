@@ -16,14 +16,17 @@ import (
 
 // UnattendedBootConfig struct for UnattendedBootConfig
 type UnattendedBootConfig struct {
-	Status string `json:"status"`
+	Status Switch `json:"status"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _UnattendedBootConfig UnattendedBootConfig
 
 // NewUnattendedBootConfig instantiates a new UnattendedBootConfig object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUnattendedBootConfig(status string, ) *UnattendedBootConfig {
+func NewUnattendedBootConfig(status Switch, ) *UnattendedBootConfig {
 	this := UnattendedBootConfig{}
 	this.Status = status
 	return &this
@@ -38,9 +41,9 @@ func NewUnattendedBootConfigWithDefaults() *UnattendedBootConfig {
 }
 
 // GetStatus returns the Status field value
-func (o *UnattendedBootConfig) GetStatus() string {
+func (o *UnattendedBootConfig) GetStatus() Switch {
 	if o == nil  {
-		var ret string
+		var ret Switch
 		return ret
 	}
 
@@ -49,7 +52,7 @@ func (o *UnattendedBootConfig) GetStatus() string {
 
 // GetStatusOk returns a tuple with the Status field value
 // and a boolean to check if the value has been set.
-func (o *UnattendedBootConfig) GetStatusOk() (*string, bool) {
+func (o *UnattendedBootConfig) GetStatusOk() (*Switch, bool) {
 	if o == nil  {
 		return nil, false
 	}
@@ -57,7 +60,7 @@ func (o *UnattendedBootConfig) GetStatusOk() (*string, bool) {
 }
 
 // SetStatus sets field value
-func (o *UnattendedBootConfig) SetStatus(v string) {
+func (o *UnattendedBootConfig) SetStatus(v Switch) {
 	o.Status = v
 }
 
@@ -66,7 +69,29 @@ func (o UnattendedBootConfig) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["status"] = o.Status
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *UnattendedBootConfig) UnmarshalJSON(bytes []byte) (err error) {
+	varUnattendedBootConfig := _UnattendedBootConfig{}
+
+	if err = json.Unmarshal(bytes, &varUnattendedBootConfig); err == nil {
+		*o = UnattendedBootConfig(varUnattendedBootConfig)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "status")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableUnattendedBootConfig struct {

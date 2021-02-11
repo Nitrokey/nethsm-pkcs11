@@ -20,8 +20,8 @@ type KeyAlgorithm string
 
 // List of KeyAlgorithm
 const (
-	RSA KeyAlgorithm = "RSA"
-	ED25519 KeyAlgorithm = "ED25519"
+	KEYALGORITHM_RSA KeyAlgorithm = "RSA"
+	KEYALGORITHM_ED25519 KeyAlgorithm = "ED25519"
 )
 
 func (v *KeyAlgorithm) UnmarshalJSON(src []byte) error {

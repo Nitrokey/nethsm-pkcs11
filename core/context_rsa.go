@@ -6,16 +6,21 @@ package core
 import "C"
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/binary"
 	"io"
+	"log"
+	"p11nethsm/openapi"
 	"unsafe"
 )
 
 type SignContextRSA struct {
-	randSrc     io.Reader
-	pubKey      rsa.PublicKey
+	// randSrc     io.Reader
+	// pubKey      rsa.PublicKey
+	apiCtx      context.Context
 	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
 	keyID       string     // Key ID used in signing.
 	data        []byte     // Data to sign.
@@ -36,14 +41,16 @@ func (context *SignContextRSA) Initialized() bool {
 	return context.initialized
 }
 
-func (context *SignContextRSA) Init(metaBytes []byte) (err error) {
+func (context *SignContextRSA) Init([]byte) (err error) {
 	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
 	context.initialized = true
 	return
 }
 
 func (context *SignContextRSA) SignatureLength() int {
-	return context.pubKey.Size()
+	log.Printf("context: %v", context)
+	return 0 // XXX
+
 }
 
 func (context *SignContextRSA) Update(data []byte) error {
@@ -52,26 +59,30 @@ func (context *SignContextRSA) Update(data []byte) error {
 }
 
 func (context *SignContextRSA) Final() ([]byte, error) {
-	_ /*prepared*/, err := context.mechanism.Prepare(
-		context.randSrc,
-		context.pubKey.Size(),
-		context.data,
-	)
-	if err != nil {
-		return nil, err
-	}
+	var err error
+	// _ /*prepared*/, err := context.mechanism.Prepare(
+	// 	context.randSrc,
+	// 	context.pubKey.Size(),
+	// 	context.data,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 	// XXX signature, err := context.dtc.RSASignData(context.keyID,
 	// context.keyMeta, prepared)
-	var signature []byte
+
+	var reqBody openapi.SignRequestData
+	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
+	reqBody.SetMode(openapi.SIGNMODE_PKCS1)
+	sigData, r, err := App.Service.KeysKeyIDSignPost(
+		context.apiCtx, context.keyID).Body(reqBody).Execute()
 	if err != nil {
+		log.Printf("%v\n", r)
+		log.Printf("%v\n", r.Request.Body)
 		return nil, err
 	}
-	if err = verifyRSA(
-		context.mechanism,
-		context.pubKey,
-		context.data,
-		signature,
-	); err != nil {
+	signature, err := base64.StdEncoding.DecodeString(sigData.GetSignature())
+	if err != nil {
 		return nil, err
 	}
 	return signature, nil
@@ -189,7 +200,7 @@ func createRSAPublicKey(keyID string, pkAttrs Attributes, key *rsa.PublicKey) (A
 		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
 
 		// Custom Fields
-		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
+		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
 		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 
@@ -243,7 +254,7 @@ func createRSAPrivateKey(keyID string, skAttrs Attributes, key *rsa.PublicKey) (
 		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
 
 		// Custom Fields
-		&Attribute{AttrTypeKeyHandler, []byte(keyID)},
+		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
 		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},
 	)
 

@@ -204,7 +204,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewLoggingConfig("IpAddress_example", int32(123), "LogLevel_example") // LoggingConfig |  (optional)
+    body := *openapiclient.NewLoggingConfig("IpAddress_example", int32(123), openapiclient.LogLevel("debug")) // LoggingConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -832,7 +832,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewUnattendedBootConfig("Status_example") // UnattendedBootConfig |  (optional)
+    body := *openapiclient.NewUnattendedBootConfig(openapiclient.Switch("on")) // UnattendedBootConfig |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1606,7 +1606,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewDecryptRequestData("Mode_example", "Encrypted_example") // DecryptRequestData |  (optional)
+    body := *openapiclient.NewDecryptRequestData(openapiclient.DecryptMode("RAW"), "Encrypted_example") // DecryptRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1956,7 +1956,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewSignRequestData("Mode_example", "Message_example") // SignRequestData |  (optional)
+    body := *openapiclient.NewSignRequestData(openapiclient.SignMode("PKCS1"), "Message_example") // SignRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)

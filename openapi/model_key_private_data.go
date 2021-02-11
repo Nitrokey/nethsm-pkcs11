@@ -20,7 +20,10 @@ type KeyPrivateData struct {
 	PrimeQ *string `json:"primeQ,omitempty"`
 	PublicExponent *string `json:"publicExponent,omitempty"`
 	Data *string `json:"data,omitempty"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _KeyPrivateData KeyPrivateData
 
 // NewKeyPrivateData instantiates a new KeyPrivateData object
 // This constructor will assign default values to properties that have it defined,
@@ -181,7 +184,32 @@ func (o KeyPrivateData) MarshalJSON() ([]byte, error) {
 	if o.Data != nil {
 		toSerialize["data"] = o.Data
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *KeyPrivateData) UnmarshalJSON(bytes []byte) (err error) {
+	varKeyPrivateData := _KeyPrivateData{}
+
+	if err = json.Unmarshal(bytes, &varKeyPrivateData); err == nil {
+		*o = KeyPrivateData(varKeyPrivateData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "primeP")
+		delete(additionalProperties, "primeQ")
+		delete(additionalProperties, "publicExponent")
+		delete(additionalProperties, "data")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableKeyPrivateData struct {

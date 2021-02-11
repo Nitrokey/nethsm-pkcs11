@@ -20,10 +20,10 @@ type UserRole string
 
 // List of UserRole
 const (
-	ADMINISTRATOR UserRole = "Administrator"
-	OPERATOR UserRole = "Operator"
-	METRICS UserRole = "Metrics"
-	BACKUP UserRole = "Backup"
+	USERROLE_ADMINISTRATOR UserRole = "Administrator"
+	USERROLE_OPERATOR UserRole = "Operator"
+	USERROLE_METRICS UserRole = "Metrics"
+	USERROLE_BACKUP UserRole = "Backup"
 )
 
 func (v *UserRole) UnmarshalJSON(src []byte) error {

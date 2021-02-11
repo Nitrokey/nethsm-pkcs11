@@ -4,14 +4,14 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Mode** | **string** |  | 
+**Mode** | [**DecryptMode**](DecryptMode.md) |  | 
 **Encrypted** | **string** |  | 
 
 ## Methods
 
 ### NewDecryptRequestData
 
-`func NewDecryptRequestData(mode string, encrypted string, ) *DecryptRequestData`
+`func NewDecryptRequestData(mode DecryptMode, encrypted string, ) *DecryptRequestData`
 
 NewDecryptRequestData instantiates a new DecryptRequestData object
 This constructor will assign default values to properties that have it defined,
@@ -28,20 +28,20 @@ but it doesn't guarantee that properties required by API are set
 
 ### GetMode
 
-`func (o *DecryptRequestData) GetMode() string`
+`func (o *DecryptRequestData) GetMode() DecryptMode`
 
 GetMode returns the Mode field if non-nil, zero value otherwise.
 
 ### GetModeOk
 
-`func (o *DecryptRequestData) GetModeOk() (*string, bool)`
+`func (o *DecryptRequestData) GetModeOk() (*DecryptMode, bool)`
 
 GetModeOk returns a tuple with the Mode field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetMode
 
-`func (o *DecryptRequestData) SetMode(v string)`
+`func (o *DecryptRequestData) SetMode(v DecryptMode)`
 
 SetMode sets Mode field to given value.
 

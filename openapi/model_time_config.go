@@ -18,7 +18,10 @@ import (
 // TimeConfig struct for TimeConfig
 type TimeConfig struct {
 	Time time.Time `json:"time"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _TimeConfig TimeConfig
 
 // NewTimeConfig instantiates a new TimeConfig object
 // This constructor will assign default values to properties that have it defined,
@@ -67,7 +70,29 @@ func (o TimeConfig) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["time"] = o.Time
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *TimeConfig) UnmarshalJSON(bytes []byte) (err error) {
+	varTimeConfig := _TimeConfig{}
+
+	if err = json.Unmarshal(bytes, &varTimeConfig); err == nil {
+		*o = TimeConfig(varTimeConfig)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "time")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableTimeConfig struct {

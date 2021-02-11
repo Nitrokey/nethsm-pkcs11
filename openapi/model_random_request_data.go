@@ -17,7 +17,10 @@ import (
 // RandomRequestData struct for RandomRequestData
 type RandomRequestData struct {
 	Length int32 `json:"length"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _RandomRequestData RandomRequestData
 
 // NewRandomRequestData instantiates a new RandomRequestData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o RandomRequestData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["length"] = o.Length
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *RandomRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varRandomRequestData := _RandomRequestData{}
+
+	if err = json.Unmarshal(bytes, &varRandomRequestData); err == nil {
+		*o = RandomRequestData(varRandomRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "length")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableRandomRequestData struct {

@@ -17,7 +17,10 @@ import (
 // KeyItem struct for KeyItem
 type KeyItem struct {
 	Key string `json:"key"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _KeyItem KeyItem
 
 // NewKeyItem instantiates a new KeyItem object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o KeyItem) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["key"] = o.Key
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *KeyItem) UnmarshalJSON(bytes []byte) (err error) {
+	varKeyItem := _KeyItem{}
+
+	if err = json.Unmarshal(bytes, &varKeyItem); err == nil {
+		*o = KeyItem(varKeyItem)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "key")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableKeyItem struct {

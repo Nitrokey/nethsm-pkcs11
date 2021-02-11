@@ -61,7 +61,7 @@ func (slot *Slot) CloseSession(handle C.CK_SESSION_HANDLE) error {
 func (slot *Slot) CloseAllSessions() {
 	slot.Lock()
 	defer slot.Unlock()
-	slot.Sessions = make(Sessions, 0)
+	slot.Sessions = make(Sessions)
 }
 
 // GetSession returns an active session with the given handle.

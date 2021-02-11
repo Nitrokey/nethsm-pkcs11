@@ -1633,16 +1633,7 @@ components:
         message: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
       properties:
         mode:
-          enum:
-          - PKCS1
-          - PSS_MD5
-          - PSS_SHA1
-          - PSS_SHA224
-          - PSS_SHA256
-          - PSS_SHA384
-          - PSS_SHA512
-          - ED25519
-          type: string
+          $ref: '#/components/schemas/SignMode'
         message:
           pattern: ^[a-zA-Z0-9+/]+={0,3}$
           type: string
@@ -1747,9 +1738,9 @@ components:
       type: string
     NetworkConfig:
       example:
-        ipAddress: 10.0.0.23
+        ipAddress: 192.168.1.1
         netmask: 255.255.255.0
-        gateway: 10.0.0.1
+        gateway: 0.0.0.0
       properties:
         ipAddress:
           type: string
@@ -1771,7 +1762,7 @@ components:
       example:
         unlockPassphrase: UnlockPassphrase
         adminPassphrase: Administrator
-        systemTime: 2018-10-30T11:20:50.000+0000
+        systemTime: 2018-10-30T11:20:50Z
       properties:
         unlockPassphrase:
           minLength: 1
@@ -1806,7 +1797,7 @@ components:
       type: array
     TimeConfig:
       example:
-        time: 2018-10-30T11:20:50.000+0000
+        time: 2018-10-30T11:20:50Z
       properties:
         time:
           format: date-time
@@ -1826,6 +1817,13 @@ components:
       required:
       - key
       type: object
+    LogLevel:
+      enum:
+      - debug
+      - info
+      - warn
+      - error
+      type: string
     UnlockRequestData:
       example:
         passphrase: UnlockPassphrase
@@ -1885,16 +1883,7 @@ components:
         encrypted: nhrfotu32409ru0rgert45z54z099u23r03498uhtr==
       properties:
         mode:
-          enum:
-          - RAW
-          - PKCS1
-          - OAEP_MD5
-          - OAEP_SHA1
-          - OAEP_SHA224
-          - OAEP_SHA256
-          - OAEP_SHA384
-          - OAEP_SHA512
-          type: string
+          $ref: '#/components/schemas/DecryptMode'
         encrypted:
           pattern: ^[a-zA-Z0-9+/]+={0,3}$
           type: string
@@ -1902,6 +1891,17 @@ components:
       - encrypted
       - mode
       type: object
+    SignMode:
+      enum:
+      - PKCS1
+      - PSS_MD5
+      - PSS_SHA1
+      - PSS_SHA224
+      - PSS_SHA256
+      - PSS_SHA384
+      - PSS_SHA512
+      - ED25519
+      type: string
     UserPostData:
       example:
         realName: Jane User
@@ -1955,6 +1955,17 @@ components:
       items:
         $ref: '#/components/schemas/KeyMechanism'
       type: array
+    DecryptMode:
+      enum:
+      - RAW
+      - PKCS1
+      - OAEP_MD5
+      - OAEP_SHA1
+      - OAEP_SHA224
+      - OAEP_SHA256
+      - OAEP_SHA384
+      - OAEP_SHA512
+      type: string
     PemPublicKey:
       example: |
         -----BEGIN PUBLIC KEY-----
@@ -1978,12 +1989,7 @@ components:
         port:
           type: integer
         logLevel:
-          enum:
-          - debug
-          - info
-          - warn
-          - error
-          type: string
+          $ref: '#/components/schemas/LogLevel'
       required:
       - ipAddress
       - logLevel
@@ -2149,10 +2155,10 @@ components:
       type: object
     UnattendedBootConfig:
       example:
-        status: true
+        status: "off"
       properties:
         status:
-          type: string
+          $ref: '#/components/schemas/Switch'
       required:
       - status
       type: object
@@ -2193,6 +2199,11 @@ components:
       - algorithm
       - mechanisms
       type: object
+    Switch:
+      enum:
+      - "on"
+      - "off"
+      type: string
     RandomData:
       example:
         random: VGhlIHE=

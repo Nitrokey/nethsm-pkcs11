@@ -17,7 +17,10 @@ import (
 // UnlockRequestData struct for UnlockRequestData
 type UnlockRequestData struct {
 	Passphrase string `json:"passphrase"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _UnlockRequestData UnlockRequestData
 
 // NewUnlockRequestData instantiates a new UnlockRequestData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o UnlockRequestData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["passphrase"] = o.Passphrase
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *UnlockRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varUnlockRequestData := _UnlockRequestData{}
+
+	if err = json.Unmarshal(bytes, &varUnlockRequestData); err == nil {
+		*o = UnlockRequestData(varUnlockRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "passphrase")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableUnlockRequestData struct {

@@ -9,13 +9,11 @@ extern CK_FUNCTION_LIST functionList;
 import "C"
 import (
 	"crypto/rand"
-	"fmt"
 	"log"
 	"os"
+	"p11nethsm/config"
 	"strings"
 	"unsafe"
-
-	"github.com/spf13/viper"
 )
 
 const (
@@ -23,25 +21,22 @@ const (
 	libDescription    = "NetHSM PKCS#11 module"
 	libVersionMajor   = 0
 	libVersionMinor   = 1
+	minPinLength      = 3
+	maxPinLength      = 10
+	serialNumber      = "1010101"
 )
 
 func init() {
-	viper.SetConfigName("p11nethsm-config")
-	viper.AddConfigPath("./")
-	viper.AddConfigPath("$HOME/.nitrokey")
-	viper.AddConfigPath("/etc/nitrokey/")
-	if err := viper.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("config file problem %v", err))
-	}
-	logPath := viper.GetString("logfile")
-	log.SetPrefix("[p11nethsm] ")
+	logPath := config.Get().LogFile
 	if logPath != "" {
 		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			log.Printf("cannot create logfile in given path: %s", err)
+			log.Printf("cannot create logfile at given path: %s", err)
 			return
 		}
 		log.SetOutput(logFile)
+	} else {
+		log.SetPrefix("[p11nethsm] ")
 	}
 }
 
@@ -53,11 +48,10 @@ func ErrorToRV(err error) C.CK_RV {
 		return C.CKR_OK
 	}
 	//log.Printf("%+v\n", err)
-	switch err.(type) {
+	switch err := err.(type) {
 	case P11Error:
-		p11err := err.(P11Error)
-		log.Printf("[%s] %s [Code %d]\n", p11err.Who, p11err.Description, int(p11err.Code))
-		return C.CK_RV(p11err.Code)
+		log.Printf("[%s] %s [Code %d]\n", err.Who, err.Description, int(err.Code))
+		return C.CK_RV(err.Code)
 	default:
 		code := C.CKR_GENERAL_ERROR
 		log.Printf("[General error] %+v [Code %d]\n", err, int(code))
@@ -698,32 +692,35 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	sigLen, err := session.SignLength()
 	if pulSignatureLen == nil {
 		return C.CKR_ARGUMENTS_BAD
-	} else if err != nil {
+	}
+
+	data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
+	err = session.SignUpdate(data)
+	if err != nil {
 		return ErrorToRV(err)
-	} else if pSignature == nil {
+	}
+	signature, err := session.SignFinal()
+	log.Printf("signFinal ended")
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	sigLen := C.CK_ULONG(len(signature))
+	if pSignature == nil {
 		*pulSignatureLen = sigLen
+		// XX cache signature
 		return C.CKR_OK
 	} else if *pulSignatureLen < sigLen {
 		*pulSignatureLen = sigLen
 		return C.CKR_BUFFER_TOO_SMALL
-	} else {
-		data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
-		err = session.SignUpdate(data)
-		signature, err := session.SignFinal()
-		log.Printf("signFinal ended")
-		if err != nil {
-			return ErrorToRV(err)
-		}
-		cSignature := C.CBytes(signature)
-		*pulSignatureLen = C.ulong(len(signature))
-		C.memcpy(unsafe.Pointer(pSignature), cSignature, *pulSignatureLen)
-		log.Printf("freeing cSignature")
-		C.free(cSignature)
-		log.Printf("done with this branch")
 	}
+	cSignature := C.CBytes(signature)
+	*pulSignatureLen = sigLen
+	C.memcpy(unsafe.Pointer(pSignature), cSignature, *pulSignatureLen)
+	log.Printf("freeing cSignature")
+	C.free(cSignature)
+	log.Printf("done with this branch")
 	return C.CKR_OK
 }
 
@@ -1084,5 +1081,3 @@ func C_WaitForSlotEvent(C.CK_FLAGS, C.CK_SLOT_ID_PTR, C.CK_VOID_PTR) C.CK_RV {
 	log.Printf("Called: C_WaitForSlotEvent")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
-
-func main() {}

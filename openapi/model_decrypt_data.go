@@ -17,7 +17,10 @@ import (
 // DecryptData struct for DecryptData
 type DecryptData struct {
 	Decrypted string `json:"decrypted"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _DecryptData DecryptData
 
 // NewDecryptData instantiates a new DecryptData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o DecryptData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["decrypted"] = o.Decrypted
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *DecryptData) UnmarshalJSON(bytes []byte) (err error) {
+	varDecryptData := _DecryptData{}
+
+	if err = json.Unmarshal(bytes, &varDecryptData); err == nil {
+		*o = DecryptData(varDecryptData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "decrypted")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableDecryptData struct {

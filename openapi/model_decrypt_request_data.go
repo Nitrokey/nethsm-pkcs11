@@ -16,15 +16,18 @@ import (
 
 // DecryptRequestData struct for DecryptRequestData
 type DecryptRequestData struct {
-	Mode string `json:"mode"`
+	Mode DecryptMode `json:"mode"`
 	Encrypted string `json:"encrypted"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _DecryptRequestData DecryptRequestData
 
 // NewDecryptRequestData instantiates a new DecryptRequestData object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDecryptRequestData(mode string, encrypted string, ) *DecryptRequestData {
+func NewDecryptRequestData(mode DecryptMode, encrypted string, ) *DecryptRequestData {
 	this := DecryptRequestData{}
 	this.Mode = mode
 	this.Encrypted = encrypted
@@ -40,9 +43,9 @@ func NewDecryptRequestDataWithDefaults() *DecryptRequestData {
 }
 
 // GetMode returns the Mode field value
-func (o *DecryptRequestData) GetMode() string {
+func (o *DecryptRequestData) GetMode() DecryptMode {
 	if o == nil  {
-		var ret string
+		var ret DecryptMode
 		return ret
 	}
 
@@ -51,7 +54,7 @@ func (o *DecryptRequestData) GetMode() string {
 
 // GetModeOk returns a tuple with the Mode field value
 // and a boolean to check if the value has been set.
-func (o *DecryptRequestData) GetModeOk() (*string, bool) {
+func (o *DecryptRequestData) GetModeOk() (*DecryptMode, bool) {
 	if o == nil  {
 		return nil, false
 	}
@@ -59,7 +62,7 @@ func (o *DecryptRequestData) GetModeOk() (*string, bool) {
 }
 
 // SetMode sets field value
-func (o *DecryptRequestData) SetMode(v string) {
+func (o *DecryptRequestData) SetMode(v DecryptMode) {
 	o.Mode = v
 }
 
@@ -95,7 +98,30 @@ func (o DecryptRequestData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["encrypted"] = o.Encrypted
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *DecryptRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varDecryptRequestData := _DecryptRequestData{}
+
+	if err = json.Unmarshal(bytes, &varDecryptRequestData); err == nil {
+		*o = DecryptRequestData(varDecryptRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "mode")
+		delete(additionalProperties, "encrypted")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableDecryptRequestData struct {

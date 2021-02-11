@@ -17,7 +17,10 @@ import (
 // UserPassphrasePostData struct for UserPassphrasePostData
 type UserPassphrasePostData struct {
 	Passphrase string `json:"passphrase"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _UserPassphrasePostData UserPassphrasePostData
 
 // NewUserPassphrasePostData instantiates a new UserPassphrasePostData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o UserPassphrasePostData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["passphrase"] = o.Passphrase
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *UserPassphrasePostData) UnmarshalJSON(bytes []byte) (err error) {
+	varUserPassphrasePostData := _UserPassphrasePostData{}
+
+	if err = json.Unmarshal(bytes, &varUserPassphrasePostData); err == nil {
+		*o = UserPassphrasePostData(varUserPassphrasePostData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "passphrase")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableUserPassphrasePostData struct {

@@ -18,14 +18,17 @@ import (
 type LoggingConfig struct {
 	IpAddress string `json:"ipAddress"`
 	Port int32 `json:"port"`
-	LogLevel string `json:"logLevel"`
+	LogLevel LogLevel `json:"logLevel"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _LoggingConfig LoggingConfig
 
 // NewLoggingConfig instantiates a new LoggingConfig object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewLoggingConfig(ipAddress string, port int32, logLevel string, ) *LoggingConfig {
+func NewLoggingConfig(ipAddress string, port int32, logLevel LogLevel, ) *LoggingConfig {
 	this := LoggingConfig{}
 	this.IpAddress = ipAddress
 	this.Port = port
@@ -90,9 +93,9 @@ func (o *LoggingConfig) SetPort(v int32) {
 }
 
 // GetLogLevel returns the LogLevel field value
-func (o *LoggingConfig) GetLogLevel() string {
+func (o *LoggingConfig) GetLogLevel() LogLevel {
 	if o == nil  {
-		var ret string
+		var ret LogLevel
 		return ret
 	}
 
@@ -101,7 +104,7 @@ func (o *LoggingConfig) GetLogLevel() string {
 
 // GetLogLevelOk returns a tuple with the LogLevel field value
 // and a boolean to check if the value has been set.
-func (o *LoggingConfig) GetLogLevelOk() (*string, bool) {
+func (o *LoggingConfig) GetLogLevelOk() (*LogLevel, bool) {
 	if o == nil  {
 		return nil, false
 	}
@@ -109,7 +112,7 @@ func (o *LoggingConfig) GetLogLevelOk() (*string, bool) {
 }
 
 // SetLogLevel sets field value
-func (o *LoggingConfig) SetLogLevel(v string) {
+func (o *LoggingConfig) SetLogLevel(v LogLevel) {
 	o.LogLevel = v
 }
 
@@ -124,7 +127,31 @@ func (o LoggingConfig) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["logLevel"] = o.LogLevel
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *LoggingConfig) UnmarshalJSON(bytes []byte) (err error) {
+	varLoggingConfig := _LoggingConfig{}
+
+	if err = json.Unmarshal(bytes, &varLoggingConfig); err == nil {
+		*o = LoggingConfig(varLoggingConfig)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "ipAddress")
+		delete(additionalProperties, "port")
+		delete(additionalProperties, "logLevel")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableLoggingConfig struct {

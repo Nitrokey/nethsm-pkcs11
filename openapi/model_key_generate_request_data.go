@@ -20,7 +20,10 @@ type KeyGenerateRequestData struct {
 	Algorithm KeyAlgorithm `json:"algorithm"`
 	Length *int32 `json:"length,omitempty"`
 	Id *string `json:"id,omitempty"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _KeyGenerateRequestData KeyGenerateRequestData
 
 // NewKeyGenerateRequestData instantiates a new KeyGenerateRequestData object
 // This constructor will assign default values to properties that have it defined,
@@ -167,7 +170,32 @@ func (o KeyGenerateRequestData) MarshalJSON() ([]byte, error) {
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *KeyGenerateRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varKeyGenerateRequestData := _KeyGenerateRequestData{}
+
+	if err = json.Unmarshal(bytes, &varKeyGenerateRequestData); err == nil {
+		*o = KeyGenerateRequestData(varKeyGenerateRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "mechanisms")
+		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "length")
+		delete(additionalProperties, "id")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableKeyGenerateRequestData struct {

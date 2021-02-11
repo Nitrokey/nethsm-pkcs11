@@ -7,6 +7,7 @@ client.go
 configuration.go
 docs/BackupPassphraseConfig.md
 docs/DecryptData.md
+docs/DecryptMode.md
 docs/DecryptRequestData.md
 docs/DefaultApi.md
 docs/DistinguishedName.md
@@ -18,6 +19,7 @@ docs/KeyItem.md
 docs/KeyMechanism.md
 docs/KeyPrivateData.md
 docs/KeyPublicData.md
+docs/LogLevel.md
 docs/LoggingConfig.md
 docs/NetworkConfig.md
 docs/PrivateKey.md
@@ -26,7 +28,9 @@ docs/PublicKey.md
 docs/RandomData.md
 docs/RandomRequestData.md
 docs/SignData.md
+docs/SignMode.md
 docs/SignRequestData.md
+docs/Switch.md
 docs/SystemInfo.md
 docs/SystemState.md
 docs/SystemUpdateData.md
@@ -44,6 +48,7 @@ go.mod
 go.sum
 model_backup_passphrase_config.go
 model_decrypt_data.go
+model_decrypt_mode.go
 model_decrypt_request_data.go
 model_distinguished_name.go
 model_health_state_data.go
@@ -54,6 +59,7 @@ model_key_item.go
 model_key_mechanism.go
 model_key_private_data.go
 model_key_public_data.go
+model_log_level.go
 model_logging_config.go
 model_network_config.go
 model_private_key.go
@@ -62,7 +68,9 @@ model_public_key.go
 model_random_data.go
 model_random_request_data.go
 model_sign_data.go
+model_sign_mode.go
 model_sign_request_data.go
+model_switch.go
 model_system_info.go
 model_system_state.go
 model_system_update_data.go

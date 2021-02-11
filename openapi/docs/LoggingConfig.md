@@ -6,13 +6,13 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **IpAddress** | **string** |  | 
 **Port** | **int32** |  | 
-**LogLevel** | **string** |  | 
+**LogLevel** | [**LogLevel**](LogLevel.md) |  | 
 
 ## Methods
 
 ### NewLoggingConfig
 
-`func NewLoggingConfig(ipAddress string, port int32, logLevel string, ) *LoggingConfig`
+`func NewLoggingConfig(ipAddress string, port int32, logLevel LogLevel, ) *LoggingConfig`
 
 NewLoggingConfig instantiates a new LoggingConfig object
 This constructor will assign default values to properties that have it defined,
@@ -69,20 +69,20 @@ SetPort sets Port field to given value.
 
 ### GetLogLevel
 
-`func (o *LoggingConfig) GetLogLevel() string`
+`func (o *LoggingConfig) GetLogLevel() LogLevel`
 
 GetLogLevel returns the LogLevel field if non-nil, zero value otherwise.
 
 ### GetLogLevelOk
 
-`func (o *LoggingConfig) GetLogLevelOk() (*string, bool)`
+`func (o *LoggingConfig) GetLogLevelOk() (*LogLevel, bool)`
 
 GetLogLevelOk returns a tuple with the LogLevel field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetLogLevel
 
-`func (o *LoggingConfig) SetLogLevel(v string)`
+`func (o *LoggingConfig) SetLogLevel(v LogLevel)`
 
 SetLogLevel sets LogLevel field to given value.
 

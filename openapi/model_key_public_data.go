@@ -19,7 +19,10 @@ type KeyPublicData struct {
 	Modulus *string `json:"modulus,omitempty"`
 	PublicExponent *string `json:"publicExponent,omitempty"`
 	Data *string `json:"data,omitempty"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _KeyPublicData KeyPublicData
 
 // NewKeyPublicData instantiates a new KeyPublicData object
 // This constructor will assign default values to properties that have it defined,
@@ -145,7 +148,31 @@ func (o KeyPublicData) MarshalJSON() ([]byte, error) {
 	if o.Data != nil {
 		toSerialize["data"] = o.Data
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *KeyPublicData) UnmarshalJSON(bytes []byte) (err error) {
+	varKeyPublicData := _KeyPublicData{}
+
+	if err = json.Unmarshal(bytes, &varKeyPublicData); err == nil {
+		*o = KeyPublicData(varKeyPublicData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "modulus")
+		delete(additionalProperties, "publicExponent")
+		delete(additionalProperties, "data")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableKeyPublicData struct {

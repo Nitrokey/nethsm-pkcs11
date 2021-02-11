@@ -22,10 +22,7 @@ type Application struct {
 
 // NewApplication returns a new application, using the configuration defined in the config file.
 func NewApplication() (App *Application, err error) {
-	conf, err := config.GetConfig()
-	if err != nil {
-		return
-	}
+	conf := config.Get()
 	// db, err := NewDatabase(conf.Cryptoki.DatabaseType)
 	// if err != nil {
 	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
@@ -35,7 +32,7 @@ func NewApplication() (App *Application, err error) {
 	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
 	// 	return
 	// }
-	slots := make([]*Slot, len(conf.Cryptoki.Slots))
+	slots := make([]*Slot, len(conf.Slots))
 
 	apiConf := openapi.NewConfiguration()
 	apiConf.Servers[0].Variables = map[string]openapi.ServerVariable{"URL": {}}
@@ -48,7 +45,7 @@ func NewApplication() (App *Application, err error) {
 		Config:  conf,
 		Service: service,
 	}
-	for i, slotConf := range conf.Cryptoki.Slots {
+	for i, slotConf := range conf.Slots {
 		password := slotConf.Password
 		if prefix := "env:"; strings.HasPrefix(password, prefix) {
 			password = os.Getenv(strings.TrimPrefix(password, prefix))
@@ -67,7 +64,7 @@ func NewApplication() (App *Application, err error) {
 			ID:          C.CK_SLOT_ID(i),
 			description: slotConf.Description,
 			Application: App,
-			Sessions:    make(Sessions, 0),
+			Sessions:    make(Sessions),
 			ctx:         ctx,
 			ctxCancel:   ctxCancel,
 		}

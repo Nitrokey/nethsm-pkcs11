@@ -6,9 +6,6 @@ package core
 import "C"
 import (
 	"encoding/binary"
-	"fmt"
-
-	"p11nethsm/utils"
 )
 
 // SignContext represents a structure which groups parameters that allow to sign
@@ -36,24 +33,25 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 	if err != nil {
 		return nil, err
 	}
-	keyIDAttr := keyObject.FindAttribute(AttrTypeKeyHandler)
+	keyIDAttr := keyObject.FindAttribute(C.CKA_ID)
 	if keyIDAttr == nil {
-		return nil, NewError("NewSignContext", "object handle does not contain a key handler attribute", C.CKR_ARGUMENTS_BAD)
+		return nil, NewError("NewSignContext", "object does not contain a key ID", C.CKR_ARGUMENTS_BAD)
 	}
-	keyMetaAttr := keyObject.FindAttribute(AttrTypeKeyMeta)
-	if keyMetaAttr == nil {
-		return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
-	}
-
+	// keyMetaAttr := keyObject.FindAttribute(AttrTypeKeyMeta)
+	// if keyMetaAttr == nil {
+	// 	return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
+	// }
+	//log.Printf("Type: %v", mechanism.Type)
 	switch mechanism.Type {
-	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
+	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_RSA_PKCS_PSS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
 		c := &SignContextRSA{
-			randSrc:   session.randSrc,
+			// randSrc:   session.randSrc,
+			apiCtx:    session.Slot.ctx,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
 			data:      make([]byte, 0),
 		}
-		if err := c.Init(keyMetaAttr.Value); err != nil {
+		if err := c.Init(nil); err != nil {
 			return nil, err
 		}
 		context = c
@@ -64,22 +62,23 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 			return nil, NewError("NewSignContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
 		}
 		c := &ECDSASignContext{
-			randSrc:   session.randSrc,
+			// randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
 			data:      make([]byte, 0),
 		}
-		if err := c.Init(keyMetaAttr.Value); err != nil {
+		if err := c.Init(nil); err != nil {
 			return nil, err
 		}
-		pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
-		if err != nil {
-			return nil, NewError("NewSignContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
-		}
-		c.pubKey = pk
+		// pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
+		// if err != nil {
+		// 	return nil, NewError("NewSignContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
+		// }
+		// c.pubKey = pk
 		context = c
 	default:
 		err = NewError("NewSignContext", "sign mechanism invalid", C.CKR_MECHANISM_INVALID)
+		return nil, err
 	}
 	return context, nil
 }
@@ -89,14 +88,14 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 	if err != nil {
 		return nil, err
 	}
-	keyIDAttr := keyObject.FindAttribute(AttrTypeKeyHandler)
+	keyIDAttr := keyObject.FindAttribute(C.CKA_ID)
 	if keyIDAttr == nil {
-		return nil, NewError("NewSignContext", "object handle does not contain a key handler attribute", C.CKR_ARGUMENTS_BAD)
+		return nil, NewError("NewSignContext", "object does not contain a key ID", C.CKR_ARGUMENTS_BAD)
 	}
-	keyMetaAttr := keyObject.FindAttribute(AttrTypeKeyMeta)
-	if keyMetaAttr == nil {
-		return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
-	}
+	// keyMetaAttr := keyObject.FindAttribute(AttrTypeKeyMeta)
+	// if keyMetaAttr == nil {
+	// 	return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
+	// }
 
 	switch mechanism.Type {
 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
@@ -106,7 +105,7 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 			mechanism: mechanism,
 			data:      make([]byte, 0),
 		}
-		if err := c.Init(keyMetaAttr.Value); err != nil {
+		if err := c.Init(nil); err != nil {
 			return nil, err
 		}
 		context = c
@@ -117,22 +116,23 @@ func NewVerifyContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_H
 			return nil, NewError("NewVerifyContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
 		}
 		c := &ECDSAVerifyContext{
-			randSrc:   session.randSrc,
+			// randSrc:   session.randSrc,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
 			data:      make([]byte, 0),
 		}
-		if err := c.Init(keyMetaAttr.Value); err != nil {
+		if err := c.Init(nil); err != nil {
 			return nil, err
 		}
-		pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
-		if err != nil {
-			return nil, NewError("NewVerifyContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
-		}
-		c.pubKey = pk
+		// pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
+		// if err != nil {
+		// 	return nil, NewError("NewVerifyContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
+		// }
+		// c.pubKey = pk
 		context = c
 	default:
 		err = NewError("NewVerifyContext", "sign mechanism invalid", C.CKR_MECHANISM_INVALID)
+		return nil, err
 	}
 	return context, nil
 }

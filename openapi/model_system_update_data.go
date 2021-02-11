@@ -17,7 +17,10 @@ import (
 // SystemUpdateData struct for SystemUpdateData
 type SystemUpdateData struct {
 	ReleaseNotes string `json:"releaseNotes"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _SystemUpdateData SystemUpdateData
 
 // NewSystemUpdateData instantiates a new SystemUpdateData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o SystemUpdateData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["releaseNotes"] = o.ReleaseNotes
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *SystemUpdateData) UnmarshalJSON(bytes []byte) (err error) {
+	varSystemUpdateData := _SystemUpdateData{}
+
+	if err = json.Unmarshal(bytes, &varSystemUpdateData); err == nil {
+		*o = SystemUpdateData(varSystemUpdateData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "releaseNotes")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableSystemUpdateData struct {

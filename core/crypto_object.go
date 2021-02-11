@@ -89,7 +89,7 @@ func (object *CryptoObject) Match(attrs Attributes) bool {
 		ourAttr, ok := object.Attributes[uint32(theirAttr.Type)]
 		if !ok {
 			return false
-		} else if bytes.Compare(ourAttr.Value, theirAttr.Value) != 0 {
+		} else if !bytes.Equal(ourAttr.Value, theirAttr.Value) {
 			return false
 		}
 	}
@@ -150,8 +150,6 @@ func (object *CryptoObject) EditAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 			object.Attributes[uint32(templateSlice[i]._type)] = newAttr
 		}
 	}
-	if err := session.SaveObject(object); err != nil {
-		return err
-	}
-	return nil
+	err := session.SaveObject(object)
+	return err
 }

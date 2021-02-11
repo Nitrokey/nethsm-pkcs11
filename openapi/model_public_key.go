@@ -20,7 +20,10 @@ type PublicKey struct {
 	Algorithm KeyAlgorithm `json:"algorithm"`
 	Key KeyPublicData `json:"key"`
 	Operations int32 `json:"operations"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _PublicKey PublicKey
 
 // NewPublicKey instantiates a new PublicKey object
 // This constructor will assign default values to properties that have it defined,
@@ -153,7 +156,32 @@ func (o PublicKey) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["operations"] = o.Operations
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *PublicKey) UnmarshalJSON(bytes []byte) (err error) {
+	varPublicKey := _PublicKey{}
+
+	if err = json.Unmarshal(bytes, &varPublicKey); err == nil {
+		*o = PublicKey(varPublicKey)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "mechanisms")
+		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "key")
+		delete(additionalProperties, "operations")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullablePublicKey struct {

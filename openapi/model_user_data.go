@@ -18,7 +18,10 @@ import (
 type UserData struct {
 	RealName string `json:"realName"`
 	Role UserRole `json:"role"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _UserData UserData
 
 // NewUserData instantiates a new UserData object
 // This constructor will assign default values to properties that have it defined,
@@ -95,7 +98,30 @@ func (o UserData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["role"] = o.Role
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *UserData) UnmarshalJSON(bytes []byte) (err error) {
+	varUserData := _UserData{}
+
+	if err = json.Unmarshal(bytes, &varUserData); err == nil {
+		*o = UserData(varUserData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "realName")
+		delete(additionalProperties, "role")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableUserData struct {

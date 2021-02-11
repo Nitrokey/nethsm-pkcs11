@@ -4,14 +4,14 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Mode** | **string** |  | 
+**Mode** | [**SignMode**](SignMode.md) |  | 
 **Message** | **string** |  | 
 
 ## Methods
 
 ### NewSignRequestData
 
-`func NewSignRequestData(mode string, message string, ) *SignRequestData`
+`func NewSignRequestData(mode SignMode, message string, ) *SignRequestData`
 
 NewSignRequestData instantiates a new SignRequestData object
 This constructor will assign default values to properties that have it defined,
@@ -28,20 +28,20 @@ but it doesn't guarantee that properties required by API are set
 
 ### GetMode
 
-`func (o *SignRequestData) GetMode() string`
+`func (o *SignRequestData) GetMode() SignMode`
 
 GetMode returns the Mode field if non-nil, zero value otherwise.
 
 ### GetModeOk
 
-`func (o *SignRequestData) GetModeOk() (*string, bool)`
+`func (o *SignRequestData) GetModeOk() (*SignMode, bool)`
 
 GetModeOk returns a tuple with the Mode field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetMode
 
-`func (o *SignRequestData) SetMode(v string)`
+`func (o *SignRequestData) SetMode(v SignMode)`
 
 SetMode sets Mode field to given value.
 

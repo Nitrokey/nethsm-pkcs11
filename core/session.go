@@ -20,9 +20,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const AttrTypeKeyHandler = 1 << 31
-const AttrTypeKeyMeta = 1<<31 + 1
-
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
 type Session struct {
 	sync.Mutex
@@ -161,7 +158,7 @@ func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
 		return err
 	} else {
 		// Is it secure to allow the server to delete the keys? Suspended by now.
-		attr := object.FindAttribute(AttrTypeKeyHandler) // Key ID
+		attr := object.FindAttribute(C.CKA_ID) // Key ID
 		if attr != nil {
 			keyID := string(attr.Value)
 			privateAttr := object.FindAttribute(C.CKA_PRIVATE)
@@ -520,7 +517,7 @@ func (session *Session) GenerateRandom(size int) ([]byte, error) {
 	out := make([]byte, size)
 	randLen, err := session.randSrc.Read(out)
 	if err != nil {
-		return nil, NewError("Session.GenerateRandom", fmt.Sprintf("%s", err.Error()), C.CKR_DEVICE_ERROR)
+		return nil, NewError("Session.GenerateRandom", err.Error(), C.CKR_DEVICE_ERROR)
 	}
 	if randLen != size {
 		return nil, NewError("Session.GenerateRandom", "random data acquired is not as big as requested", C.CKR_DEVICE_ERROR)

@@ -19,7 +19,10 @@ type NetworkConfig struct {
 	IpAddress string `json:"ipAddress"`
 	Netmask string `json:"netmask"`
 	Gateway string `json:"gateway"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _NetworkConfig NetworkConfig
 
 // NewNetworkConfig instantiates a new NetworkConfig object
 // This constructor will assign default values to properties that have it defined,
@@ -124,7 +127,31 @@ func (o NetworkConfig) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["gateway"] = o.Gateway
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *NetworkConfig) UnmarshalJSON(bytes []byte) (err error) {
+	varNetworkConfig := _NetworkConfig{}
+
+	if err = json.Unmarshal(bytes, &varNetworkConfig); err == nil {
+		*o = NetworkConfig(varNetworkConfig)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "ipAddress")
+		delete(additionalProperties, "netmask")
+		delete(additionalProperties, "gateway")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableNetworkConfig struct {

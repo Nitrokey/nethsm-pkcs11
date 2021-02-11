@@ -17,7 +17,10 @@ import (
 // HealthStateData struct for HealthStateData
 type HealthStateData struct {
 	State SystemState `json:"state"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _HealthStateData HealthStateData
 
 // NewHealthStateData instantiates a new HealthStateData object
 // This constructor will assign default values to properties that have it defined,
@@ -66,7 +69,29 @@ func (o HealthStateData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["state"] = o.State
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *HealthStateData) UnmarshalJSON(bytes []byte) (err error) {
+	varHealthStateData := _HealthStateData{}
+
+	if err = json.Unmarshal(bytes, &varHealthStateData); err == nil {
+		*o = HealthStateData(varHealthStateData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "state")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableHealthStateData struct {

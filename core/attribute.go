@@ -102,7 +102,7 @@ func (attribute *Attribute) ToC(cDst C.CK_ATTRIBUTE_PTR) error {
 // Equals returns true if the attributes are equal.
 func (attribute *Attribute) Equals(attribute2 *Attribute) bool {
 	return attribute.Type == attribute2.Type &&
-		bytes.Compare(attribute.Value, attribute2.Value) == 0
+		bytes.Equal(attribute.Value, attribute2.Value)
 }
 
 // GetAttributeByType returns an attribute of the attributes list with the type specified in the arguments.

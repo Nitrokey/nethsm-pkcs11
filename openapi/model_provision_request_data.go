@@ -20,7 +20,10 @@ type ProvisionRequestData struct {
 	UnlockPassphrase string `json:"unlockPassphrase"`
 	AdminPassphrase string `json:"adminPassphrase"`
 	SystemTime time.Time `json:"systemTime"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _ProvisionRequestData ProvisionRequestData
 
 // NewProvisionRequestData instantiates a new ProvisionRequestData object
 // This constructor will assign default values to properties that have it defined,
@@ -125,7 +128,31 @@ func (o ProvisionRequestData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["systemTime"] = o.SystemTime
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *ProvisionRequestData) UnmarshalJSON(bytes []byte) (err error) {
+	varProvisionRequestData := _ProvisionRequestData{}
+
+	if err = json.Unmarshal(bytes, &varProvisionRequestData); err == nil {
+		*o = ProvisionRequestData(varProvisionRequestData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "unlockPassphrase")
+		delete(additionalProperties, "adminPassphrase")
+		delete(additionalProperties, "systemTime")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableProvisionRequestData struct {

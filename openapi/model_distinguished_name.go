@@ -23,7 +23,10 @@ type DistinguishedName struct {
 	OrganizationalUnitName string `json:"organizationalUnitName"`
 	CommonName string `json:"commonName"`
 	EmailAddress string `json:"emailAddress"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _DistinguishedName DistinguishedName
 
 // NewDistinguishedName instantiates a new DistinguishedName object
 // This constructor will assign default values to properties that have it defined,
@@ -240,7 +243,35 @@ func (o DistinguishedName) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["emailAddress"] = o.EmailAddress
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *DistinguishedName) UnmarshalJSON(bytes []byte) (err error) {
+	varDistinguishedName := _DistinguishedName{}
+
+	if err = json.Unmarshal(bytes, &varDistinguishedName); err == nil {
+		*o = DistinguishedName(varDistinguishedName)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "countryName")
+		delete(additionalProperties, "stateOrProvinceName")
+		delete(additionalProperties, "localityName")
+		delete(additionalProperties, "organizationName")
+		delete(additionalProperties, "organizationalUnitName")
+		delete(additionalProperties, "commonName")
+		delete(additionalProperties, "emailAddress")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableDistinguishedName struct {

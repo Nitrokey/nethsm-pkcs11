@@ -29,8 +29,8 @@ func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 
 	done := 0
 	for done < len(out) {
-		hash.Write(seed)
-		hash.Write(counter[0:4])
+		_, _ = hash.Write(seed)
+		_, _ = hash.Write(counter[0:4])
 		digest = hash.Sum(digest[:0])
 		hash.Reset()
 
@@ -89,9 +89,9 @@ func padPSS(rand io.Reader, hash crypto.Hash, nBits int, hashed []byte) (s []byt
 
 	var prefix [8]byte
 
-	hashFunc.Write(prefix[:])
-	hashFunc.Write(hashed)
-	hashFunc.Write(salt)
+	_, _ = hashFunc.Write(prefix[:])
+	_, _ = hashFunc.Write(hashed)
+	_, _ = hashFunc.Write(salt)
 
 	h = hashFunc.Sum(h[:0])
 	hashFunc.Reset()

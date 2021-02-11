@@ -18,7 +18,10 @@ import (
 type InfoData struct {
 	Vendor string `json:"vendor"`
 	Product string `json:"product"`
+	AdditionalProperties map[string]interface{}
 }
+
+type _InfoData InfoData
 
 // NewInfoData instantiates a new InfoData object
 // This constructor will assign default values to properties that have it defined,
@@ -95,7 +98,30 @@ func (o InfoData) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["product"] = o.Product
 	}
+
+	for key, value := range o.AdditionalProperties {
+		toSerialize[key] = value
+	}
+
 	return json.Marshal(toSerialize)
+}
+
+func (o *InfoData) UnmarshalJSON(bytes []byte) (err error) {
+	varInfoData := _InfoData{}
+
+	if err = json.Unmarshal(bytes, &varInfoData); err == nil {
+		*o = InfoData(varInfoData)
+	}
+
+	additionalProperties := make(map[string]interface{})
+
+	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
+		delete(additionalProperties, "vendor")
+		delete(additionalProperties, "product")
+		o.AdditionalProperties = additionalProperties
+	}
+
+	return err
 }
 
 type NullableInfoData struct {
