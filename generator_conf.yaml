@@ -1,6 +1,8 @@
-#packageName: nethsmapi
+packageName: api
 enumClassPrefix: true
 #structPrefix: true
 #packageVersion: 1.0.0
 #generateInterfaces: true
 disallowAdditionalPropertiesIfNotPresent: false
+#prependFormOrBodyParameters: true
+#apiNameSuffix: Client

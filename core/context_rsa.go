@@ -13,7 +13,7 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
-	"p11nethsm/openapi"
+	"p11nethsm/api"
 	"unsafe"
 )
 
@@ -71,9 +71,9 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	// XXX signature, err := context.dtc.RSASignData(context.keyID,
 	// context.keyMeta, prepared)
 
-	var reqBody openapi.SignRequestData
+	var reqBody api.SignRequestData
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
-	reqBody.SetMode(openapi.SIGNMODE_PKCS1)
+	reqBody.SetMode(api.SIGNMODE_PKCS1)
 	sigData, r, err := App.Service.KeysKeyIDSignPost(
 		context.apiCtx, context.keyID).Body(reqBody).Execute()
 	if err != nil {

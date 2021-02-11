@@ -8,7 +8,7 @@ package core
 import "C"
 import (
 	"fmt"
-	"p11nethsm/openapi"
+	"p11nethsm/api"
 	"sync"
 	"time"
 	"unsafe"
@@ -109,7 +109,7 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 			&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
 		)
 		switch key.Algorithm {
-		case openapi.KEYALGORITHM_RSA:
+		case api.KEYALGORITHM_RSA:
 			object.Attributes.Set(
 				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
 				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
@@ -121,7 +121,7 @@ func (token *Token) GetObjects() (objects CryptoObjects, err error) {
 				&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
 				&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
 			)
-		case openapi.KEYALGORITHM_ED25519:
+		case api.KEYALGORITHM_ED25519:
 			object.Attributes.Set(
 				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
 				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},

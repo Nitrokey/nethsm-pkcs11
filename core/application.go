@@ -7,8 +7,8 @@ import "C"
 import (
 	"context"
 	"os"
+	"p11nethsm/api"
 	"p11nethsm/config"
-	"p11nethsm/openapi"
 	"strings"
 )
 
@@ -17,7 +17,7 @@ type Application struct {
 	// Storage Storage        // Storage saves the HSM objects.
 	Slots   []*Slot        // Represents the slots of the HSM
 	Config  *config.Config // has the complete configuration of the HSM
-	Service *openapi.DefaultApiService
+	Service *api.DefaultApiService
 }
 
 // NewApplication returns a new application, using the configuration defined in the config file.
@@ -34,10 +34,10 @@ func NewApplication() (App *Application, err error) {
 	// }
 	slots := make([]*Slot, len(conf.Slots))
 
-	apiConf := openapi.NewConfiguration()
-	apiConf.Servers[0].Variables = map[string]openapi.ServerVariable{"URL": {}}
+	apiConf := api.NewConfiguration()
+	apiConf.Servers[0].Variables = map[string]api.ServerVariable{"URL": {}}
 	apiConf.Servers[0].URL = "{URL}"
-	service := openapi.NewAPIClient(apiConf).DefaultApi
+	service := api.NewAPIClient(apiConf).DefaultApi
 
 	App = &Application{
 		// Storage: db,
@@ -50,15 +50,15 @@ func NewApplication() (App *Application, err error) {
 		if prefix := "env:"; strings.HasPrefix(password, prefix) {
 			password = os.Getenv(strings.TrimPrefix(password, prefix))
 		}
-		basicAuth := openapi.BasicAuth{
+		basicAuth := api.BasicAuth{
 			UserName: slotConf.User,
 			Password: password,
 		}
 		ctx, ctxCancel := context.WithCancel(context.Background())
-		ctx = context.WithValue(ctx, openapi.ContextServerVariables, map[string]string{
+		ctx = context.WithValue(ctx, api.ContextServerVariables, map[string]string{
 			"URL": slotConf.URL,
 		})
-		ctx = context.WithValue(ctx, openapi.ContextBasicAuth, basicAuth)
+		ctx = context.WithValue(ctx, api.ContextBasicAuth, basicAuth)
 
 		slot := &Slot{
 			ID:          C.CK_SLOT_ID(i),
