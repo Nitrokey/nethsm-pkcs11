@@ -1,0 +1,35 @@
+version: '3'
+services:
+  dtcnode1:
+    container_name: dtcnode1
+    build: dtcnode/
+    volumes:
+      - ./dtcnode/config/node_0:/etc/dtcnode
+  dtcnode2:
+    container_name: dtcnode2
+    build: dtcnode/
+    volumes:
+      - ./dtcnode/config/node_1:/etc/dtcnode
+  dtcnode3:
+    container_name: dtcnode3
+    build: dtcnode/
+    volumes:
+      - ./dtcnode/config/node_2:/etc/dtcnode
+  dtcnode4:
+    container_name: dtcnode4
+    build: dtcnode/
+    volumes:
+      - ./dtcnode/config/node_3:/etc/dtcnode
+  dtcnode5:
+    container_name: dtcnode5
+    build: dtcnode/
+    volumes:
+      - ./dtcnode/config/node_4:/etc/dtcnode
+  dtcclient:
+    container_name: dtcclient
+    build:
+      context: ../../../
+      dockerfile: dtc/tests/dns-tools/dtc/Dockerfile
+    volumes:
+      - ./dtc/config:/etc/dtc
+      - /var/run/docker.sock:/var/run/docker.sock
