@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 .travis.yml
 README.md
 api/openapi.yaml
@@ -45,8 +44,6 @@ docs/UserPassphrasePostData.md
 docs/UserPostData.md
 docs/UserRole.md
 git_push.sh
-go.mod
-go.sum
 model_backup_passphrase_config.go
 model_decrypt_data.go
 model_decrypt_mode.go
