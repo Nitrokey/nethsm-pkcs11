@@ -9,6 +9,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"p11nethsm/config"
 	"sync"
 	"unsafe"
 )
@@ -17,12 +18,12 @@ import (
 type Slot struct {
 	ID          C.CK_SLOT_ID // ID of slot
 	description string
-	flags       uint64       // Flags related to the slot
-	token       *Token       // Token connected to slot. It could be nil
-	Sessions    Sessions     // Sessions accessing to the slot
-	Application *Application // Application that created the slot.
+	flags       uint64   // Flags related to the slot
+	token       *Token   // Token connected to slot. It could be nil
+	Sessions    Sessions // Sessions accessing to the slot
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
+	conf        *config.SlotsConfig
 	sync.Mutex
 }
 

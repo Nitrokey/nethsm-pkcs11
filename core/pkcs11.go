@@ -22,7 +22,7 @@ const (
 	libVersionMajor   = 0
 	libVersionMinor   = 1
 	minPinLength      = 3
-	maxPinLength      = 10
+	maxPinLength      = 256
 	serialNumber      = "1010101"
 )
 
@@ -110,55 +110,58 @@ func C_Finalize(pReserved C.CK_VOID_PTR) C.CK_RV {
 	if pReserved != nil {
 		return C.CKR_ARGUMENTS_BAD
 	}
+	err := App.Finalize()
 	App = nil
-	return C.CKR_OK
+	return ErrorToRV(err)
 }
 
 //export C_InitToken
 func C_InitToken(slotID C.CK_SLOT_ID, pPin C.CK_UTF8CHAR_PTR, ulPinLen C.CK_ULONG, pLabel C.CK_UTF8CHAR_PTR) C.CK_RV {
 	log.Printf("Called: C_InitToken\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	if pPin == nil || pLabel == nil {
-		return C.CKR_ARGUMENTS_BAD
-	}
-	slot, err := App.GetSlot(slotID)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	cLabel := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
-	label := string(C.GoBytes(unsafe.Pointer(cLabel), 32))
-	cPin := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
-	pin := string(C.GoBytes(unsafe.Pointer(cPin), C.int(ulPinLen)))
-	token, err := NewToken(label, pin, pin)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	slot.InsertToken(token)
-	return C.CKR_OK
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// if pPin == nil || pLabel == nil {
+	// 	return C.CKR_ARGUMENTS_BAD
+	// }
+	// slot, err := App.GetSlot(slotID)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// cLabel := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
+	// label := string(C.GoBytes(unsafe.Pointer(cLabel), 32))
+	// cPin := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
+	// pin := string(C.GoBytes(unsafe.Pointer(cPin), C.int(ulPinLen)))
+	// token, err := NewToken(label, pin, pin)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// slot.InsertToken(token)
+	// return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
 //export C_InitPIN
 func C_InitPIN(hSession C.CK_SESSION_HANDLE, pPin C.CK_UTF8CHAR_PTR, ulPinLen C.CK_ULONG) C.CK_RV {
 	log.Printf("Called: C_InitPIN\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	if pPin == nil {
-		return C.CKR_ARGUMENTS_BAD
-	}
-	pin := string(C.GoBytes(unsafe.Pointer(pPin), C.int(ulPinLen)))
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	token, err := session.Slot.GetToken()
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	token.SetUserPin(pin)
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// if pPin == nil {
+	// 	return C.CKR_ARGUMENTS_BAD
+	// }
+	// pin := string(C.GoBytes(unsafe.Pointer(pPin), C.int(ulPinLen)))
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// token, err := session.Slot.GetToken()
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// token.SetUserPin(pin)
+	// return C.CKR_OK
 }
 
 //export C_SetPIN
@@ -306,12 +309,9 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	token, err := slot.GetToken()
+	_, err = slot.GetToken()
 	if err != nil {
 		return ErrorToRV(err)
-	}
-	if !token.IsInited() {
-		return C.CKR_TOKEN_NOT_RECOGNIZED
 	}
 	session, err := slot.OpenSession(flags)
 	if err != nil {
@@ -420,43 +420,45 @@ func C_Logout(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 //export C_CreateObject
 func C_CreateObject(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG, phObject C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
 	log.Printf("Called: C_CreateObject\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	if phObject == nil {
-		return C.CKR_ARGUMENTS_BAD
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	attributes, err := CToAttributes(pTemplate, ulCount)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	object, err := session.CreateObject(attributes)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	*phObject = object.Handle
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// if phObject == nil {
+	// 	return C.CKR_ARGUMENTS_BAD
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// attributes, err := CToAttributes(pTemplate, ulCount)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// object, err := session.CreateObject(attributes)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// *phObject = object.Handle
+	// return C.CKR_OK
 }
 
 //export C_DestroyObject
 func C_DestroyObject(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Printf("Called: C_DestroyObject\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	err = session.DestroyObject(hObject)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// err = session.DestroyObject(hObject)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_FindObjectsInit
@@ -541,21 +543,22 @@ func C_FindObjectsFinal(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 func C_SetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDLE, pTemplate C.CK_ATTRIBUTE_PTR,
 	ulCount C.CK_ULONG) C.CK_RV {
 	log.Printf("Called: C_SetAttributeValue\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	object, err := session.GetObject(hObject)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	if err := object.EditAttributes(pTemplate, ulCount, session); err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// object, err := session.GetObject(hObject)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// if err := object.EditAttributes(pTemplate, ulCount, session); err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_GetAttributeValue
@@ -582,32 +585,33 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 //export C_GenerateKeyPair
 func C_GenerateKeyPair(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, pPublicKeyTemplate C.CK_ATTRIBUTE_PTR, ulPublicKeyAttributeCount C.CK_ULONG, pPrivateKeyTemplate C.CK_ATTRIBUTE_PTR, ulPrivateKeyAttributeCount C.CK_ULONG, phPublicKey C.CK_OBJECT_HANDLE_PTR, phPrivateKey C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
 	log.Printf("Called: C_GenerateKeyPair\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	if phPublicKey == nil || phPrivateKey == nil {
-		return C.CKR_ARGUMENTS_BAD
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	mechanism := CToMechanism(pMechanism)
-	pkAttrs, err := CToAttributes(pPublicKeyTemplate, ulPublicKeyAttributeCount)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	skAttrs, err := CToAttributes(pPrivateKeyTemplate, ulPrivateKeyAttributeCount)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	pk, sk, err := session.GenerateKeyPair(mechanism, pkAttrs, skAttrs)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	*phPublicKey = pk.Handle
-	*phPrivateKey = sk.Handle
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// 	if App == nil {
+	// 		return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// 	}
+	// 	if phPublicKey == nil || phPrivateKey == nil {
+	// 		return C.CKR_ARGUMENTS_BAD
+	// 	}
+	// 	session, err := App.GetSession(hSession)
+	// 	if err != nil {
+	// 		return ErrorToRV(err)
+	// 	}
+	// 	mechanism := CToMechanism(pMechanism)
+	// 	pkAttrs, err := CToAttributes(pPublicKeyTemplate, ulPublicKeyAttributeCount)
+	// 	if err != nil {
+	// 		return ErrorToRV(err)
+	// 	}
+	// 	skAttrs, err := CToAttributes(pPrivateKeyTemplate, ulPrivateKeyAttributeCount)
+	// 	if err != nil {
+	// 		return ErrorToRV(err)
+	// 	}
+	// 	pk, sk, err := session.GenerateKeyPair(mechanism, pkAttrs, skAttrs)
+	// 	if err != nil {
+	// 		return ErrorToRV(err)
+	// 	}
+	// 	*phPublicKey = pk.Handle
+	// 	*phPrivateKey = sk.Handle
+	// 	return C.CKR_OK
 }
 
 //export C_SignInit

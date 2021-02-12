@@ -14,74 +14,62 @@ import (
 
 // Application contains the essential parts of the HSM
 type Application struct {
-	// Storage Storage        // Storage saves the HSM objects.
-	Slots   []*Slot        // Represents the slots of the HSM
-	Config  *config.Config // has the complete configuration of the HSM
-	Service *api.DefaultApiService
+	Slots  []*Slot        // Represents the slots of the HSM
+	Config *config.Config // has the complete configuration of the HSM
+	Api    *api.DefaultApiService
 }
 
 // NewApplication returns a new application, using the configuration defined in the config file.
-func NewApplication() (App *Application, err error) {
+func NewApplication() (*Application, error) {
 	conf := config.Get()
-	// db, err := NewDatabase(conf.Cryptoki.DatabaseType)
-	// if err != nil {
-	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-	// 	return
-	// }
-	// if err = db.Init(conf.Cryptoki.Slots); err != nil {
-	// 	err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-	// 	return
-	// }
 	slots := make([]*Slot, len(conf.Slots))
 
 	apiConf := api.NewConfiguration()
 	apiConf.Servers[0].Variables = map[string]api.ServerVariable{"URL": {}}
 	apiConf.Servers[0].URL = "{URL}"
-	service := api.NewAPIClient(apiConf).DefaultApi
+	client := api.NewAPIClient(apiConf)
 
-	App = &Application{
-		// Storage: db,
-		Slots:   slots,
-		Config:  conf,
-		Service: service,
+	app := &Application{
+		Slots:  slots,
+		Config: conf,
+		Api:    client.DefaultApi,
 	}
 	for i, slotConf := range conf.Slots {
 		password := slotConf.Password
 		if prefix := "env:"; strings.HasPrefix(password, prefix) {
 			password = os.Getenv(strings.TrimPrefix(password, prefix))
 		}
-		basicAuth := api.BasicAuth{
-			UserName: slotConf.User,
-			Password: password,
-		}
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		ctx = context.WithValue(ctx, api.ContextServerVariables, map[string]string{
 			"URL": slotConf.URL,
 		})
-		ctx = context.WithValue(ctx, api.ContextBasicAuth, basicAuth)
-
+		if password != "" {
+			ctx = addBasicAuth(ctx, slotConf.User, password)
+		}
 		slot := &Slot{
 			ID:          C.CK_SLOT_ID(i),
 			description: slotConf.Description,
-			Application: App,
 			Sessions:    make(Sessions),
+			conf:        slotConf,
 			ctx:         ctx,
 			ctxCancel:   ctxCancel,
 		}
 		slots[i] = slot
 
-		r, e := App.Service.HealthReadyGet(slot.ctx).Execute()
+		r, e := app.Api.HealthReadyGet(slot.ctx).Execute()
 		if e == nil && r.StatusCode < 300 {
-			var token *Token
-			token, err = NewToken(slotConf.Label, "1234", "1234")
+			token, err := NewToken(slotConf.Label)
 			if err != nil {
 				err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
-				return
+				return nil, err
+			}
+			if password == "" {
+				token.tokenFlags |= C.CKF_LOGIN_REQUIRED
 			}
 			slot.InsertToken(token)
 		}
 	}
-	return
+	return app, nil
 }
 
 // GetSessionSlot returns the slot object related to a given session handle.
@@ -113,4 +101,21 @@ func (app *Application) GetSlot(id C.CK_SLOT_ID) (*Slot, error) {
 		return nil, NewError("Application.GetSlot", "index out of bounds", C.CKR_SLOT_ID_INVALID)
 	}
 	return app.Slots[int(id)], nil
+}
+
+// GetSlot returns the slot with the given ID.
+func (app *Application) Finalize() error {
+	for _, slot := range app.Slots {
+		slot.ctxCancel()
+		slot = nil
+	}
+	return nil
+}
+
+func addBasicAuth(ctx context.Context, user, password string) context.Context {
+	basicAuth := api.BasicAuth{
+		UserName: user,
+		Password: password,
+	}
+	return context.WithValue(ctx, api.ContextBasicAuth, basicAuth)
 }

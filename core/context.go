@@ -46,7 +46,7 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_RSA_PKCS_PSS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
 		c := &SignContextRSA{
 			// randSrc:   session.randSrc,
-			apiCtx:    session.Slot.ctx,
+			apiCtx:    session.apiCtx,
 			keyID:     string(keyIDAttr.Value),
 			mechanism: mechanism,
 			data:      make([]byte, 0),

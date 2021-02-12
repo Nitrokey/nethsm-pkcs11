@@ -74,7 +74,7 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	var reqBody api.SignRequestData
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
 	reqBody.SetMode(api.SIGNMODE_PKCS1)
-	sigData, r, err := App.Service.KeysKeyIDSignPost(
+	sigData, r, err := App.Api.KeysKeyIDSignPost(
 		context.apiCtx, context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		log.Printf("%v\n", r)
