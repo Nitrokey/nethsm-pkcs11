@@ -10,8 +10,6 @@ import "C"
 import (
 	"crypto/rand"
 	"log"
-	"os"
-	"p11nethsm/config"
 	"strings"
 	"unsafe"
 )
@@ -25,22 +23,6 @@ const (
 	maxPinLength      = 256
 	serialNumber      = "1010101"
 )
-
-func init() {
-	logPath := config.Get().LogFile
-	if logPath != "" {
-		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			log.Printf("cannot create logfile at given path: %s", err)
-			return
-		}
-		log.SetOutput(logFile)
-	} else {
-		log.SetPrefix("[p11nethsm] ")
-	}
-}
-
-var App *Application
 
 // Extracts the Return Value from an error, and logs it.
 func ErrorToRV(err error) C.CK_RV {

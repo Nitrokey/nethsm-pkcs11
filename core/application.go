@@ -6,6 +6,7 @@ package core
 import "C"
 import (
 	"context"
+	"log"
 	"os"
 	"p11nethsm/api"
 	"p11nethsm/config"
@@ -18,6 +19,26 @@ type Application struct {
 	Config *config.Config // has the complete configuration of the HSM
 	Api    *api.DefaultApiService
 }
+
+func init() {
+	conf := config.Get()
+	logPath := conf.LogFile
+	if logPath != "" {
+		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+		if err != nil {
+			log.Printf("cannot create logfile at given path: %s", err)
+			return
+		}
+		log.SetOutput(logFile)
+	} else {
+		log.SetPrefix("[p11nethsm] ")
+	}
+	if conf.Debug {
+		log.SetFlags(log.Flags() | log.Lshortfile | log.Lmicroseconds)
+	}
+}
+
+var App *Application
 
 // NewApplication returns a new application, using the configuration defined in the config file.
 func NewApplication() (*Application, error) {
