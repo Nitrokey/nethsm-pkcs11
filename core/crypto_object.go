@@ -111,7 +111,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	}
 	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
-	log.Printf("templateSlice:%+v", templateSlice)
+	// log.Printf("templateSlice:%+v", templateSlice)
 
 	missingAttr := false
 

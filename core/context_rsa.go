@@ -6,13 +6,11 @@ package core
 import "C"
 
 import (
-	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/binary"
 	"io"
-	"log"
 	"p11nethsm/api"
 	"unsafe"
 )
@@ -20,7 +18,7 @@ import (
 type SignContextRSA struct {
 	// randSrc     io.Reader
 	// pubKey      rsa.PublicKey
-	apiCtx      context.Context
+	session     *Session
 	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
 	keyID       string     // Key ID used in signing.
 	data        []byte     // Data to sign.
@@ -48,7 +46,7 @@ func (context *SignContextRSA) Init([]byte) (err error) {
 }
 
 func (context *SignContextRSA) SignatureLength() int {
-	log.Printf("context: %v", context)
+	// log.Printf("context: %v", context)
 	return 0 // XXX
 
 }
@@ -75,11 +73,11 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
 	reqBody.SetMode(api.SIGNMODE_PKCS1)
 	sigData, r, err := App.Api.KeysKeyIDSignPost(
-		context.apiCtx, context.keyID).Body(reqBody).Execute()
+		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
-		log.Printf("%v\n", r)
-		log.Printf("%v\n", r.Request.Body)
-		return nil, err
+		// log.Printf("%v\n", r)
+		// log.Printf("%v\n", r.Request.Body)
+		return nil, NewAPIError("SignContextRSA.Final()", "Signing failed.", r, err)
 	}
 	signature, err := base64.StdEncoding.DecodeString(sigData.GetSignature())
 	if err != nil {

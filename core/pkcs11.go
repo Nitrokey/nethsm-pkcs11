@@ -181,7 +181,7 @@ func C_GetInfo(pInfo C.CK_INFO_PTR) C.CK_RV {
 	}
 	info := (*C.CK_INFO)(unsafe.Pointer(pInfo))
 
-	log.Printf("%v", &info.manufacturerID[0])
+	// log.Printf("%v", &info.manufacturerID[0])
 	str2Buf(libManufacturerID, &info.manufacturerID)
 	str2Buf(libDescription, &info.libraryDescription)
 
@@ -243,7 +243,7 @@ func C_GetSlotList(tokenPresent C.CK_BBOOL, pSlotList C.CK_SLOT_ID_PTR, pulCount
 	}
 
 	*pulCount = C.CK_ULONG(bufSize)
-	log.Printf("Slots: %d", *pulCount)
+	// log.Printf("Slots: %d", *pulCount)
 	return C.CKR_OK
 }
 
@@ -405,15 +405,15 @@ func C_Logout(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	}
 	session, err := App.GetSession(hSession)
 	if err != nil {
-		log.Printf("error! %v\n", err)
+		// log.Printf("error! %v\n", err)
 		return ErrorToRV(err)
 	}
 	err = session.Logout()
 	if err != nil {
-		log.Printf("error! %v", err)
+		// log.Printf("error! %v", err)
 		return ErrorToRV(err)
 	}
-	log.Print("Logged out.")
+	// log.Print("Logged out.")
 	return C.CKR_OK
 }
 
@@ -467,7 +467,7 @@ func C_FindObjectsInit(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PT
 	if App == nil {
 		return C.CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	log.Printf("Template: %v\n", pTemplate)
+	// log.Printf("Template: %v\n", pTemplate)
 	if ulCount > 0 && pTemplate == nil {
 		return C.CKR_ARGUMENTS_BAD
 	}
@@ -575,7 +575,7 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	log.Printf("Obj Attr: %+v", object.Attributes)
+	// log.Printf("Obj Attr: %+v", object.Attributes)
 	if err := object.CopyAttributes(pTemplate, ulCount); err != nil {
 		return ErrorToRV(err)
 	}
@@ -660,6 +660,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	if err != nil {
 		return ErrorToRV(err)
 	}
+	// XXX this is always 0
 	sigLen, err := session.SignLength()
 	if pulSignatureLen == nil {
 		return C.CKR_ARGUMENTS_BAD
@@ -672,9 +673,9 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 		*pulSignatureLen = sigLen
 		return C.CKR_BUFFER_TOO_SMALL
 	} else {
-		log.Printf("starting signFinal")
+		// log.Printf("starting signFinal")
 		signature, err := session.SignFinal()
-		log.Printf("signFinal done")
+		// log.Printf("signFinal done")
 		if err != nil {
 			return ErrorToRV(err)
 		}
@@ -706,7 +707,7 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 		return ErrorToRV(err)
 	}
 	signature, err := session.SignFinal()
-	log.Printf("signFinal ended")
+	// log.Printf("signFinal ended")
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -722,9 +723,9 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	cSignature := C.CBytes(signature)
 	*pulSignatureLen = sigLen
 	C.memcpy(unsafe.Pointer(pSignature), cSignature, *pulSignatureLen)
-	log.Printf("freeing cSignature")
+	// log.Printf("freeing cSignature")
 	C.free(cSignature)
-	log.Printf("done with this branch")
+	// log.Printf("done with this branch")
 	return C.CKR_OK
 }
 

@@ -6,6 +6,7 @@ p11nethsm:
     description: NetHSM Zone A
     url: "https://nethsmdemo.nitrokey.com/api/v1"
     user: "operator"
+#    user: "admin"
     password: "env:NETHSM_PASS"
   - label: NetHSM2
     #description: NetHSM Zone B

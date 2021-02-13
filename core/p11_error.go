@@ -32,9 +32,12 @@ func NewError(who, description string, code C.CK_RV) P11Error {
 
 // NewAPIError returns a new error. with the provided parameters.
 func NewAPIError(who, f string, r *http.Response, err error) P11Error {
-	desc := fmt.Sprintf("Error when calling '%v': %v - %v\n", who, f, err)
+	desc := fmt.Sprintf("Error when calling '%v': %v\n%v\n", who, f, err)
 	desc += fmt.Sprintf("HTTP request: %+v\n", r.Request)
 	desc += fmt.Sprintf("HTTP response: %+v\n", r)
+	if r.StatusCode == 401 {
+		return NewError(who, desc, C.CKR_PIN_INCORRECT)
+	}
 	return NewError(who, desc, C.CKR_DEVICE_ERROR)
 }
 

@@ -5,7 +5,6 @@ package core
 */
 import "C"
 import (
-	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/binary"
@@ -16,7 +15,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"p11nethsm/api"
 	"p11nethsm/utils"
 
 	"github.com/google/uuid"
@@ -36,7 +34,6 @@ type Session struct {
 	digestHash        hash.Hash            // Hash used for hashing
 	digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
 	randSrc           *rand.Rand           // Seedable random source.
-	apiCtx            context.Context
 }
 
 // Map of sessions identified by their handle. It's very similar to an array because the handles are integers.
@@ -57,7 +54,6 @@ func NewSession(flags C.CK_FLAGS, currentSlot *Slot) *Session {
 		Handle:  SessionHandle,
 		flags:   flags,
 		randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
-		apiCtx:  currentSlot.ctx,
 	}
 }
 
@@ -80,73 +76,77 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 }
 
 // CreateObject saves an object and sets its handle.
-// func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
-// 	if attrs == nil {
-// 		return nil, NewError("Session.CreateObject", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
-// 	}
+func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
+	if attrs == nil {
+		return nil, NewError("Session.CreateObject", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+	}
 
-// 	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
-// 	if err != nil {
-// 		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
-// 	}
+	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
+	if err != nil {
+		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
+	}
 
-// 	isToken := isTokenAttr.Value[0] != 0
-// 	var objType CryptoObjectType
+	isToken := isTokenAttr.Value[0] != 0
+	var objType CryptoObjectType
 
-// 	if isToken {
-// 		objType = TokenObject
-// 	} else {
-// 		objType = SessionObject
-// 	}
+	if isToken {
+		objType = TokenObject
+	} else {
+		objType = SessionObject
+	}
 
-// 	object := &CryptoObject{
-// 		Type:       objType,
-// 		Attributes: attrs,
-// 	}
-// 	token := session.Slot.token
-// 	isPrivate := true
-// 	oClass := C.CK_OBJECT_CLASS(C.CKO_VENDOR_DEFINED)
-// 	keyType := C.CK_KEY_TYPE(C.CKK_VENDOR_DEFINED)
+	object := &CryptoObject{
+		Type:       objType,
+		Attributes: attrs,
+	}
+	token := session.Slot.token
+	isPrivate := true
+	oClass := C.CK_OBJECT_CLASS(C.CKO_VENDOR_DEFINED)
+	keyType := C.CK_KEY_TYPE(C.CKK_VENDOR_DEFINED)
 
-// 	privAttr, err := object.Attributes.GetAttributeByType(C.CKA_PRIVATE)
-// 	if err == nil && len(privAttr.Value) > 0 {
-// 		isPrivate = C.CK_BBOOL(privAttr.Value[0]) == C.CK_TRUE
-// 	}
+	privAttr, err := object.Attributes.GetAttributeByType(C.CKA_PRIVATE)
+	if err == nil && len(privAttr.Value) > 0 {
+		isPrivate = C.CK_BBOOL(privAttr.Value[0]) == C.CK_TRUE
+	}
 
-// 	classAttr, err := object.Attributes.GetAttributeByType(C.CKA_CLASS)
-// 	if err == nil && len(classAttr.Value) > 0 {
-// 		oClass = C.CK_OBJECT_CLASS(classAttr.Value[0])
-// 	}
+	classAttr, err := object.Attributes.GetAttributeByType(C.CKA_CLASS)
+	if err == nil && len(classAttr.Value) > 0 {
+		oClass = C.CK_OBJECT_CLASS(classAttr.Value[0])
+	}
 
-// 	keyTypeAttr, err := object.Attributes.GetAttributeByType(C.CKA_KEY_TYPE)
-// 	if err == nil && len(classAttr.Value) > 0 {
-// 		keyType = C.CK_KEY_TYPE(keyTypeAttr.Value[0])
-// 	}
+	keyTypeAttr, err := object.Attributes.GetAttributeByType(C.CKA_KEY_TYPE)
+	if err == nil && len(classAttr.Value) > 0 {
+		keyType = C.CK_KEY_TYPE(keyTypeAttr.Value[0])
+	}
 
-// 	if isToken && session.isReadOnly() {
-// 		return nil, NewError("Session.CreateObject", "session is read only", C.CKR_SESSION_READ_ONLY)
-// 	}
-// 	state, err := session.GetState()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if !GetUserAuthorization(state, isToken, isPrivate, true) {
-// 		return nil, NewError("Session.CreateObject", "user not logged in", C.CKR_USER_NOT_LOGGED_IN)
-// 	}
+	if isToken && session.isReadOnly() {
+		return nil, NewError("Session.CreateObject", "session is read only", C.CKR_SESSION_READ_ONLY)
+	}
+	state, err := session.GetState()
+	if err != nil {
+		return nil, err
+	}
+	if !GetUserAuthorization(state, isToken, isPrivate, true) {
+		return nil, NewError("Session.CreateObject", "user not logged in", C.CKR_USER_NOT_LOGGED_IN)
+	}
 
-// 	switch oClass {
-// 	case C.CKO_PUBLIC_KEY, C.CKO_PRIVATE_KEY:
-// 		switch keyType {
-// 		case C.CKK_RSA, C.CKK_EC:
-// 			token.AddObject(object)
-// 			return object, nil
-// 		default:
-// 			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
-// 		}
-// 	}
-// 	return nil, NewError("Session.CreateObject", "object class not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
-// 	// TODO: Verify if the objects are valid
-// }
+	switch oClass {
+	case C.CKO_PUBLIC_KEY, C.CKO_PRIVATE_KEY:
+		switch keyType {
+		case C.CKK_RSA, C.CKK_EC:
+			token.AddObject(object)
+			// err := session.Slot.Application.Storage.SaveToken(token)
+			// if err != nil {
+			// 	return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
+			// }
+			return object, nil
+		default:
+			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+		}
+	}
+	return nil, NewError("Session.CreateObject", "object class not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+	// TODO: Verify if the objects are valid
+}
 
 // DestroyObject deletes an object from the storage.
 // func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
@@ -187,14 +187,18 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 	if session.findInitialized {
 		return NewError("Session.FindObjectsInit", "operation already initialized", C.CKR_OPERATION_ACTIVE)
 	}
-
-	log.Printf("Attributes:\n")
-	for k, v := range attrs {
-		log.Printf("0x%x: %v", k, v)
+	token, err := session.Slot.GetToken()
+	if err != nil {
+		return err
 	}
 
+	// log.Printf("Attributes:\n")
+	// for k, v := range attrs {
+	// 	log.Printf("0x%x: %v", k, v)
+	// }
+
 	if len(attrs) == 0 {
-		objects, err := session.GetObjects()
+		objects, err := token.GetObjects()
 		if err != nil {
 			return err
 		}
@@ -203,7 +207,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 			session.foundObjects[i] = object.Handle
 		}
 	} else {
-		objects, err := session.GetObjects()
+		objects, err := token.GetObjects()
 		if err != nil {
 			return err
 		}
@@ -257,82 +261,6 @@ func (session *Session) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, err
 	return object, nil
 }
 
-func (session *Session) GetObjects() (objects CryptoObjects, err error) {
-	token, err := session.Slot.GetToken()
-	if err != nil {
-		return nil, err
-	}
-	if token._objects != nil {
-		objects = token._objects
-		return
-	}
-	keys, r, e := App.Api.KeysGet(session.apiCtx).Execute()
-	if e != nil {
-		if r.StatusCode == 401 {
-			err = NewError("token.GetObjects", "KeysGet", C.CKR_PIN_INCORRECT)
-		} else {
-			err = NewAPIError("token.GetObjects", "KeysGet", r, e)
-		}
-		return
-	}
-	for _, k := range keys {
-		keyID := k.GetKey()
-		key, r, e := App.Api.KeysKeyIDGet(session.apiCtx, keyID).Execute()
-		if e != nil {
-			err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, e)
-			return
-		}
-		object := CryptoObject{}
-		object.Type = TokenObject
-		object.Handle = nextObjectHandle()
-		object.Attributes = Attributes{}
-		object.Attributes.Set(
-			&Attribute{C.CKA_LABEL, []byte(keyID)},
-			&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-			&Attribute{C.CKA_ID, []byte(keyID)},
-			&Attribute{C.CKA_SUBJECT, nil},
-			&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
-			&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_PRIVATE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_TOKEN, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
-		)
-		switch key.Algorithm {
-		case api.KEYALGORITHM_RSA:
-			object.Attributes.Set(
-				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
-				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_DECRYPT, []byte{C.CK_TRUE}},
-				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
-				&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
-			)
-		case api.KEYALGORITHM_ED25519:
-			object.Attributes.Set(
-				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
-				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_DECRYPT, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_EC_POINT, []byte(key.Key.GetData())},
-			)
-		}
-		token.AddObject(&object)
-	}
-	objects = token._objects
-	return
-}
-
 // SaveObject Saves a CryptoObject in the token.
 // func (session *Session) SaveObject(object *CryptoObject) error {
 // 	token, err := session.Slot.GetToken()
@@ -353,24 +281,25 @@ func (session *Session) GetObjects() (objects CryptoObjects, err error) {
 
 // GetState returns the session state.
 func (session *Session) GetState() (C.CK_STATE, error) {
-	// if session.pin == "" {
-	// 	if session.isReadOnly() {
-	// 		return C.CKS_RO_PUBLIC_SESSION, nil
-	// 	} else {
-	// 		return C.CKS_RW_PUBLIC_SESSION, nil
-	// 	}
-	// }
-	// switch session.user {
-	// case C.CKU_SO:
-	// 	return C.CKS_RW_SO_FUNCTIONS, nil
-	// case C.CKU_USER:
-	if session.isReadOnly() {
-		return C.CKS_RO_USER_FUNCTIONS, nil
-	} else {
-		return C.CKS_RW_USER_FUNCTIONS, nil
+	loginData := session.Slot.token.GetLoginData()
+	if loginData == nil {
+		if session.isReadOnly() {
+			return C.CKS_RO_PUBLIC_SESSION, nil
+		} else {
+			return C.CKS_RW_PUBLIC_SESSION, nil
+		}
 	}
-	// }
-	// return 0, NewError("Session.GetState", "invalid security level", C.CKR_ARGUMENTS_BAD)
+	switch loginData.userType {
+	case C.CKU_SO:
+		return C.CKS_RW_SO_FUNCTIONS, nil
+	case C.CKU_USER:
+		if session.isReadOnly() {
+			return C.CKS_RO_USER_FUNCTIONS, nil
+		} else {
+			return C.CKS_RW_USER_FUNCTIONS, nil
+		}
+	}
+	return 0, NewError("Session.GetState", "invalid security level", C.CKR_ARGUMENTS_BAD)
 }
 
 // IsReadOnly returns true if the session is read only.
@@ -380,23 +309,26 @@ func (session *Session) isReadOnly() bool {
 
 // Login logs in on a token with a pin and a defined user type.
 func (session *Session) Login(userType C.CK_USER_TYPE, pin string) error {
-	if userType != C.CKU_USER {
-		return NewError("Login", "User type not supported type", C.CKR_USER_TYPE_INVALID)
-	}
-	session.apiCtx = addBasicAuth(session.apiCtx, session.Slot.conf.User, pin)
-	_, r, err := App.Api.KeysGet(session.apiCtx).Execute()
+	token, err := session.Slot.GetToken()
 	if err != nil {
-		if r.StatusCode == 401 {
-			return NewError("Login", "Authorization failed", C.CKR_PIN_INCORRECT)
-		}
-		return NewAPIError("Login", "Login failed", r, err)
+		return err
 	}
-	return nil
+	return token.Login(userType, pin)
 }
 
 // Logout logs out of a token.
 func (session *Session) Logout() error {
-	session.apiCtx = session.Slot.ctx
+	slot := session.Slot
+	if slot == nil {
+		return NewError("Session.Logout", "Slot is null", C.CKR_DEVICE_ERROR)
+	}
+	token, err := slot.GetToken()
+	if err != nil {
+		return err
+	}
+	if token != nil {
+		token.Logout()
+	}
 	return nil
 }
 

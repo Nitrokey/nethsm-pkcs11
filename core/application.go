@@ -56,7 +56,7 @@ func NewApplication() (*Application, error) {
 		}
 		slots[i] = slot
 
-		r, e := app.Api.HealthReadyGet(slot.ctx).Execute()
+		r, e := app.Api.HealthReadyGet(ctx).Execute()
 		if e == nil && r.StatusCode < 300 {
 			token, err := NewToken(slotConf.Label)
 			if err != nil {
