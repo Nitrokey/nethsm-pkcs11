@@ -27,6 +27,7 @@ func NewApplication() (*Application, error) {
 	apiConf := api.NewConfiguration()
 	apiConf.Servers[0].Variables = map[string]api.ServerVariable{"URL": {}}
 	apiConf.Servers[0].URL = "{URL}"
+	apiConf.Debug = conf.Debug
 	client := api.NewAPIClient(apiConf)
 
 	app := &Application{

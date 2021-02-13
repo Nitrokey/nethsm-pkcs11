@@ -28,7 +28,8 @@ func init() {
 // CryptokiConfig represents the configuration specific to Cryptoki API.
 type Config struct {
 	LogFile         string
-	MaxSessionCount uint16         // String that will be used as Max Session Count
+	MaxSessionCount uint16 // String that will be used as Max Session Count
+	Debug           bool
 	Slots           []*SlotsConfig // List of slots open.
 }
 

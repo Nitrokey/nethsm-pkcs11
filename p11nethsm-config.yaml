@@ -1,6 +1,7 @@
 p11nethsm:
   logfile: /tmp/p11nethsm.log
   maxsessioncount: 5
+  debug: true
   slots:
   - label: NetHSM1
     description: NetHSM Zone A
