@@ -35,6 +35,7 @@ func init() {
 	}
 	if conf.Debug {
 		log.SetFlags(log.Flags() | log.Lshortfile | log.Lmicroseconds)
+		log.SetPrefix("==========================\n" + log.Prefix())
 	}
 }
 
