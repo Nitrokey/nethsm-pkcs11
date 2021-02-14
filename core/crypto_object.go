@@ -93,6 +93,7 @@ func (object *CryptoObject) Match(attrs Attributes) bool {
 			return false
 		}
 	}
+	log.Printf("Matching object: %v", object)
 	return true
 }
 

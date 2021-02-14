@@ -9,6 +9,7 @@ import "C"
 import (
 	"crypto"
 	"io"
+	"p11nethsm/api"
 	"unsafe"
 )
 
@@ -116,4 +117,25 @@ func (mechanism *Mechanism) Prepare(randSrc io.Reader, nBits int, data []byte) (
 		err = NewError("Mechanism.Sign", "mechanism not supported yet for preparing", C.CKR_MECHANISM_INVALID)
 		return
 	}
+}
+
+func (mechanism *Mechanism) GetSignMode() (mode api.SignMode, err error) {
+	switch mechanism.Type {
+	case C.CKM_RSA_PKCS, C.CKM_ECDSA:
+		return crypto.Hash(0), nil
+	case C.CKM_MD5_RSA_PKCS, C.CKM_MD5:
+		h = crypto.MD5
+	case C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA_1, C.CKM_ECDSA_SHA1:
+		h = crypto.SHA1
+	case C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA256, C.CKM_ECDSA_SHA256:
+		h = crypto.SHA256
+	case C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA384, C.CKM_ECDSA_SHA384:
+		h = crypto.SHA384
+	case C.CKM_SHA512_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS, C.CKM_SHA512, C.CKM_ECDSA_SHA512:
+		h = crypto.SHA512
+	default:
+		err = NewError("Mechanism.Sign", "mechanism not supported yet for hashing", C.CKR_MECHANISM_INVALID)
+		return
+	}
+	return
 }

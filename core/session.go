@@ -76,77 +76,77 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 }
 
 // CreateObject saves an object and sets its handle.
-func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
-	if attrs == nil {
-		return nil, NewError("Session.CreateObject", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
-	}
+// func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
+// 	if attrs == nil {
+// 		return nil, NewError("Session.CreateObject", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 	}
 
-	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
-	if err != nil {
-		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
-	}
+// 	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
+// 	if err != nil {
+// 		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
+// 	}
 
-	isToken := isTokenAttr.Value[0] != 0
-	var objType CryptoObjectType
+// 	isToken := isTokenAttr.Value[0] != 0
+// 	var objType CryptoObjectType
 
-	if isToken {
-		objType = TokenObject
-	} else {
-		objType = SessionObject
-	}
+// 	if isToken {
+// 		objType = TokenObject
+// 	} else {
+// 		objType = SessionObject
+// 	}
 
-	object := &CryptoObject{
-		Type:       objType,
-		Attributes: attrs,
-	}
-	token := session.Slot.token
-	isPrivate := true
-	oClass := C.CK_OBJECT_CLASS(C.CKO_VENDOR_DEFINED)
-	keyType := C.CK_KEY_TYPE(C.CKK_VENDOR_DEFINED)
+// 	object := &CryptoObject{
+// 		Type:       objType,
+// 		Attributes: attrs,
+// 	}
+// 	token := session.Slot.token
+// 	isPrivate := true
+// 	oClass := C.CK_OBJECT_CLASS(C.CKO_VENDOR_DEFINED)
+// 	keyType := C.CK_KEY_TYPE(C.CKK_VENDOR_DEFINED)
 
-	privAttr, err := object.Attributes.GetAttributeByType(C.CKA_PRIVATE)
-	if err == nil && len(privAttr.Value) > 0 {
-		isPrivate = C.CK_BBOOL(privAttr.Value[0]) == C.CK_TRUE
-	}
+// 	privAttr, err := object.Attributes.GetAttributeByType(C.CKA_PRIVATE)
+// 	if err == nil && len(privAttr.Value) > 0 {
+// 		isPrivate = C.CK_BBOOL(privAttr.Value[0]) == C.CK_TRUE
+// 	}
 
-	classAttr, err := object.Attributes.GetAttributeByType(C.CKA_CLASS)
-	if err == nil && len(classAttr.Value) > 0 {
-		oClass = C.CK_OBJECT_CLASS(classAttr.Value[0])
-	}
+// 	classAttr, err := object.Attributes.GetAttributeByType(C.CKA_CLASS)
+// 	if err == nil && len(classAttr.Value) > 0 {
+// 		oClass = C.CK_OBJECT_CLASS(classAttr.Value[0])
+// 	}
 
-	keyTypeAttr, err := object.Attributes.GetAttributeByType(C.CKA_KEY_TYPE)
-	if err == nil && len(classAttr.Value) > 0 {
-		keyType = C.CK_KEY_TYPE(keyTypeAttr.Value[0])
-	}
+// 	keyTypeAttr, err := object.Attributes.GetAttributeByType(C.CKA_KEY_TYPE)
+// 	if err == nil && len(classAttr.Value) > 0 {
+// 		keyType = C.CK_KEY_TYPE(keyTypeAttr.Value[0])
+// 	}
 
-	if isToken && session.isReadOnly() {
-		return nil, NewError("Session.CreateObject", "session is read only", C.CKR_SESSION_READ_ONLY)
-	}
-	state, err := session.GetState()
-	if err != nil {
-		return nil, err
-	}
-	if !GetUserAuthorization(state, isToken, isPrivate, true) {
-		return nil, NewError("Session.CreateObject", "user not logged in", C.CKR_USER_NOT_LOGGED_IN)
-	}
+// 	if isToken && session.isReadOnly() {
+// 		return nil, NewError("Session.CreateObject", "session is read only", C.CKR_SESSION_READ_ONLY)
+// 	}
+// 	state, err := session.GetState()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if !GetUserAuthorization(state, isToken, isPrivate, true) {
+// 		return nil, NewError("Session.CreateObject", "user not logged in", C.CKR_USER_NOT_LOGGED_IN)
+// 	}
 
-	switch oClass {
-	case C.CKO_PUBLIC_KEY, C.CKO_PRIVATE_KEY:
-		switch keyType {
-		case C.CKK_RSA, C.CKK_EC:
-			token.AddObject(object)
-			// err := session.Slot.Application.Storage.SaveToken(token)
-			// if err != nil {
-			// 	return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
-			// }
-			return object, nil
-		default:
-			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
-		}
-	}
-	return nil, NewError("Session.CreateObject", "object class not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
-	// TODO: Verify if the objects are valid
-}
+// 	switch oClass {
+// 	case C.CKO_PUBLIC_KEY, C.CKO_PRIVATE_KEY:
+// 		switch keyType {
+// 		case C.CKK_RSA, C.CKK_EC:
+// 			token.AddObject(object)
+// 			// err := session.Slot.Application.Storage.SaveToken(token)
+// 			// if err != nil {
+// 			// 	return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
+// 			// }
+// 			return object, nil
+// 		default:
+// 			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 		}
+// 	}
+// 	return nil, NewError("Session.CreateObject", "object class not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 	// TODO: Verify if the objects are valid
+// }
 
 // DestroyObject deletes an object from the storage.
 // func (session *Session) DestroyObject(hObject C.CK_OBJECT_HANDLE) error {
@@ -192,10 +192,10 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		return err
 	}
 
-	// log.Printf("Attributes:\n")
-	// for k, v := range attrs {
-	// 	log.Printf("0x%x: %v", k, v)
-	// }
+	log.Printf("Attributes:\n")
+	for k, v := range attrs {
+		log.Printf("0x%x: %v", k, v)
+	}
 
 	if len(attrs) == 0 {
 		objects, err := token.GetObjects()
@@ -217,6 +217,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 				session.foundObjects = append(session.foundObjects, object.Handle)
 			}
 		}
+		log.Printf("foundObjects: %v", session.foundObjects)
 	}
 
 	session.findInitialized = true
