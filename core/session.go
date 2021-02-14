@@ -6,18 +6,12 @@ package core
 import "C"
 import (
 	"crypto"
-	"crypto/rsa"
 	"encoding/binary"
-	"fmt"
 	"hash"
 	"log"
 	"math/rand"
 	"sync"
 	"unsafe"
-
-	"p11nethsm/utils"
-
-	"github.com/google/uuid"
 )
 
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
@@ -449,6 +443,50 @@ func (session *Session) VerifyFinal(signature []byte) error {
 	return session.verifyCtx.Final(signature)
 }
 
+// SignInit starts the signing process.
+func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
+	if session.signCtx != nil && session.signCtx.Initialized() {
+		return NewError("Session.SignInit", "operation active", C.CKR_OPERATION_ACTIVE)
+	}
+	if mechanism == nil {
+		return NewError("Session.SignInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+	}
+
+	signCtx, err := NewSignContext(session, mechanism, hKey)
+	if err != nil {
+		return err
+	}
+	session.signCtx = signCtx
+	return nil
+}
+
+// SignLength returns the signature length.
+func (session *Session) DecryptLength() (C.ulong, error) {
+	if session.signCtx == nil || !session.signCtx.Initialized() {
+		return 0, NewError("Session.SignLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	}
+	return C.ulong(session.signCtx.SignatureLength()), nil
+}
+
+// SignUpdate updates the signature with data to sign.
+func (session *Session) DecryptUpdate(data []byte) error {
+	if session.signCtx == nil || !session.signCtx.Initialized() {
+		return NewError("Session.SignUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	}
+	return session.signCtx.Update(data)
+}
+
+// SignFinal returns the signature and resets the state.
+func (session *Session) DecryptFinal() ([]byte, error) {
+	if session.signCtx == nil || !session.signCtx.Initialized() {
+		return nil, NewError("Session.SignFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	}
+	defer func() {
+		session.signCtx = nil
+	}()
+	return session.signCtx.Final()
+}
+
 // DigestInit starts a digest session.
 func (session *Session) DigestInit(mechanism *Mechanism) error {
 	if session.digestInitialized {
@@ -531,62 +569,62 @@ func (session *Session) SeedRandom(seed []byte) {
 	session.randSrc.Seed(seedInt)
 }
 
-func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) (pkAttrs, skAttrs Attributes, err error) {
-	keyID := uuid.New().String()
-	curveParams, err := pkTemplate.GetAttributeByType(C.CKA_EC_PARAMS)
-	if err != nil {
-		err = NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("error getting curve: %s", err), C.CKR_TEMPLATE_INCOMPLETE)
-		return
-	}
-	_ /*curveName*/, err = utils.ASN1ToCurveName(curveParams.Value)
-	if err != nil {
-		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
-	}
-	// create key
-	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil /*, nil*/)
-	if err != nil {
-		return
-	}
-	sk, err := createECDSAPrivateKey(keyID, skTemplate, nil /*, nil*/)
-	if err != nil {
-		return
-	}
-	return pk, sk, nil
-}
+// func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) (pkAttrs, skAttrs Attributes, err error) {
+// 	keyID := uuid.New().String()
+// 	curveParams, err := pkTemplate.GetAttributeByType(C.CKA_EC_PARAMS)
+// 	if err != nil {
+// 		err = NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("error getting curve: %s", err), C.CKR_TEMPLATE_INCOMPLETE)
+// 		return
+// 	}
+// 	_ /*curveName*/, err = utils.ASN1ToCurveName(curveParams.Value)
+// 	if err != nil {
+// 		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
+// 	}
+// 	// create key
+// 	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil /*, nil*/)
+// 	if err != nil {
+// 		return
+// 	}
+// 	sk, err := createECDSAPrivateKey(keyID, skTemplate, nil /*, nil*/)
+// 	if err != nil {
+// 		return
+// 	}
+// 	return pk, sk, nil
+// }
 
-func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (pk, sk Attributes, err error) {
-	var key *rsa.PublicKey
-	keyID := uuid.New().String()
-	bitSizeAttr, err := pkTemplate.GetAttributeByType(C.CKA_MODULUS_BITS)
-	if err != nil {
-		err = NewError("Session.GenerateRSAKeyPair", "Modulus Bits undefined", C.CKR_TEMPLATE_INCOMPLETE)
-		return
-	}
-	exponentAttr, err := pkTemplate.GetAttributeByType(C.CKA_PUBLIC_EXPONENT)
-	if err != nil {
-		err = NewError("Session.GenerateRSAKeyPair", "Public Exponent undefined", C.CKR_TEMPLATE_INCOMPLETE)
-		return
-	}
-	bitSize := binary.LittleEndian.Uint64(bitSizeAttr.Value)
-	extendedExpAttr := make([]byte, 8)
-	if len(exponentAttr.Value) > 8 {
-		err = NewError("Session.GenerateRSAKeyPair", "Exponent size should not be greater than 64 bits", C.CKR_ARGUMENTS_BAD)
-		return
-	}
-	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
-	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
-	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
-	// XXX create key
-	pk, err = createRSAPublicKey(keyID, pkTemplate, key)
-	if err != nil {
-		return
-	}
-	sk, err = createRSAPrivateKey(keyID, skTemplate, key)
-	if err != nil {
-		return
-	}
-	return
-}
+// func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (pk, sk Attributes, err error) {
+// 	var key *rsa.PublicKey
+// 	keyID := uuid.New().String()
+// 	bitSizeAttr, err := pkTemplate.GetAttributeByType(C.CKA_MODULUS_BITS)
+// 	if err != nil {
+// 		err = NewError("Session.GenerateRSAKeyPair", "Modulus Bits undefined", C.CKR_TEMPLATE_INCOMPLETE)
+// 		return
+// 	}
+// 	exponentAttr, err := pkTemplate.GetAttributeByType(C.CKA_PUBLIC_EXPONENT)
+// 	if err != nil {
+// 		err = NewError("Session.GenerateRSAKeyPair", "Public Exponent undefined", C.CKR_TEMPLATE_INCOMPLETE)
+// 		return
+// 	}
+// 	bitSize := binary.LittleEndian.Uint64(bitSizeAttr.Value)
+// 	extendedExpAttr := make([]byte, 8)
+// 	if len(exponentAttr.Value) > 8 {
+// 		err = NewError("Session.GenerateRSAKeyPair", "Exponent size should not be greater than 64 bits", C.CKR_ARGUMENTS_BAD)
+// 		return
+// 	}
+// 	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
+// 	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
+// 	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
+// 	// XXX create key
+// 	pk, err = createRSAPublicKey(keyID, pkTemplate, key)
+// 	if err != nil {
+// 		return
+// 	}
+// 	sk, err = createRSAPrivateKey(keyID, skTemplate, key)
+// 	if err != nil {
+// 		return
+// 	}
+// 	return
+// }
 
 // GetUserAuthorization returns the authorization level of the state.
 func GetUserAuthorization(state C.CK_STATE, isToken, isPrivate, userAction bool) bool {

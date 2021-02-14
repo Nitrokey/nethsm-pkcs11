@@ -54,27 +54,27 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 			return nil, err
 		}
 		context = c
-	case C.CKM_ECDSA, C.CKM_ECDSA_SHA1, C.CKM_ECDSA_SHA256, C.CKM_ECDSA_SHA384, C.CKM_ECDSA_SHA512:
-		// Get PK
-		pkAttr := keyObject.FindAttribute(C.CKA_EC_POINT)
-		if pkAttr == nil {
-			return nil, NewError("NewSignContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
-		}
-		c := &ECDSASignContext{
-			// randSrc:   session.randSrc,
-			keyID:     string(keyIDAttr.Value),
-			mechanism: mechanism,
-			data:      make([]byte, 0),
-		}
-		if err := c.Init(nil); err != nil {
-			return nil, err
-		}
-		// pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
-		// if err != nil {
-		// 	return nil, NewError("NewSignContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
-		// }
-		// c.pubKey = pk
-		context = c
+	// case C.CKM_ECDSA, C.CKM_ECDSA_SHA1, C.CKM_ECDSA_SHA256, C.CKM_ECDSA_SHA384, C.CKM_ECDSA_SHA512:
+	// 	// Get PK
+	// 	pkAttr := keyObject.FindAttribute(C.CKA_EC_POINT)
+	// 	if pkAttr == nil {
+	// 		return nil, NewError("NewSignContext", "object handle does not contain any ec public key attribute", C.CKR_ARGUMENTS_BAD)
+	// 	}
+	// 	c := &ECDSASignContext{
+	// 		// randSrc:   session.randSrc,
+	// 		keyID:     string(keyIDAttr.Value),
+	// 		mechanism: mechanism,
+	// 		data:      make([]byte, 0),
+	// 	}
+	// 	if err := c.Init(nil); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	// pk, err := utils.ASN1BytesToPubKey(c.pubKey.Curve, pkAttr.Value)
+	// 	// if err != nil {
+	// 	// 	return nil, NewError("NewSignContext", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
+	// 	// }
+	// 	// c.pubKey = pk
+	// 	context = c
 	default:
 		err = NewError("NewSignContext", "sign mechanism invalid", C.CKR_MECHANISM_INVALID)
 		return nil, err

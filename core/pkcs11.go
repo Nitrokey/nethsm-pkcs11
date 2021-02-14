@@ -788,6 +788,42 @@ func C_VerifyFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, ulSig
 	return C.CKR_OK
 }
 
+//export C_DecryptInit
+func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKey C.CK_OBJECT_HANDLE) C.CK_RV {
+	log.Printf("Called: C_DecryptInit")
+	if App == nil {
+		return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	}
+	session, err := App.GetSession(hSession)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	mechanism := CToMechanism(pMechanism)
+	err = session.DecryptInit(mechanism, hKey)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	return C.CKR_OK
+}
+
+//export C_Decrypt
+func C_Decrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
+	C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+}
+
+//export C_DecryptUpdate
+func C_DecryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptUpdate")
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+}
+
+//export C_DecryptFinal
+func C_DecryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_DecryptFinal")
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+}
+
 //export C_DigestInit
 func C_DigestInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR) C.CK_RV {
 	log.Printf("Called: C_DigestInit\n")
@@ -934,30 +970,6 @@ func C_EncryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_P
 //export C_EncryptFinal
 func C_EncryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
 	log.Printf("Called: C_EncryptFinal")
-	return C.CKR_FUNCTION_NOT_SUPPORTED
-}
-
-//export C_DecryptInit
-func C_DecryptInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) C.CK_RV {
-	log.Printf("Called: C_DecryptInit")
-	return C.CKR_FUNCTION_NOT_SUPPORTED
-}
-
-//export C_Decrypt
-func C_Decrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
-	C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
-	return C.CKR_FUNCTION_NOT_SUPPORTED
-}
-
-//export C_DecryptUpdate
-func C_DecryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
-	log.Printf("Called: C_DecryptUpdate")
-	return C.CKR_FUNCTION_NOT_SUPPORTED
-}
-
-//export C_DecryptFinal
-func C_DecryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
-	log.Printf("Called: C_DecryptFinal")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
