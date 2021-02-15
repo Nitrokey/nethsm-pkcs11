@@ -20,14 +20,14 @@ type SignMode string
 
 // List of SignMode
 const (
-	SIGNMODE_PKCS1 SignMode = "PKCS1"
-	SIGNMODE_PSS_MD5 SignMode = "PSS_MD5"
-	SIGNMODE_PSS_SHA1 SignMode = "PSS_SHA1"
+	SIGNMODE_PKCS1      SignMode = "PKCS1"
+	SIGNMODE_PSS_MD5    SignMode = "PSS_MD5"
+	SIGNMODE_PSS_SHA1   SignMode = "PSS_SHA1"
 	SIGNMODE_PSS_SHA224 SignMode = "PSS_SHA224"
 	SIGNMODE_PSS_SHA256 SignMode = "PSS_SHA256"
 	SIGNMODE_PSS_SHA384 SignMode = "PSS_SHA384"
 	SIGNMODE_PSS_SHA512 SignMode = "PSS_SHA512"
-	SIGNMODE_ED25519 SignMode = "ED25519"
+	SIGNMODE_ED25519    SignMode = "ED25519"
 )
 
 func (v *SignMode) UnmarshalJSON(src []byte) error {
@@ -37,7 +37,7 @@ func (v *SignMode) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := SignMode(value)
-	for _, existing := range []SignMode{ "PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519",   } {
+	for _, existing := range []SignMode{"PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -87,4 +87,3 @@ func (v *NullableSignMode) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

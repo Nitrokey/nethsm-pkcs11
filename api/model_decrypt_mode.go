@@ -20,10 +20,10 @@ type DecryptMode string
 
 // List of DecryptMode
 const (
-	DECRYPTMODE_RAW DecryptMode = "RAW"
-	DECRYPTMODE_PKCS1 DecryptMode = "PKCS1"
-	DECRYPTMODE_OAEP_MD5 DecryptMode = "OAEP_MD5"
-	DECRYPTMODE_OAEP_SHA1 DecryptMode = "OAEP_SHA1"
+	DECRYPTMODE_RAW         DecryptMode = "RAW"
+	DECRYPTMODE_PKCS1       DecryptMode = "PKCS1"
+	DECRYPTMODE_OAEP_MD5    DecryptMode = "OAEP_MD5"
+	DECRYPTMODE_OAEP_SHA1   DecryptMode = "OAEP_SHA1"
 	DECRYPTMODE_OAEP_SHA224 DecryptMode = "OAEP_SHA224"
 	DECRYPTMODE_OAEP_SHA256 DecryptMode = "OAEP_SHA256"
 	DECRYPTMODE_OAEP_SHA384 DecryptMode = "OAEP_SHA384"
@@ -37,7 +37,7 @@ func (v *DecryptMode) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := DecryptMode(value)
-	for _, existing := range []DecryptMode{ "RAW", "PKCS1", "OAEP_MD5", "OAEP_SHA1", "OAEP_SHA224", "OAEP_SHA256", "OAEP_SHA384", "OAEP_SHA512",   } {
+	for _, existing := range []DecryptMode{"RAW", "PKCS1", "OAEP_MD5", "OAEP_SHA1", "OAEP_SHA224", "OAEP_SHA256", "OAEP_SHA384", "OAEP_SHA512"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -87,4 +87,3 @@ func (v *NullableDecryptMode) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

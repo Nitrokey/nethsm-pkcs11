@@ -16,7 +16,7 @@ import (
 
 // KeyItem struct for KeyItem
 type KeyItem struct {
-	Key string `json:"key"`
+	Key                  string `json:"key"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _KeyItem KeyItem
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewKeyItem(key string, ) *KeyItem {
+func NewKeyItem(key string) *KeyItem {
 	this := KeyItem{}
 	this.Key = key
 	return &this
@@ -42,7 +42,7 @@ func NewKeyItemWithDefaults() *KeyItem {
 
 // GetKey returns the Key field value
 func (o *KeyItem) GetKey() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *KeyItem) GetKey() string {
 // GetKeyOk returns a tuple with the Key field value
 // and a boolean to check if the value has been set.
 func (o *KeyItem) GetKeyOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Key, true
@@ -129,5 +129,3 @@ func (v *NullableKeyItem) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

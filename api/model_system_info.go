@@ -16,10 +16,10 @@ import (
 
 // SystemInfo struct for SystemInfo
 type SystemInfo struct {
-	FirmwareVersion string `json:"firmwareVersion"`
-	SoftwareVersion string `json:"softwareVersion"`
-	HardwareVersion string `json:"hardwareVersion"`
-	BuildTag string `json:"buildTag"`
+	FirmwareVersion      string `json:"firmwareVersion"`
+	SoftwareVersion      string `json:"softwareVersion"`
+	HardwareVersion      string `json:"hardwareVersion"`
+	BuildTag             string `json:"buildTag"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -29,7 +29,7 @@ type _SystemInfo SystemInfo
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSystemInfo(firmwareVersion string, softwareVersion string, hardwareVersion string, buildTag string, ) *SystemInfo {
+func NewSystemInfo(firmwareVersion string, softwareVersion string, hardwareVersion string, buildTag string) *SystemInfo {
 	this := SystemInfo{}
 	this.FirmwareVersion = firmwareVersion
 	this.SoftwareVersion = softwareVersion
@@ -48,7 +48,7 @@ func NewSystemInfoWithDefaults() *SystemInfo {
 
 // GetFirmwareVersion returns the FirmwareVersion field value
 func (o *SystemInfo) GetFirmwareVersion() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -59,7 +59,7 @@ func (o *SystemInfo) GetFirmwareVersion() string {
 // GetFirmwareVersionOk returns a tuple with the FirmwareVersion field value
 // and a boolean to check if the value has been set.
 func (o *SystemInfo) GetFirmwareVersionOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.FirmwareVersion, true
@@ -72,7 +72,7 @@ func (o *SystemInfo) SetFirmwareVersion(v string) {
 
 // GetSoftwareVersion returns the SoftwareVersion field value
 func (o *SystemInfo) GetSoftwareVersion() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -83,7 +83,7 @@ func (o *SystemInfo) GetSoftwareVersion() string {
 // GetSoftwareVersionOk returns a tuple with the SoftwareVersion field value
 // and a boolean to check if the value has been set.
 func (o *SystemInfo) GetSoftwareVersionOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.SoftwareVersion, true
@@ -96,7 +96,7 @@ func (o *SystemInfo) SetSoftwareVersion(v string) {
 
 // GetHardwareVersion returns the HardwareVersion field value
 func (o *SystemInfo) GetHardwareVersion() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -107,7 +107,7 @@ func (o *SystemInfo) GetHardwareVersion() string {
 // GetHardwareVersionOk returns a tuple with the HardwareVersion field value
 // and a boolean to check if the value has been set.
 func (o *SystemInfo) GetHardwareVersionOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.HardwareVersion, true
@@ -120,7 +120,7 @@ func (o *SystemInfo) SetHardwareVersion(v string) {
 
 // GetBuildTag returns the BuildTag field value
 func (o *SystemInfo) GetBuildTag() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -131,7 +131,7 @@ func (o *SystemInfo) GetBuildTag() string {
 // GetBuildTagOk returns a tuple with the BuildTag field value
 // and a boolean to check if the value has been set.
 func (o *SystemInfo) GetBuildTagOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.BuildTag, true
@@ -219,5 +219,3 @@ func (v *NullableSystemInfo) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

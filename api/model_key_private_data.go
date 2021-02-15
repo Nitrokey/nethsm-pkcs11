@@ -16,10 +16,10 @@ import (
 
 // KeyPrivateData struct for KeyPrivateData
 type KeyPrivateData struct {
-	PrimeP *string `json:"primeP,omitempty"`
-	PrimeQ *string `json:"primeQ,omitempty"`
-	PublicExponent *string `json:"publicExponent,omitempty"`
-	Data *string `json:"data,omitempty"`
+	PrimeP               *string `json:"primeP,omitempty"`
+	PrimeQ               *string `json:"primeQ,omitempty"`
+	PublicExponent       *string `json:"publicExponent,omitempty"`
+	Data                 *string `json:"data,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -247,5 +247,3 @@ func (v *NullableKeyPrivateData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

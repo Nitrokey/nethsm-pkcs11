@@ -16,7 +16,7 @@ import (
 
 // SystemUpdateData struct for SystemUpdateData
 type SystemUpdateData struct {
-	ReleaseNotes string `json:"releaseNotes"`
+	ReleaseNotes         string `json:"releaseNotes"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _SystemUpdateData SystemUpdateData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSystemUpdateData(releaseNotes string, ) *SystemUpdateData {
+func NewSystemUpdateData(releaseNotes string) *SystemUpdateData {
 	this := SystemUpdateData{}
 	this.ReleaseNotes = releaseNotes
 	return &this
@@ -42,7 +42,7 @@ func NewSystemUpdateDataWithDefaults() *SystemUpdateData {
 
 // GetReleaseNotes returns the ReleaseNotes field value
 func (o *SystemUpdateData) GetReleaseNotes() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *SystemUpdateData) GetReleaseNotes() string {
 // GetReleaseNotesOk returns a tuple with the ReleaseNotes field value
 // and a boolean to check if the value has been set.
 func (o *SystemUpdateData) GetReleaseNotesOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.ReleaseNotes, true
@@ -129,5 +129,3 @@ func (v *NullableSystemUpdateData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

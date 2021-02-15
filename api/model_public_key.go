@@ -16,10 +16,10 @@ import (
 
 // PublicKey struct for PublicKey
 type PublicKey struct {
-	Mechanisms []KeyMechanism `json:"mechanisms"`
-	Algorithm KeyAlgorithm `json:"algorithm"`
-	Key KeyPublicData `json:"key"`
-	Operations int32 `json:"operations"`
+	Mechanisms           []KeyMechanism `json:"mechanisms"`
+	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Key                  KeyPublicData  `json:"key"`
+	Operations           int32          `json:"operations"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -29,7 +29,7 @@ type _PublicKey PublicKey
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPublicKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPublicData, operations int32, ) *PublicKey {
+func NewPublicKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPublicData, operations int32) *PublicKey {
 	this := PublicKey{}
 	this.Mechanisms = mechanisms
 	this.Algorithm = algorithm
@@ -48,7 +48,7 @@ func NewPublicKeyWithDefaults() *PublicKey {
 
 // GetMechanisms returns the Mechanisms field value
 func (o *PublicKey) GetMechanisms() []KeyMechanism {
-	if o == nil  {
+	if o == nil {
 		var ret []KeyMechanism
 		return ret
 	}
@@ -59,7 +59,7 @@ func (o *PublicKey) GetMechanisms() []KeyMechanism {
 // GetMechanismsOk returns a tuple with the Mechanisms field value
 // and a boolean to check if the value has been set.
 func (o *PublicKey) GetMechanismsOk() (*[]KeyMechanism, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Mechanisms, true
@@ -72,7 +72,7 @@ func (o *PublicKey) SetMechanisms(v []KeyMechanism) {
 
 // GetAlgorithm returns the Algorithm field value
 func (o *PublicKey) GetAlgorithm() KeyAlgorithm {
-	if o == nil  {
+	if o == nil {
 		var ret KeyAlgorithm
 		return ret
 	}
@@ -83,7 +83,7 @@ func (o *PublicKey) GetAlgorithm() KeyAlgorithm {
 // GetAlgorithmOk returns a tuple with the Algorithm field value
 // and a boolean to check if the value has been set.
 func (o *PublicKey) GetAlgorithmOk() (*KeyAlgorithm, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Algorithm, true
@@ -96,7 +96,7 @@ func (o *PublicKey) SetAlgorithm(v KeyAlgorithm) {
 
 // GetKey returns the Key field value
 func (o *PublicKey) GetKey() KeyPublicData {
-	if o == nil  {
+	if o == nil {
 		var ret KeyPublicData
 		return ret
 	}
@@ -107,7 +107,7 @@ func (o *PublicKey) GetKey() KeyPublicData {
 // GetKeyOk returns a tuple with the Key field value
 // and a boolean to check if the value has been set.
 func (o *PublicKey) GetKeyOk() (*KeyPublicData, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Key, true
@@ -120,7 +120,7 @@ func (o *PublicKey) SetKey(v KeyPublicData) {
 
 // GetOperations returns the Operations field value
 func (o *PublicKey) GetOperations() int32 {
-	if o == nil  {
+	if o == nil {
 		var ret int32
 		return ret
 	}
@@ -131,7 +131,7 @@ func (o *PublicKey) GetOperations() int32 {
 // GetOperationsOk returns a tuple with the Operations field value
 // and a boolean to check if the value has been set.
 func (o *PublicKey) GetOperationsOk() (*int32, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Operations, true
@@ -219,5 +219,3 @@ func (v *NullablePublicKey) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

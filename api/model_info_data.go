@@ -16,8 +16,8 @@ import (
 
 // InfoData struct for InfoData
 type InfoData struct {
-	Vendor string `json:"vendor"`
-	Product string `json:"product"`
+	Vendor               string `json:"vendor"`
+	Product              string `json:"product"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -27,7 +27,7 @@ type _InfoData InfoData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewInfoData(vendor string, product string, ) *InfoData {
+func NewInfoData(vendor string, product string) *InfoData {
 	this := InfoData{}
 	this.Vendor = vendor
 	this.Product = product
@@ -44,7 +44,7 @@ func NewInfoDataWithDefaults() *InfoData {
 
 // GetVendor returns the Vendor field value
 func (o *InfoData) GetVendor() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -55,7 +55,7 @@ func (o *InfoData) GetVendor() string {
 // GetVendorOk returns a tuple with the Vendor field value
 // and a boolean to check if the value has been set.
 func (o *InfoData) GetVendorOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Vendor, true
@@ -68,7 +68,7 @@ func (o *InfoData) SetVendor(v string) {
 
 // GetProduct returns the Product field value
 func (o *InfoData) GetProduct() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -79,7 +79,7 @@ func (o *InfoData) GetProduct() string {
 // GetProductOk returns a tuple with the Product field value
 // and a boolean to check if the value has been set.
 func (o *InfoData) GetProductOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Product, true
@@ -159,5 +159,3 @@ func (v *NullableInfoData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

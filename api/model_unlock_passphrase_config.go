@@ -16,7 +16,7 @@ import (
 
 // UnlockPassphraseConfig struct for UnlockPassphraseConfig
 type UnlockPassphraseConfig struct {
-	Passphrase string `json:"passphrase"`
+	Passphrase           string `json:"passphrase"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _UnlockPassphraseConfig UnlockPassphraseConfig
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUnlockPassphraseConfig(passphrase string, ) *UnlockPassphraseConfig {
+func NewUnlockPassphraseConfig(passphrase string) *UnlockPassphraseConfig {
 	this := UnlockPassphraseConfig{}
 	this.Passphrase = passphrase
 	return &this
@@ -42,7 +42,7 @@ func NewUnlockPassphraseConfigWithDefaults() *UnlockPassphraseConfig {
 
 // GetPassphrase returns the Passphrase field value
 func (o *UnlockPassphraseConfig) GetPassphrase() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *UnlockPassphraseConfig) GetPassphrase() string {
 // GetPassphraseOk returns a tuple with the Passphrase field value
 // and a boolean to check if the value has been set.
 func (o *UnlockPassphraseConfig) GetPassphraseOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Passphrase, true
@@ -129,5 +129,3 @@ func (v *NullableUnlockPassphraseConfig) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

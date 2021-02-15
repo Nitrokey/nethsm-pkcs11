@@ -16,7 +16,7 @@ import (
 
 // RandomRequestData struct for RandomRequestData
 type RandomRequestData struct {
-	Length int32 `json:"length"`
+	Length               int32 `json:"length"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _RandomRequestData RandomRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewRandomRequestData(length int32, ) *RandomRequestData {
+func NewRandomRequestData(length int32) *RandomRequestData {
 	this := RandomRequestData{}
 	this.Length = length
 	return &this
@@ -42,7 +42,7 @@ func NewRandomRequestDataWithDefaults() *RandomRequestData {
 
 // GetLength returns the Length field value
 func (o *RandomRequestData) GetLength() int32 {
-	if o == nil  {
+	if o == nil {
 		var ret int32
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *RandomRequestData) GetLength() int32 {
 // GetLengthOk returns a tuple with the Length field value
 // and a boolean to check if the value has been set.
 func (o *RandomRequestData) GetLengthOk() (*int32, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Length, true
@@ -129,5 +129,3 @@ func (v *NullableRandomRequestData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

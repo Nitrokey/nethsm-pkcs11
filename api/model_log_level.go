@@ -21,8 +21,8 @@ type LogLevel string
 // List of LogLevel
 const (
 	LOGLEVEL_DEBUG LogLevel = "debug"
-	LOGLEVEL_INFO LogLevel = "info"
-	LOGLEVEL_WARN LogLevel = "warn"
+	LOGLEVEL_INFO  LogLevel = "info"
+	LOGLEVEL_WARN  LogLevel = "warn"
 	LOGLEVEL_ERROR LogLevel = "error"
 )
 
@@ -33,7 +33,7 @@ func (v *LogLevel) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := LogLevel(value)
-	for _, existing := range []LogLevel{ "debug", "info", "warn", "error",   } {
+	for _, existing := range []LogLevel{"debug", "info", "warn", "error"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -83,4 +83,3 @@ func (v *NullableLogLevel) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

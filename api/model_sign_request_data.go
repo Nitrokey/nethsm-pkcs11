@@ -16,8 +16,8 @@ import (
 
 // SignRequestData struct for SignRequestData
 type SignRequestData struct {
-	Mode SignMode `json:"mode"`
-	Message string `json:"message"`
+	Mode                 SignMode `json:"mode"`
+	Message              string   `json:"message"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -27,7 +27,7 @@ type _SignRequestData SignRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSignRequestData(mode SignMode, message string, ) *SignRequestData {
+func NewSignRequestData(mode SignMode, message string) *SignRequestData {
 	this := SignRequestData{}
 	this.Mode = mode
 	this.Message = message
@@ -44,7 +44,7 @@ func NewSignRequestDataWithDefaults() *SignRequestData {
 
 // GetMode returns the Mode field value
 func (o *SignRequestData) GetMode() SignMode {
-	if o == nil  {
+	if o == nil {
 		var ret SignMode
 		return ret
 	}
@@ -55,7 +55,7 @@ func (o *SignRequestData) GetMode() SignMode {
 // GetModeOk returns a tuple with the Mode field value
 // and a boolean to check if the value has been set.
 func (o *SignRequestData) GetModeOk() (*SignMode, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Mode, true
@@ -68,7 +68,7 @@ func (o *SignRequestData) SetMode(v SignMode) {
 
 // GetMessage returns the Message field value
 func (o *SignRequestData) GetMessage() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -79,7 +79,7 @@ func (o *SignRequestData) GetMessage() string {
 // GetMessageOk returns a tuple with the Message field value
 // and a boolean to check if the value has been set.
 func (o *SignRequestData) GetMessageOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Message, true
@@ -159,5 +159,3 @@ func (v *NullableSignRequestData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

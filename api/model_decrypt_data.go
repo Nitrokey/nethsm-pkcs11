@@ -16,7 +16,7 @@ import (
 
 // DecryptData struct for DecryptData
 type DecryptData struct {
-	Decrypted string `json:"decrypted"`
+	Decrypted            string `json:"decrypted"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _DecryptData DecryptData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDecryptData(decrypted string, ) *DecryptData {
+func NewDecryptData(decrypted string) *DecryptData {
 	this := DecryptData{}
 	this.Decrypted = decrypted
 	return &this
@@ -42,7 +42,7 @@ func NewDecryptDataWithDefaults() *DecryptData {
 
 // GetDecrypted returns the Decrypted field value
 func (o *DecryptData) GetDecrypted() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *DecryptData) GetDecrypted() string {
 // GetDecryptedOk returns a tuple with the Decrypted field value
 // and a boolean to check if the value has been set.
 func (o *DecryptData) GetDecryptedOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Decrypted, true
@@ -129,5 +129,3 @@ func (v *NullableDecryptData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

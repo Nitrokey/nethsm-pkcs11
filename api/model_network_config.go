@@ -16,9 +16,9 @@ import (
 
 // NetworkConfig struct for NetworkConfig
 type NetworkConfig struct {
-	IpAddress string `json:"ipAddress"`
-	Netmask string `json:"netmask"`
-	Gateway string `json:"gateway"`
+	IpAddress            string `json:"ipAddress"`
+	Netmask              string `json:"netmask"`
+	Gateway              string `json:"gateway"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -28,7 +28,7 @@ type _NetworkConfig NetworkConfig
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewNetworkConfig(ipAddress string, netmask string, gateway string, ) *NetworkConfig {
+func NewNetworkConfig(ipAddress string, netmask string, gateway string) *NetworkConfig {
 	this := NetworkConfig{}
 	this.IpAddress = ipAddress
 	this.Netmask = netmask
@@ -46,7 +46,7 @@ func NewNetworkConfigWithDefaults() *NetworkConfig {
 
 // GetIpAddress returns the IpAddress field value
 func (o *NetworkConfig) GetIpAddress() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -57,7 +57,7 @@ func (o *NetworkConfig) GetIpAddress() string {
 // GetIpAddressOk returns a tuple with the IpAddress field value
 // and a boolean to check if the value has been set.
 func (o *NetworkConfig) GetIpAddressOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.IpAddress, true
@@ -70,7 +70,7 @@ func (o *NetworkConfig) SetIpAddress(v string) {
 
 // GetNetmask returns the Netmask field value
 func (o *NetworkConfig) GetNetmask() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -81,7 +81,7 @@ func (o *NetworkConfig) GetNetmask() string {
 // GetNetmaskOk returns a tuple with the Netmask field value
 // and a boolean to check if the value has been set.
 func (o *NetworkConfig) GetNetmaskOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Netmask, true
@@ -94,7 +94,7 @@ func (o *NetworkConfig) SetNetmask(v string) {
 
 // GetGateway returns the Gateway field value
 func (o *NetworkConfig) GetGateway() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -105,7 +105,7 @@ func (o *NetworkConfig) GetGateway() string {
 // GetGatewayOk returns a tuple with the Gateway field value
 // and a boolean to check if the value has been set.
 func (o *NetworkConfig) GetGatewayOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Gateway, true
@@ -189,5 +189,3 @@ func (v *NullableNetworkConfig) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -16,7 +16,7 @@ import (
 
 // UserItem struct for UserItem
 type UserItem struct {
-	User string `json:"user"`
+	User                 string `json:"user"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _UserItem UserItem
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserItem(user string, ) *UserItem {
+func NewUserItem(user string) *UserItem {
 	this := UserItem{}
 	this.User = user
 	return &this
@@ -42,7 +42,7 @@ func NewUserItemWithDefaults() *UserItem {
 
 // GetUser returns the User field value
 func (o *UserItem) GetUser() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *UserItem) GetUser() string {
 // GetUserOk returns a tuple with the User field value
 // and a boolean to check if the value has been set.
 func (o *UserItem) GetUserOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.User, true
@@ -129,5 +129,3 @@ func (v *NullableUserItem) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

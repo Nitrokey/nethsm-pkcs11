@@ -17,9 +17,9 @@ import (
 
 // ProvisionRequestData struct for ProvisionRequestData
 type ProvisionRequestData struct {
-	UnlockPassphrase string `json:"unlockPassphrase"`
-	AdminPassphrase string `json:"adminPassphrase"`
-	SystemTime time.Time `json:"systemTime"`
+	UnlockPassphrase     string    `json:"unlockPassphrase"`
+	AdminPassphrase      string    `json:"adminPassphrase"`
+	SystemTime           time.Time `json:"systemTime"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -29,7 +29,7 @@ type _ProvisionRequestData ProvisionRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewProvisionRequestData(unlockPassphrase string, adminPassphrase string, systemTime time.Time, ) *ProvisionRequestData {
+func NewProvisionRequestData(unlockPassphrase string, adminPassphrase string, systemTime time.Time) *ProvisionRequestData {
 	this := ProvisionRequestData{}
 	this.UnlockPassphrase = unlockPassphrase
 	this.AdminPassphrase = adminPassphrase
@@ -47,7 +47,7 @@ func NewProvisionRequestDataWithDefaults() *ProvisionRequestData {
 
 // GetUnlockPassphrase returns the UnlockPassphrase field value
 func (o *ProvisionRequestData) GetUnlockPassphrase() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -58,7 +58,7 @@ func (o *ProvisionRequestData) GetUnlockPassphrase() string {
 // GetUnlockPassphraseOk returns a tuple with the UnlockPassphrase field value
 // and a boolean to check if the value has been set.
 func (o *ProvisionRequestData) GetUnlockPassphraseOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.UnlockPassphrase, true
@@ -71,7 +71,7 @@ func (o *ProvisionRequestData) SetUnlockPassphrase(v string) {
 
 // GetAdminPassphrase returns the AdminPassphrase field value
 func (o *ProvisionRequestData) GetAdminPassphrase() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -82,7 +82,7 @@ func (o *ProvisionRequestData) GetAdminPassphrase() string {
 // GetAdminPassphraseOk returns a tuple with the AdminPassphrase field value
 // and a boolean to check if the value has been set.
 func (o *ProvisionRequestData) GetAdminPassphraseOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.AdminPassphrase, true
@@ -95,7 +95,7 @@ func (o *ProvisionRequestData) SetAdminPassphrase(v string) {
 
 // GetSystemTime returns the SystemTime field value
 func (o *ProvisionRequestData) GetSystemTime() time.Time {
-	if o == nil  {
+	if o == nil {
 		var ret time.Time
 		return ret
 	}
@@ -106,7 +106,7 @@ func (o *ProvisionRequestData) GetSystemTime() time.Time {
 // GetSystemTimeOk returns a tuple with the SystemTime field value
 // and a boolean to check if the value has been set.
 func (o *ProvisionRequestData) GetSystemTimeOk() (*time.Time, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.SystemTime, true
@@ -190,5 +190,3 @@ func (v *NullableProvisionRequestData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

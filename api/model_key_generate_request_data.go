@@ -16,10 +16,10 @@ import (
 
 // KeyGenerateRequestData struct for KeyGenerateRequestData
 type KeyGenerateRequestData struct {
-	Mechanisms []KeyMechanism `json:"mechanisms"`
-	Algorithm KeyAlgorithm `json:"algorithm"`
-	Length *int32 `json:"length,omitempty"`
-	Id *string `json:"id,omitempty"`
+	Mechanisms           []KeyMechanism `json:"mechanisms"`
+	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Length               *int32         `json:"length,omitempty"`
+	Id                   *string        `json:"id,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -29,7 +29,7 @@ type _KeyGenerateRequestData KeyGenerateRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewKeyGenerateRequestData(mechanisms []KeyMechanism, algorithm KeyAlgorithm, ) *KeyGenerateRequestData {
+func NewKeyGenerateRequestData(mechanisms []KeyMechanism, algorithm KeyAlgorithm) *KeyGenerateRequestData {
 	this := KeyGenerateRequestData{}
 	this.Mechanisms = mechanisms
 	this.Algorithm = algorithm
@@ -46,7 +46,7 @@ func NewKeyGenerateRequestDataWithDefaults() *KeyGenerateRequestData {
 
 // GetMechanisms returns the Mechanisms field value
 func (o *KeyGenerateRequestData) GetMechanisms() []KeyMechanism {
-	if o == nil  {
+	if o == nil {
 		var ret []KeyMechanism
 		return ret
 	}
@@ -57,7 +57,7 @@ func (o *KeyGenerateRequestData) GetMechanisms() []KeyMechanism {
 // GetMechanismsOk returns a tuple with the Mechanisms field value
 // and a boolean to check if the value has been set.
 func (o *KeyGenerateRequestData) GetMechanismsOk() (*[]KeyMechanism, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Mechanisms, true
@@ -70,7 +70,7 @@ func (o *KeyGenerateRequestData) SetMechanisms(v []KeyMechanism) {
 
 // GetAlgorithm returns the Algorithm field value
 func (o *KeyGenerateRequestData) GetAlgorithm() KeyAlgorithm {
-	if o == nil  {
+	if o == nil {
 		var ret KeyAlgorithm
 		return ret
 	}
@@ -81,7 +81,7 @@ func (o *KeyGenerateRequestData) GetAlgorithm() KeyAlgorithm {
 // GetAlgorithmOk returns a tuple with the Algorithm field value
 // and a boolean to check if the value has been set.
 func (o *KeyGenerateRequestData) GetAlgorithmOk() (*KeyAlgorithm, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Algorithm, true
@@ -233,5 +233,3 @@ func (v *NullableKeyGenerateRequestData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

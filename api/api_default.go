@@ -29,9 +29,9 @@ var (
 type DefaultApiService service
 
 type ApiConfigBackupPassphrasePutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *BackupPassphraseConfig
+	body       *BackupPassphraseConfig
 }
 
 func (r ApiConfigBackupPassphrasePutRequest) Body(body BackupPassphraseConfig) ApiConfigBackupPassphrasePutRequest {
@@ -52,7 +52,7 @@ func (r ApiConfigBackupPassphrasePutRequest) Execute() (*_nethttp.Response, erro
 func (a *DefaultApiService) ConfigBackupPassphrasePut(ctx _context.Context) ApiConfigBackupPassphrasePutRequest {
 	return ApiConfigBackupPassphrasePutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -127,10 +127,9 @@ func (a *DefaultApiService) ConfigBackupPassphrasePutExecute(r ApiConfigBackupPa
 }
 
 type ApiConfigLoggingGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigLoggingGetRequest) Execute() (LoggingConfig, *_nethttp.Response, error) {
 	return r.ApiService.ConfigLoggingGetExecute(r)
@@ -145,7 +144,7 @@ func (r ApiConfigLoggingGetRequest) Execute() (LoggingConfig, *_nethttp.Response
 func (a *DefaultApiService) ConfigLoggingGet(ctx _context.Context) ApiConfigLoggingGetRequest {
 	return ApiConfigLoggingGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -229,9 +228,9 @@ func (a *DefaultApiService) ConfigLoggingGetExecute(r ApiConfigLoggingGetRequest
 }
 
 type ApiConfigLoggingPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *LoggingConfig
+	body       *LoggingConfig
 }
 
 func (r ApiConfigLoggingPutRequest) Body(body LoggingConfig) ApiConfigLoggingPutRequest {
@@ -252,7 +251,7 @@ func (r ApiConfigLoggingPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) ConfigLoggingPut(ctx _context.Context) ApiConfigLoggingPutRequest {
 	return ApiConfigLoggingPutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -327,10 +326,9 @@ func (a *DefaultApiService) ConfigLoggingPutExecute(r ApiConfigLoggingPutRequest
 }
 
 type ApiConfigNetworkGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigNetworkGetRequest) Execute() (NetworkConfig, *_nethttp.Response, error) {
 	return r.ApiService.ConfigNetworkGetExecute(r)
@@ -345,7 +343,7 @@ func (r ApiConfigNetworkGetRequest) Execute() (NetworkConfig, *_nethttp.Response
 func (a *DefaultApiService) ConfigNetworkGet(ctx _context.Context) ApiConfigNetworkGetRequest {
 	return ApiConfigNetworkGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -429,9 +427,9 @@ func (a *DefaultApiService) ConfigNetworkGetExecute(r ApiConfigNetworkGetRequest
 }
 
 type ApiConfigNetworkPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *NetworkConfig
+	body       *NetworkConfig
 }
 
 func (r ApiConfigNetworkPutRequest) Body(body NetworkConfig) ApiConfigNetworkPutRequest {
@@ -452,7 +450,7 @@ func (r ApiConfigNetworkPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) ConfigNetworkPut(ctx _context.Context) ApiConfigNetworkPutRequest {
 	return ApiConfigNetworkPutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -527,10 +525,9 @@ func (a *DefaultApiService) ConfigNetworkPutExecute(r ApiConfigNetworkPutRequest
 }
 
 type ApiConfigTimeGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigTimeGetRequest) Execute() (TimeConfig, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTimeGetExecute(r)
@@ -545,7 +542,7 @@ func (r ApiConfigTimeGetRequest) Execute() (TimeConfig, *_nethttp.Response, erro
 func (a *DefaultApiService) ConfigTimeGet(ctx _context.Context) ApiConfigTimeGetRequest {
 	return ApiConfigTimeGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -629,9 +626,9 @@ func (a *DefaultApiService) ConfigTimeGetExecute(r ApiConfigTimeGetRequest) (Tim
 }
 
 type ApiConfigTimePutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *TimeConfig
+	body       *TimeConfig
 }
 
 func (r ApiConfigTimePutRequest) Body(body TimeConfig) ApiConfigTimePutRequest {
@@ -652,7 +649,7 @@ func (r ApiConfigTimePutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) ConfigTimePut(ctx _context.Context) ApiConfigTimePutRequest {
 	return ApiConfigTimePutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -727,10 +724,9 @@ func (a *DefaultApiService) ConfigTimePutExecute(r ApiConfigTimePutRequest) (*_n
 }
 
 type ApiConfigTlsCertPemGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigTlsCertPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTlsCertPemGetExecute(r)
@@ -745,7 +741,7 @@ func (r ApiConfigTlsCertPemGetRequest) Execute() (string, *_nethttp.Response, er
 func (a *DefaultApiService) ConfigTlsCertPemGet(ctx _context.Context) ApiConfigTlsCertPemGetRequest {
 	return ApiConfigTlsCertPemGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -829,9 +825,9 @@ func (a *DefaultApiService) ConfigTlsCertPemGetExecute(r ApiConfigTlsCertPemGetR
 }
 
 type ApiConfigTlsCertPemPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *string
+	body       *string
 }
 
 func (r ApiConfigTlsCertPemPutRequest) Body(body string) ApiConfigTlsCertPemPutRequest {
@@ -852,7 +848,7 @@ func (r ApiConfigTlsCertPemPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) ConfigTlsCertPemPut(ctx _context.Context) ApiConfigTlsCertPemPutRequest {
 	return ApiConfigTlsCertPemPutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -927,9 +923,9 @@ func (a *DefaultApiService) ConfigTlsCertPemPutExecute(r ApiConfigTlsCertPemPutR
 }
 
 type ApiConfigTlsCsrPemPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *DistinguishedName
+	body       *DistinguishedName
 }
 
 func (r ApiConfigTlsCsrPemPutRequest) Body(body DistinguishedName) ApiConfigTlsCsrPemPutRequest {
@@ -950,7 +946,7 @@ func (r ApiConfigTlsCsrPemPutRequest) Execute() (string, *_nethttp.Response, err
 func (a *DefaultApiService) ConfigTlsCsrPemPut(ctx _context.Context) ApiConfigTlsCsrPemPutRequest {
 	return ApiConfigTlsCsrPemPutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1036,10 +1032,9 @@ func (a *DefaultApiService) ConfigTlsCsrPemPutExecute(r ApiConfigTlsCsrPemPutReq
 }
 
 type ApiConfigTlsPublicPemGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigTlsPublicPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.ConfigTlsPublicPemGetExecute(r)
@@ -1054,7 +1049,7 @@ func (r ApiConfigTlsPublicPemGetRequest) Execute() (string, *_nethttp.Response, 
 func (a *DefaultApiService) ConfigTlsPublicPemGet(ctx _context.Context) ApiConfigTlsPublicPemGetRequest {
 	return ApiConfigTlsPublicPemGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1138,10 +1133,9 @@ func (a *DefaultApiService) ConfigTlsPublicPemGetExecute(r ApiConfigTlsPublicPem
 }
 
 type ApiConfigUnattendedBootGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiConfigUnattendedBootGetRequest) Execute() (UnattendedBootConfig, *_nethttp.Response, error) {
 	return r.ApiService.ConfigUnattendedBootGetExecute(r)
@@ -1156,7 +1150,7 @@ func (r ApiConfigUnattendedBootGetRequest) Execute() (UnattendedBootConfig, *_ne
 func (a *DefaultApiService) ConfigUnattendedBootGet(ctx _context.Context) ApiConfigUnattendedBootGetRequest {
 	return ApiConfigUnattendedBootGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1240,9 +1234,9 @@ func (a *DefaultApiService) ConfigUnattendedBootGetExecute(r ApiConfigUnattended
 }
 
 type ApiConfigUnattendedBootPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *UnattendedBootConfig
+	body       *UnattendedBootConfig
 }
 
 func (r ApiConfigUnattendedBootPutRequest) Body(body UnattendedBootConfig) ApiConfigUnattendedBootPutRequest {
@@ -1263,7 +1257,7 @@ func (r ApiConfigUnattendedBootPutRequest) Execute() (*_nethttp.Response, error)
 func (a *DefaultApiService) ConfigUnattendedBootPut(ctx _context.Context) ApiConfigUnattendedBootPutRequest {
 	return ApiConfigUnattendedBootPutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1338,9 +1332,9 @@ func (a *DefaultApiService) ConfigUnattendedBootPutExecute(r ApiConfigUnattended
 }
 
 type ApiConfigUnlockPassphrasePutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *UnlockPassphraseConfig
+	body       *UnlockPassphraseConfig
 }
 
 func (r ApiConfigUnlockPassphrasePutRequest) Body(body UnlockPassphraseConfig) ApiConfigUnlockPassphrasePutRequest {
@@ -1361,7 +1355,7 @@ func (r ApiConfigUnlockPassphrasePutRequest) Execute() (*_nethttp.Response, erro
 func (a *DefaultApiService) ConfigUnlockPassphrasePut(ctx _context.Context) ApiConfigUnlockPassphrasePutRequest {
 	return ApiConfigUnlockPassphrasePutRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1436,10 +1430,9 @@ func (a *DefaultApiService) ConfigUnlockPassphrasePutExecute(r ApiConfigUnlockPa
 }
 
 type ApiHealthAliveGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiHealthAliveGetRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.HealthAliveGetExecute(r)
@@ -1454,7 +1447,7 @@ func (r ApiHealthAliveGetRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) HealthAliveGet(ctx _context.Context) ApiHealthAliveGetRequest {
 	return ApiHealthAliveGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1527,10 +1520,9 @@ func (a *DefaultApiService) HealthAliveGetExecute(r ApiHealthAliveGetRequest) (*
 }
 
 type ApiHealthReadyGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiHealthReadyGetRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.HealthReadyGetExecute(r)
@@ -1545,7 +1537,7 @@ func (r ApiHealthReadyGetRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) HealthReadyGet(ctx _context.Context) ApiHealthReadyGetRequest {
 	return ApiHealthReadyGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1618,10 +1610,9 @@ func (a *DefaultApiService) HealthReadyGetExecute(r ApiHealthReadyGetRequest) (*
 }
 
 type ApiHealthStateGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiHealthStateGetRequest) Execute() (HealthStateData, *_nethttp.Response, error) {
 	return r.ApiService.HealthStateGetExecute(r)
@@ -1636,7 +1627,7 @@ func (r ApiHealthStateGetRequest) Execute() (HealthStateData, *_nethttp.Response
 func (a *DefaultApiService) HealthStateGet(ctx _context.Context) ApiHealthStateGetRequest {
 	return ApiHealthStateGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1720,10 +1711,9 @@ func (a *DefaultApiService) HealthStateGetExecute(r ApiHealthStateGetRequest) (H
 }
 
 type ApiInfoGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiInfoGetRequest) Execute() (InfoData, *_nethttp.Response, error) {
 	return r.ApiService.InfoGetExecute(r)
@@ -1738,7 +1728,7 @@ func (r ApiInfoGetRequest) Execute() (InfoData, *_nethttp.Response, error) {
 func (a *DefaultApiService) InfoGet(ctx _context.Context) ApiInfoGetRequest {
 	return ApiInfoGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1822,9 +1812,9 @@ func (a *DefaultApiService) InfoGetExecute(r ApiInfoGetRequest) (InfoData, *_net
 }
 
 type ApiKeysGeneratePostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *KeyGenerateRequestData
+	body       *KeyGenerateRequestData
 }
 
 func (r ApiKeysGeneratePostRequest) Body(body KeyGenerateRequestData) ApiKeysGeneratePostRequest {
@@ -1845,7 +1835,7 @@ func (r ApiKeysGeneratePostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) KeysGeneratePost(ctx _context.Context) ApiKeysGeneratePostRequest {
 	return ApiKeysGeneratePostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -1920,10 +1910,9 @@ func (a *DefaultApiService) KeysGeneratePostExecute(r ApiKeysGeneratePostRequest
 }
 
 type ApiKeysGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiKeysGetRequest) Execute() ([]KeyItem, *_nethttp.Response, error) {
 	return r.ApiService.KeysGetExecute(r)
@@ -1938,7 +1927,7 @@ func (r ApiKeysGetRequest) Execute() ([]KeyItem, *_nethttp.Response, error) {
 func (a *DefaultApiService) KeysGet(ctx _context.Context) ApiKeysGetRequest {
 	return ApiKeysGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -2022,11 +2011,10 @@ func (a *DefaultApiService) KeysGetExecute(r ApiKeysGetRequest) ([]KeyItem, *_ne
 }
 
 type ApiKeysKeyIDCertDeleteRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
+	keyID      string
 }
-
 
 func (r ApiKeysKeyIDCertDeleteRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDCertDeleteExecute(r)
@@ -2042,8 +2030,8 @@ func (r ApiKeysKeyIDCertDeleteRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) KeysKeyIDCertDelete(ctx _context.Context, keyID string) ApiKeysKeyIDCertDeleteRequest {
 	return ApiKeysKeyIDCertDeleteRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2117,11 +2105,10 @@ func (a *DefaultApiService) KeysKeyIDCertDeleteExecute(r ApiKeysKeyIDCertDeleteR
 }
 
 type ApiKeysKeyIDCertGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
+	keyID      string
 }
-
 
 func (r ApiKeysKeyIDCertGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDCertGetExecute(r)
@@ -2137,8 +2124,8 @@ func (r ApiKeysKeyIDCertGetRequest) Execute() (string, *_nethttp.Response, error
 func (a *DefaultApiService) KeysKeyIDCertGet(ctx _context.Context, keyID string) ApiKeysKeyIDCertGetRequest {
 	return ApiKeysKeyIDCertGetRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2223,10 +2210,10 @@ func (a *DefaultApiService) KeysKeyIDCertGetExecute(r ApiKeysKeyIDCertGetRequest
 }
 
 type ApiKeysKeyIDCertPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
-	body *string
+	keyID      string
+	body       *string
 }
 
 func (r ApiKeysKeyIDCertPutRequest) Body(body string) ApiKeysKeyIDCertPutRequest {
@@ -2248,8 +2235,8 @@ func (r ApiKeysKeyIDCertPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) KeysKeyIDCertPut(ctx _context.Context, keyID string) ApiKeysKeyIDCertPutRequest {
 	return ApiKeysKeyIDCertPutRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2325,10 +2312,10 @@ func (a *DefaultApiService) KeysKeyIDCertPutExecute(r ApiKeysKeyIDCertPutRequest
 }
 
 type ApiKeysKeyIDCsrPemPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
-	body *DistinguishedName
+	keyID      string
+	body       *DistinguishedName
 }
 
 func (r ApiKeysKeyIDCsrPemPostRequest) Body(body DistinguishedName) ApiKeysKeyIDCsrPemPostRequest {
@@ -2350,8 +2337,8 @@ func (r ApiKeysKeyIDCsrPemPostRequest) Execute() (string, *_nethttp.Response, er
 func (a *DefaultApiService) KeysKeyIDCsrPemPost(ctx _context.Context, keyID string) ApiKeysKeyIDCsrPemPostRequest {
 	return ApiKeysKeyIDCsrPemPostRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2438,10 +2425,10 @@ func (a *DefaultApiService) KeysKeyIDCsrPemPostExecute(r ApiKeysKeyIDCsrPemPostR
 }
 
 type ApiKeysKeyIDDecryptPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
-	body *DecryptRequestData
+	keyID      string
+	body       *DecryptRequestData
 }
 
 func (r ApiKeysKeyIDDecryptPostRequest) Body(body DecryptRequestData) ApiKeysKeyIDDecryptPostRequest {
@@ -2463,8 +2450,8 @@ func (r ApiKeysKeyIDDecryptPostRequest) Execute() (DecryptData, *_nethttp.Respon
 func (a *DefaultApiService) KeysKeyIDDecryptPost(ctx _context.Context, keyID string) ApiKeysKeyIDDecryptPostRequest {
 	return ApiKeysKeyIDDecryptPostRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2551,11 +2538,10 @@ func (a *DefaultApiService) KeysKeyIDDecryptPostExecute(r ApiKeysKeyIDDecryptPos
 }
 
 type ApiKeysKeyIDDeleteRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
+	keyID      string
 }
-
 
 func (r ApiKeysKeyIDDeleteRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDDeleteExecute(r)
@@ -2571,8 +2557,8 @@ func (r ApiKeysKeyIDDeleteRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) KeysKeyIDDelete(ctx _context.Context, keyID string) ApiKeysKeyIDDeleteRequest {
 	return ApiKeysKeyIDDeleteRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2646,11 +2632,10 @@ func (a *DefaultApiService) KeysKeyIDDeleteExecute(r ApiKeysKeyIDDeleteRequest) 
 }
 
 type ApiKeysKeyIDGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
+	keyID      string
 }
-
 
 func (r ApiKeysKeyIDGetRequest) Execute() (PublicKey, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDGetExecute(r)
@@ -2666,8 +2651,8 @@ func (r ApiKeysKeyIDGetRequest) Execute() (PublicKey, *_nethttp.Response, error)
 func (a *DefaultApiService) KeysKeyIDGet(ctx _context.Context, keyID string) ApiKeysKeyIDGetRequest {
 	return ApiKeysKeyIDGetRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2752,11 +2737,10 @@ func (a *DefaultApiService) KeysKeyIDGetExecute(r ApiKeysKeyIDGetRequest) (Publi
 }
 
 type ApiKeysKeyIDPublicPemGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
+	keyID      string
 }
-
 
 func (r ApiKeysKeyIDPublicPemGetRequest) Execute() (string, *_nethttp.Response, error) {
 	return r.ApiService.KeysKeyIDPublicPemGetExecute(r)
@@ -2772,8 +2756,8 @@ func (r ApiKeysKeyIDPublicPemGetRequest) Execute() (string, *_nethttp.Response, 
 func (a *DefaultApiService) KeysKeyIDPublicPemGet(ctx _context.Context, keyID string) ApiKeysKeyIDPublicPemGetRequest {
 	return ApiKeysKeyIDPublicPemGetRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2858,10 +2842,10 @@ func (a *DefaultApiService) KeysKeyIDPublicPemGetExecute(r ApiKeysKeyIDPublicPem
 }
 
 type ApiKeysKeyIDPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
-	body *PrivateKey
+	keyID      string
+	body       *PrivateKey
 }
 
 func (r ApiKeysKeyIDPutRequest) Body(body PrivateKey) ApiKeysKeyIDPutRequest {
@@ -2883,8 +2867,8 @@ func (r ApiKeysKeyIDPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) KeysKeyIDPut(ctx _context.Context, keyID string) ApiKeysKeyIDPutRequest {
 	return ApiKeysKeyIDPutRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -2960,10 +2944,10 @@ func (a *DefaultApiService) KeysKeyIDPutExecute(r ApiKeysKeyIDPutRequest) (*_net
 }
 
 type ApiKeysKeyIDSignPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	keyID string
-	body *SignRequestData
+	keyID      string
+	body       *SignRequestData
 }
 
 func (r ApiKeysKeyIDSignPostRequest) Body(body SignRequestData) ApiKeysKeyIDSignPostRequest {
@@ -2985,8 +2969,8 @@ func (r ApiKeysKeyIDSignPostRequest) Execute() (SignData, *_nethttp.Response, er
 func (a *DefaultApiService) KeysKeyIDSignPost(ctx _context.Context, keyID string) ApiKeysKeyIDSignPostRequest {
 	return ApiKeysKeyIDSignPostRequest{
 		ApiService: a,
-		ctx: ctx,
-		keyID: keyID,
+		ctx:        ctx,
+		keyID:      keyID,
 	}
 }
 
@@ -3073,10 +3057,10 @@ func (a *DefaultApiService) KeysKeyIDSignPostExecute(r ApiKeysKeyIDSignPostReque
 }
 
 type ApiKeysPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 	mechanisms *[]KeyMechanism
-	body *PrivateKey
+	body       *PrivateKey
 }
 
 func (r ApiKeysPostRequest) Mechanisms(mechanisms []KeyMechanism) ApiKeysPostRequest {
@@ -3101,7 +3085,7 @@ func (r ApiKeysPostRequest) Execute() (KeyItem, *_nethttp.Response, error) {
 func (a *DefaultApiService) KeysPost(ctx _context.Context) ApiKeysPostRequest {
 	return ApiKeysPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3190,10 +3174,9 @@ func (a *DefaultApiService) KeysPostExecute(r ApiKeysPostRequest) (KeyItem, *_ne
 }
 
 type ApiLockPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiLockPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.LockPostExecute(r)
@@ -3208,7 +3191,7 @@ func (r ApiLockPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) LockPost(ctx _context.Context) ApiLockPostRequest {
 	return ApiLockPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3281,10 +3264,9 @@ func (a *DefaultApiService) LockPostExecute(r ApiLockPostRequest) (*_nethttp.Res
 }
 
 type ApiMetricsGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiMetricsGetRequest) Execute() (map[string]interface{}, *_nethttp.Response, error) {
 	return r.ApiService.MetricsGetExecute(r)
@@ -3299,7 +3281,7 @@ func (r ApiMetricsGetRequest) Execute() (map[string]interface{}, *_nethttp.Respo
 func (a *DefaultApiService) MetricsGet(ctx _context.Context) ApiMetricsGetRequest {
 	return ApiMetricsGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3383,9 +3365,9 @@ func (a *DefaultApiService) MetricsGetExecute(r ApiMetricsGetRequest) (map[strin
 }
 
 type ApiProvisionPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *ProvisionRequestData
+	body       *ProvisionRequestData
 }
 
 func (r ApiProvisionPostRequest) Body(body ProvisionRequestData) ApiProvisionPostRequest {
@@ -3406,7 +3388,7 @@ func (r ApiProvisionPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) ProvisionPost(ctx _context.Context) ApiProvisionPostRequest {
 	return ApiProvisionPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3481,9 +3463,9 @@ func (a *DefaultApiService) ProvisionPostExecute(r ApiProvisionPostRequest) (*_n
 }
 
 type ApiRandomPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *RandomRequestData
+	body       *RandomRequestData
 }
 
 func (r ApiRandomPostRequest) Body(body RandomRequestData) ApiRandomPostRequest {
@@ -3504,7 +3486,7 @@ func (r ApiRandomPostRequest) Execute() (RandomData, *_nethttp.Response, error) 
 func (a *DefaultApiService) RandomPost(ctx _context.Context) ApiRandomPostRequest {
 	return ApiRandomPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3590,10 +3572,9 @@ func (a *DefaultApiService) RandomPostExecute(r ApiRandomPostRequest) (RandomDat
 }
 
 type ApiSystemBackupPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemBackupPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemBackupPostExecute(r)
@@ -3608,7 +3589,7 @@ func (r ApiSystemBackupPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) SystemBackupPost(ctx _context.Context) ApiSystemBackupPostRequest {
 	return ApiSystemBackupPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3681,10 +3662,9 @@ func (a *DefaultApiService) SystemBackupPostExecute(r ApiSystemBackupPostRequest
 }
 
 type ApiSystemCancelUpdatePostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemCancelUpdatePostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemCancelUpdatePostExecute(r)
@@ -3699,7 +3679,7 @@ func (r ApiSystemCancelUpdatePostRequest) Execute() (*_nethttp.Response, error) 
 func (a *DefaultApiService) SystemCancelUpdatePost(ctx _context.Context) ApiSystemCancelUpdatePostRequest {
 	return ApiSystemCancelUpdatePostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3772,10 +3752,9 @@ func (a *DefaultApiService) SystemCancelUpdatePostExecute(r ApiSystemCancelUpdat
 }
 
 type ApiSystemCommitUpdatePostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemCommitUpdatePostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemCommitUpdatePostExecute(r)
@@ -3790,7 +3769,7 @@ func (r ApiSystemCommitUpdatePostRequest) Execute() (*_nethttp.Response, error) 
 func (a *DefaultApiService) SystemCommitUpdatePost(ctx _context.Context) ApiSystemCommitUpdatePostRequest {
 	return ApiSystemCommitUpdatePostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3863,10 +3842,9 @@ func (a *DefaultApiService) SystemCommitUpdatePostExecute(r ApiSystemCommitUpdat
 }
 
 type ApiSystemInfoGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemInfoGetRequest) Execute() (SystemInfo, *_nethttp.Response, error) {
 	return r.ApiService.SystemInfoGetExecute(r)
@@ -3881,7 +3859,7 @@ func (r ApiSystemInfoGetRequest) Execute() (SystemInfo, *_nethttp.Response, erro
 func (a *DefaultApiService) SystemInfoGet(ctx _context.Context) ApiSystemInfoGetRequest {
 	return ApiSystemInfoGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -3965,10 +3943,9 @@ func (a *DefaultApiService) SystemInfoGetExecute(r ApiSystemInfoGetRequest) (Sys
 }
 
 type ApiSystemRebootPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemRebootPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemRebootPostExecute(r)
@@ -3983,7 +3960,7 @@ func (r ApiSystemRebootPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) SystemRebootPost(ctx _context.Context) ApiSystemRebootPostRequest {
 	return ApiSystemRebootPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4056,10 +4033,9 @@ func (a *DefaultApiService) SystemRebootPostExecute(r ApiSystemRebootPostRequest
 }
 
 type ApiSystemResetPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemResetPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemResetPostExecute(r)
@@ -4074,7 +4050,7 @@ func (r ApiSystemResetPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) SystemResetPost(ctx _context.Context) ApiSystemResetPostRequest {
 	return ApiSystemResetPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4147,11 +4123,11 @@ func (a *DefaultApiService) SystemResetPostExecute(r ApiSystemResetPostRequest) 
 }
 
 type ApiSystemRestorePostRequest struct {
-	ctx _context.Context
-	ApiService *DefaultApiService
+	ctx              _context.Context
+	ApiService       *DefaultApiService
 	backupPassphrase *string
-	systemTime *time.Time
-	body *map[string]interface{}
+	systemTime       *time.Time
+	body             *map[string]interface{}
 }
 
 func (r ApiSystemRestorePostRequest) BackupPassphrase(backupPassphrase string) ApiSystemRestorePostRequest {
@@ -4180,7 +4156,7 @@ func (r ApiSystemRestorePostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) SystemRestorePost(ctx _context.Context) ApiSystemRestorePostRequest {
 	return ApiSystemRestorePostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4263,10 +4239,9 @@ func (a *DefaultApiService) SystemRestorePostExecute(r ApiSystemRestorePostReque
 }
 
 type ApiSystemShutdownPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiSystemShutdownPostRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.SystemShutdownPostExecute(r)
@@ -4281,7 +4256,7 @@ func (r ApiSystemShutdownPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) SystemShutdownPost(ctx _context.Context) ApiSystemShutdownPostRequest {
 	return ApiSystemShutdownPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4354,9 +4329,9 @@ func (a *DefaultApiService) SystemShutdownPostExecute(r ApiSystemShutdownPostReq
 }
 
 type ApiSystemUpdatePostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *map[string]interface{}
+	body       *map[string]interface{}
 }
 
 func (r ApiSystemUpdatePostRequest) Body(body map[string]interface{}) ApiSystemUpdatePostRequest {
@@ -4377,7 +4352,7 @@ func (r ApiSystemUpdatePostRequest) Execute() (SystemUpdateData, *_nethttp.Respo
 func (a *DefaultApiService) SystemUpdatePost(ctx _context.Context) ApiSystemUpdatePostRequest {
 	return ApiSystemUpdatePostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4463,9 +4438,9 @@ func (a *DefaultApiService) SystemUpdatePostExecute(r ApiSystemUpdatePostRequest
 }
 
 type ApiUnlockPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *UnlockRequestData
+	body       *UnlockRequestData
 }
 
 func (r ApiUnlockPostRequest) Body(body UnlockRequestData) ApiUnlockPostRequest {
@@ -4486,7 +4461,7 @@ func (r ApiUnlockPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) UnlockPost(ctx _context.Context) ApiUnlockPostRequest {
 	return ApiUnlockPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4561,10 +4536,9 @@ func (a *DefaultApiService) UnlockPostExecute(r ApiUnlockPostRequest) (*_nethttp
 }
 
 type ApiUsersGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
 }
-
 
 func (r ApiUsersGetRequest) Execute() ([]UserItem, *_nethttp.Response, error) {
 	return r.ApiService.UsersGetExecute(r)
@@ -4579,7 +4553,7 @@ func (r ApiUsersGetRequest) Execute() ([]UserItem, *_nethttp.Response, error) {
 func (a *DefaultApiService) UsersGet(ctx _context.Context) ApiUsersGetRequest {
 	return ApiUsersGetRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4663,9 +4637,9 @@ func (a *DefaultApiService) UsersGetExecute(r ApiUsersGetRequest) ([]UserItem, *
 }
 
 type ApiUsersPostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	body *UserPostData
+	body       *UserPostData
 }
 
 func (r ApiUsersPostRequest) Body(body UserPostData) ApiUsersPostRequest {
@@ -4686,7 +4660,7 @@ func (r ApiUsersPostRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) UsersPost(ctx _context.Context) ApiUsersPostRequest {
 	return ApiUsersPostRequest{
 		ApiService: a,
-		ctx: ctx,
+		ctx:        ctx,
 	}
 }
 
@@ -4761,11 +4735,10 @@ func (a *DefaultApiService) UsersPostExecute(r ApiUsersPostRequest) (*_nethttp.R
 }
 
 type ApiUsersUserIDDeleteRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	userID string
+	userID     string
 }
-
 
 func (r ApiUsersUserIDDeleteRequest) Execute() (*_nethttp.Response, error) {
 	return r.ApiService.UsersUserIDDeleteExecute(r)
@@ -4781,8 +4754,8 @@ func (r ApiUsersUserIDDeleteRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) UsersUserIDDelete(ctx _context.Context, userID string) ApiUsersUserIDDeleteRequest {
 	return ApiUsersUserIDDeleteRequest{
 		ApiService: a,
-		ctx: ctx,
-		userID: userID,
+		ctx:        ctx,
+		userID:     userID,
 	}
 }
 
@@ -4856,11 +4829,10 @@ func (a *DefaultApiService) UsersUserIDDeleteExecute(r ApiUsersUserIDDeleteReque
 }
 
 type ApiUsersUserIDGetRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	userID string
+	userID     string
 }
-
 
 func (r ApiUsersUserIDGetRequest) Execute() (UserData, *_nethttp.Response, error) {
 	return r.ApiService.UsersUserIDGetExecute(r)
@@ -4876,8 +4848,8 @@ func (r ApiUsersUserIDGetRequest) Execute() (UserData, *_nethttp.Response, error
 func (a *DefaultApiService) UsersUserIDGet(ctx _context.Context, userID string) ApiUsersUserIDGetRequest {
 	return ApiUsersUserIDGetRequest{
 		ApiService: a,
-		ctx: ctx,
-		userID: userID,
+		ctx:        ctx,
+		userID:     userID,
 	}
 }
 
@@ -4962,10 +4934,10 @@ func (a *DefaultApiService) UsersUserIDGetExecute(r ApiUsersUserIDGetRequest) (U
 }
 
 type ApiUsersUserIDPassphrasePostRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	userID string
-	body *UserPassphrasePostData
+	userID     string
+	body       *UserPassphrasePostData
 }
 
 func (r ApiUsersUserIDPassphrasePostRequest) Body(body UserPassphrasePostData) ApiUsersUserIDPassphrasePostRequest {
@@ -4987,8 +4959,8 @@ func (r ApiUsersUserIDPassphrasePostRequest) Execute() (*_nethttp.Response, erro
 func (a *DefaultApiService) UsersUserIDPassphrasePost(ctx _context.Context, userID string) ApiUsersUserIDPassphrasePostRequest {
 	return ApiUsersUserIDPassphrasePostRequest{
 		ApiService: a,
-		ctx: ctx,
-		userID: userID,
+		ctx:        ctx,
+		userID:     userID,
 	}
 }
 
@@ -5064,10 +5036,10 @@ func (a *DefaultApiService) UsersUserIDPassphrasePostExecute(r ApiUsersUserIDPas
 }
 
 type ApiUsersUserIDPutRequest struct {
-	ctx _context.Context
+	ctx        _context.Context
 	ApiService *DefaultApiService
-	userID string
-	body *UserPostData
+	userID     string
+	body       *UserPostData
 }
 
 func (r ApiUsersUserIDPutRequest) Body(body UserPostData) ApiUsersUserIDPutRequest {
@@ -5089,8 +5061,8 @@ func (r ApiUsersUserIDPutRequest) Execute() (*_nethttp.Response, error) {
 func (a *DefaultApiService) UsersUserIDPut(ctx _context.Context, userID string) ApiUsersUserIDPutRequest {
 	return ApiUsersUserIDPutRequest{
 		ApiService: a,
-		ctx: ctx,
-		userID: userID,
+		ctx:        ctx,
+		userID:     userID,
 	}
 }
 

@@ -16,9 +16,9 @@ import (
 
 // LoggingConfig struct for LoggingConfig
 type LoggingConfig struct {
-	IpAddress string `json:"ipAddress"`
-	Port int32 `json:"port"`
-	LogLevel LogLevel `json:"logLevel"`
+	IpAddress            string   `json:"ipAddress"`
+	Port                 int32    `json:"port"`
+	LogLevel             LogLevel `json:"logLevel"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -28,7 +28,7 @@ type _LoggingConfig LoggingConfig
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewLoggingConfig(ipAddress string, port int32, logLevel LogLevel, ) *LoggingConfig {
+func NewLoggingConfig(ipAddress string, port int32, logLevel LogLevel) *LoggingConfig {
 	this := LoggingConfig{}
 	this.IpAddress = ipAddress
 	this.Port = port
@@ -46,7 +46,7 @@ func NewLoggingConfigWithDefaults() *LoggingConfig {
 
 // GetIpAddress returns the IpAddress field value
 func (o *LoggingConfig) GetIpAddress() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -57,7 +57,7 @@ func (o *LoggingConfig) GetIpAddress() string {
 // GetIpAddressOk returns a tuple with the IpAddress field value
 // and a boolean to check if the value has been set.
 func (o *LoggingConfig) GetIpAddressOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.IpAddress, true
@@ -70,7 +70,7 @@ func (o *LoggingConfig) SetIpAddress(v string) {
 
 // GetPort returns the Port field value
 func (o *LoggingConfig) GetPort() int32 {
-	if o == nil  {
+	if o == nil {
 		var ret int32
 		return ret
 	}
@@ -81,7 +81,7 @@ func (o *LoggingConfig) GetPort() int32 {
 // GetPortOk returns a tuple with the Port field value
 // and a boolean to check if the value has been set.
 func (o *LoggingConfig) GetPortOk() (*int32, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Port, true
@@ -94,7 +94,7 @@ func (o *LoggingConfig) SetPort(v int32) {
 
 // GetLogLevel returns the LogLevel field value
 func (o *LoggingConfig) GetLogLevel() LogLevel {
-	if o == nil  {
+	if o == nil {
 		var ret LogLevel
 		return ret
 	}
@@ -105,7 +105,7 @@ func (o *LoggingConfig) GetLogLevel() LogLevel {
 // GetLogLevelOk returns a tuple with the LogLevel field value
 // and a boolean to check if the value has been set.
 func (o *LoggingConfig) GetLogLevelOk() (*LogLevel, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.LogLevel, true
@@ -189,5 +189,3 @@ func (v *NullableLoggingConfig) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

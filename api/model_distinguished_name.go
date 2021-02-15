@@ -16,14 +16,14 @@ import (
 
 // DistinguishedName struct for DistinguishedName
 type DistinguishedName struct {
-	CountryName string `json:"countryName"`
-	StateOrProvinceName string `json:"stateOrProvinceName"`
-	LocalityName string `json:"localityName"`
-	OrganizationName string `json:"organizationName"`
+	CountryName            string `json:"countryName"`
+	StateOrProvinceName    string `json:"stateOrProvinceName"`
+	LocalityName           string `json:"localityName"`
+	OrganizationName       string `json:"organizationName"`
 	OrganizationalUnitName string `json:"organizationalUnitName"`
-	CommonName string `json:"commonName"`
-	EmailAddress string `json:"emailAddress"`
-	AdditionalProperties map[string]interface{}
+	CommonName             string `json:"commonName"`
+	EmailAddress           string `json:"emailAddress"`
+	AdditionalProperties   map[string]interface{}
 }
 
 type _DistinguishedName DistinguishedName
@@ -32,7 +32,7 @@ type _DistinguishedName DistinguishedName
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDistinguishedName(countryName string, stateOrProvinceName string, localityName string, organizationName string, organizationalUnitName string, commonName string, emailAddress string, ) *DistinguishedName {
+func NewDistinguishedName(countryName string, stateOrProvinceName string, localityName string, organizationName string, organizationalUnitName string, commonName string, emailAddress string) *DistinguishedName {
 	this := DistinguishedName{}
 	this.CountryName = countryName
 	this.StateOrProvinceName = stateOrProvinceName
@@ -54,7 +54,7 @@ func NewDistinguishedNameWithDefaults() *DistinguishedName {
 
 // GetCountryName returns the CountryName field value
 func (o *DistinguishedName) GetCountryName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -65,7 +65,7 @@ func (o *DistinguishedName) GetCountryName() string {
 // GetCountryNameOk returns a tuple with the CountryName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetCountryNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.CountryName, true
@@ -78,7 +78,7 @@ func (o *DistinguishedName) SetCountryName(v string) {
 
 // GetStateOrProvinceName returns the StateOrProvinceName field value
 func (o *DistinguishedName) GetStateOrProvinceName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -89,7 +89,7 @@ func (o *DistinguishedName) GetStateOrProvinceName() string {
 // GetStateOrProvinceNameOk returns a tuple with the StateOrProvinceName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetStateOrProvinceNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.StateOrProvinceName, true
@@ -102,7 +102,7 @@ func (o *DistinguishedName) SetStateOrProvinceName(v string) {
 
 // GetLocalityName returns the LocalityName field value
 func (o *DistinguishedName) GetLocalityName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -113,7 +113,7 @@ func (o *DistinguishedName) GetLocalityName() string {
 // GetLocalityNameOk returns a tuple with the LocalityName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetLocalityNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.LocalityName, true
@@ -126,7 +126,7 @@ func (o *DistinguishedName) SetLocalityName(v string) {
 
 // GetOrganizationName returns the OrganizationName field value
 func (o *DistinguishedName) GetOrganizationName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -137,7 +137,7 @@ func (o *DistinguishedName) GetOrganizationName() string {
 // GetOrganizationNameOk returns a tuple with the OrganizationName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetOrganizationNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.OrganizationName, true
@@ -150,7 +150,7 @@ func (o *DistinguishedName) SetOrganizationName(v string) {
 
 // GetOrganizationalUnitName returns the OrganizationalUnitName field value
 func (o *DistinguishedName) GetOrganizationalUnitName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -161,7 +161,7 @@ func (o *DistinguishedName) GetOrganizationalUnitName() string {
 // GetOrganizationalUnitNameOk returns a tuple with the OrganizationalUnitName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetOrganizationalUnitNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.OrganizationalUnitName, true
@@ -174,7 +174,7 @@ func (o *DistinguishedName) SetOrganizationalUnitName(v string) {
 
 // GetCommonName returns the CommonName field value
 func (o *DistinguishedName) GetCommonName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -185,7 +185,7 @@ func (o *DistinguishedName) GetCommonName() string {
 // GetCommonNameOk returns a tuple with the CommonName field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetCommonNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.CommonName, true
@@ -198,7 +198,7 @@ func (o *DistinguishedName) SetCommonName(v string) {
 
 // GetEmailAddress returns the EmailAddress field value
 func (o *DistinguishedName) GetEmailAddress() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -209,7 +209,7 @@ func (o *DistinguishedName) GetEmailAddress() string {
 // GetEmailAddressOk returns a tuple with the EmailAddress field value
 // and a boolean to check if the value has been set.
 func (o *DistinguishedName) GetEmailAddressOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.EmailAddress, true
@@ -309,5 +309,3 @@ func (v *NullableDistinguishedName) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -16,8 +16,8 @@ import (
 
 // UserData struct for UserData
 type UserData struct {
-	RealName string `json:"realName"`
-	Role UserRole `json:"role"`
+	RealName             string   `json:"realName"`
+	Role                 UserRole `json:"role"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -27,7 +27,7 @@ type _UserData UserData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserData(realName string, role UserRole, ) *UserData {
+func NewUserData(realName string, role UserRole) *UserData {
 	this := UserData{}
 	this.RealName = realName
 	this.Role = role
@@ -44,7 +44,7 @@ func NewUserDataWithDefaults() *UserData {
 
 // GetRealName returns the RealName field value
 func (o *UserData) GetRealName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -55,7 +55,7 @@ func (o *UserData) GetRealName() string {
 // GetRealNameOk returns a tuple with the RealName field value
 // and a boolean to check if the value has been set.
 func (o *UserData) GetRealNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.RealName, true
@@ -68,7 +68,7 @@ func (o *UserData) SetRealName(v string) {
 
 // GetRole returns the Role field value
 func (o *UserData) GetRole() UserRole {
-	if o == nil  {
+	if o == nil {
 		var ret UserRole
 		return ret
 	}
@@ -79,7 +79,7 @@ func (o *UserData) GetRole() UserRole {
 // GetRoleOk returns a tuple with the Role field value
 // and a boolean to check if the value has been set.
 func (o *UserData) GetRoleOk() (*UserRole, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Role, true
@@ -159,5 +159,3 @@ func (v *NullableUserData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

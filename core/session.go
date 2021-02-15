@@ -5,11 +5,7 @@ package core
 */
 import "C"
 import (
-	"crypto"
-	"encoding/binary"
-	"hash"
 	"log"
-	"math/rand"
 	"sync"
 	"unsafe"
 )
@@ -17,17 +13,17 @@ import (
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
 type Session struct {
 	sync.Mutex
-	Slot              *Slot                // The slot where the session is being used
-	Handle            C.CK_SESSION_HANDLE  // A session handle
-	flags             C.CK_FLAGS           // Session flags
-	refreshedToken    bool                 // True if the token have been refreshed
-	foundObjects      []C.CK_OBJECT_HANDLE // List of found objects
-	findInitialized   bool                 // True if the user executed a Find method and it has not finished yet.
-	signCtx           OpContext            // Signing Context
-	decryptCtx        OpContext            // Decrypting Context
-	digestHash        hash.Hash            // Hash used for hashing
-	digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
-	randSrc           *rand.Rand           // Seedable random source.
+	Slot            *Slot                // The slot where the session is being used
+	Handle          C.CK_SESSION_HANDLE  // A session handle
+	flags           C.CK_FLAGS           // Session flags
+	refreshedToken  bool                 // True if the token have been refreshed
+	foundObjects    []C.CK_OBJECT_HANDLE // List of found objects
+	findInitialized bool                 // True if the user executed a Find method and it has not finished yet.
+	signCtx         OpContext            // Signing Context
+	decryptCtx      OpContext            // Decrypting Context
+	// digestHash        hash.Hash            // Hash used for hashing
+	// digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
+	// randSrc *rand.Rand // Seedable random source.
 }
 
 // Map of sessions identified by their handle. It's very similar to an array because the handles are integers.
@@ -44,10 +40,10 @@ func NewSession(flags C.CK_FLAGS, currentSlot *Slot) *Session {
 	defer SessionMutex.Unlock()
 	SessionHandle++
 	return &Session{
-		Slot:    currentSlot,
-		Handle:  SessionHandle,
-		flags:   flags,
-		randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
+		Slot:   currentSlot,
+		Handle: SessionHandle,
+		flags:  flags,
+		// randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
 	}
 }
 
@@ -484,86 +480,86 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 }
 
 // DigestInit starts a digest session.
-func (session *Session) DigestInit(mechanism *Mechanism) error {
-	if session.digestInitialized {
-		return NewError("Session.DigestInit", "operation active", C.CKR_OPERATION_ACTIVE)
-	}
-	if mechanism == nil {
-		return NewError("Session.DigestInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
-	}
+// func (session *Session) DigestInit(mechanism *Mechanism) error {
+// 	if session.digestInitialized {
+// 		return NewError("Session.DigestInit", "operation active", C.CKR_OPERATION_ACTIVE)
+// 	}
+// 	if mechanism == nil {
+// 		return NewError("Session.DigestInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 	}
 
-	hashType, err := mechanism.GetHashType()
-	if err != nil {
-		return err
-	}
+// 	hashType, err := mechanism.GetHashType()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	if hashType <= 0 || hashType >= crypto.BLAKE2b_512 {
-		return NewError("Session.DigestInit", "mechanism invalid", C.CKR_MECHANISM_INVALID)
-	}
+// 	if hashType <= 0 || hashType >= crypto.BLAKE2b_512 {
+// 		return NewError("Session.DigestInit", "mechanism invalid", C.CKR_MECHANISM_INVALID)
+// 	}
 
-	session.digestHash = hashType.New()
-	session.digestInitialized = true
-	return nil
-}
+// 	session.digestHash = hashType.New()
+// 	session.digestInitialized = true
+// 	return nil
+// }
 
 // Digest adds data to digest and returns the digest of the data.
 // If reset is true, the digestHash resets afther the hash calculation.
-func (session *Session) Digest(data []byte, reset bool) ([]byte, error) {
-	if !session.digestInitialized || session.digestHash == nil {
-		return nil, NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
-	}
-	if data == nil {
-		return nil, NewError("Session.Digest", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
-	}
-	_, err := session.digestHash.Write(data)
-	if err != nil {
-		return nil, err
-	}
-	hashed := session.digestHash.Sum(nil)
-	if reset {
-		session.digestHash.Reset()
-	}
-	return hashed, nil
-}
+// func (session *Session) Digest(data []byte, reset bool) ([]byte, error) {
+// 	if !session.digestInitialized || session.digestHash == nil {
+// 		return nil, NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 	}
+// 	if data == nil {
+// 		return nil, NewError("Session.Digest", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 	}
+// 	_, err := session.digestHash.Write(data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	hashed := session.digestHash.Sum(nil)
+// 	if reset {
+// 		session.digestHash.Reset()
+// 	}
+// 	return hashed, nil
+// }
 
 // DigestFinish finishes a digest operation.
-func (session *Session) DigestFinish() error {
-	if !session.digestInitialized || session.digestHash == nil {
-		return NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
-	}
-	session.digestInitialized = false
-	session.digestHash = nil
-	return nil
-}
+// func (session *Session) DigestFinish() error {
+// 	if !session.digestInitialized || session.digestHash == nil {
+// 		return NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 	}
+// 	session.digestInitialized = false
+// 	session.digestHash = nil
+// 	return nil
+// }
 
 // GenerateRandom generates a random number and returns it as byte.
-func (session *Session) GenerateRandom(size int) ([]byte, error) {
-	out := make([]byte, size)
-	randLen, err := session.randSrc.Read(out)
-	if err != nil {
-		return nil, NewError("Session.GenerateRandom", err.Error(), C.CKR_DEVICE_ERROR)
-	}
-	if randLen != size {
-		return nil, NewError("Session.GenerateRandom", "random data acquired is not as big as requested", C.CKR_DEVICE_ERROR)
-	}
-	return out, nil
-}
+// func (session *Session) GenerateRandom(size int) ([]byte, error) {
+// 	out := make([]byte, size)
+// 	randLen, err := session.randSrc.Read(out)
+// 	if err != nil {
+// 		return nil, NewError("Session.GenerateRandom", err.Error(), C.CKR_DEVICE_ERROR)
+// 	}
+// 	if randLen != size {
+// 		return nil, NewError("Session.GenerateRandom", "random data acquired is not as big as requested", C.CKR_DEVICE_ERROR)
+// 	}
+// 	return out, nil
+// }
 
 // SeedRandom seeds the PRNG.
-func (session *Session) SeedRandom(seed []byte) {
-	seedInt := int64(0)
-	for i := 0; i < len(seed); i += 8 {
-		var f int
-		if len(seed) < i+8 {
-			f = len(seed)
-		} else {
-			f = i + 8
-		}
-		slice := seed[i:f]
-		seedInt += int64(binary.LittleEndian.Uint64(slice)) // it overflows
-	}
-	session.randSrc.Seed(seedInt)
-}
+// func (session *Session) SeedRandom(seed []byte) {
+// 	seedInt := int64(0)
+// 	for i := 0; i < len(seed); i += 8 {
+// 		var f int
+// 		if len(seed) < i+8 {
+// 			f = len(seed)
+// 		} else {
+// 			f = i + 8
+// 		}
+// 		slice := seed[i:f]
+// 		seedInt += int64(binary.LittleEndian.Uint64(slice)) // it overflows
+// 	}
+// 	session.randSrc.Seed(seedInt)
+// }
 
 // func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) (pkAttrs, skAttrs Attributes, err error) {
 // 	keyID := uuid.New().String()

@@ -16,7 +16,7 @@ import (
 
 // HealthStateData struct for HealthStateData
 type HealthStateData struct {
-	State SystemState `json:"state"`
+	State                SystemState `json:"state"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _HealthStateData HealthStateData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewHealthStateData(state SystemState, ) *HealthStateData {
+func NewHealthStateData(state SystemState) *HealthStateData {
 	this := HealthStateData{}
 	this.State = state
 	return &this
@@ -42,7 +42,7 @@ func NewHealthStateDataWithDefaults() *HealthStateData {
 
 // GetState returns the State field value
 func (o *HealthStateData) GetState() SystemState {
-	if o == nil  {
+	if o == nil {
 		var ret SystemState
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *HealthStateData) GetState() SystemState {
 // GetStateOk returns a tuple with the State field value
 // and a boolean to check if the value has been set.
 func (o *HealthStateData) GetStateOk() (*SystemState, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.State, true
@@ -129,5 +129,3 @@ func (v *NullableHealthStateData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

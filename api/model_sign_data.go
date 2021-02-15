@@ -16,7 +16,7 @@ import (
 
 // SignData struct for SignData
 type SignData struct {
-	Signature string `json:"signature"`
+	Signature            string `json:"signature"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _SignData SignData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSignData(signature string, ) *SignData {
+func NewSignData(signature string) *SignData {
 	this := SignData{}
 	this.Signature = signature
 	return &this
@@ -42,7 +42,7 @@ func NewSignDataWithDefaults() *SignData {
 
 // GetSignature returns the Signature field value
 func (o *SignData) GetSignature() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *SignData) GetSignature() string {
 // GetSignatureOk returns a tuple with the Signature field value
 // and a boolean to check if the value has been set.
 func (o *SignData) GetSignatureOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Signature, true
@@ -129,5 +129,3 @@ func (v *NullableSignData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -20,7 +20,7 @@ type Switch string
 
 // List of Switch
 const (
-	SWITCH_ON Switch = "on"
+	SWITCH_ON  Switch = "on"
 	SWITCH_OFF Switch = "off"
 )
 
@@ -31,7 +31,7 @@ func (v *Switch) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := Switch(value)
-	for _, existing := range []Switch{ "on", "off",   } {
+	for _, existing := range []Switch{"on", "off"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -81,4 +81,3 @@ func (v *NullableSwitch) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

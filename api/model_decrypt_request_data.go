@@ -16,8 +16,8 @@ import (
 
 // DecryptRequestData struct for DecryptRequestData
 type DecryptRequestData struct {
-	Mode DecryptMode `json:"mode"`
-	Encrypted string `json:"encrypted"`
+	Mode                 DecryptMode `json:"mode"`
+	Encrypted            string      `json:"encrypted"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -27,7 +27,7 @@ type _DecryptRequestData DecryptRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDecryptRequestData(mode DecryptMode, encrypted string, ) *DecryptRequestData {
+func NewDecryptRequestData(mode DecryptMode, encrypted string) *DecryptRequestData {
 	this := DecryptRequestData{}
 	this.Mode = mode
 	this.Encrypted = encrypted
@@ -44,7 +44,7 @@ func NewDecryptRequestDataWithDefaults() *DecryptRequestData {
 
 // GetMode returns the Mode field value
 func (o *DecryptRequestData) GetMode() DecryptMode {
-	if o == nil  {
+	if o == nil {
 		var ret DecryptMode
 		return ret
 	}
@@ -55,7 +55,7 @@ func (o *DecryptRequestData) GetMode() DecryptMode {
 // GetModeOk returns a tuple with the Mode field value
 // and a boolean to check if the value has been set.
 func (o *DecryptRequestData) GetModeOk() (*DecryptMode, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Mode, true
@@ -68,7 +68,7 @@ func (o *DecryptRequestData) SetMode(v DecryptMode) {
 
 // GetEncrypted returns the Encrypted field value
 func (o *DecryptRequestData) GetEncrypted() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -79,7 +79,7 @@ func (o *DecryptRequestData) GetEncrypted() string {
 // GetEncryptedOk returns a tuple with the Encrypted field value
 // and a boolean to check if the value has been set.
 func (o *DecryptRequestData) GetEncryptedOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Encrypted, true
@@ -159,5 +159,3 @@ func (v *NullableDecryptRequestData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

@@ -16,9 +16,9 @@ import (
 
 // UserPostData struct for UserPostData
 type UserPostData struct {
-	RealName string `json:"realName"`
-	Role UserRole `json:"role"`
-	Passphrase string `json:"passphrase"`
+	RealName             string   `json:"realName"`
+	Role                 UserRole `json:"role"`
+	Passphrase           string   `json:"passphrase"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -28,7 +28,7 @@ type _UserPostData UserPostData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserPostData(realName string, role UserRole, passphrase string, ) *UserPostData {
+func NewUserPostData(realName string, role UserRole, passphrase string) *UserPostData {
 	this := UserPostData{}
 	this.RealName = realName
 	this.Role = role
@@ -46,7 +46,7 @@ func NewUserPostDataWithDefaults() *UserPostData {
 
 // GetRealName returns the RealName field value
 func (o *UserPostData) GetRealName() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -57,7 +57,7 @@ func (o *UserPostData) GetRealName() string {
 // GetRealNameOk returns a tuple with the RealName field value
 // and a boolean to check if the value has been set.
 func (o *UserPostData) GetRealNameOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.RealName, true
@@ -70,7 +70,7 @@ func (o *UserPostData) SetRealName(v string) {
 
 // GetRole returns the Role field value
 func (o *UserPostData) GetRole() UserRole {
-	if o == nil  {
+	if o == nil {
 		var ret UserRole
 		return ret
 	}
@@ -81,7 +81,7 @@ func (o *UserPostData) GetRole() UserRole {
 // GetRoleOk returns a tuple with the Role field value
 // and a boolean to check if the value has been set.
 func (o *UserPostData) GetRoleOk() (*UserRole, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Role, true
@@ -94,7 +94,7 @@ func (o *UserPostData) SetRole(v UserRole) {
 
 // GetPassphrase returns the Passphrase field value
 func (o *UserPostData) GetPassphrase() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -105,7 +105,7 @@ func (o *UserPostData) GetPassphrase() string {
 // GetPassphraseOk returns a tuple with the Passphrase field value
 // and a boolean to check if the value has been set.
 func (o *UserPostData) GetPassphraseOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Passphrase, true
@@ -189,5 +189,3 @@ func (v *NullableUserPostData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

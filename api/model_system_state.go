@@ -21,8 +21,8 @@ type SystemState string
 // List of SystemState
 const (
 	SYSTEMSTATE_UNPROVISIONED SystemState = "Unprovisioned"
-	SYSTEMSTATE_LOCKED SystemState = "Locked"
-	SYSTEMSTATE_OPERATIONAL SystemState = "Operational"
+	SYSTEMSTATE_LOCKED        SystemState = "Locked"
+	SYSTEMSTATE_OPERATIONAL   SystemState = "Operational"
 )
 
 func (v *SystemState) UnmarshalJSON(src []byte) error {
@@ -32,7 +32,7 @@ func (v *SystemState) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := SystemState(value)
-	for _, existing := range []SystemState{ "Unprovisioned", "Locked", "Operational",   } {
+	for _, existing := range []SystemState{"Unprovisioned", "Locked", "Operational"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -82,4 +82,3 @@ func (v *NullableSystemState) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

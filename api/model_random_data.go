@@ -16,7 +16,7 @@ import (
 
 // RandomData struct for RandomData
 type RandomData struct {
-	Random string `json:"random"`
+	Random               string `json:"random"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _RandomData RandomData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewRandomData(random string, ) *RandomData {
+func NewRandomData(random string) *RandomData {
 	this := RandomData{}
 	this.Random = random
 	return &this
@@ -42,7 +42,7 @@ func NewRandomDataWithDefaults() *RandomData {
 
 // GetRandom returns the Random field value
 func (o *RandomData) GetRandom() string {
-	if o == nil  {
+	if o == nil {
 		var ret string
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *RandomData) GetRandom() string {
 // GetRandomOk returns a tuple with the Random field value
 // and a boolean to check if the value has been set.
 func (o *RandomData) GetRandomOk() (*string, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Random, true
@@ -129,5 +129,3 @@ func (v *NullableRandomData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

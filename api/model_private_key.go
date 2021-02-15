@@ -16,9 +16,9 @@ import (
 
 // PrivateKey struct for PrivateKey
 type PrivateKey struct {
-	Mechanisms []KeyMechanism `json:"mechanisms"`
-	Algorithm KeyAlgorithm `json:"algorithm"`
-	Key KeyPrivateData `json:"key"`
+	Mechanisms           []KeyMechanism `json:"mechanisms"`
+	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Key                  KeyPrivateData `json:"key"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -28,7 +28,7 @@ type _PrivateKey PrivateKey
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPrivateKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPrivateData, ) *PrivateKey {
+func NewPrivateKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPrivateData) *PrivateKey {
 	this := PrivateKey{}
 	this.Mechanisms = mechanisms
 	this.Algorithm = algorithm
@@ -46,7 +46,7 @@ func NewPrivateKeyWithDefaults() *PrivateKey {
 
 // GetMechanisms returns the Mechanisms field value
 func (o *PrivateKey) GetMechanisms() []KeyMechanism {
-	if o == nil  {
+	if o == nil {
 		var ret []KeyMechanism
 		return ret
 	}
@@ -57,7 +57,7 @@ func (o *PrivateKey) GetMechanisms() []KeyMechanism {
 // GetMechanismsOk returns a tuple with the Mechanisms field value
 // and a boolean to check if the value has been set.
 func (o *PrivateKey) GetMechanismsOk() (*[]KeyMechanism, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Mechanisms, true
@@ -70,7 +70,7 @@ func (o *PrivateKey) SetMechanisms(v []KeyMechanism) {
 
 // GetAlgorithm returns the Algorithm field value
 func (o *PrivateKey) GetAlgorithm() KeyAlgorithm {
-	if o == nil  {
+	if o == nil {
 		var ret KeyAlgorithm
 		return ret
 	}
@@ -81,7 +81,7 @@ func (o *PrivateKey) GetAlgorithm() KeyAlgorithm {
 // GetAlgorithmOk returns a tuple with the Algorithm field value
 // and a boolean to check if the value has been set.
 func (o *PrivateKey) GetAlgorithmOk() (*KeyAlgorithm, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Algorithm, true
@@ -94,7 +94,7 @@ func (o *PrivateKey) SetAlgorithm(v KeyAlgorithm) {
 
 // GetKey returns the Key field value
 func (o *PrivateKey) GetKey() KeyPrivateData {
-	if o == nil  {
+	if o == nil {
 		var ret KeyPrivateData
 		return ret
 	}
@@ -105,7 +105,7 @@ func (o *PrivateKey) GetKey() KeyPrivateData {
 // GetKeyOk returns a tuple with the Key field value
 // and a boolean to check if the value has been set.
 func (o *PrivateKey) GetKeyOk() (*KeyPrivateData, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Key, true
@@ -189,5 +189,3 @@ func (v *NullablePrivateKey) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

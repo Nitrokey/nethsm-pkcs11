@@ -20,7 +20,7 @@ type KeyAlgorithm string
 
 // List of KeyAlgorithm
 const (
-	KEYALGORITHM_RSA KeyAlgorithm = "RSA"
+	KEYALGORITHM_RSA     KeyAlgorithm = "RSA"
 	KEYALGORITHM_ED25519 KeyAlgorithm = "ED25519"
 )
 
@@ -31,7 +31,7 @@ func (v *KeyAlgorithm) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := KeyAlgorithm(value)
-	for _, existing := range []KeyAlgorithm{ "RSA", "ED25519",   } {
+	for _, existing := range []KeyAlgorithm{"RSA", "ED25519"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -81,4 +81,3 @@ func (v *NullableKeyAlgorithm) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

@@ -8,7 +8,6 @@ extern CK_FUNCTION_LIST functionList;
 */
 import "C"
 import (
-	"crypto/rand"
 	"log"
 	"strings"
 	"unsafe"
@@ -300,12 +299,12 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	}
 	*phSession = session
 	// We seed randomly the RNG at init (In case the user would forget to seed the RNG)
-	bs := make([]byte, 8)
-	_, err = rand.Read(bs)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	slot.Sessions[session].SeedRandom(bs)
+	// bs := make([]byte, 8)
+	// _, err = rand.Read(bs)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// slot.Sessions[session].SeedRandom(bs)
 	return C.CKR_OK
 }
 
@@ -894,85 +893,89 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 
 //export C_DigestInit
 func C_DigestInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR) C.CK_RV {
-	log.Printf("Called: C_DigestInit\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	mechanism := CToMechanism(pMechanism)
-	err = session.DigestInit(mechanism)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// log.Printf("Called: C_DigestInit\n")
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// mechanism := CToMechanism(pMechanism)
+	// err = session.DigestInit(mechanism)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_Digest
 func C_Digest(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_ULONG, pDigest C.CK_BYTE_PTR, pulDigestLen C.CK_ULONG_PTR) C.CK_RV {
-	log.Printf("Called: C_Digest\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	input := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
-	digested, err := session.Digest(input, true) // if pDigest is nil, we are only calculating buffer size
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	cDigestLen := C.CK_ULONG(len(digested))
-	if pDigest == nil {
-		*pulDigestLen = cDigestLen
-		return C.CKR_OK
-	}
-	if *pulDigestLen < cDigestLen {
-		*pulDigestLen = cDigestLen
-		return C.CKR_BUFFER_TOO_SMALL
-	}
-	*pulDigestLen = cDigestLen
-	C.memcpy(unsafe.Pointer(pDigest), unsafe.Pointer(&digested[0]), cDigestLen)
-	if err := session.DigestFinish(); err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// log.Printf("Called: C_Digest\n")
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// input := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
+	// digested, err := session.Digest(input, true) // if pDigest is nil, we are only calculating buffer size
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// cDigestLen := C.CK_ULONG(len(digested))
+	// if pDigest == nil {
+	// 	*pulDigestLen = cDigestLen
+	// 	return C.CKR_OK
+	// }
+	// if *pulDigestLen < cDigestLen {
+	// 	*pulDigestLen = cDigestLen
+	// 	return C.CKR_BUFFER_TOO_SMALL
+	// }
+	// *pulDigestLen = cDigestLen
+	// C.memcpy(unsafe.Pointer(pDigest), unsafe.Pointer(&digested[0]), cDigestLen)
+	// if err := session.DigestFinish(); err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_SeedRandom
 func C_SeedRandom(hSession C.CK_SESSION_HANDLE, pSeed C.CK_BYTE_PTR, ulSeedLen C.CK_ULONG) C.CK_RV {
-	log.Printf("Called: C_SeedRandom\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	rand := C.GoBytes(unsafe.Pointer(pSeed), C.int(ulSeedLen))
-	session.SeedRandom(rand)
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// log.Printf("Called: C_SeedRandom\n")
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// rand := C.GoBytes(unsafe.Pointer(pSeed), C.int(ulSeedLen))
+	// session.SeedRandom(rand)
+	// return C.CKR_OK
 }
 
 //export C_GenerateRandom
 func C_GenerateRandom(hSession C.CK_SESSION_HANDLE, pRandomData C.CK_BYTE_PTR, ulRandomLen C.CK_ULONG) C.CK_RV {
-	log.Printf("Called: C_GenerateRandom\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	rand, err := session.GenerateRandom(int(ulRandomLen))
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	C.memcpy(unsafe.Pointer(pRandomData), unsafe.Pointer(&rand[0]), ulRandomLen)
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// log.Printf("Called: C_GenerateRandom\n")
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// rand, err := session.GenerateRandom(int(ulRandomLen))
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// C.memcpy(unsafe.Pointer(pRandomData), unsafe.Pointer(&rand[0]), ulRandomLen)
+	// return C.CKR_OK
 }
 
 // NOTE: Not implemented functions...

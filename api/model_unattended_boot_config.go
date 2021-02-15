@@ -16,7 +16,7 @@ import (
 
 // UnattendedBootConfig struct for UnattendedBootConfig
 type UnattendedBootConfig struct {
-	Status Switch `json:"status"`
+	Status               Switch `json:"status"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -26,7 +26,7 @@ type _UnattendedBootConfig UnattendedBootConfig
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUnattendedBootConfig(status Switch, ) *UnattendedBootConfig {
+func NewUnattendedBootConfig(status Switch) *UnattendedBootConfig {
 	this := UnattendedBootConfig{}
 	this.Status = status
 	return &this
@@ -42,7 +42,7 @@ func NewUnattendedBootConfigWithDefaults() *UnattendedBootConfig {
 
 // GetStatus returns the Status field value
 func (o *UnattendedBootConfig) GetStatus() Switch {
-	if o == nil  {
+	if o == nil {
 		var ret Switch
 		return ret
 	}
@@ -53,7 +53,7 @@ func (o *UnattendedBootConfig) GetStatus() Switch {
 // GetStatusOk returns a tuple with the Status field value
 // and a boolean to check if the value has been set.
 func (o *UnattendedBootConfig) GetStatusOk() (*Switch, bool) {
-	if o == nil  {
+	if o == nil {
 		return nil, false
 	}
 	return &o.Status, true
@@ -129,5 +129,3 @@ func (v *NullableUnattendedBootConfig) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-

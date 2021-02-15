@@ -21,9 +21,9 @@ type UserRole string
 // List of UserRole
 const (
 	USERROLE_ADMINISTRATOR UserRole = "Administrator"
-	USERROLE_OPERATOR UserRole = "Operator"
-	USERROLE_METRICS UserRole = "Metrics"
-	USERROLE_BACKUP UserRole = "Backup"
+	USERROLE_OPERATOR      UserRole = "Operator"
+	USERROLE_METRICS       UserRole = "Metrics"
+	USERROLE_BACKUP        UserRole = "Backup"
 )
 
 func (v *UserRole) UnmarshalJSON(src []byte) error {
@@ -33,7 +33,7 @@ func (v *UserRole) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := UserRole(value)
-	for _, existing := range []UserRole{ "Administrator", "Operator", "Metrics", "Backup",   } {
+	for _, existing := range []UserRole{"Administrator", "Operator", "Metrics", "Backup"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -83,4 +83,3 @@ func (v *NullableUserRole) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-

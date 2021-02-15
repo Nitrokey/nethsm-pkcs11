@@ -16,9 +16,9 @@ import (
 
 // KeyPublicData struct for KeyPublicData
 type KeyPublicData struct {
-	Modulus *string `json:"modulus,omitempty"`
-	PublicExponent *string `json:"publicExponent,omitempty"`
-	Data *string `json:"data,omitempty"`
+	Modulus              *string `json:"modulus,omitempty"`
+	PublicExponent       *string `json:"publicExponent,omitempty"`
+	Data                 *string `json:"data,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -210,5 +210,3 @@ func (v *NullableKeyPublicData) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
-
-
