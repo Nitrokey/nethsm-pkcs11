@@ -9,10 +9,11 @@ import (
 var conf Config
 
 func init() {
-	viper.SetConfigName("p11nethsm-config")
-	viper.AddConfigPath("./")
+	viper.SetConfigName("p11nethsm.conf")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("$PWD")
 	viper.AddConfigPath("$HOME/.nitrokey")
-	viper.AddConfigPath("/etc/nitrokey/")
+	viper.AddConfigPath("/etc/nitrokey")
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("Failed to read config file: %v", err))
 	}
