@@ -60,9 +60,8 @@ func str2Buf(s string, buffer interface{}) {
 		s = s[:length]
 	}
 	s += strings.Repeat(" ", length-len(s))
-	cBytes := C.CBytes([]byte(s))
-	defer C.free(unsafe.Pointer(cBytes))
-	C.memcpy(pBuffer, cBytes, (C.size_t)(length))
+	b := []byte(s)
+	C.memcpy(pBuffer, unsafe.Pointer(&b[0]), (C.size_t)(length))
 }
 
 //export C_Initialize
@@ -642,30 +641,25 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	// XXX this is always 0
-	sigLen, err := session.SignLength()
 	if pulSignatureLen == nil {
 		return C.CKR_ARGUMENTS_BAD
-	} else if err != nil {
+	}
+	signature, err := session.SignFinal()
+	// log.Printf("signFinal done")
+	if err != nil {
 		return ErrorToRV(err)
-	} else if pSignature == nil {
+	}
+	sigLen := C.CK_ULONG(len(signature))
+	if pSignature == nil {
 		*pulSignatureLen = sigLen
+		// XXX cache signature
 		return C.CKR_OK
 	} else if *pulSignatureLen < sigLen {
 		*pulSignatureLen = sigLen
 		return C.CKR_BUFFER_TOO_SMALL
-	} else {
-		// log.Printf("starting signFinal")
-		signature, err := session.SignFinal()
-		// log.Printf("signFinal done")
-		if err != nil {
-			return ErrorToRV(err)
-		}
-		cSignature := C.CBytes(signature)
-		defer C.free(cSignature)
-		*pulSignatureLen = C.ulong(len(signature))
-		C.memcpy(unsafe.Pointer(pSignature), cSignature, *pulSignatureLen)
 	}
+	*pulSignatureLen = sigLen
+	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
 	return C.CKR_OK
 }
 
@@ -696,17 +690,14 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	sigLen := C.CK_ULONG(len(signature))
 	if pSignature == nil {
 		*pulSignatureLen = sigLen
-		// XX cache signature
+		// XXX cache signature
 		return C.CKR_OK
 	} else if *pulSignatureLen < sigLen {
 		*pulSignatureLen = sigLen
 		return C.CKR_BUFFER_TOO_SMALL
 	}
-	cSignature := C.CBytes(signature)
 	*pulSignatureLen = sigLen
-	C.memcpy(unsafe.Pointer(pSignature), cSignature, *pulSignatureLen)
-	// log.Printf("freeing cSignature")
-	C.free(cSignature)
+	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
 	// log.Printf("done with this branch")
 	return C.CKR_OK
 }
@@ -714,78 +705,82 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 //export C_VerifyInit
 func C_VerifyInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKey C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Printf("Called: C_VerifyInit\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	mechanism := CToMechanism(pMechanism)
-	err = session.VerifyInit(mechanism, hKey)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// mechanism := CToMechanism(pMechanism)
+	// err = session.VerifyInit(mechanism, hKey)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_Verify
 func C_Verify(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_ULONG, pSignature C.CK_BYTE_PTR, ulSignatureLen C.CK_ULONG) C.CK_RV {
 	log.Printf("Called: C_Verify\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
-	err = session.VerifyUpdate(data)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
-	err = session.VerifyFinal(signature)
-	if err != nil {
-		return C.CKR_SIGNATURE_INVALID
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
+	// err = session.VerifyUpdate(data)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
+	// err = session.VerifyFinal(signature)
+	// if err != nil {
+	// 	return C.CKR_SIGNATURE_INVALID
+	// }
+	// return C.CKR_OK
 }
 
 //export C_VerifyUpdate
 func C_VerifyUpdate(hSession C.CK_SESSION_HANDLE, pPart C.CK_BYTE_PTR, ulPartLen C.CK_ULONG) C.CK_RV {
 	log.Printf("Called: C_VerifyUpdate\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	data := C.GoBytes(unsafe.Pointer(pPart), C.int(ulPartLen))
-	err = session.VerifyUpdate(data)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// data := C.GoBytes(unsafe.Pointer(pPart), C.int(ulPartLen))
+	// err = session.VerifyUpdate(data)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// return C.CKR_OK
 }
 
 //export C_VerifyFinal
 func C_VerifyFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, ulSignatureLen C.CK_ULONG) C.CK_RV {
 	log.Printf("Called: C_VerifyFinal\n")
-	if App == nil {
-		return C.CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
-	err = session.VerifyFinal(signature)
-	if err != nil {
-		return C.CKR_SIGNATURE_INVALID
-	}
-	return C.CKR_OK
+	return C.CKR_FUNCTION_NOT_SUPPORTED
+	// if App == nil {
+	// 	return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	// }
+	// session, err := App.GetSession(hSession)
+	// if err != nil {
+	// 	return ErrorToRV(err)
+	// }
+	// signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
+	// err = session.VerifyFinal(signature)
+	// if err != nil {
+	// 	return C.CKR_SIGNATURE_INVALID
+	// }
+	// return C.CKR_OK
 }
 
 //export C_DecryptInit
@@ -807,21 +802,94 @@ func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, 
 }
 
 //export C_Decrypt
-func C_Decrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
-	C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
-	return C.CKR_FUNCTION_NOT_SUPPORTED
+func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
+	ulEncryptedDataLen C.CK_ULONG, pData C.CK_BYTE_PTR,
+	pulDataLen C.CK_ULONG_PTR) C.CK_RV {
+	if App == nil {
+		return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	}
+	session, err := App.GetSession(hSession)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	if pulDataLen == nil {
+		return C.CKR_ARGUMENTS_BAD
+	}
+	encrypted := C.GoBytes(unsafe.Pointer(pEncryptedData), C.int(ulEncryptedDataLen))
+	err = session.DecryptUpdate(encrypted)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	data, err := session.DecryptFinal()
+	// log.Printf("signFinal ended")
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	dataLen := C.CK_ULONG(len(data))
+	if pData == nil {
+		*pulDataLen = dataLen
+		// XXX cache signature
+		return C.CKR_OK
+	} else if *pulDataLen < dataLen {
+		*pulDataLen = dataLen
+		return C.CKR_BUFFER_TOO_SMALL
+	}
+	*pulDataLen = dataLen
+	C.memcpy(unsafe.Pointer(pData), unsafe.Pointer(&data[0]), *pulDataLen)
+	// log.Printf("done with this branch")
+	return C.CKR_OK
 }
 
 //export C_DecryptUpdate
-func C_DecryptUpdate(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+func C_DecryptUpdate(hSession C.CK_SESSION_HANDLE, pEncryptedPart C.CK_BYTE_PTR,
+	ulEncryptedPartLen C.CK_ULONG, pPart C.CK_BYTE_PTR,
+	pulPartLen C.CK_ULONG_PTR) C.CK_RV {
 	log.Printf("Called: C_DecryptUpdate")
-	return C.CKR_FUNCTION_NOT_SUPPORTED
+	if App == nil {
+		return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	}
+	session, err := App.GetSession(hSession)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	data := C.GoBytes(unsafe.Pointer(pEncryptedPart), C.int(ulEncryptedPartLen))
+	err = session.SignUpdate(data)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	*pulPartLen = 0
+	return C.CKR_OK
 }
 
 //export C_DecryptFinal
-func C_DecryptFinal(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLastPartLen C.CK_ULONG_PTR) C.CK_RV {
 	log.Printf("Called: C_DecryptFinal")
-	return C.CKR_FUNCTION_NOT_SUPPORTED
+	if App == nil {
+		return C.CKR_CRYPTOKI_NOT_INITIALIZED
+	}
+	session, err := App.GetSession(hSession)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	if pulLastPartLen == nil {
+		return C.CKR_ARGUMENTS_BAD
+	}
+	data, err := session.SignFinal()
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	dataLen := C.CK_ULONG(len(data))
+	if pLastPart == nil {
+		*pulLastPartLen = dataLen
+		// XXX cache signature
+		return C.CKR_OK
+	} else if *pulLastPartLen < dataLen {
+		*pulLastPartLen = dataLen
+		return C.CKR_BUFFER_TOO_SMALL
+	}
+	*pulLastPartLen = dataLen
+	C.memcpy(unsafe.Pointer(pLastPart), unsafe.Pointer(&data[0]), *pulLastPartLen)
+	return C.CKR_OK
 }
 
 //export C_DigestInit
@@ -866,13 +934,11 @@ func C_Digest(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_
 		*pulDigestLen = cDigestLen
 		return C.CKR_BUFFER_TOO_SMALL
 	}
-	cDigest := C.CBytes(digested)
-	defer C.free(cDigest)
-	C.memcpy(unsafe.Pointer(pDigest), cDigest, cDigestLen)
+	*pulDigestLen = cDigestLen
+	C.memcpy(unsafe.Pointer(pDigest), unsafe.Pointer(&digested[0]), cDigestLen)
 	if err := session.DigestFinish(); err != nil {
 		return ErrorToRV(err)
 	}
-	*pulDigestLen = cDigestLen
 	return C.CKR_OK
 }
 
@@ -905,9 +971,7 @@ func C_GenerateRandom(hSession C.CK_SESSION_HANDLE, pRandomData C.CK_BYTE_PTR, u
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	cRand := C.CBytes(rand)
-	defer C.free(cRand)
-	C.memcpy(unsafe.Pointer(pRandomData), cRand, ulRandomLen)
+	C.memcpy(unsafe.Pointer(pRandomData), unsafe.Pointer(&rand[0]), ulRandomLen)
 	return C.CKR_OK
 }
 

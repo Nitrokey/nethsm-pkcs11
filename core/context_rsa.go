@@ -6,16 +6,11 @@ package core
 import "C"
 
 import (
-	"crypto"
-	"crypto/rsa"
 	"encoding/base64"
-	"io"
 	"p11nethsm/api"
 )
 
-type SignContextRSA struct {
-	// randSrc     io.Reader
-	// pubKey      rsa.PublicKey
+type OpContextRSA struct {
 	session     *Session
 	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
 	keyID       string     // Key ID used in signing.
@@ -23,33 +18,31 @@ type SignContextRSA struct {
 	initialized bool       // // True if the user executed a Sign method and it has not finished yet.
 }
 
-type VerifyContextRSA struct {
-	randSrc io.Reader
-	// keyMeta     *tcrsa.KeyMeta // Key Metainfo used in sign verification.
-	pubKey      rsa.PublicKey
-	mechanism   *Mechanism // Mechanism used to verify a signature in a Verify session.
-	keyID       string     // Key ID used in sign verification.
-	data        []byte     // Data to verify.
-	initialized bool       // True if the user executed a Verify method and it has not finished yet.
+type SignContextRSA struct {
+	OpContextRSA
 }
 
-func (context *SignContextRSA) Initialized() bool {
+type DecryptContextRSA struct {
+	OpContextRSA
+}
+
+//type VerifyContextRSA contextRSA
+
+func (context *OpContextRSA) Initialized() bool {
 	return context.initialized
 }
 
-func (context *SignContextRSA) Init([]byte) (err error) {
-	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
+func (context *OpContextRSA) Init() (err error) {
 	context.initialized = true
 	return
 }
 
-func (context *SignContextRSA) SignatureLength() int {
+func (context *OpContextRSA) ResultLength() int {
 	// log.Printf("context: %v", context)
 	return 0 // XXX
-
 }
 
-func (context *SignContextRSA) Update(data []byte) error {
+func (context *OpContextRSA) Update(data []byte) error {
 	context.data = append(context.data, data...)
 	return nil
 }
@@ -88,76 +81,110 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	return signature, nil
 }
 
-func (context *VerifyContextRSA) Initialized() bool {
-	return context.initialized
-}
+func (context *DecryptContextRSA) Final() ([]byte, error) {
+	var err error
+	// _ /*prepared*/, err := context.mechanism.Prepare(
+	// 	context.randSrc,
+	// 	context.pubKey.Size(),
+	// 	context.data,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// XXX signature, err := context.dtc.RSASignData(context.keyID,
+	// context.keyMeta, prepared)
 
-func (context *VerifyContextRSA) Init(metaBytes []byte) (err error) {
-	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
-	context.initialized = true
-	return
-}
-
-func (context *VerifyContextRSA) Length() int {
-	return context.pubKey.Size()
-}
-
-func (context *VerifyContextRSA) Update(data []byte) error {
-	context.data = append(context.data, data...)
-	return nil
-}
-
-func (context *VerifyContextRSA) Final(signature []byte) error {
-	return verifyRSA(
-		context.mechanism,
-		context.pubKey,
-		context.data,
-		signature,
-	)
-}
-
-func verifyRSA(mechanism *Mechanism, pubKey crypto.PublicKey, data []byte, signature []byte) (err error) {
-	var hash []byte
-	hashType, err := mechanism.GetHashType()
+	var reqBody api.DecryptRequestData
+	reqBody.SetEncrypted(base64.StdEncoding.EncodeToString(context.data))
+	mode, err := context.mechanism.DecryptMode()
 	if err != nil {
-		return
+		return nil, err
 	}
-	rsaPK, ok := pubKey.(*rsa.PublicKey)
-	if !ok {
-		return NewError("verifyRSA", "public key invalid for this type of signature", C.CKR_ARGUMENTS_BAD)
-
+	reqBody.SetMode(mode)
+	decryptData, r, err := App.Api.KeysKeyIDDecryptPost(
+		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
+	if err != nil {
+		// log.Printf("%v\n", r)
+		// log.Printf("%v\n", r.Request.Body)
+		return nil, NewAPIError("DecryptContextRSA.Final()", "Decryption failed.", r, err)
 	}
-	switch mechanism.Type {
-	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS:
-		if hashType == crypto.Hash(0) {
-			hash = data
-		} else {
-			hashFunc := hashType.New()
-			_, err = hashFunc.Write(data)
-			if err != nil {
-				return
-			}
-			hash = hashFunc.Sum(nil)
-		}
-		if err = rsa.VerifyPKCS1v15(rsaPK, hashType, hash, signature); err != nil {
-			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
-		}
-	case C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
-		hashFunc := hashType.New()
-		_, err = hashFunc.Write(data)
-		if err != nil {
-			return
-		}
-		hash = hashFunc.Sum(nil)
-		if err = rsa.VerifyPSS(rsaPK, hashType, hash, signature, nil); err != nil {
-			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
-		}
-	default:
-		err = NewError("verifyRSA", "mechanism not supported yet for verifying", C.CKR_MECHANISM_INVALID)
-		return
+	decrypted, err := base64.StdEncoding.DecodeString(decryptData.GetDecrypted())
+	if err != nil {
+		return nil, err
 	}
-	return
+	return decrypted, nil
 }
+
+// func (context *VerifyContextRSA) Initialized() bool {
+// 	return context.initialized
+// }
+
+// func (context *VerifyContextRSA) Init(metaBytes []byte) (err error) {
+// 	// context.keyMeta, err = message.DecodeRSAKeyMeta(metaBytes)
+// 	context.initialized = true
+// 	return
+// }
+
+// func (context *VerifyContextRSA) Length() int {
+// 	return 0 //context.pubKey.Size()
+// }
+
+// func (context *VerifyContextRSA) Update(data []byte) error {
+// 	context.data = append(context.data, data...)
+// 	return nil
+// }
+
+// func (context *VerifyContextRSA) Final(signature []byte) error {
+// 	return verifyRSA(
+// 		context.mechanism,
+// 		// context.pubKey,
+// 		context.data,
+// 		signature,
+// 	)
+// }
+
+// func verifyRSA(mechanism *Mechanism /* pubKey crypto.PublicKey ,*/, data []byte, signature []byte) (err error) {
+// 	var hash []byte
+// 	hashType, err := mechanism.GetHashType()
+// 	if err != nil {
+// 		return
+// 	}
+// 	rsaPK, ok := pubKey.(*rsa.PublicKey)
+// 	if !ok {
+// 		return NewError("verifyRSA", "public key invalid for this type of signature", C.CKR_ARGUMENTS_BAD)
+
+// 	}
+// 	switch mechanism.Type {
+// 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS:
+// 		if hashType == crypto.Hash(0) {
+// 			hash = data
+// 		} else {
+// 			hashFunc := hashType.New()
+// 			_, err = hashFunc.Write(data)
+// 			if err != nil {
+// 				return
+// 			}
+// 			hash = hashFunc.Sum(nil)
+// 		}
+// 		if err = rsa.VerifyPKCS1v15(rsaPK, hashType, hash, signature); err != nil {
+// 			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
+// 		}
+// 	case C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
+// 		hashFunc := hashType.New()
+// 		_, err = hashFunc.Write(data)
+// 		if err != nil {
+// 			return
+// 		}
+// 		hash = hashFunc.Sum(nil)
+// 		if err = rsa.VerifyPSS(rsaPK, hashType, hash, signature, nil); err != nil {
+// 			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
+// 		}
+// 	default:
+// 		err = NewError("verifyRSA", "mechanism not supported yet for verifying", C.CKR_MECHANISM_INVALID)
+// 		return
+// 	}
+// 	return
+// }
 
 // func createRSAPublicKey(keyID string, pkAttrs Attributes, key *rsa.PublicKey) (Attributes, error) {
 

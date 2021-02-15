@@ -23,8 +23,8 @@ type Session struct {
 	refreshedToken    bool                 // True if the token have been refreshed
 	foundObjects      []C.CK_OBJECT_HANDLE // List of found objects
 	findInitialized   bool                 // True if the user executed a Find method and it has not finished yet.
-	signCtx           SignContext          // Signing Context
-	verifyCtx         VerifyContext        // Verification Context
+	signCtx           OpContext            // Signing Context
+	decryptCtx        OpContext            // Decrypting Context
 	digestHash        hash.Hash            // Hash used for hashing
 	digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
 	randSrc           *rand.Rand           // Seedable random source.
@@ -378,7 +378,7 @@ func (session *Session) SignLength() (C.ulong, error) {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
 		return 0, NewError("Session.SignLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
 	}
-	return C.ulong(session.signCtx.SignatureLength()), nil
+	return C.ulong(session.signCtx.ResultLength()), nil
 }
 
 // SignUpdate updates the signature with data to sign.
@@ -400,91 +400,87 @@ func (session *Session) SignFinal() ([]byte, error) {
 	return session.signCtx.Final()
 }
 
-// VerifyInit starts a signature verification session with the key with the provided ID.
-func (session *Session) VerifyInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
-	if session.verifyCtx != nil && session.verifyCtx.Initialized() {
-		return NewError("Session.VerifyInit", "operation active", C.CKR_OPERATION_ACTIVE)
-	}
-	if mechanism == nil {
-		return NewError("Session.VerifyInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
-	}
-	verifyCtx, err := NewVerifyContext(session, mechanism, hKey)
-	if err != nil {
-		return err
-	}
-	session.verifyCtx = verifyCtx
-	return nil
-}
+// // VerifyInit starts a signature verification session with the key with the provided ID.
+// func (session *Session) VerifyInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
+// 	if session.verifyCtx != nil && session.verifyCtx.Initialized() {
+// 		return NewError("Session.VerifyInit", "operation active", C.CKR_OPERATION_ACTIVE)
+// 	}
+// 	if mechanism == nil {
+// 		return NewError("Session.VerifyInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 	}
+// 	verifyCtx, err := NewVerifyContext(session, mechanism, hKey)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	session.verifyCtx = verifyCtx
+// 	return nil
+// }
 
-// VerifyLength returns the size of the verification key Public Key Size.
-func (session *Session) VerifyLength() (C.ulong, error) {
-	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-		return 0, NewError("Session.VerifyLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
-	}
-	return C.ulong(session.verifyCtx.Length()), nil
-}
+// // VerifyLength returns the size of the verification key Public Key Size.
+// func (session *Session) VerifyLength() (C.ulong, error) {
+// 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
+// 		return 0, NewError("Session.VerifyLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 	}
+// 	return C.ulong(session.verifyCtx.Length()), nil
+// }
 
-// VerifyUpdate adds more data to verify the signature.
-func (session *Session) VerifyUpdate(data []byte) error {
-	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-		return NewError("Session.VerifyUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
-	}
-	return session.verifyCtx.Update(data)
-}
+// // VerifyUpdate adds more data to verify the signature.
+// func (session *Session) VerifyUpdate(data []byte) error {
+// 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
+// 		return NewError("Session.VerifyUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 	}
+// 	return session.verifyCtx.Update(data)
+// }
 
-// VerifyFinal receives the signature and verifies it based on the key and data provided on earlier methods.
-func (session *Session) VerifyFinal(signature []byte) error {
-	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-		return NewError("Session.VerifyFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
-	}
-	defer func() {
-		session.verifyCtx = nil
-	}()
-	return session.verifyCtx.Final(signature)
-}
+// // VerifyFinal receives the signature and verifies it based on the key and data provided on earlier methods.
+// func (session *Session) VerifyFinal(signature []byte) error {
+// 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
+// 		return NewError("Session.VerifyFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 	}
+// 	defer func() {
+// 		session.verifyCtx = nil
+// 	}()
+// 	return session.verifyCtx.Final(signature)
+// }
 
-// SignInit starts the signing process.
 func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
-	if session.signCtx != nil && session.signCtx.Initialized() {
-		return NewError("Session.SignInit", "operation active", C.CKR_OPERATION_ACTIVE)
+	if session.decryptCtx != nil && session.decryptCtx.Initialized() {
+		return NewError("Session.DecryptInit", "operation active", C.CKR_OPERATION_ACTIVE)
 	}
 	if mechanism == nil {
-		return NewError("Session.SignInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("Session.DecryptInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
 
-	signCtx, err := NewSignContext(session, mechanism, hKey)
+	decryptCtx, err := NewDecryptContext(session, mechanism, hKey)
 	if err != nil {
 		return err
 	}
-	session.signCtx = signCtx
+	session.decryptCtx = decryptCtx
 	return nil
 }
 
-// SignLength returns the signature length.
 func (session *Session) DecryptLength() (C.ulong, error) {
-	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return 0, NewError("Session.SignLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
+		return 0, NewError("Session.DecryptLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
 	}
-	return C.ulong(session.signCtx.SignatureLength()), nil
+	return C.ulong(session.decryptCtx.ResultLength()), nil
 }
 
-// SignUpdate updates the signature with data to sign.
 func (session *Session) DecryptUpdate(data []byte) error {
-	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return NewError("Session.SignUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
+		return NewError("Session.DecryptUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
 	}
-	return session.signCtx.Update(data)
+	return session.decryptCtx.Update(data)
 }
 
-// SignFinal returns the signature and resets the state.
 func (session *Session) DecryptFinal() ([]byte, error) {
-	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return nil, NewError("Session.SignFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
+		return nil, NewError("Session.DecryptFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
 	}
 	defer func() {
-		session.signCtx = nil
+		session.decryptCtx = nil
 	}()
-	return session.signCtx.Final()
+	return session.decryptCtx.Final()
 }
 
 // DigestInit starts a digest session.
