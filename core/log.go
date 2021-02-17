@@ -35,7 +35,7 @@ func LogInit() {
 
 func (l *levelLoggerT) Errorf(s string, v ...interface{}) {
 	if logLevel >= logError {
-		_ = errorLog.Output(2, fmt.Sprintf("[ERR] "+s, v...))
+		_ = errorLog.Output(2, fmt.Sprintf(s, v...))
 	}
 }
 
