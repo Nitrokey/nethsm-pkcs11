@@ -92,7 +92,7 @@ func (object *CryptoObject) Match(attrs Attributes) bool {
 			return false
 		}
 	}
-	dbg.Printf("Matching object: %v", object)
+	log.Debugf("Matching object: %v", object)
 	return true
 }
 
@@ -111,7 +111,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	}
 	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
-	// dbg.Printf("templateSlice:%+v", templateSlice)
+	// log.Debugf("templateSlice:%+v", templateSlice)
 
 	missingAttr := false
 
@@ -124,7 +124,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 			}
 		} else {
 			missingAttr = true
-			dbg.Printf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
+			log.Debugf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
 			templateSlice[i].ulValueLen = C.CK_UNAVAILABLE_INFORMATION
 		}
 	}

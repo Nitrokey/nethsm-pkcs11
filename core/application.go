@@ -6,7 +6,7 @@ package core
 import "C"
 import (
 	"context"
-	"log"
+	stdLog "log"
 	"os"
 	"p11nethsm/api"
 	"p11nethsm/config"
@@ -26,33 +26,22 @@ func init() {
 	if logPath != "" {
 		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			log.Printf("cannot create logfile at given path: %s", err)
-			return
+			stdLog.Printf("cannot create logfile at given path: %s", err)
+		} else {
+			stdLog.SetOutput(logFile)
 		}
-		log.SetOutput(logFile)
 	} else {
-		log.SetPrefix("[p11nethsm] ")
+		stdLog.SetPrefix("[p11nethsm] ")
 	}
 	if conf.Debug {
-		var dbgLog log.Logger
-		dbgLog.SetFlags(log.Flags() | log.Lshortfile | log.Lmicroseconds)
-		dbgLog.SetPrefix("=========[DEBUG]==========\n" + log.Prefix())
-		dbgLog.SetOutput(log.Writer())
-		dbg = &dbgLog
+		logLevel = logDebug
+		stdLog.SetPrefix("=== " + stdLog.Prefix())
+		stdLog.SetFlags(stdLog.Flags() | stdLog.Lshortfile | stdLog.Lmicroseconds)
 	}
+	LogInit()
 }
 
 var App *Application
-
-type printer interface {
-	Printf(format string, v ...interface{})
-}
-
-type nopPrinter struct{}
-
-func (nopPrinter) Printf(string, ...interface{}) {}
-
-var dbg printer = nopPrinter{}
 
 // NewApplication returns a new application, using the configuration defined in the config file.
 func NewApplication() (*Application, error) {

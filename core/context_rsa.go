@@ -38,7 +38,7 @@ func (context *OpContextRSA) Init() (err error) {
 }
 
 func (context *OpContextRSA) ResultLength() int {
-	// dbg.Printf("context: %v", context)
+	// log.Debugf("context: %v", context)
 	return 0 // XXX
 }
 
@@ -70,8 +70,8 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	sigData, r, err := App.Api.KeysKeyIDSignPost(
 		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
-		// dbg.Printf("%v\n", r)
-		// dbg.Printf("%v\n", r.Request.Body)
+		// log.Debugf("%v\n", r)
+		// log.Debugf("%v\n", r.Request.Body)
 		return nil, NewAPIError("SignContextRSA.Final()", "Signing failed.", r, err)
 	}
 	signature, err := base64.StdEncoding.DecodeString(sigData.GetSignature())
@@ -104,8 +104,8 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 	decryptData, r, err := App.Api.KeysKeyIDDecryptPost(
 		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
-		// dbg.Printf("%v\n", r)
-		// dbg.Printf("%v\n", r.Request.Body)
+		// log.Debugf("%v\n", r)
+		// log.Debugf("%v\n", r.Request.Body)
 		return nil, NewAPIError("DecryptContextRSA.Final()", "Decryption failed.", r, err)
 	}
 	decrypted, err := base64.StdEncoding.DecodeString(decryptData.GetDecrypted())
