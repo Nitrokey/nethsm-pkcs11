@@ -5,7 +5,6 @@ package core
 */
 import "C"
 import (
-	"log"
 	"sync"
 	"unsafe"
 )
@@ -159,7 +158,7 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 // 					if err != nil {
 // 						return err
 // 					}
-// 					log.Printf("all nodes deleted key shares for keyid=%s", keyID)
+// 					dbg.Printf("all nodes deleted key shares for keyid=%s", keyID)
 // 				}
 // 			}
 // 		}
@@ -182,9 +181,9 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		return err
 	}
 
-	log.Printf("Attributes:\n")
+	dbg.Printf("Attributes:\n")
 	for k, v := range attrs {
-		log.Printf("0x%x: %v", k, v)
+		dbg.Printf("0x%x: %v", k, v)
 	}
 
 	if len(attrs) == 0 {
@@ -207,7 +206,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 				session.foundObjects = append(session.foundObjects, object.Handle)
 			}
 		}
-		log.Printf("foundObjects: %v", session.foundObjects)
+		dbg.Printf("foundObjects: %v", session.foundObjects)
 	}
 
 	session.findInitialized = true
@@ -605,7 +604,7 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // 	}
 // 	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
 // 	exponent := binary.BigEndian.Uint64(extendedExpAttr) // Big Integer
-// 	log.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
+// 	dbg.Printf("creating key with bitsize=%d and exponent=%d", bitSize, exponent)
 // 	// XXX create key
 // 	pk, err = createRSAPublicKey(keyID, pkTemplate, key)
 // 	if err != nil {

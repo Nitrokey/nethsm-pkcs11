@@ -42,7 +42,7 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 	// if keyMetaAttr == nil {
 	// 	return nil, NewError(" NewSignContext", "object handle does not contain any key metainfo attribute", C.CKR_ARGUMENTS_BAD)
 	// }
-	//log.Printf("Type: %v", mechanism.Type)
+	//dbg.Printf("Type: %v", mechanism.Type)
 	switch mechanism.Type {
 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS, C.CKM_RSA_PKCS_PSS, C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
 		c := &SignContextRSA{OpContextRSA{

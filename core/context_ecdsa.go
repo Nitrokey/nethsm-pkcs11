@@ -58,7 +58,7 @@ import "C"
 // 	// if err != nil {
 // 	// 	return nil, err
 // 	// }
-// 	// log.Printf("Signing data with key of curve=%s and id=%s", context.pubKey.Curve, context.keyID)
+// 	// dbg.Printf("Signing data with key of curve=%s and id=%s", context.pubKey.Curve, context.keyID)
 // 	// Round 1
 // 	var sig []byte
 // 	// XXX sig, err := context.dtc.ECDSASignData(context.keyID, context.keyMeta, prepared)

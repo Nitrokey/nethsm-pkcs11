@@ -6,7 +6,6 @@ package core
 import "C"
 import (
 	"bytes"
-	"log"
 	"math"
 	"unsafe"
 )
@@ -93,7 +92,7 @@ func (object *CryptoObject) Match(attrs Attributes) bool {
 			return false
 		}
 	}
-	log.Printf("Matching object: %v", object)
+	dbg.Printf("Matching object: %v", object)
 	return true
 }
 
@@ -112,7 +111,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	}
 	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
-	// log.Printf("templateSlice:%+v", templateSlice)
+	// dbg.Printf("templateSlice:%+v", templateSlice)
 
 	missingAttr := false
 
@@ -125,7 +124,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 			}
 		} else {
 			missingAttr = true
-			log.Printf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
+			dbg.Printf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
 			templateSlice[i].ulValueLen = C.CK_UNAVAILABLE_INFORMATION
 		}
 	}
