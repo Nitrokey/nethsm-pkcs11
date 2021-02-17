@@ -98,8 +98,8 @@ func (slot *Slot) GetInfo(pInfo C.CK_SLOT_INFO_PTR) error {
 	if slot.description == "" {
 		description = "Nitrokey NetHSM"
 	}
-	str2Buf(description, &info.slotDescription)
-	str2Buf(libManufacturerID, &info.manufacturerID)
+	str2Buf(description, info.slotDescription[:])
+	str2Buf(libManufacturerID, info.manufacturerID[:])
 
 	slot.flags = C.CKF_REMOVABLE_DEVICE
 	if slot.token != nil {

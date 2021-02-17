@@ -26,28 +26,14 @@ const (
 	libVersionMinor   = 1
 )
 
-func str2Buf(s string, buffer interface{}) {
-	var length int
-	var pBuffer unsafe.Pointer
-	if b, ok := buffer.(*[16]C.uchar); ok {
-		length = 16
-		pBuffer = unsafe.Pointer(&b[0])
-	} else if b, ok := buffer.(*[32]C.uchar); ok {
-		length = 32
-		pBuffer = unsafe.Pointer(&b[0])
-	} else if b, ok := buffer.(*[64]C.uchar); ok {
-		length = 64
-		pBuffer = unsafe.Pointer(&b[0])
-	} else {
-		log.Panicf("strBuf: buffer type %T not supported", buffer)
+func str2Buf(s string, b []C.uchar) {
+	sLen := len(s)
+	bLen := len(b)
+	if sLen < bLen {
+		s += strings.Repeat(" ", bLen-sLen)
 	}
-	if len(s) > length {
-		s = s[:length]
-	}
-	s += strings.Repeat(" ", length-len(s))
-	cBytes := C.CBytes([]byte(s))
-	defer C.free(unsafe.Pointer(cBytes))
-	C.memcpy(pBuffer, cBytes, (C.size_t)(length))
+	s2 := []byte(s)
+	C.memcpy(unsafe.Pointer(&b[0]), unsafe.Pointer(&s2[0]), (C.size_t)(bLen))
 }
 
 //export C_Initialize
@@ -89,8 +75,8 @@ func C_GetInfo(pInfo C.CK_INFO_PTR) C.CK_RV {
 	info := (*C.CK_INFO)(unsafe.Pointer(pInfo))
 
 	log.Printf("%v", &info.manufacturerID[0])
-	str2Buf(libManufacturerID, &info.manufacturerID)
-	str2Buf(libDescription, &info.libraryDescription)
+	str2Buf(libManufacturerID, info.manufacturerID[:])
+	str2Buf(libDescription, info.libraryDescription[:])
 
 	info.flags = 0
 	info.cryptokiVersion.major = 2

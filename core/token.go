@@ -169,9 +169,9 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	// 	return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
 	// }
 
-	str2Buf(apiInfo.Vendor, &info.manufacturerID)
-	str2Buf(apiInfo.Product, &info.model)
-	str2Buf(serialNumber, &info.serialNumber)
+	str2Buf(apiInfo.Vendor, info.manufacturerID[:])
+	str2Buf(apiInfo.Product, info.model[:])
+	str2Buf(serialNumber, info.serialNumber[:])
 
 	info.flags = C.CK_ULONG(token.tokenFlags)
 	info.ulMaxSessionCount = C.CK_ULONG(App.Config.MaxSessionCount)
