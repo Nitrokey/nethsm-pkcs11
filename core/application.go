@@ -34,32 +34,25 @@ func init() {
 		log.SetPrefix("[p11nethsm] ")
 	}
 	if conf.Debug {
+		var dbgLog log.Logger
 		dbgLog.SetFlags(log.Flags() | log.Lshortfile | log.Lmicroseconds)
 		dbgLog.SetPrefix("=========[DEBUG]==========\n" + log.Prefix())
 		dbgLog.SetOutput(log.Writer())
-		dbg.active = true
+		dbg = &dbgLog
 	}
 }
 
 var App *Application
 
-type Printer interface {
+type printer interface {
 	Printf(format string, v ...interface{})
 }
 
-type conditionalPrinter struct {
-	printer Printer
-	active  bool
-}
+type nopPrinter struct{}
 
-func (p *conditionalPrinter) Printf(format string, v ...interface{}) {
-	if p.active {
-		p.printer.Printf(format, v...)
-	}
-}
+func (nopPrinter) Printf(string, ...interface{}) {}
 
-var dbgLog log.Logger
-var dbg = conditionalPrinter{printer: &dbgLog}
+var dbg printer = nopPrinter{}
 
 // NewApplication returns a new application, using the configuration defined in the config file.
 func NewApplication() (*Application, error) {
