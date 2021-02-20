@@ -32,7 +32,9 @@ type loginData struct {
 type Token struct {
 	sync.Mutex
 	Label      string
+	keyIDs     []string
 	_objects   CryptoObjects
+	fetchedAll bool
 	tokenFlags uint64
 	loginData  *loginData
 	slot       *Slot
@@ -76,72 +78,103 @@ func (token *Token) ApiCtx() context.Context {
 // 		token._objects.Equals(token2._objects)
 // }
 
-func (token *Token) GetObjects() (objects CryptoObjects, err error) {
-	if token._objects != nil {
-		objects = token._objects
-		return
+func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
+	if objects := token.GetObjectsByID(keyID); objects != nil {
+		return objects, nil
 	}
-	keys, r, e := App.Api.KeysGet(token.ApiCtx()).Execute()
-	if e != nil {
-		err = NewAPIError("token.GetObjects", "KeysGet", r, e)
-		return
+	key, r, err := App.Api.KeysKeyIDGet(token.ApiCtx(), keyID).Execute()
+	if err != nil {
+		err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
+		return nil, err
 	}
-	for _, k := range keys {
-		keyID := k.GetKey()
-		key, r, e := App.Api.KeysKeyIDGet(token.ApiCtx(), keyID).Execute()
-		if e != nil {
-			err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, e)
-			return
-		}
-		object := CryptoObject{}
-		object.Type = TokenObject
-		object.Handle = nextObjectHandle()
-		object.Attributes = Attributes{}
+	object := &CryptoObject{}
+	// object.Type = TokenObject
+	object.Handle = nextObjectHandle()
+	object.ID = keyID
+	object.Attributes = Attributes{}
+	object.Attributes.Set(
+		&Attribute{C.CKA_LABEL, []byte(keyID)},
+		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
+		&Attribute{C.CKA_ID, []byte(keyID)},
+		&Attribute{C.CKA_SUBJECT, nil},
+		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
+		&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
+		&Attribute{C.CKA_PRIVATE, boolToArr(C.CK_TRUE)},
+		&Attribute{C.CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
+		&Attribute{C.CKA_TOKEN, boolToArr(C.CK_TRUE)},
+		&Attribute{C.CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
+		&Attribute{C.CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
+		&Attribute{C.CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
+		&Attribute{C.CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
+		&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
+	)
+	switch key.Algorithm {
+	case api.KEYALGORITHM_RSA:
 		object.Attributes.Set(
-			&Attribute{C.CKA_LABEL, []byte(keyID)},
-			&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-			&Attribute{C.CKA_ID, []byte(keyID)},
-			&Attribute{C.CKA_SUBJECT, nil},
-			&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
-			&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_PRIVATE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_TOKEN, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
+			&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_DECRYPT, []byte{C.CK_TRUE}},
+			&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
+			&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
 		)
-		switch key.Algorithm {
-		case api.KEYALGORITHM_RSA:
-			object.Attributes.Set(
-				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
-				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_DECRYPT, []byte{C.CK_TRUE}},
-				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
-				&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
-			)
-		case api.KEYALGORITHM_ED25519:
-			object.Attributes.Set(
-				&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
-				&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_DECRYPT, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-				&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-				&Attribute{C.CKA_EC_POINT, []byte(key.Key.GetData())},
-			)
-		}
-		token.AddObject(&object)
+	case api.KEYALGORITHM_ED25519:
+		object.Attributes.Set(
+			&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
+			&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_DECRYPT, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+			&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+			&Attribute{C.CKA_EC_POINT, []byte(key.Key.GetData())},
+		)
 	}
-	objects = token._objects
-	return
+	token.AddObject(object)
+	return CryptoObjects{object}, nil
+}
+
+func (token *Token) FetchKeyIDs() ([]string, error) {
+	if token.keyIDs == nil {
+		keys, r, err := App.Api.KeysGet(token.ApiCtx()).Execute()
+		if err != nil {
+			err = NewAPIError("token.FetchKeyIDs", "KeysGet", r, err)
+			return nil, err
+		}
+		var ids []string
+		for _, k := range keys {
+			ids = append(ids, k.GetKey())
+		}
+		token.Lock()
+		token.keyIDs = ids
+		token.Unlock()
+	}
+	return token.keyIDs, nil
+}
+
+func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
+	if keyID != "" {
+		return token.FetchObjectsByID(keyID)
+	}
+	if !token.fetchedAll {
+		keyIDs, err := token.FetchKeyIDs()
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range keyIDs {
+			_, err := token.FetchObjectsByID(id)
+			if err != nil {
+				return nil, err
+			}
+		}
+		token.Lock()
+		token.fetchedAll = true
+		token.Unlock()
+	}
+	return token._objects, nil
 }
 
 func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
@@ -190,9 +223,8 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	info.firmwareVersion.minor = 1
 
 	now := time.Now()
-	cTimeStr := C.CString(now.Format("20060102150405") + "00")
-	defer C.free(unsafe.Pointer(cTimeStr))
-	C.memcpy(unsafe.Pointer(&info.utcTime[0]), unsafe.Pointer(cTimeStr), 16)
+	timeStr := []byte(now.Format("20060102150405") + "00")
+	C.memcpy(unsafe.Pointer(&info.utcTime[0]), unsafe.Pointer(&timeStr[0]), 16)
 
 	return nil
 }
@@ -302,7 +334,19 @@ func (token *Token) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, error) 
 			return object, nil
 		}
 	}
-	return nil, NewError("Token.GetObject", fmt.Sprintf("object not found with id %v", handle), C.CKR_OBJECT_HANDLE_INVALID)
+	return nil, NewError("Token.GetObject", fmt.Sprintf("object not found with handle %v", handle), C.CKR_OBJECT_HANDLE_INVALID)
+}
+
+func (token *Token) GetObjectsByID(keyID string) CryptoObjects {
+	token.Lock()
+	defer token.Unlock()
+	var objects CryptoObjects
+	for _, object := range token._objects {
+		if object.ID == keyID {
+			objects = append(objects, object)
+		}
+	}
+	return objects
 }
 
 // Deletes an object from its list, but doesn't save it.

@@ -10,47 +10,39 @@ import (
 	"unsafe"
 )
 
-// CryptoObjectType represents a type of cryptoObject.
-type CryptoObjectType int
-
-const (
-	SessionObject CryptoObjectType = iota
-	TokenObject
-)
-
 // A cryptoObject related to a token.
 type CryptoObject struct {
 	Handle     C.CK_OBJECT_HANDLE // Object's handle
-	Type       CryptoObjectType   // Object type
-	Attributes Attributes         // List of attributes of the object.
+	ID         string
+	Attributes Attributes // List of attributes of the object.
 }
 
 // A map of cryptoobjects
 type CryptoObjects []*CryptoObject
 
 // Transforms a C version of a cryptoobject in a CryptoObject Golang struct.
-func CToCryptoObject(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (*CryptoObject, error) {
-	attrMap, err := CToAttributes(pAttributes, ulCount)
-	if err != nil {
-		return nil, err
-	}
-	var coType CryptoObjectType
-	tokenAttr, ok := attrMap[C.CKA_TOKEN]
-	if !ok {
-		return nil, NewError("CToCryptoObject", "Token attribute not found", C.CKR_ATTRIBUTE_VALUE_INVALID)
-	}
-	isToken := C.CK_BBOOL(tokenAttr.Value[0])
-	if isToken == C.CK_FALSE {
-		coType = SessionObject
-	} else {
-		coType = TokenObject
-	}
-	object := &CryptoObject{
-		Type:       coType,
-		Attributes: attrMap,
-	}
-	return object, nil
-}
+// func CToCryptoObject(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (*CryptoObject, error) {
+// 	attrMap, err := CToAttributes(pAttributes, ulCount)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var coType CryptoObjectType
+// 	tokenAttr, ok := attrMap[C.CKA_TOKEN]
+// 	if !ok {
+// 		return nil, NewError("CToCryptoObject", "Token attribute not found", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 	}
+// 	isToken := C.CK_BBOOL(tokenAttr.Value[0])
+// 	if isToken == C.CK_FALSE {
+// 		coType = SessionObject
+// 	} else {
+// 		coType = TokenObject
+// 	}
+// 	object := &CryptoObject{
+// 		Type:       coType,
+// 		Attributes: attrMap,
+// 	}
+// 	return object, nil
+// }
 
 // Equals returns true if the maps of crypto objects are equal.
 func (objects CryptoObjects) Equals(objects2 CryptoObjects) bool {

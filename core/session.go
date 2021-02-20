@@ -186,20 +186,27 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		log.Debugf("0x%x: %v", k, v)
 	}
 
-	if len(attrs) == 0 {
-		objects, err := token.GetObjects()
-		if err != nil {
-			return err
+	var id string
+	for k, v := range attrs {
+		if k == C.CKA_ID {
+			id = string(v.Value)
+			break
 		}
+		if k == C.CKA_LABEL {
+			id = string(v.Value)
+		}
+	}
+	objects, err := token.FetchObjects(id)
+	if err != nil {
+		return err
+	}
+
+	if len(attrs) == 0 {
 		session.foundObjects = make([]C.CK_OBJECT_HANDLE, len(objects))
 		for i, object := range objects {
 			session.foundObjects[i] = object.Handle
 		}
 	} else {
-		objects, err := token.GetObjects()
-		if err != nil {
-			return err
-		}
 		session.foundObjects = nil
 		for _, object := range objects {
 			if object.Match(attrs) {
