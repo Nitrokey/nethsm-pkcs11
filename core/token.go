@@ -38,6 +38,7 @@ type Token struct {
 	tokenFlags uint64
 	loginData  *loginData
 	slot       *Slot
+	info       *api.InfoData
 }
 
 // Creates a new token, but doesn't store it.
@@ -182,19 +183,19 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 		return NewError("token.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
 	info := (*C.CK_TOKEN_INFO)(unsafe.Pointer(pInfo))
-	C.memset(unsafe.Pointer(&info.label[0]), ' ', 32)
 
-	cLabel := C.CBytes([]byte(token.Label))
-	defer C.free(unsafe.Pointer(cLabel))
-	C.memcpy(unsafe.Pointer(&info.label[0]), cLabel, C.CK_ULONG(len(token.Label)))
+	str2Buf(token.Label, info.label[:])
 
 	if token.slot == nil {
 		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", C.CKR_ARGUMENTS_BAD)
 	}
 
-	apiInfo, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
-	if err != nil {
-		return NewAPIError("token.GetInfo", "InfoGet", r, err)
+	if token.info == nil {
+		info, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
+		if err != nil {
+			return NewAPIError("token.GetInfo", "InfoGet", r, err)
+		}
+		token.info = &info
 	}
 
 	// apiSystemInfo, r, err := App.Service.SystemInfoGet(token.slot.ctx).Execute()
@@ -202,8 +203,8 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	// 	return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
 	// }
 
-	str2Buf(apiInfo.Vendor, info.manufacturerID[:])
-	str2Buf(apiInfo.Product, info.model[:])
+	str2Buf(token.info.Vendor, info.manufacturerID[:])
+	str2Buf(token.info.Product, info.model[:])
 	str2Buf(serialNumber, info.serialNumber[:])
 
 	info.flags = C.CK_ULONG(token.tokenFlags)
