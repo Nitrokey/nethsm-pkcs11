@@ -790,6 +790,7 @@ func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, 
 func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
 	ulEncryptedDataLen C.CK_ULONG, pData C.CK_BYTE_PTR,
 	pulDataLen C.CK_ULONG_PTR) C.CK_RV {
+	log.Debugf("Called: C_Decrypt")
 	if App == nil {
 		return C.CKR_CRYPTOKI_NOT_INITIALIZED
 	}

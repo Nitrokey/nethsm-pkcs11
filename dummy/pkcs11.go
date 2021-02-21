@@ -271,8 +271,6 @@ func C_GenerateRandom(hSession C.CK_SESSION_HANDLE, pRandomData C.CK_BYTE_PTR, u
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
-// NOTE: Not implemented functions...
-
 //export C_GetMechanismList
 func C_GetMechanismList(C.CK_SLOT_ID, C.CK_MECHANISM_TYPE_PTR, C.CK_ULONG_PTR) C.CK_RV {
 	log.Printf("Called: C_GetMechanismList")
@@ -342,6 +340,7 @@ func C_DecryptInit(C.CK_SESSION_HANDLE, C.CK_MECHANISM_PTR, C.CK_OBJECT_HANDLE) 
 //export C_Decrypt
 func C_Decrypt(C.CK_SESSION_HANDLE, C.CK_BYTE_PTR, C.CK_ULONG,
 	C.CK_BYTE_PTR, C.CK_ULONG_PTR) C.CK_RV {
+	log.Printf("Called: C_Decrypt")
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
