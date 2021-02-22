@@ -27,9 +27,9 @@ type CryptoObjects []*CryptoObject
 // 		return nil, err
 // 	}
 // 	var coType CryptoObjectType
-// 	tokenAttr, ok := attrMap[C.CKA_TOKEN]
+// 	tokenAttr, ok := attrMap[CKA_TOKEN]
 // 	if !ok {
-// 		return nil, NewError("CToCryptoObject", "Token attribute not found", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 		return nil, NewError("CToCryptoObject", "Token attribute not found", CKR_ATTRIBUTE_VALUE_INVALID)
 // 	}
 // 	isToken := C.CK_BBOOL(tokenAttr.Value[0])
 // 	if isToken == C.CK_FALSE {
@@ -99,7 +99,7 @@ func (object *CryptoObject) FindAttribute(attrType C.CK_ATTRIBUTE_TYPE) *Attribu
 // Copies the attributes of an object to a C pointer.
 func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) error {
 	if pTemplate == nil {
-		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
@@ -122,7 +122,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 		}
 	}
 	if missingAttr {
-		return NewError("CopyAttributes", "Some attributes were missing", C.CKR_ATTRIBUTE_TYPE_INVALID)
+		return NewError("CopyAttributes", "Some attributes were missing", CKR_ATTRIBUTE_TYPE_INVALID)
 	}
 	return nil
 }
@@ -130,7 +130,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 // Copies the attributes of an object to a C pointer.
 // func (object *CryptoObject) EditAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG, session *Session) error {
 // 	if pTemplate == nil {
-// 		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 	}
 // 	templateSlice := (*[1 << 30]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 

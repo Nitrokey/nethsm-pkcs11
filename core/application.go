@@ -85,11 +85,11 @@ func NewApplication() (*Application, error) {
 		if e == nil && r.StatusCode < 300 {
 			token, err := NewToken(slotConf.Label)
 			if err != nil {
-				err = NewError("NewApplication", err.Error(), C.CKR_DEVICE_ERROR)
+				err = NewError("NewApplication", err.Error(), CKR_DEVICE_ERROR)
 				return nil, err
 			}
 			if password == "" {
-				token.tokenFlags |= C.CKF_LOGIN_REQUIRED
+				token.tokenFlags |= CKF_LOGIN_REQUIRED
 			}
 			slot.InsertToken(token)
 		}
@@ -104,7 +104,7 @@ func (app *Application) GetSessionSlot(handle C.CK_SESSION_HANDLE) (*Slot, error
 			return slot, nil
 		}
 	}
-	return nil, NewError("Application.GetSessionSlot", "session not found", C.CKR_SESSION_HANDLE_INVALID)
+	return nil, NewError("Application.GetSessionSlot", "session not found", CKR_SESSION_HANDLE_INVALID)
 }
 
 // GetSession returns the session object related to a given handle.
@@ -123,7 +123,7 @@ func (app *Application) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error)
 // GetSlot returns the slot with the given ID.
 func (app *Application) GetSlot(id C.CK_SLOT_ID) (*Slot, error) {
 	if int(id) >= len(app.Slots) {
-		return nil, NewError("Application.GetSlot", "index out of bounds", C.CKR_SLOT_ID_INVALID)
+		return nil, NewError("Application.GetSlot", "index out of bounds", CKR_SLOT_ID_INVALID)
 	}
 	return app.Slots[int(id)], nil
 }

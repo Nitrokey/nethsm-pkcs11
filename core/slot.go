@@ -35,7 +35,7 @@ func (slot *Slot) IsTokenPresent() bool {
 // OpenSession opens a new session with given flags.
 func (slot *Slot) OpenSession(flags C.CK_FLAGS) (C.CK_SESSION_HANDLE, error) {
 	if !slot.IsTokenPresent() {
-		return 0, NewError("Slot.OpenSession", "token not present", C.CKR_TOKEN_NOT_PRESENT)
+		return 0, NewError("Slot.OpenSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
 	session := NewSession(flags, slot)
 	handle := session.Handle
@@ -48,7 +48,7 @@ func (slot *Slot) OpenSession(flags C.CK_FLAGS) (C.CK_SESSION_HANDLE, error) {
 // CloseSession closes the session identified by the given handle.
 func (slot *Slot) CloseSession(handle C.CK_SESSION_HANDLE) error {
 	if !slot.IsTokenPresent() {
-		return NewError("Slot.CloseSession", "token not present", C.CKR_TOKEN_NOT_PRESENT)
+		return NewError("Slot.CloseSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
 	if _, err := slot.GetSession(handle); err != nil {
 		return err
@@ -68,12 +68,12 @@ func (slot *Slot) CloseAllSessions() {
 // GetSession returns an active session with the given handle.
 func (slot *Slot) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error) {
 	if !slot.IsTokenPresent() {
-		return nil, NewError("Slot.GetSession", "token not present", C.CKR_TOKEN_NOT_PRESENT)
+		return nil, NewError("Slot.GetSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
 	slot.Lock()
 	defer slot.Unlock()
 	if session, ok := slot.Sessions[handle]; !ok {
-		return nil, NewError("Slot.CloseSession", fmt.Sprintf("session handle '%v' doesn't exist in this slot", handle), C.CKR_SESSION_HANDLE_INVALID)
+		return nil, NewError("Slot.CloseSession", fmt.Sprintf("session handle '%v' doesn't exist in this slot", handle), CKR_SESSION_HANDLE_INVALID)
 	} else {
 		return session, nil
 	}
@@ -90,7 +90,7 @@ func (slot *Slot) HasSession(handle C.CK_SESSION_HANDLE) bool {
 // GetInfo returns the slot info.
 func (slot *Slot) GetInfo(pInfo C.CK_SLOT_INFO_PTR) error {
 	if pInfo == nil {
-		return NewError("Slot.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("Slot.GetInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 	info := (*C.CK_SLOT_INFO)(unsafe.Pointer(pInfo))
 
@@ -101,9 +101,9 @@ func (slot *Slot) GetInfo(pInfo C.CK_SLOT_INFO_PTR) error {
 	str2Buf(description, info.slotDescription[:])
 	str2Buf(libManufacturerID, info.manufacturerID[:])
 
-	slot.flags = C.CKF_REMOVABLE_DEVICE
+	slot.flags = CKF_REMOVABLE_DEVICE
 	if slot.token != nil {
-		slot.flags |= C.CKF_TOKEN_PRESENT
+		slot.flags |= CKF_TOKEN_PRESENT
 	}
 
 	pInfo.flags = C.CK_ULONG(slot.flags)
@@ -119,7 +119,7 @@ func (slot *Slot) GetToken() (*Token, error) {
 	if slot.IsTokenPresent() {
 		return slot.token, nil
 	} else {
-		return nil, NewError("Slot.GetToken", "token not present", C.CKR_TOKEN_NOT_PRESENT)
+		return nil, NewError("Slot.GetToken", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
 }
 

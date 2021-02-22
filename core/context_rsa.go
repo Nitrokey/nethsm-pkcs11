@@ -151,11 +151,11 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 // 	}
 // 	rsaPK, ok := pubKey.(*rsa.PublicKey)
 // 	if !ok {
-// 		return NewError("verifyRSA", "public key invalid for this type of signature", C.CKR_ARGUMENTS_BAD)
+// 		return NewError("verifyRSA", "public key invalid for this type of signature", CKR_ARGUMENTS_BAD)
 
 // 	}
 // 	switch mechanism.Type {
-// 	case C.CKM_RSA_PKCS, C.CKM_MD5_RSA_PKCS, C.CKM_SHA1_RSA_PKCS, C.CKM_SHA256_RSA_PKCS, C.CKM_SHA384_RSA_PKCS, C.CKM_SHA512_RSA_PKCS:
+// 	case CKM_RSA_PKCS, CKM_MD5_RSA_PKCS, CKM_SHA1_RSA_PKCS, CKM_SHA256_RSA_PKCS, CKM_SHA384_RSA_PKCS, CKM_SHA512_RSA_PKCS:
 // 		if hashType == crypto.Hash(0) {
 // 			hash = data
 // 		} else {
@@ -167,9 +167,9 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 // 			hash = hashFunc.Sum(nil)
 // 		}
 // 		if err = rsa.VerifyPKCS1v15(rsaPK, hashType, hash, signature); err != nil {
-// 			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
+// 			return NewError("verifyRSA", "invalid signature", CKR_SIGNATURE_INVALID)
 // 		}
-// 	case C.CKM_SHA1_RSA_PKCS_PSS, C.CKM_SHA256_RSA_PKCS_PSS, C.CKM_SHA384_RSA_PKCS_PSS, C.CKM_SHA512_RSA_PKCS_PSS:
+// 	case CKM_SHA1_RSA_PKCS_PSS, CKM_SHA256_RSA_PKCS_PSS, CKM_SHA384_RSA_PKCS_PSS, CKM_SHA512_RSA_PKCS_PSS:
 // 		hashFunc := hashType.New()
 // 		_, err = hashFunc.Write(data)
 // 		if err != nil {
@@ -177,10 +177,10 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 // 		}
 // 		hash = hashFunc.Sum(nil)
 // 		if err = rsa.VerifyPSS(rsaPK, hashType, hash, signature, nil); err != nil {
-// 			return NewError("verifyRSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
+// 			return NewError("verifyRSA", "invalid signature", CKR_SIGNATURE_INVALID)
 // 		}
 // 	default:
-// 		err = NewError("verifyRSA", "mechanism not supported yet for verifying", C.CKR_MECHANISM_INVALID)
+// 		err = NewError("verifyRSA", "mechanism not supported yet for verifying", CKR_MECHANISM_INVALID)
 // 		return
 // 	}
 // 	return
@@ -193,38 +193,38 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 
 // 	// encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
 // 	// if err != nil {
-// 	// 	return nil, NewError("Session.createRSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+// 	// 	return nil, NewError("Session.createRSAPublicKey", fmt.Sprintf("%s", err.Error()), CKR_ARGUMENTS_BAD)
 // 	// }
 
 // 	// This fields are defined in SoftHSM implementation
 // 	pkAttrs.SetIfUndefined(
-// 		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PUBLIC_KEY)},
-// 		&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
-// 		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CKM_RSA_PKCS_KEY_PAIR_GEN)},
-// 		&Attribute{C.CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_CLASS, ulongToArr(CKO_PUBLIC_KEY)},
+// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
+// 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_RSA_PKCS_KEY_PAIR_GEN)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
 
 // 		// This fields are our defaults
-// 		&Attribute{C.CKA_LABEL, nil},
-// 		&Attribute{C.CKA_ID, nil},
-// 		&Attribute{C.CKA_SUBJECT, nil},
-// 		&Attribute{C.CKA_PRIVATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_DERIVE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_ENCRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_VERIFY, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_VERIFY_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_WRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TRUSTED, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_START_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_END_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_MODULUS_BITS, nil},
-// 		&Attribute{C.CKA_PUBLIC_EXPONENT, eBytes},
+// 		&Attribute{CKA_LABEL, nil},
+// 		&Attribute{CKA_ID, nil},
+// 		&Attribute{CKA_SUBJECT, nil},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_ENCRYPT, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_VERIFY, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_VERIFY_RECOVER, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_WRAP, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TRUSTED, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_START_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_END_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_MODULUS_BITS, nil},
+// 		&Attribute{CKA_PUBLIC_EXPONENT, eBytes},
 // 	)
 
 // 	pkAttrs.Set(
 // 		// E and N from PK
-// 		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
+// 		&Attribute{CKA_MODULUS, key.N.Bytes()},
 
 // 		// Custom Fields
 // 		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
@@ -241,44 +241,44 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 
 // 	// encodedKeyMeta, err := message.EncodeRSAKeyMeta(keyMeta)
 // 	// if err != nil {
-// 	// 	return nil, NewError("Session.createRSAPrivateKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+// 	// 	return nil, NewError("Session.createRSAPrivateKey", fmt.Sprintf("%s", err.Error()), CKR_ARGUMENTS_BAD)
 // 	// }
 
 // 	// This fields are defined in SoftHSM implementation
 // 	skAttrs.SetIfUndefined(
-// 		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-// 		&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
-// 		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CKM_RSA_PKCS_KEY_PAIR_GEN)},
-// 		&Attribute{C.CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
+// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
+// 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_RSA_PKCS_KEY_PAIR_GEN)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
 
 // 		// This fields are our defaults
-// 		&Attribute{C.CKA_LABEL, nil},
-// 		&Attribute{C.CKA_ID, nil},
-// 		&Attribute{C.CKA_SUBJECT, nil},
-// 		&Attribute{C.CKA_PRIVATE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_DERIVE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_LABEL, nil},
+// 		&Attribute{CKA_ID, nil},
+// 		&Attribute{CKA_SUBJECT, nil},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
 
-// 		&Attribute{C.CKA_WRAP_WITH_TRUSTED, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_ALWAYS_AUTHENTICATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_ALWAYS_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_DECRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_SIGN, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_SIGN_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_UNWRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_EXTRACTABLE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_WRAP_WITH_TRUSTED, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_AUTHENTICATE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_SENSITIVE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_SENSITIVE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_DECRYPT, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_SIGN, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_SIGN_RECOVER, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_UNWRAP, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_EXTRACTABLE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
 
-// 		&Attribute{C.CKA_START_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_END_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_PUBLIC_EXPONENT, eBytes},
+// 		&Attribute{CKA_START_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_END_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_PUBLIC_EXPONENT, eBytes},
 // 	)
 
 // 	skAttrs.Set(
 // 		// E and N from PK
-// 		&Attribute{C.CKA_MODULUS, key.N.Bytes()},
+// 		&Attribute{CKA_MODULUS, key.N.Bytes()},
 
 // 		// Custom Fields
 // 		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},

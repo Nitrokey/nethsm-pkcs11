@@ -44,16 +44,16 @@ type Token struct {
 // Creates a new token, but doesn't store it.
 func NewToken(label string) (*Token, error) {
 	if len(label) > 32 {
-		return nil, NewError("objects.NewToken", "Label with more than 32 chars", C.CKR_ARGUMENTS_BAD)
+		return nil, NewError("objects.NewToken", "Label with more than 32 chars", CKR_ARGUMENTS_BAD)
 	}
 	newToken := &Token{
 		Label: label,
-		tokenFlags: C.CKF_RNG |
-			C.CKF_WRITE_PROTECTED |
-			// C.CKF_LOGIN_REQUIRED |
-			// C.CKF_PROTECTED_AUTHENTICATION_PATH |
-			C.CKF_USER_PIN_INITIALIZED |
-			C.CKF_TOKEN_INITIALIZED,
+		tokenFlags: CKF_RNG |
+			CKF_WRITE_PROTECTED |
+			// CKF_LOGIN_REQUIRED |
+			// CKF_PROTECTED_AUTHENTICATION_PATH |
+			CKF_USER_PIN_INITIALIZED |
+			CKF_TOKEN_INITIALIZED,
 	}
 	return newToken, nil
 }
@@ -94,44 +94,44 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	object.ID = keyID
 	object.Attributes = Attributes{}
 	object.Attributes.Set(
-		&Attribute{C.CKA_LABEL, []byte(keyID)},
-		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-		&Attribute{C.CKA_ID, []byte(keyID)},
-		&Attribute{C.CKA_SUBJECT, nil},
-		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
-		&Attribute{C.CKA_LOCAL, boolToArr(C.CK_FALSE)},
-		&Attribute{C.CKA_PRIVATE, boolToArr(C.CK_TRUE)},
-		&Attribute{C.CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
-		&Attribute{C.CKA_TOKEN, boolToArr(C.CK_TRUE)},
-		&Attribute{C.CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
-		&Attribute{C.CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
-		&Attribute{C.CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
-		&Attribute{C.CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
-		&Attribute{C.CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_LABEL, []byte(keyID)},
+		&Attribute{CKA_CLASS, ulongToArr(uint64(CKO_PRIVATE_KEY))},
+		&Attribute{CKA_ID, []byte(keyID)},
+		&Attribute{CKA_SUBJECT, nil},
+		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
+		&Attribute{CKA_LOCAL, boolToArr(C.CK_FALSE)},
+		&Attribute{CKA_PRIVATE, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
+		&Attribute{CKA_TOKEN, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
+		&Attribute{CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
+		&Attribute{CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
 	)
 	switch key.Algorithm {
 	case api.KEYALGORITHM_RSA:
 		object.Attributes.Set(
-			&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_RSA)},
-			&Attribute{C.CKA_DERIVE, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_DECRYPT, []byte{C.CK_TRUE}},
-			&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_MODULUS, []byte(key.Key.GetModulus())},
-			&Attribute{C.CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
+			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
+			&Attribute{CKA_DERIVE, boolToArr(C.CK_FALSE)},
+			&Attribute{CKA_DECRYPT, []byte{C.CK_TRUE}},
+			&Attribute{CKA_SIGN, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_MODULUS, []byte(key.Key.GetModulus())},
+			&Attribute{CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
 		)
 	case api.KEYALGORITHM_ED25519:
 		object.Attributes.Set(
-			&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
-			&Attribute{C.CKA_DERIVE, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_DECRYPT, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_SIGN, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-			&Attribute{C.CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-			&Attribute{C.CKA_EC_POINT, []byte(key.Key.GetData())},
+			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
+			&Attribute{CKA_DERIVE, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_DECRYPT, boolToArr(C.CK_FALSE)},
+			&Attribute{CKA_SIGN, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+			&Attribute{CKA_EC_POINT, []byte(key.Key.GetData())},
 		)
 	}
 	token.AddObject(object)
@@ -180,14 +180,14 @@ func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
 
 func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	if pInfo == nil {
-		return NewError("token.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("token.GetInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 	info := (*C.CK_TOKEN_INFO)(unsafe.Pointer(pInfo))
 
 	str2Buf(token.Label, info.label[:])
 
 	if token.slot == nil {
-		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", C.CKR_ARGUMENTS_BAD)
+		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", CKR_ARGUMENTS_BAD)
 	}
 
 	if token.info == nil {
@@ -240,7 +240,7 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 // 	// if token.Pin == pin {
 // 	return User, nil
 // 	// } else {
-// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", C.CKR_PIN_INCORRECT)
+// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", CKR_PIN_INCORRECT)
 // 	// }
 // }
 
@@ -249,7 +249,7 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 // 	// if token.SoPin == pin {
 // 	return User, nil
 // 	// } else {
-// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", C.CKR_PIN_INCORRECT)
+// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", CKR_PIN_INCORRECT)
 // 	// }
 // }
 
@@ -258,7 +258,7 @@ func (token *Token) CheckUserPin(pin string) error {
 	_, r, err := App.Api.KeysGet(authCtx).Execute()
 	if err != nil {
 		if r.StatusCode == 401 {
-			return NewError("Login", "Authorization failed", C.CKR_PIN_INCORRECT)
+			return NewError("Login", "Authorization failed", CKR_PIN_INCORRECT)
 		}
 		return NewAPIError("Login", "Login failed", r, err)
 	}
@@ -267,24 +267,24 @@ func (token *Token) CheckUserPin(pin string) error {
 
 // Logs into the token, or returns an error if something goes wrong.
 func (token *Token) Login(userType C.CK_USER_TYPE, pin string) error {
-	if userType != C.CKU_CONTEXT_SPECIFIC && token.loginData != nil &&
+	if uint(userType) != CKU_CONTEXT_SPECIFIC && token.loginData != nil &&
 		token.loginData.userType == userType {
-		return NewError("token.Login", "another user already logged in", C.CKR_USER_ALREADY_LOGGED_IN)
+		return NewError("token.Login", "another user already logged in", CKR_USER_ALREADY_LOGGED_IN)
 	}
 
-	switch userType {
-	case C.CKU_USER:
+	switch uint(userType) {
+	case CKU_USER:
 		err := token.CheckUserPin(pin)
 		if err != nil {
 			return err
 		}
-	case C.CKU_SO:
-		return NewError("token.Login", "CKU_SO not supperted", C.CKR_USER_TYPE_INVALID)
-	case C.CKU_CONTEXT_SPECIFIC:
-		return NewError("token.Login", "CKU_CONTEXT_SPECIFIC not supperted", C.CKR_USER_TYPE_INVALID)
+	case CKU_SO:
+		return NewError("token.Login", "CKU_SO not supperted", CKR_USER_TYPE_INVALID)
+	case CKU_CONTEXT_SPECIFIC:
+		return NewError("token.Login", "CKU_CONTEXT_SPECIFIC not supperted", CKR_USER_TYPE_INVALID)
 		// switch token.userType {
 		// case Public:
-		// 	return NewError("token.Login", "Bad userType", C.CKR_OPERATION_NOT_INITIALIZED)
+		// 	return NewError("token.Login", "Bad userType", CKR_OPERATION_NOT_INITIALIZED)
 		// case User:
 		// 	securityLevel, err := token.CheckUserPin(pin)
 		// 	if err != nil {
@@ -300,7 +300,7 @@ func (token *Token) Login(userType C.CK_USER_TYPE, pin string) error {
 
 		// }
 	default:
-		return NewError("token.Login", "Bad userType", C.CKR_USER_TYPE_INVALID)
+		return NewError("token.Login", "Bad userType", CKR_USER_TYPE_INVALID)
 	}
 	var loginData loginData
 	loginData.userType = userType
@@ -335,7 +335,7 @@ func (token *Token) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, error) 
 			return object, nil
 		}
 	}
-	return nil, NewError("Token.GetObject", fmt.Sprintf("object not found with handle %v", handle), C.CKR_OBJECT_HANDLE_INVALID)
+	return nil, NewError("Token.GetObject", fmt.Sprintf("object not found with handle %v", handle), CKR_OBJECT_HANDLE_INVALID)
 }
 
 func (token *Token) GetObjectsByID(keyID string) CryptoObjects {
@@ -362,7 +362,7 @@ func (token *Token) GetObjectsByID(keyID string) CryptoObjects {
 // 		}
 // 	}
 // 	if objPos == -1 {
-// 		return NewError("Token.DeleteObject", fmt.Sprintf("object not found with id %v", handle), C.CKR_OBJECT_HANDLE_INVALID)
+// 		return NewError("Token.DeleteObject", fmt.Sprintf("object not found with id %v", handle), CKR_OBJECT_HANDLE_INVALID)
 // 	}
 // 	token._objects = append(token._objects[:objPos], token._objects[objPos+1:]...)
 // 	return nil

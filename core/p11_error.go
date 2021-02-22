@@ -21,7 +21,7 @@ type P11Error struct {
 // NewError returns a new error. with the provided parameters.
 func NewError(who, description string, code C.CK_RV) P11Error {
 	if code == C.CK_RV(0) {
-		code = C.CKR_GENERAL_ERROR
+		code = CKR_GENERAL_ERROR
 	}
 	return P11Error{
 		Who:         who,
@@ -36,9 +36,9 @@ func NewAPIError(who, f string, r *http.Response, err error) P11Error {
 	desc += fmt.Sprintf("HTTP request: %+v\n", r.Request)
 	desc += fmt.Sprintf("HTTP response: %+v\n", r)
 	if r.StatusCode == 401 {
-		return NewError(who, desc, C.CKR_PIN_INCORRECT)
+		return NewError(who, desc, CKR_PIN_INCORRECT)
 	}
-	return NewError(who, desc, C.CKR_DEVICE_ERROR)
+	return NewError(who, desc, CKR_DEVICE_ERROR)
 }
 
 func (err P11Error) Error() string {

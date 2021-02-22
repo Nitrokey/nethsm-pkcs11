@@ -112,10 +112,10 @@ import "C"
 // 	}
 // 	ecdsaPK, ok := pubKey.(*ecdsa.PublicKey)
 // 	if !ok {
-// 		return NewError("verifyECDSA", "public key invalid for this type of signature", C.CKR_ARGUMENTS_BAD)
+// 		return NewError("verifyECDSA", "public key invalid for this type of signature", CKR_ARGUMENTS_BAD)
 // 	}
 // 	switch mechanism.Type {
-// 	case C.CKM_ECDSA, C.CKM_ECDSA_SHA1, C.CKM_ECDSA_SHA256, C.CKM_ECDSA_SHA384, C.CKM_ECDSA_SHA512:
+// 	case CKM_ECDSA, CKM_ECDSA_SHA1, CKM_ECDSA_SHA256, CKM_ECDSA_SHA384, CKM_ECDSA_SHA512:
 // 		if hashType == crypto.Hash(0) {
 // 			hash = data
 // 		} else {
@@ -133,10 +133,10 @@ import "C"
 // 		r := big.NewInt(0).SetBytes(signature[:len(signature)/2])
 // 		s := big.NewInt(0).SetBytes(signature[len(signature)/2:])
 // 		if !ecdsa.Verify(ecdsaPK, hash, r, s) {
-// 			return NewError("verifyECDSA", "invalid signature", C.CKR_SIGNATURE_INVALID)
+// 			return NewError("verifyECDSA", "invalid signature", CKR_SIGNATURE_INVALID)
 // 		}
 // 	default:
-// 		err = NewError("verifyECDSA", "mechanism not supported yet for verifying", C.CKR_MECHANISM_INVALID)
+// 		err = NewError("verifyECDSA", "mechanism not supported yet for verifying", CKR_MECHANISM_INVALID)
 // 		return
 // 	}
 // 	return
@@ -146,41 +146,41 @@ import "C"
 
 // 	// encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
 // 	// if err != nil {
-// 	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+// 	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), CKR_ARGUMENTS_BAD)
 // 	// }
 
 // 	ecPointSerialized, err := utils.PubKeyToASN1Bytes(pk)
 // 	if err != nil {
-// 		return nil, NewError("Session.createECDSAPublicKey", "cannot interpret ec point", C.CKR_ARGUMENTS_BAD)
+// 		return nil, NewError("Session.createECDSAPublicKey", "cannot interpret ec point", CKR_ARGUMENTS_BAD)
 // 	}
 
 // 	// This fields are defined in SoftHSM implementation
 // 	pkAttrs.SetIfUndefined(
-// 		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PUBLIC_KEY)},
-// 		&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
-// 		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CKM_EC_KEY_PAIR_GEN)},
-// 		&Attribute{C.CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_CLASS, ulongToArr(CKO_PUBLIC_KEY)},
+// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
+// 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_EC_KEY_PAIR_GEN)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
 
 // 		// This fields are our defaults
-// 		&Attribute{C.CKA_LABEL, nil},
-// 		&Attribute{C.CKA_ID, nil},
-// 		&Attribute{C.CKA_SUBJECT, nil},
-// 		&Attribute{C.CKA_PRIVATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_DERIVE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_ENCRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_VERIFY, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_VERIFY_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_WRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TRUSTED, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_START_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_END_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_LABEL, nil},
+// 		&Attribute{CKA_ID, nil},
+// 		&Attribute{CKA_SUBJECT, nil},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_ENCRYPT, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_VERIFY, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_VERIFY_RECOVER, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_WRAP, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TRUSTED, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_START_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_END_DATE, make([]byte, 8)},
 // 	)
 
 // 	pkAttrs.Set(
 // 		// ECDSA Public Key
-// 		&Attribute{C.CKA_EC_POINT, ecPointSerialized},
+// 		&Attribute{CKA_EC_POINT, ecPointSerialized},
 
 // 		// Custom fields
 // 		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
@@ -194,46 +194,46 @@ import "C"
 
 // 	// encodedKeyMeta, err := message.EncodeECDSAKeyMeta(keyMeta)
 // 	// if err != nil {
-// 	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), C.CKR_ARGUMENTS_BAD)
+// 	// 	return nil, NewError("Session.createECDSAPublicKey", fmt.Sprintf("%s", err.Error()), CKR_ARGUMENTS_BAD)
 // 	// }
 
 // 	ecPointSerialized, err := utils.PubKeyToASN1Bytes(pk)
 // 	if err != nil {
-// 		return nil, NewError("Session.createECDSAPublicKey", "cannot interpret ec point", C.CKR_ARGUMENTS_BAD)
+// 		return nil, NewError("Session.createECDSAPublicKey", "cannot interpret ec point", CKR_ARGUMENTS_BAD)
 // 	}
 
 // 	// This fields are defined in SoftHSM implementation
 // 	skAttrs.SetIfUndefined(
-// 		&Attribute{C.CKA_CLASS, ulongToArr(C.CKO_PRIVATE_KEY)},
-// 		&Attribute{C.CKA_KEY_TYPE, ulongToArr(C.CKK_EC)},
-// 		&Attribute{C.CKA_KEY_GEN_MECHANISM, ulongToArr(C.CKM_EC_KEY_PAIR_GEN)},
-// 		&Attribute{C.CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
+// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
+// 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_EC_KEY_PAIR_GEN)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
 
 // 		// This fields are our defaults
-// 		&Attribute{C.CKA_LABEL, nil},
-// 		&Attribute{C.CKA_ID, nil},
-// 		&Attribute{C.CKA_SUBJECT, nil},
-// 		&Attribute{C.CKA_PRIVATE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_DERIVE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_LABEL, nil},
+// 		&Attribute{CKA_ID, nil},
+// 		&Attribute{CKA_SUBJECT, nil},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
 
-// 		&Attribute{C.CKA_WRAP_WITH_TRUSTED, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_ALWAYS_AUTHENTICATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_ALWAYS_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_DECRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_SIGN, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_SIGN_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_UNWRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_EXTRACTABLE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{C.CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{C.CKA_START_DATE, make([]byte, 8)},
-// 		&Attribute{C.CKA_END_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_WRAP_WITH_TRUSTED, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_AUTHENTICATE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_SENSITIVE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_SENSITIVE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_DECRYPT, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_SIGN, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_SIGN_RECOVER, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_UNWRAP, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_EXTRACTABLE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_START_DATE, make([]byte, 8)},
+// 		&Attribute{CKA_END_DATE, make([]byte, 8)},
 // 	)
 // 	skAttrs.Set(
 // 		// ECDSA Public Key
-// 		&Attribute{C.CKA_EC_POINT, ecPointSerialized},
+// 		&Attribute{CKA_EC_POINT, ecPointSerialized},
 // 		// Custom Fields
 // 		// &Attribute{AttrTypeKeyHandler, []byte(keyID)},
 // 		// &Attribute{AttrTypeKeyMeta, encodedKeyMeta},

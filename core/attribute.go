@@ -34,7 +34,7 @@ type Attributes map[uint32]*Attribute
 // CToAttributes transform a C pointer of attributes into a Golang Attributes structure.
 func CToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (Attributes, error) {
 	if ulCount <= 0 {
-		return nil, NewError("CToAttributes", "cannot transform: ulcount is not greater than 0", C.CKR_BUFFER_TOO_SMALL)
+		return nil, NewError("CToAttributes", "cannot transform: ulcount is not greater than 0", CKR_BUFFER_TOO_SMALL)
 	}
 
 	cAttrSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pAttributes))[:ulCount:ulCount]
@@ -104,7 +104,7 @@ func (attribute *Attribute) ToC(cDst C.CK_ATTRIBUTE_PTR) error {
 		C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(cValue), cValueLen)
 		C.free(unsafe.Pointer(cValue))
 	} else {
-		return NewError("Attribute.ToC", fmt.Sprintf("Buffer too small: %d, need %d", cDst.ulValueLen, len(attribute.Value)), C.CKR_BUFFER_TOO_SMALL)
+		return NewError("Attribute.ToC", fmt.Sprintf("Buffer too small: %d, need %d", cDst.ulValueLen, len(attribute.Value)), CKR_BUFFER_TOO_SMALL)
 	}
 	return nil
 }
@@ -121,5 +121,5 @@ func (attributes Attributes) GetAttributeByType(cAttr C.CK_ATTRIBUTE_TYPE) (*Att
 	if ok {
 		return attr, nil
 	}
-	return nil, NewError("Attributes.GetAttributeByType", "attribute doesn't exist", C.CKR_ATTRIBUTE_VALUE_INVALID)
+	return nil, NewError("Attributes.GetAttributeByType", "attribute doesn't exist", CKR_ATTRIBUTE_VALUE_INVALID)
 }

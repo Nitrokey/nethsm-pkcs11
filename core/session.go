@@ -60,19 +60,19 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 		return nil
 
 	} else {
-		return NewError("Session.GetSessionInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("Session.GetSessionInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 }
 
 // CreateObject saves an object and sets its handle.
 // func (session *Session) CreateObject(attrs Attributes) (*CryptoObject, error) {
 // 	if attrs == nil {
-// 		return nil, NewError("Session.CreateObject", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		return nil, NewError("Session.CreateObject", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 	}
 
-// 	isTokenAttr, err := attrs.GetAttributeByType(C.CKA_TOKEN)
+// 	isTokenAttr, err := attrs.GetAttributeByType(CKA_TOKEN)
 // 	if err != nil {
-// 		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", C.CKR_ARGUMENTS_BAD)
+// 		return nil, NewError("Session.CreateObject", "CKA_TOKEN attr not defined", CKR_ARGUMENTS_BAD)
 // 	}
 
 // 	isToken := isTokenAttr.Value[0] != 0
@@ -90,50 +90,50 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 // 	}
 // 	token := session.Slot.token
 // 	isPrivate := true
-// 	oClass := C.CK_OBJECT_CLASS(C.CKO_VENDOR_DEFINED)
-// 	keyType := C.CK_KEY_TYPE(C.CKK_VENDOR_DEFINED)
+// 	oClass := C.CK_OBJECT_CLASS(CKO_VENDOR_DEFINED)
+// 	keyType := C.CK_KEY_TYPE(CKK_VENDOR_DEFINED)
 
-// 	privAttr, err := object.Attributes.GetAttributeByType(C.CKA_PRIVATE)
+// 	privAttr, err := object.Attributes.GetAttributeByType(CKA_PRIVATE)
 // 	if err == nil && len(privAttr.Value) > 0 {
 // 		isPrivate = C.CK_BBOOL(privAttr.Value[0]) == C.CK_TRUE
 // 	}
 
-// 	classAttr, err := object.Attributes.GetAttributeByType(C.CKA_CLASS)
+// 	classAttr, err := object.Attributes.GetAttributeByType(CKA_CLASS)
 // 	if err == nil && len(classAttr.Value) > 0 {
 // 		oClass = C.CK_OBJECT_CLASS(classAttr.Value[0])
 // 	}
 
-// 	keyTypeAttr, err := object.Attributes.GetAttributeByType(C.CKA_KEY_TYPE)
+// 	keyTypeAttr, err := object.Attributes.GetAttributeByType(CKA_KEY_TYPE)
 // 	if err == nil && len(classAttr.Value) > 0 {
 // 		keyType = C.CK_KEY_TYPE(keyTypeAttr.Value[0])
 // 	}
 
 // 	if isToken && session.isReadOnly() {
-// 		return nil, NewError("Session.CreateObject", "session is read only", C.CKR_SESSION_READ_ONLY)
+// 		return nil, NewError("Session.CreateObject", "session is read only", CKR_SESSION_READ_ONLY)
 // 	}
 // 	state, err := session.GetState()
 // 	if err != nil {
 // 		return nil, err
 // 	}
 // 	if !GetUserAuthorization(state, isToken, isPrivate, true) {
-// 		return nil, NewError("Session.CreateObject", "user not logged in", C.CKR_USER_NOT_LOGGED_IN)
+// 		return nil, NewError("Session.CreateObject", "user not logged in", CKR_USER_NOT_LOGGED_IN)
 // 	}
 
 // 	switch oClass {
-// 	case C.CKO_PUBLIC_KEY, C.CKO_PRIVATE_KEY:
+// 	case CKO_PUBLIC_KEY, CKO_PRIVATE_KEY:
 // 		switch keyType {
-// 		case C.CKK_RSA, C.CKK_EC:
+// 		case CKK_RSA, CKK_EC:
 // 			token.AddObject(object)
 // 			// err := session.Slot.Application.Storage.SaveToken(token)
 // 			// if err != nil {
-// 			// 	return nil, NewError("Session.CreateObject", err.Error(), C.CKR_DEVICE_ERROR)
+// 			// 	return nil, NewError("Session.CreateObject", err.Error(), CKR_DEVICE_ERROR)
 // 			// }
 // 			return object, nil
 // 		default:
-// 			return nil, NewError("Session.CreateObject", "key type not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 			return nil, NewError("Session.CreateObject", "key type not supported yet", CKR_ATTRIBUTE_VALUE_INVALID)
 // 		}
 // 	}
-// 	return nil, NewError("Session.CreateObject", "object class not supported yet", C.CKR_ATTRIBUTE_VALUE_INVALID)
+// 	return nil, NewError("Session.CreateObject", "object class not supported yet", CKR_ATTRIBUTE_VALUE_INVALID)
 // 	// TODO: Verify if the objects are valid
 // }
 
@@ -147,10 +147,10 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 // 		return err
 // 	} else {
 // 		// Is it secure to allow the server to delete the keys? Suspended by now.
-// 		attr := object.FindAttribute(C.CKA_ID) // Key ID
+// 		attr := object.FindAttribute(CKA_ID) // Key ID
 // 		if attr != nil {
 // 			keyID := string(attr.Value)
-// 			privateAttr := object.FindAttribute(C.CKA_PRIVATE)
+// 			privateAttr := object.FindAttribute(CKA_PRIVATE)
 // 			if privateAttr != nil {
 // 				isPrivate := C.CK_BBOOL(privateAttr.Value[0]) == C.CK_TRUE
 // 				if isPrivate {
@@ -165,7 +165,7 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 // 		_ = token.DeleteObject(hObject)
 // 		// err := session.Slot.Application.Storage.SaveToken(token)
 // 		// if err != nil {
-// 		// 	return NewError("Session.DestroyObject", err.Error(), C.CKR_DEVICE_ERROR)
+// 		// 	return NewError("Session.DestroyObject", err.Error(), CKR_DEVICE_ERROR)
 // 		// }
 // 		return nil
 // 	}
@@ -174,7 +174,7 @@ func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
 // FindObjectsInit initializes a Find Objects Operation. It finds objects that have the attributes provided by the method.
 func (session *Session) FindObjectsInit(attrs Attributes) error {
 	if session.findInitialized {
-		return NewError("Session.FindObjectsInit", "operation already initialized", C.CKR_OPERATION_ACTIVE)
+		return NewError("Session.FindObjectsInit", "operation already initialized", CKR_OPERATION_ACTIVE)
 	}
 	token, err := session.Slot.GetToken()
 	if err != nil {
@@ -188,11 +188,11 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 
 	var id string
 	for k, v := range attrs {
-		if k == C.CKA_ID {
+		if k == CKA_ID {
 			id = string(v.Value)
 			break
 		}
-		if k == C.CKA_LABEL {
+		if k == CKA_LABEL {
 			id = string(v.Value)
 		}
 	}
@@ -223,7 +223,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 // FindObjects returns a number of objects defined in arguments that have been found.
 func (session *Session) FindObjects(maxObjectCount C.CK_ULONG) ([]C.CK_OBJECT_HANDLE, error) {
 	if !session.findInitialized {
-		return nil, NewError("Session.FindObjects", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return nil, NewError("Session.FindObjects", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	limit := len(session.foundObjects)
 	if int(maxObjectCount) < limit {
@@ -237,7 +237,7 @@ func (session *Session) FindObjects(maxObjectCount C.CK_ULONG) ([]C.CK_OBJECT_HA
 // FindObjectsFinal resets the status and finishes the finding objects session.
 func (session *Session) FindObjectsFinal() error {
 	if !session.findInitialized {
-		return NewError("Session.FindObjectsFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return NewError("Session.FindObjectsFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	} else {
 		session.findInitialized = false
 		session.refreshedToken = false
@@ -281,27 +281,27 @@ func (session *Session) GetState() (C.CK_STATE, error) {
 	loginData := session.Slot.token.GetLoginData()
 	if loginData == nil {
 		if session.isReadOnly() {
-			return C.CKS_RO_PUBLIC_SESSION, nil
+			return CKS_RO_PUBLIC_SESSION, nil
 		} else {
-			return C.CKS_RW_PUBLIC_SESSION, nil
+			return CKS_RW_PUBLIC_SESSION, nil
 		}
 	}
-	switch loginData.userType {
-	case C.CKU_SO:
-		return C.CKS_RW_SO_FUNCTIONS, nil
-	case C.CKU_USER:
+	switch uint(loginData.userType) {
+	case CKU_SO:
+		return CKS_RW_SO_FUNCTIONS, nil
+	case CKU_USER:
 		if session.isReadOnly() {
-			return C.CKS_RO_USER_FUNCTIONS, nil
+			return CKS_RO_USER_FUNCTIONS, nil
 		} else {
-			return C.CKS_RW_USER_FUNCTIONS, nil
+			return CKS_RW_USER_FUNCTIONS, nil
 		}
 	}
-	return 0, NewError("Session.GetState", "invalid security level", C.CKR_ARGUMENTS_BAD)
+	return 0, NewError("Session.GetState", "invalid security level", CKR_ARGUMENTS_BAD)
 }
 
 // IsReadOnly returns true if the session is read only.
 func (session *Session) isReadOnly() bool {
-	return (session.flags & C.CKF_RW_SESSION) != C.CKF_RW_SESSION
+	return (session.flags & CKF_RW_SESSION) != CKF_RW_SESSION
 }
 
 // Login logs in on a token with a pin and a defined user type.
@@ -317,7 +317,7 @@ func (session *Session) Login(userType C.CK_USER_TYPE, pin string) error {
 func (session *Session) Logout() error {
 	slot := session.Slot
 	if slot == nil {
-		return NewError("Session.Logout", "Slot is null", C.CKR_DEVICE_ERROR)
+		return NewError("Session.Logout", "Slot is null", CKR_DEVICE_ERROR)
 	}
 	token, err := slot.GetToken()
 	if err != nil {
@@ -333,14 +333,14 @@ func (session *Session) Logout() error {
 // func (session *Session) GenerateKeyPair(mechanism *Mechanism, pkTemplate, skTemplate Attributes) (pkObject, skObject *CryptoObject, err error) {
 // 	// TODO: Verify access permissions
 // 	if mechanism == nil || pkTemplate == nil || skTemplate == nil { // maybe this should be 0?
-// 		err = NewError("Session.GenerateKeyPair", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		err = NewError("Session.GenerateKeyPair", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 		return
 // 	}
 // 	var pk, sk Attributes
 // 	switch mechanism.Type {
-// 	case C.CKM_EC_KEY_PAIR_GEN:
+// 	case CKM_EC_KEY_PAIR_GEN:
 // 		pk, sk, err = session.generateECDSAKeyPair(pkTemplate, skTemplate)
-// 	case C.CKM_RSA_PKCS_KEY_PAIR_GEN:
+// 	case CKM_RSA_PKCS_KEY_PAIR_GEN:
 // 		pk, sk, err = session.generateRSAKeyPair(pkTemplate, skTemplate)
 // 	}
 // 	if err != nil {
@@ -361,10 +361,10 @@ func (session *Session) Logout() error {
 // SignInit starts the signing process.
 func (session *Session) SignInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
 	if session.signCtx != nil && session.signCtx.Initialized() {
-		return NewError("Session.SignInit", "operation active", C.CKR_OPERATION_ACTIVE)
+		return NewError("Session.SignInit", "operation active", CKR_OPERATION_ACTIVE)
 	}
 	if mechanism == nil {
-		return NewError("Session.SignInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("Session.SignInit", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 
 	signCtx, err := NewSignContext(session, mechanism, hKey)
@@ -378,7 +378,7 @@ func (session *Session) SignInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) 
 // SignLength returns the signature length.
 func (session *Session) SignLength() (C.ulong, error) {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return 0, NewError("Session.SignLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return 0, NewError("Session.SignLength", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	return C.ulong(session.signCtx.ResultLength()), nil
 }
@@ -386,7 +386,7 @@ func (session *Session) SignLength() (C.ulong, error) {
 // SignUpdate updates the signature with data to sign.
 func (session *Session) SignUpdate(data []byte) error {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return NewError("Session.SignUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return NewError("Session.SignUpdate", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	return session.signCtx.Update(data)
 }
@@ -394,7 +394,7 @@ func (session *Session) SignUpdate(data []byte) error {
 // SignFinal returns the signature and resets the state.
 func (session *Session) SignFinal() ([]byte, error) {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
-		return nil, NewError("Session.SignFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return nil, NewError("Session.SignFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	defer func() {
 		session.signCtx = nil
@@ -405,10 +405,10 @@ func (session *Session) SignFinal() ([]byte, error) {
 // // VerifyInit starts a signature verification session with the key with the provided ID.
 // func (session *Session) VerifyInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
 // 	if session.verifyCtx != nil && session.verifyCtx.Initialized() {
-// 		return NewError("Session.VerifyInit", "operation active", C.CKR_OPERATION_ACTIVE)
+// 		return NewError("Session.VerifyInit", "operation active", CKR_OPERATION_ACTIVE)
 // 	}
 // 	if mechanism == nil {
-// 		return NewError("Session.VerifyInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		return NewError("Session.VerifyInit", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 	}
 // 	verifyCtx, err := NewVerifyContext(session, mechanism, hKey)
 // 	if err != nil {
@@ -421,7 +421,7 @@ func (session *Session) SignFinal() ([]byte, error) {
 // // VerifyLength returns the size of the verification key Public Key Size.
 // func (session *Session) VerifyLength() (C.ulong, error) {
 // 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-// 		return 0, NewError("Session.VerifyLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 		return 0, NewError("Session.VerifyLength", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 // 	}
 // 	return C.ulong(session.verifyCtx.Length()), nil
 // }
@@ -429,7 +429,7 @@ func (session *Session) SignFinal() ([]byte, error) {
 // // VerifyUpdate adds more data to verify the signature.
 // func (session *Session) VerifyUpdate(data []byte) error {
 // 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-// 		return NewError("Session.VerifyUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 		return NewError("Session.VerifyUpdate", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 // 	}
 // 	return session.verifyCtx.Update(data)
 // }
@@ -437,7 +437,7 @@ func (session *Session) SignFinal() ([]byte, error) {
 // // VerifyFinal receives the signature and verifies it based on the key and data provided on earlier methods.
 // func (session *Session) VerifyFinal(signature []byte) error {
 // 	if session.verifyCtx == nil || !session.verifyCtx.Initialized() {
-// 		return NewError("Session.VerifyFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 		return NewError("Session.VerifyFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 // 	}
 // 	defer func() {
 // 		session.verifyCtx = nil
@@ -447,10 +447,10 @@ func (session *Session) SignFinal() ([]byte, error) {
 
 func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
 	if session.decryptCtx != nil && session.decryptCtx.Initialized() {
-		return NewError("Session.DecryptInit", "operation active", C.CKR_OPERATION_ACTIVE)
+		return NewError("Session.DecryptInit", "operation active", CKR_OPERATION_ACTIVE)
 	}
 	if mechanism == nil {
-		return NewError("Session.DecryptInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+		return NewError("Session.DecryptInit", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 
 	decryptCtx, err := NewDecryptContext(session, mechanism, hKey)
@@ -463,21 +463,21 @@ func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDL
 
 func (session *Session) DecryptLength() (C.ulong, error) {
 	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
-		return 0, NewError("Session.DecryptLength", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return 0, NewError("Session.DecryptLength", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	return C.ulong(session.decryptCtx.ResultLength()), nil
 }
 
 func (session *Session) DecryptUpdate(data []byte) error {
 	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
-		return NewError("Session.DecryptUpdate", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return NewError("Session.DecryptUpdate", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	return session.decryptCtx.Update(data)
 }
 
 func (session *Session) DecryptFinal() ([]byte, error) {
 	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
-		return nil, NewError("Session.DecryptFinal", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+		return nil, NewError("Session.DecryptFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	defer func() {
 		session.decryptCtx = nil
@@ -488,10 +488,10 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // DigestInit starts a digest session.
 // func (session *Session) DigestInit(mechanism *Mechanism) error {
 // 	if session.digestInitialized {
-// 		return NewError("Session.DigestInit", "operation active", C.CKR_OPERATION_ACTIVE)
+// 		return NewError("Session.DigestInit", "operation active", CKR_OPERATION_ACTIVE)
 // 	}
 // 	if mechanism == nil {
-// 		return NewError("Session.DigestInit", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		return NewError("Session.DigestInit", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 	}
 
 // 	hashType, err := mechanism.GetHashType()
@@ -500,7 +500,7 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // 	}
 
 // 	if hashType <= 0 || hashType >= crypto.BLAKE2b_512 {
-// 		return NewError("Session.DigestInit", "mechanism invalid", C.CKR_MECHANISM_INVALID)
+// 		return NewError("Session.DigestInit", "mechanism invalid", CKR_MECHANISM_INVALID)
 // 	}
 
 // 	session.digestHash = hashType.New()
@@ -512,10 +512,10 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // If reset is true, the digestHash resets afther the hash calculation.
 // func (session *Session) Digest(data []byte, reset bool) ([]byte, error) {
 // 	if !session.digestInitialized || session.digestHash == nil {
-// 		return nil, NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 		return nil, NewError("Session.Digest", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 // 	}
 // 	if data == nil {
-// 		return nil, NewError("Session.Digest", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
+// 		return nil, NewError("Session.Digest", "got NULL pointer", CKR_ARGUMENTS_BAD)
 // 	}
 // 	_, err := session.digestHash.Write(data)
 // 	if err != nil {
@@ -531,7 +531,7 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // DigestFinish finishes a digest operation.
 // func (session *Session) DigestFinish() error {
 // 	if !session.digestInitialized || session.digestHash == nil {
-// 		return NewError("Session.Digest", "operation not initialized", C.CKR_OPERATION_NOT_INITIALIZED)
+// 		return NewError("Session.Digest", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 // 	}
 // 	session.digestInitialized = false
 // 	session.digestHash = nil
@@ -543,10 +543,10 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // 	out := make([]byte, size)
 // 	randLen, err := session.randSrc.Read(out)
 // 	if err != nil {
-// 		return nil, NewError("Session.GenerateRandom", err.Error(), C.CKR_DEVICE_ERROR)
+// 		return nil, NewError("Session.GenerateRandom", err.Error(), CKR_DEVICE_ERROR)
 // 	}
 // 	if randLen != size {
-// 		return nil, NewError("Session.GenerateRandom", "random data acquired is not as big as requested", C.CKR_DEVICE_ERROR)
+// 		return nil, NewError("Session.GenerateRandom", "random data acquired is not as big as requested", CKR_DEVICE_ERROR)
 // 	}
 // 	return out, nil
 // }
@@ -569,14 +569,14 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 
 // func (session *Session) generateECDSAKeyPair(pkTemplate, skTemplate Attributes) (pkAttrs, skAttrs Attributes, err error) {
 // 	keyID := uuid.New().String()
-// 	curveParams, err := pkTemplate.GetAttributeByType(C.CKA_EC_PARAMS)
+// 	curveParams, err := pkTemplate.GetAttributeByType(CKA_EC_PARAMS)
 // 	if err != nil {
-// 		err = NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("error getting curve: %s", err), C.CKR_TEMPLATE_INCOMPLETE)
+// 		err = NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("error getting curve: %s", err), CKR_TEMPLATE_INCOMPLETE)
 // 		return
 // 	}
 // 	_ /*curveName*/, err = utils.ASN1ToCurveName(curveParams.Value)
 // 	if err != nil {
-// 		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), C.CKR_ARGUMENTS_BAD)
+// 		return nil, nil, NewError("Session.GenerateECDSAKeyPair", fmt.Sprintf("%s", err), CKR_ARGUMENTS_BAD)
 // 	}
 // 	// create key
 // 	pk, err := createECDSAPublicKey(keyID, pkTemplate, nil /*, nil*/)
@@ -593,20 +593,20 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // func (session *Session) generateRSAKeyPair(pkTemplate, skTemplate Attributes) (pk, sk Attributes, err error) {
 // 	var key *rsa.PublicKey
 // 	keyID := uuid.New().String()
-// 	bitSizeAttr, err := pkTemplate.GetAttributeByType(C.CKA_MODULUS_BITS)
+// 	bitSizeAttr, err := pkTemplate.GetAttributeByType(CKA_MODULUS_BITS)
 // 	if err != nil {
-// 		err = NewError("Session.GenerateRSAKeyPair", "Modulus Bits undefined", C.CKR_TEMPLATE_INCOMPLETE)
+// 		err = NewError("Session.GenerateRSAKeyPair", "Modulus Bits undefined", CKR_TEMPLATE_INCOMPLETE)
 // 		return
 // 	}
-// 	exponentAttr, err := pkTemplate.GetAttributeByType(C.CKA_PUBLIC_EXPONENT)
+// 	exponentAttr, err := pkTemplate.GetAttributeByType(CKA_PUBLIC_EXPONENT)
 // 	if err != nil {
-// 		err = NewError("Session.GenerateRSAKeyPair", "Public Exponent undefined", C.CKR_TEMPLATE_INCOMPLETE)
+// 		err = NewError("Session.GenerateRSAKeyPair", "Public Exponent undefined", CKR_TEMPLATE_INCOMPLETE)
 // 		return
 // 	}
 // 	bitSize := binary.LittleEndian.Uint64(bitSizeAttr.Value)
 // 	extendedExpAttr := make([]byte, 8)
 // 	if len(exponentAttr.Value) > 8 {
-// 		err = NewError("Session.GenerateRSAKeyPair", "Exponent size should not be greater than 64 bits", C.CKR_ARGUMENTS_BAD)
+// 		err = NewError("Session.GenerateRSAKeyPair", "Exponent size should not be greater than 64 bits", CKR_ARGUMENTS_BAD)
 // 		return
 // 	}
 // 	copy(extendedExpAttr[8-len(exponentAttr.Value):], exponentAttr.Value)
@@ -627,19 +627,19 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 // GetUserAuthorization returns the authorization level of the state.
 func GetUserAuthorization(state C.CK_STATE, isToken, isPrivate, userAction bool) bool {
 	switch state {
-	case C.CKS_RW_SO_FUNCTIONS:
+	case CKS_RW_SO_FUNCTIONS:
 		return !isPrivate
-	case C.CKS_RW_USER_FUNCTIONS:
+	case CKS_RW_USER_FUNCTIONS:
 		return true
-	case C.CKS_RO_USER_FUNCTIONS:
+	case CKS_RO_USER_FUNCTIONS:
 		if isToken {
 			return !userAction
 		} else {
 			return true
 		}
-	case C.CKS_RW_PUBLIC_SESSION:
+	case CKS_RW_PUBLIC_SESSION:
 		return !isPrivate
-	case C.CKS_RO_PUBLIC_SESSION:
+	case CKS_RO_PUBLIC_SESSION:
 		return false
 	}
 	return false
