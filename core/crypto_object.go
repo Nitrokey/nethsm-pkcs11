@@ -7,6 +7,7 @@ import "C"
 import (
 	"bytes"
 	"math"
+	"p11nethsm/log"
 	"unsafe"
 )
 

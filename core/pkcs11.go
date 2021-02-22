@@ -8,6 +8,7 @@ extern CK_FUNCTION_LIST functionList;
 */
 import "C"
 import (
+	"p11nethsm/log"
 	"strings"
 	"unsafe"
 )

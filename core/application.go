@@ -6,7 +6,6 @@ package core
 import "C"
 import (
 	"context"
-	stdLog "log"
 	"os"
 	"p11nethsm/api"
 	"p11nethsm/config"
@@ -18,27 +17,6 @@ type Application struct {
 	Slots  []*Slot        // Represents the slots of the HSM
 	Config *config.Config // has the complete configuration of the HSM
 	Api    *api.DefaultApiService
-}
-
-func init() {
-	conf := config.Get()
-	logPath := conf.LogFile
-	if logPath != "" {
-		logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			stdLog.Printf("cannot create logfile at given path: %s", err)
-		} else {
-			stdLog.SetOutput(logFile)
-		}
-	} else {
-		stdLog.SetPrefix("[p11nethsm] ")
-	}
-	if conf.Debug {
-		logLevel = logDebug
-		stdLog.SetPrefix("=== " + stdLog.Prefix())
-		stdLog.SetFlags(stdLog.Flags() | stdLog.Lshortfile | stdLog.Lmicroseconds)
-	}
-	LogInit()
 }
 
 var App *Application

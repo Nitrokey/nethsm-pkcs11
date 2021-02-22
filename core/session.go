@@ -5,6 +5,7 @@ package core
 */
 import "C"
 import (
+	"p11nethsm/log"
 	"sync"
 	"unsafe"
 )
