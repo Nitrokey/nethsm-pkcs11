@@ -102,7 +102,7 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	if pTemplate == nil {
 		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
-	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
+	templateSlice := (*[math.MaxInt32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
 	//log.Debugf("template:%v", templateSlice)
 
@@ -127,23 +127,3 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	}
 	return nil
 }
-
-// Copies the attributes of an object to a C pointer.
-// func (object *CryptoObject) EditAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG, session *Session) error {
-// 	if pTemplate == nil {
-// 		return NewError("CryptoObject.CopyAttributes", "got NULL pointer", CKR_ARGUMENTS_BAD)
-// 	}
-// 	templateSlice := (*[1 << 30]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
-
-// 	for i := 0; i < len(templateSlice); i++ {
-// 		newAttr := CToAttribute(templateSlice[i])
-// 		src := object.FindAttribute(templateSlice[i]._type)
-// 		if src != nil {
-// 			src.Value = newAttr.Value
-// 		} else {
-// 			object.Attributes[uint32(templateSlice[i]._type)] = newAttr
-// 		}
-// 	}
-// 	err := session.SaveObject(object)
-// 	return err
-// }

@@ -71,14 +71,6 @@ func (token *Token) ApiCtx() context.Context {
 	return ctx
 }
 
-// Equals returns true if the token objects are equal.
-// func (token *Token) Equals(token2 *Token) bool {
-// 	return token.Label == token2.Label &&
-// 		token.Pin == token2.Pin &&
-// 		token.SoPin == token2.SoPin &&
-// 		token._objects.Equals(token2._objects)
-// }
-
 func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	if objects := token.GetObjectsByID(keyID); objects != nil {
 		return objects, nil
@@ -198,11 +190,6 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 		token.info = &info
 	}
 
-	// apiSystemInfo, r, err := App.Service.SystemInfoGet(token.slot.ctx).Execute()
-	// if err != nil {
-	// 	return NewAPIError("token.GetInfo", "SystemInfoGet", r, err)
-	// }
-
 	str2Buf(token.info.Vendor, info.manufacturerID[:])
 	str2Buf(token.info.Product, info.model[:])
 	str2Buf(serialNumber, info.serialNumber[:])
@@ -229,29 +216,6 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 
 	return nil
 }
-
-// Sets the user pin to a new pin.
-// func (token *Token) SetUserPin(pin string) {
-// 	token.Pin = pin
-// }
-
-// Checks if the pin provided is the user pin
-// func (token *Token) CheckUserPin(pin string) (SecurityLevel, error) {
-// 	// if token.Pin == pin {
-// 	return User, nil
-// 	// } else {
-// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", CKR_PIN_INCORRECT)
-// 	// }
-// }
-
-// Checks if the pin provided is the SO pin.
-// func (token *Token) CheckSecurityOfficerPin(pin string) (SecurityLevel, error) {
-// 	// if token.SoPin == pin {
-// 	return User, nil
-// 	// } else {
-// 	// 	return Error, NewError("token.GetUserPin", "incorrect pin", CKR_PIN_INCORRECT)
-// 	// }
-// }
 
 func (token *Token) CheckUserPin(pin string) error {
 	authCtx := addBasicAuth(token.ApiCtx(), token.slot.conf.User, pin)
@@ -282,23 +246,6 @@ func (token *Token) Login(userType C.CK_USER_TYPE, pin string) error {
 		return NewError("token.Login", "CKU_SO not supperted", CKR_USER_TYPE_INVALID)
 	case CKU_CONTEXT_SPECIFIC:
 		return NewError("token.Login", "CKU_CONTEXT_SPECIFIC not supperted", CKR_USER_TYPE_INVALID)
-		// switch token.userType {
-		// case Public:
-		// 	return NewError("token.Login", "Bad userType", CKR_OPERATION_NOT_INITIALIZED)
-		// case User:
-		// 	securityLevel, err := token.CheckUserPin(pin)
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	token.userType = securityLevel
-		// case SecurityOfficer:
-		// 	securityLevel, err := token.CheckSecurityOfficerPin(pin)
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	token.userType = securityLevel
-
-		// }
 	default:
 		return NewError("token.Login", "Bad userType", CKR_USER_TYPE_INVALID)
 	}
@@ -349,21 +296,3 @@ func (token *Token) GetObjectsByID(keyID string) CryptoObjects {
 	}
 	return objects
 }
-
-// Deletes an object from its list, but doesn't save it.
-// func (token *Token) DeleteObject(handle C.CK_OBJECT_HANDLE) error {
-// 	token.Lock()
-// 	defer token.Unlock()
-// 	objPos := -1
-// 	for i, object := range token._objects {
-// 		if object.Handle == handle {
-// 			objPos = i
-// 			break
-// 		}
-// 	}
-// 	if objPos == -1 {
-// 		return NewError("Token.DeleteObject", fmt.Sprintf("object not found with id %v", handle), CKR_OBJECT_HANDLE_INVALID)
-// 	}
-// 	token._objects = append(token._objects[:objPos], token._objects[objPos+1:]...)
-// 	return nil
-// }

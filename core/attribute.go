@@ -24,7 +24,7 @@ func (v Attribute) String() string {
 }
 
 func (v C.CK_ATTRIBUTE) String() string {
-	val := (*[math.MaxUint32]byte)(unsafe.Pointer(v.pValue))[:int(v.ulValueLen):int(v.ulValueLen)]
+	val := (*[math.MaxInt32]byte)(unsafe.Pointer(v.pValue))[:int(v.ulValueLen):int(v.ulValueLen)]
 	return fmt.Sprintf("%v: %v/\"%v\"", CKAString(uint32(v._type)), val, string(val))
 }
 
@@ -37,7 +37,7 @@ func CToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (Attribut
 		return nil, NewError("CToAttributes", "cannot transform: ulcount is not greater than 0", CKR_BUFFER_TOO_SMALL)
 	}
 
-	cAttrSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pAttributes))[:ulCount:ulCount]
+	cAttrSlice := (*[math.MaxInt32]C.CK_ATTRIBUTE)(unsafe.Pointer(pAttributes))[:ulCount:ulCount]
 
 	attributes := make(Attributes, ulCount)
 	for _, cAttr := range cAttrSlice {
@@ -97,12 +97,10 @@ func (attribute *Attribute) ToC(cDst C.CK_ATTRIBUTE_PTR) error {
 		return nil
 	}
 	if cDst.ulValueLen >= C.CK_ULONG(len(attribute.Value)) {
-		cValue := C.CBytes(attribute.Value)
-		cValueLen := C.CK_ULONG(len(attribute.Value))
+		valueLen := C.CK_ULONG(len(attribute.Value))
 		cDst._type = C.CK_ATTRIBUTE_TYPE(attribute.Type)
-		cDst.ulValueLen = cValueLen
-		C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(cValue), cValueLen)
-		C.free(unsafe.Pointer(cValue))
+		cDst.ulValueLen = valueLen
+		C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(&attribute.Value[0]), valueLen)
 	} else {
 		return NewError("Attribute.ToC", fmt.Sprintf("Buffer too small: %d, need %d", cDst.ulValueLen, len(attribute.Value)), CKR_BUFFER_TOO_SMALL)
 	}

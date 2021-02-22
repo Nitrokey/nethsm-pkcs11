@@ -8,6 +8,7 @@ extern CK_FUNCTION_LIST functionList;
 */
 import "C"
 import (
+	"math"
 	"p11nethsm/log"
 	"strings"
 	"unsafe"
@@ -85,26 +86,6 @@ func C_Finalize(pReserved C.CK_VOID_PTR) C.CK_RV {
 //export C_InitToken
 func C_InitToken(slotID C.CK_SLOT_ID, pPin C.CK_UTF8CHAR_PTR, ulPinLen C.CK_ULONG, pLabel C.CK_UTF8CHAR_PTR) C.CK_RV {
 	log.Debugf("Called: C_InitToken\n")
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// if pPin == nil || pLabel == nil {
-	// 	return CKR_ARGUMENTS_BAD
-	// }
-	// slot, err := App.GetSlot(slotID)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// cLabel := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
-	// label := string(C.GoBytes(unsafe.Pointer(cLabel), 32))
-	// cPin := (*C.CK_UTF8CHAR)(unsafe.Pointer(pLabel))
-	// pin := string(C.GoBytes(unsafe.Pointer(cPin), C.int(ulPinLen)))
-	// token, err := NewToken(label, pin, pin)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// slot.InsertToken(token)
-	// return CKR_OK
 	return CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -112,23 +93,6 @@ func C_InitToken(slotID C.CK_SLOT_ID, pPin C.CK_UTF8CHAR_PTR, ulPinLen C.CK_ULON
 func C_InitPIN(hSession C.CK_SESSION_HANDLE, pPin C.CK_UTF8CHAR_PTR, ulPinLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_InitPIN\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// if pPin == nil {
-	// 	return CKR_ARGUMENTS_BAD
-	// }
-	// pin := string(C.GoBytes(unsafe.Pointer(pPin), C.int(ulPinLen)))
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// token, err := session.Slot.GetToken()
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// token.SetUserPin(pin)
-	// return CKR_OK
 }
 
 //export C_SetPIN
@@ -199,7 +163,7 @@ func C_GetSlotList(tokenPresent C.CK_BBOOL, pSlotList C.CK_SLOT_ID_PTR, pulCount
 		return CKR_BUFFER_TOO_SMALL
 	}
 
-	cSlotSlice := (*[1 << 30]C.CK_SLOT_ID)(unsafe.Pointer(pSlotList))[:*pulCount:*pulCount]
+	cSlotSlice := (*[math.MaxInt32]C.CK_SLOT_ID)(unsafe.Pointer(pSlotList))[:*pulCount:*pulCount]
 
 	i := 0
 	for _, slot := range slotList {
@@ -285,13 +249,6 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 		return ErrorToRV(err)
 	}
 	*phSession = session
-	// We seed randomly the RNG at init (In case the user would forget to seed the RNG)
-	// bs := make([]byte, 8)
-	// _, err = rand.Read(bs)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// slot.Sessions[session].SeedRandom(bs)
 	return CKR_OK
 }
 
@@ -388,44 +345,12 @@ func C_Logout(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 func C_CreateObject(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG, phObject C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
 	log.Debugf("Called: C_CreateObject\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// if phObject == nil {
-	// 	return CKR_ARGUMENTS_BAD
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// attributes, err := CToAttributes(pTemplate, ulCount)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// object, err := session.CreateObject(attributes)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// *phObject = object.Handle
-	// return CKR_OK
 }
 
 //export C_DestroyObject
 func C_DestroyObject(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Debugf("Called: C_DestroyObject\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// err = session.DestroyObject(hObject)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_FindObjectsInit
@@ -475,7 +400,7 @@ func C_FindObjects(hSession C.CK_SESSION_HANDLE, phObject C.CK_OBJECT_HANDLE_PTR
 		return ErrorToRV(err)
 	}
 
-	cObjectSlice := (*[1 << 30]C.CK_OBJECT_HANDLE)(unsafe.Pointer(phObject))[:ulMaxObjectCount:ulMaxObjectCount]
+	cObjectSlice := (*[math.MaxInt32]C.CK_OBJECT_HANDLE)(unsafe.Pointer(phObject))[:ulMaxObjectCount:ulMaxObjectCount]
 
 	l := len(cObjectSlice)
 	if len(handles) < len(cObjectSlice) {
@@ -511,21 +436,6 @@ func C_SetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 	ulCount C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_SetAttributeValue\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// object, err := session.GetObject(hObject)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// if err := object.EditAttributes(pTemplate, ulCount, session); err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_GetAttributeValue
@@ -553,32 +463,6 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 func C_GenerateKeyPair(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, pPublicKeyTemplate C.CK_ATTRIBUTE_PTR, ulPublicKeyAttributeCount C.CK_ULONG, pPrivateKeyTemplate C.CK_ATTRIBUTE_PTR, ulPrivateKeyAttributeCount C.CK_ULONG, phPublicKey C.CK_OBJECT_HANDLE_PTR, phPrivateKey C.CK_OBJECT_HANDLE_PTR) C.CK_RV {
 	log.Debugf("Called: C_GenerateKeyPair\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// 	if App == nil {
-	// 		return CKR_CRYPTOKI_NOT_INITIALIZED
-	// 	}
-	// 	if phPublicKey == nil || phPrivateKey == nil {
-	// 		return CKR_ARGUMENTS_BAD
-	// 	}
-	// 	session, err := App.GetSession(hSession)
-	// 	if err != nil {
-	// 		return ErrorToRV(err)
-	// 	}
-	// 	mechanism := CToMechanism(pMechanism)
-	// 	pkAttrs, err := CToAttributes(pPublicKeyTemplate, ulPublicKeyAttributeCount)
-	// 	if err != nil {
-	// 		return ErrorToRV(err)
-	// 	}
-	// 	skAttrs, err := CToAttributes(pPrivateKeyTemplate, ulPrivateKeyAttributeCount)
-	// 	if err != nil {
-	// 		return ErrorToRV(err)
-	// 	}
-	// 	pk, sk, err := session.GenerateKeyPair(mechanism, pkAttrs, skAttrs)
-	// 	if err != nil {
-	// 		return ErrorToRV(err)
-	// 	}
-	// 	*phPublicKey = pk.Handle
-	// 	*phPrivateKey = sk.Handle
-	// 	return CKR_OK
 }
 
 //export C_SignInit
@@ -692,81 +576,24 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 func C_VerifyInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKey C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Debugf("Called: C_VerifyInit\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// mechanism := CToMechanism(pMechanism)
-	// err = session.VerifyInit(mechanism, hKey)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_Verify
 func C_Verify(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_ULONG, pSignature C.CK_BYTE_PTR, ulSignatureLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_Verify\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
-	// err = session.VerifyUpdate(data)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
-	// err = session.VerifyFinal(signature)
-	// if err != nil {
-	// 	return CKR_SIGNATURE_INVALID
-	// }
-	// return CKR_OK
 }
 
 //export C_VerifyUpdate
 func C_VerifyUpdate(hSession C.CK_SESSION_HANDLE, pPart C.CK_BYTE_PTR, ulPartLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_VerifyUpdate\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// data := C.GoBytes(unsafe.Pointer(pPart), C.int(ulPartLen))
-	// err = session.VerifyUpdate(data)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_VerifyFinal
 func C_VerifyFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, ulSignatureLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_VerifyFinal\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// signature := C.GoBytes(unsafe.Pointer(pSignature), C.int(ulSignatureLen))
-	// err = session.VerifyFinal(signature)
-	// if err != nil {
-	// 	return CKR_SIGNATURE_INVALID
-	// }
-	// return CKR_OK
 }
 
 //export C_DecryptInit
@@ -883,87 +710,24 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 func C_DigestInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR) C.CK_RV {
 	log.Debugf("Called: C_DigestInit\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// mechanism := CToMechanism(pMechanism)
-	// err = session.DigestInit(mechanism)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_Digest
 func C_Digest(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_ULONG, pDigest C.CK_BYTE_PTR, pulDigestLen C.CK_ULONG_PTR) C.CK_RV {
 	log.Debugf("Called: C_Digest\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// input := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
-	// digested, err := session.Digest(input, true) // if pDigest is nil, we are only calculating buffer size
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// cDigestLen := C.CK_ULONG(len(digested))
-	// if pDigest == nil {
-	// 	*pulDigestLen = cDigestLen
-	// 	return CKR_OK
-	// }
-	// if *pulDigestLen < cDigestLen {
-	// 	*pulDigestLen = cDigestLen
-	// 	return CKR_BUFFER_TOO_SMALL
-	// }
-	// *pulDigestLen = cDigestLen
-	// C.memcpy(unsafe.Pointer(pDigest), unsafe.Pointer(&digested[0]), cDigestLen)
-	// if err := session.DigestFinish(); err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// return CKR_OK
 }
 
 //export C_SeedRandom
 func C_SeedRandom(hSession C.CK_SESSION_HANDLE, pSeed C.CK_BYTE_PTR, ulSeedLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_SeedRandom\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// rand := C.GoBytes(unsafe.Pointer(pSeed), C.int(ulSeedLen))
-	// session.SeedRandom(rand)
-	// return CKR_OK
 }
 
 //export C_GenerateRandom
 func C_GenerateRandom(hSession C.CK_SESSION_HANDLE, pRandomData C.CK_BYTE_PTR, ulRandomLen C.CK_ULONG) C.CK_RV {
 	log.Debugf("Called: C_GenerateRandom\n")
 	return CKR_FUNCTION_NOT_SUPPORTED
-	// if App == nil {
-	// 	return CKR_CRYPTOKI_NOT_INITIALIZED
-	// }
-	// session, err := App.GetSession(hSession)
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// rand, err := session.GenerateRandom(int(ulRandomLen))
-	// if err != nil {
-	// 	return ErrorToRV(err)
-	// }
-	// C.memcpy(unsafe.Pointer(pRandomData), unsafe.Pointer(&rand[0]), ulRandomLen)
-	// return CKR_OK
 }
 
 // NOTE: Not implemented functions...
