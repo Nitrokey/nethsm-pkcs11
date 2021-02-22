@@ -103,20 +103,21 @@ func (object *CryptoObject) CopyAttributes(pTemplate C.CK_ATTRIBUTE_PTR, ulCount
 	}
 	templateSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
-	log.Debugf("templateSlice:%+v", templateSlice)
+	//log.Debugf("template:%v", templateSlice)
 
 	missingAttr := false
 
 	for i := 0; i < len(templateSlice); i++ {
 		src := object.FindAttribute(templateSlice[i]._type)
 		if src != nil {
+			log.Debugf("Attr: %v", src)
 			err := src.ToC(&templateSlice[i])
 			if err != nil {
 				return err
 			}
 		} else {
 			missingAttr = true
-			log.Debugf("CopyAttributes: Attribute number %d does not exist: %d", i, templateSlice[i]._type)
+			log.Debugf("CopyAttributes: Attribute number %d does not exist: %d", i, CKAString(uint32(templateSlice[i]._type)))
 			templateSlice[i].ulValueLen = C.CK_UNAVAILABLE_INFORMATION
 		}
 	}

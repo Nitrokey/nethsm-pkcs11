@@ -9,6 +9,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"unsafe"
 )
 
@@ -16,6 +17,15 @@ import (
 type Attribute struct {
 	Type  uint32 // Type of attribute
 	Value []byte // Value of attribute
+}
+
+func (v Attribute) String() string {
+	return fmt.Sprintf("%v: %v/\"%v\"", CKAString(v.Type), v.Value, string(v.Value))
+}
+
+func (v C.CK_ATTRIBUTE) String() string {
+	val := (*[math.MaxUint32]byte)(unsafe.Pointer(v.pValue))[:int(v.ulValueLen):int(v.ulValueLen)]
+	return fmt.Sprintf("%v: %v/\"%v\"", CKAString(uint32(v._type)), val, string(val))
 }
 
 // A map of attributes
@@ -27,7 +37,7 @@ func CToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (Attribut
 		return nil, NewError("CToAttributes", "cannot transform: ulcount is not greater than 0", C.CKR_BUFFER_TOO_SMALL)
 	}
 
-	cAttrSlice := (*[1 << 30]C.CK_ATTRIBUTE)(unsafe.Pointer(pAttributes))[:ulCount:ulCount]
+	cAttrSlice := (*[math.MaxUint32]C.CK_ATTRIBUTE)(unsafe.Pointer(pAttributes))[:ulCount:ulCount]
 
 	attributes := make(Attributes, ulCount)
 	for _, cAttr := range cAttrSlice {
