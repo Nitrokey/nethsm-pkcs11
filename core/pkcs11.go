@@ -512,17 +512,18 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 		return ErrorToRV(err)
 	}
 	if pulSignatureLen == nil {
+		session.SignClear()
 		return CKR_ARGUMENTS_BAD
 	}
 	signature, err := session.SignFinal()
 	// log.Debugf("signFinal done")
 	if err != nil {
+		session.SignClear()
 		return ErrorToRV(err)
 	}
 	sigLen := C.CK_ULONG(len(signature))
 	if pSignature == nil {
 		*pulSignatureLen = sigLen
-		// XXX cache signature
 		return CKR_OK
 	} else if *pulSignatureLen < sigLen {
 		*pulSignatureLen = sigLen
@@ -530,6 +531,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	}
 	*pulSignatureLen = sigLen
 	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
+	session.SignClear()
 	return CKR_OK
 }
 
@@ -544,23 +546,24 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 		return ErrorToRV(err)
 	}
 	if pulSignatureLen == nil {
+		session.SignClear()
 		return CKR_ARGUMENTS_BAD
 	}
 
 	data := C.GoBytes(unsafe.Pointer(pData), C.int(ulDataLen))
 	err = session.SignUpdate(data)
 	if err != nil {
+		session.SignClear()
 		return ErrorToRV(err)
 	}
 	signature, err := session.SignFinal()
-	// log.Debugf("signFinal ended")
 	if err != nil {
+		session.SignClear()
 		return ErrorToRV(err)
 	}
 	sigLen := C.CK_ULONG(len(signature))
 	if pSignature == nil {
 		*pulSignatureLen = sigLen
-		// XXX cache signature
 		return CKR_OK
 	} else if *pulSignatureLen < sigLen {
 		*pulSignatureLen = sigLen
@@ -568,7 +571,7 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	}
 	*pulSignatureLen = sigLen
 	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
-	// log.Debugf("done with this branch")
+	session.SignClear()
 	return CKR_OK
 }
 
@@ -614,46 +617,6 @@ func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, 
 	return CKR_OK
 }
 
-//export C_Decrypt
-func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
-	ulEncryptedDataLen C.CK_ULONG, pData C.CK_BYTE_PTR,
-	pulDataLen C.CK_ULONG_PTR) C.CK_RV {
-	log.Debugf("Called: C_Decrypt")
-	if App == nil {
-		return CKR_CRYPTOKI_NOT_INITIALIZED
-	}
-	session, err := App.GetSession(hSession)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	if pulDataLen == nil {
-		return CKR_ARGUMENTS_BAD
-	}
-	encrypted := C.GoBytes(unsafe.Pointer(pEncryptedData), C.int(ulEncryptedDataLen))
-	err = session.DecryptUpdate(encrypted)
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	data, err := session.DecryptFinal()
-	// log.Debugf("signFinal ended")
-	if err != nil {
-		return ErrorToRV(err)
-	}
-	dataLen := C.CK_ULONG(len(data))
-	if pData == nil {
-		*pulDataLen = dataLen
-		// XXX cache signature
-		return CKR_OK
-	} else if *pulDataLen < dataLen {
-		*pulDataLen = dataLen
-		return CKR_BUFFER_TOO_SMALL
-	}
-	*pulDataLen = dataLen
-	C.memcpy(unsafe.Pointer(pData), unsafe.Pointer(&data[0]), *pulDataLen)
-	// log.Debugf("done with this branch")
-	return CKR_OK
-}
-
 //export C_DecryptUpdate
 func C_DecryptUpdate(hSession C.CK_SESSION_HANDLE, pEncryptedPart C.CK_BYTE_PTR,
 	ulEncryptedPartLen C.CK_ULONG, pPart C.CK_BYTE_PTR,
@@ -686,16 +649,17 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 		return ErrorToRV(err)
 	}
 	if pulLastPartLen == nil {
+		session.DecryptClear()
 		return CKR_ARGUMENTS_BAD
 	}
 	data, err := session.SignFinal()
 	if err != nil {
+		session.DecryptClear()
 		return ErrorToRV(err)
 	}
 	dataLen := C.CK_ULONG(len(data))
 	if pLastPart == nil {
 		*pulLastPartLen = dataLen
-		// XXX cache signature
 		return CKR_OK
 	} else if *pulLastPartLen < dataLen {
 		*pulLastPartLen = dataLen
@@ -703,6 +667,49 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 	}
 	*pulLastPartLen = dataLen
 	C.memcpy(unsafe.Pointer(pLastPart), unsafe.Pointer(&data[0]), *pulLastPartLen)
+	session.DecryptClear()
+	return CKR_OK
+}
+
+//export C_Decrypt
+func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
+	ulEncryptedDataLen C.CK_ULONG, pData C.CK_BYTE_PTR,
+	pulDataLen C.CK_ULONG_PTR) C.CK_RV {
+	log.Debugf("Called: C_Decrypt")
+	if App == nil {
+		return CKR_CRYPTOKI_NOT_INITIALIZED
+	}
+	session, err := App.GetSession(hSession)
+	if err != nil {
+		return ErrorToRV(err)
+	}
+	if pulDataLen == nil {
+		session.DecryptClear()
+		return CKR_ARGUMENTS_BAD
+	}
+	encrypted := C.GoBytes(unsafe.Pointer(pEncryptedData), C.int(ulEncryptedDataLen))
+	err = session.DecryptUpdate(encrypted)
+	if err != nil {
+		session.DecryptClear()
+		return ErrorToRV(err)
+	}
+	data, err := session.DecryptFinal()
+	// log.Debugf("signFinal ended")
+	if err != nil {
+		session.DecryptClear()
+		return ErrorToRV(err)
+	}
+	dataLen := C.CK_ULONG(len(data))
+	if pData == nil {
+		*pulDataLen = dataLen
+		return CKR_OK
+	} else if *pulDataLen < dataLen {
+		*pulDataLen = dataLen
+		return CKR_BUFFER_TOO_SMALL
+	}
+	*pulDataLen = dataLen
+	C.memcpy(unsafe.Pointer(pData), unsafe.Pointer(&data[0]), *pulDataLen)
+	session.DecryptClear()
 	return CKR_OK
 }
 

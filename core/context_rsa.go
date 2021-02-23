@@ -13,9 +13,10 @@ import (
 type OpContextRSA struct {
 	session     *Session
 	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
-	keyID       string     // Key ID used in signing.
-	data        []byte     // Data to sign.
-	initialized bool       // // True if the user executed a Sign method and it has not finished yet.
+	keyID       string     // Key ID used in signing or decrypting.
+	data        []byte     // Data to sign or decrypt.
+	result      []byte
+	initialized bool // // True if the user executed a Sign method and it has not finished yet.
 }
 
 type SignContextRSA struct {
@@ -43,11 +44,16 @@ func (context *OpContextRSA) ResultLength() int {
 }
 
 func (context *OpContextRSA) Update(data []byte) error {
-	context.data = append(context.data, data...)
+	if context.result == nil {
+		context.data = append(context.data, data...)
+	}
 	return nil
 }
 
 func (context *SignContextRSA) Final() ([]byte, error) {
+	if context.result != nil {
+		return context.result, nil
+	}
 	var err error
 	var reqBody api.SignRequestData
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
@@ -67,10 +73,14 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	context.result = signature
 	return signature, nil
 }
 
 func (context *DecryptContextRSA) Final() ([]byte, error) {
+	if context.result != nil {
+		return context.result, nil
+	}
 	var err error
 	var reqBody api.DecryptRequestData
 	reqBody.SetEncrypted(base64.StdEncoding.EncodeToString(context.data))
@@ -90,5 +100,6 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	context.result = decrypted
 	return decrypted, nil
 }

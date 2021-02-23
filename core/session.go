@@ -21,6 +21,7 @@ type Session struct {
 	findInitialized bool                 // True if the user executed a Find method and it has not finished yet.
 	signCtx         OpContext            // Signing Context
 	decryptCtx      OpContext            // Decrypting Context
+	Cache           []byte
 	// digestHash        hash.Hash            // Hash used for hashing
 	// digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
 	// randSrc *rand.Rand // Seedable random source.
@@ -243,10 +244,11 @@ func (session *Session) SignFinal() ([]byte, error) {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
 		return nil, NewError("Session.SignFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
-	defer func() {
-		session.signCtx = nil
-	}()
 	return session.signCtx.Final()
+}
+
+func (session *Session) SignClear() {
+	session.signCtx = nil
 }
 
 func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
@@ -283,10 +285,11 @@ func (session *Session) DecryptFinal() ([]byte, error) {
 	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
 		return nil, NewError("Session.DecryptFinal", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
-	defer func() {
-		session.decryptCtx = nil
-	}()
 	return session.decryptCtx.Final()
+}
+
+func (session *Session) DecryptClear() {
+	session.decryptCtx = nil
 }
 
 // GetUserAuthorization returns the authorization level of the state.
