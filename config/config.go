@@ -42,6 +42,7 @@ type SlotsConfig struct {
 	User        string
 	Password    string // Password to configure in Token
 	Pin         string
+	Sparse      bool
 }
 
 // GetConfig returns the configuration extracted from the common config file.

@@ -183,11 +183,18 @@ func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
 	}
 
 	if token.info == nil {
-		info, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
-		if err != nil {
-			return NewAPIError("token.GetInfo", "InfoGet", r, err)
+		if token.slot.conf.Sparse {
+			var info api.InfoData
+			info.Product = "NetHSM"
+			info.Vendor = libManufacturerID
+			token.info = &info
+		} else {
+			info, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
+			if err != nil {
+				return NewAPIError("token.GetInfo", "InfoGet", r, err)
+			}
+			token.info = &info
 		}
-		token.info = &info
 	}
 
 	str2Buf(token.info.Vendor, info.manufacturerID[:])
@@ -238,9 +245,11 @@ func (token *Token) Login(userType C.CK_USER_TYPE, pin string) error {
 
 	switch uint(userType) {
 	case CKU_USER:
-		err := token.CheckUserPin(pin)
-		if err != nil {
-			return err
+		if !token.slot.conf.Sparse {
+			err := token.CheckUserPin(pin)
+			if err != nil {
+				return err
+			}
 		}
 	case CKU_SO:
 		return NewError("token.Login", "CKU_SO not supperted", CKR_USER_TYPE_INVALID)

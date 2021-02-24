@@ -59,17 +59,21 @@ func NewApplication() (*Application, error) {
 		}
 		slots[i] = slot
 
-		r, e := app.Api.HealthReadyGet(ctx).Execute()
-		if e == nil && r.StatusCode < 300 {
-			token, err := NewToken(slotConf.Label)
-			if err != nil {
-				err = NewError("NewApplication", err.Error(), CKR_DEVICE_ERROR)
-				return nil, err
-			}
-			if password == "" {
-				token.tokenFlags |= CKF_LOGIN_REQUIRED
-			}
+		token, err := NewToken(slotConf.Label)
+		if err != nil {
+			err = NewError("NewApplication", err.Error(), CKR_DEVICE_ERROR)
+			return nil, err
+		}
+		if password == "" {
+			token.tokenFlags |= CKF_LOGIN_REQUIRED
+		}
+		if slotConf.Sparse {
 			slot.InsertToken(token)
+		} else {
+			r, e := app.Api.HealthReadyGet(ctx).Execute()
+			if e == nil && r.StatusCode < 300 {
+				slot.InsertToken(token)
+			}
 		}
 	}
 	return app, nil
