@@ -76,7 +76,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 		return err
 	}
 
-	log.Debugf("Attributes:\n")
+	log.Debugf("Find objects with attributes:\n")
 	for k, v := range attrs {
 		log.Debugf("0x%x: %v", k, v)
 	}
