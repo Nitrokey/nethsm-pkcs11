@@ -8,6 +8,7 @@ package core
 import "C"
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"p11nethsm/api"
 	"sync"
@@ -103,6 +104,14 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	)
 	switch key.Algorithm {
 	case api.KEYALGORITHM_RSA:
+		modulus, err := base64.StdEncoding.DecodeString(key.Key.GetModulus())
+		if err != nil {
+			return nil, err
+		}
+		pubExp, err := base64.StdEncoding.DecodeString(key.Key.GetPublicExponent())
+		if err != nil {
+			return nil, err
+		}
 		object.Attributes.Set(
 			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
 			&Attribute{CKA_DERIVE, boolToArr(C.CK_FALSE)},
@@ -111,10 +120,14 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 			&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
 			&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
 			&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-			&Attribute{CKA_MODULUS, []byte(key.Key.GetModulus())},
-			&Attribute{CKA_PUBLIC_EXPONENT, []byte(key.Key.GetPublicExponent())},
+			&Attribute{CKA_MODULUS, modulus},
+			&Attribute{CKA_PUBLIC_EXPONENT, pubExp},
 		)
 	case api.KEYALGORITHM_ED25519:
+		data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
+		if err != nil {
+			return nil, err
+		}
 		object.Attributes.Set(
 			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
 			&Attribute{CKA_DERIVE, boolToArr(C.CK_TRUE)},
@@ -123,7 +136,7 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 			&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
 			&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
 			&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
-			&Attribute{CKA_EC_POINT, []byte(key.Key.GetData())},
+			&Attribute{CKA_EC_POINT, data},
 		)
 	}
 	token.AddObject(object)
