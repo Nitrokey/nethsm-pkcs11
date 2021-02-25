@@ -16,7 +16,7 @@ import (
 
 // Slot represents a HSM slot. It has an ID and it can have a connected Token.
 type Slot struct {
-	ID          C.CK_SLOT_ID // ID of slot
+	ID          CK_SLOT_ID // ID of slot
 	description string
 	flags       uint64   // Flags related to the slot
 	token       *Token   // Token connected to slot. It could be nil
@@ -33,7 +33,7 @@ func (slot *Slot) IsTokenPresent() bool {
 }
 
 // OpenSession opens a new session with given flags.
-func (slot *Slot) OpenSession(flags C.CK_FLAGS) (C.CK_SESSION_HANDLE, error) {
+func (slot *Slot) OpenSession(flags C.CK_FLAGS) (CK_SESSION_HANDLE, error) {
 	if !slot.IsTokenPresent() {
 		return 0, NewError("Slot.OpenSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
@@ -46,7 +46,7 @@ func (slot *Slot) OpenSession(flags C.CK_FLAGS) (C.CK_SESSION_HANDLE, error) {
 }
 
 // CloseSession closes the session identified by the given handle.
-func (slot *Slot) CloseSession(handle C.CK_SESSION_HANDLE) error {
+func (slot *Slot) CloseSession(handle CK_SESSION_HANDLE) error {
 	if !slot.IsTokenPresent() {
 		return NewError("Slot.CloseSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
@@ -66,7 +66,7 @@ func (slot *Slot) CloseAllSessions() {
 }
 
 // GetSession returns an active session with the given handle.
-func (slot *Slot) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error) {
+func (slot *Slot) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
 	if !slot.IsTokenPresent() {
 		return nil, NewError("Slot.GetSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
@@ -80,7 +80,7 @@ func (slot *Slot) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error) {
 }
 
 // HasSession returns true if the session with the handle as ID exists.
-func (slot *Slot) HasSession(handle C.CK_SESSION_HANDLE) bool {
+func (slot *Slot) HasSession(handle CK_SESSION_HANDLE) bool {
 	slot.Lock()
 	defer slot.Unlock()
 	_, ok := slot.Sessions[handle]

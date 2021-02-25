@@ -24,6 +24,9 @@ const (
 	serialNumber      = "1010101"
 )
 
+// assert that go CK_ULONG has correct size
+const _ = byte(C.sizeof_CK_ULONG-unsafe.Sizeof(CK_ULONG(0))) << 8
+
 // Extracts the Return Value from an error, and logs it.
 func ErrorToRV(err error) C.CK_RV {
 	if err == nil {
@@ -187,7 +190,7 @@ func C_GetSlotInfo(slotId C.CK_SLOT_ID, pInfo C.CK_SLOT_INFO_PTR) C.CK_RV {
 	if pInfo == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	slot, err := App.GetSlot(slotId)
+	slot, err := App.GetSlot(CK_SLOT_ID(slotId))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -208,7 +211,7 @@ func C_GetTokenInfo(slotId C.CK_SLOT_ID, pInfo C.CK_TOKEN_INFO_PTR) C.CK_RV {
 	if pInfo == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	slot, err := App.GetSlot(slotId)
+	slot, err := App.GetSlot(CK_SLOT_ID(slotId))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -236,7 +239,7 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	if phSession == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	slot, err := App.GetSlot(slotId)
+	slot, err := App.GetSlot(CK_SLOT_ID(slotId))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -248,7 +251,7 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	*phSession = session
+	*phSession = C.CK_SESSION_HANDLE(session)
 	return CKR_OK
 }
 
@@ -258,11 +261,11 @@ func C_CloseSession(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	slot, err := App.GetSessionSlot(hSession)
+	slot, err := App.GetSessionSlot(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	err = slot.CloseSession(hSession)
+	err = slot.CloseSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -275,7 +278,7 @@ func C_CloseAllSessions(slotId C.CK_SLOT_ID) C.CK_RV {
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	slot, err := App.GetSlot(slotId)
+	slot, err := App.GetSlot(CK_SLOT_ID(slotId))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -289,7 +292,7 @@ func C_GetSessionInfo(hSession C.CK_SESSION_HANDLE, pInfo C.CK_SESSION_INFO_PTR)
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -309,7 +312,7 @@ func C_Login(hSession C.CK_SESSION_HANDLE, userType C.CK_USER_TYPE, pPin C.CK_UT
 	if pPin == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -327,7 +330,7 @@ func C_Logout(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		// log.Errorf("error! %v\n", err)
 		return ErrorToRV(err)
@@ -363,7 +366,7 @@ func C_FindObjectsInit(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PT
 	if ulCount > 0 && pTemplate == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -390,12 +393,12 @@ func C_FindObjects(hSession C.CK_SESSION_HANDLE, phObject C.CK_OBJECT_HANDLE_PTR
 	if phObject == nil || pulObjectCount == nil {
 		return CKR_ARGUMENTS_BAD
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
 
-	handles, err := session.FindObjects(ulMaxObjectCount)
+	handles, err := session.FindObjects(int(ulMaxObjectCount))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -407,7 +410,7 @@ func C_FindObjects(hSession C.CK_SESSION_HANDLE, phObject C.CK_OBJECT_HANDLE_PTR
 		l = len(handles)
 	}
 	for i := 0; i < l; i++ {
-		cObjectSlice[i] = handles[i]
+		cObjectSlice[i] = C.CK_OBJECT_HANDLE(handles[i])
 
 	}
 	*pulObjectCount = C.ulong(len(handles))
@@ -420,7 +423,7 @@ func C_FindObjectsFinal(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -444,11 +447,11 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	object, err := session.GetObject(hObject)
+	object, err := session.GetObject(CK_OBJECT_HANDLE(hObject))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -465,18 +468,20 @@ func C_GenerateKeyPair(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_P
 	return CKR_FUNCTION_NOT_SUPPORTED
 }
 
+const _ = (C.sizeof_CK_OBJECT_HANDLE - unsafe.Sizeof(CK_OBJECT_HANDLE(0))) << 128
+
 //export C_SignInit
 func C_SignInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKey C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Debugf("Called: C_SignInit\n")
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
 	mechanism := CToMechanism(pMechanism)
-	err = session.SignInit(mechanism, hKey)
+	err = session.SignInit(mechanism, CK_OBJECT_HANDLE(hKey))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -489,7 +494,7 @@ func C_SignUpdate(hSession C.CK_SESSION_HANDLE, pPart C.CK_BYTE_PTR, ulPartLen C
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -507,7 +512,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -541,7 +546,7 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -605,12 +610,12 @@ func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, 
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
 	mechanism := CToMechanism(pMechanism)
-	err = session.DecryptInit(mechanism, hKey)
+	err = session.DecryptInit(mechanism, CK_OBJECT_HANDLE(hKey))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -625,7 +630,7 @@ func C_DecryptUpdate(hSession C.CK_SESSION_HANDLE, pEncryptedPart C.CK_BYTE_PTR,
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -644,7 +649,7 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -679,7 +684,7 @@ func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
 	if App == nil {
 		return CKR_CRYPTOKI_NOT_INITIALIZED
 	}
-	session, err := App.GetSession(hSession)
+	session, err := App.GetSession(CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		return ErrorToRV(err)
 	}

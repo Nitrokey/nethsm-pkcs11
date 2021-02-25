@@ -13,14 +13,14 @@ import (
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
 type Session struct {
 	sync.Mutex
-	Slot            *Slot                // The slot where the session is being used
-	Handle          C.CK_SESSION_HANDLE  // A session handle
-	flags           C.CK_FLAGS           // Session flags
-	refreshedToken  bool                 // True if the token have been refreshed
-	foundObjects    []C.CK_OBJECT_HANDLE // List of found objects
-	findInitialized bool                 // True if the user executed a Find method and it has not finished yet.
-	signCtx         OpContext            // Signing Context
-	decryptCtx      OpContext            // Decrypting Context
+	Slot            *Slot              // The slot where the session is being used
+	Handle          CK_SESSION_HANDLE  // A session handle
+	flags           C.CK_FLAGS         // Session flags
+	refreshedToken  bool               // True if the token have been refreshed
+	foundObjects    []CK_OBJECT_HANDLE // List of found objects
+	findInitialized bool               // True if the user executed a Find method and it has not finished yet.
+	signCtx         OpContext          // Signing Context
+	decryptCtx      OpContext          // Decrypting Context
 	Cache           []byte
 	// digestHash        hash.Hash            // Hash used for hashing
 	// digestInitialized bool                 // True if the user executed a Hash method and it has not finished yet
@@ -28,10 +28,10 @@ type Session struct {
 }
 
 // Map of sessions identified by their handle. It's very similar to an array because the handles are integers.
-type Sessions map[C.CK_SESSION_HANDLE]*Session
+type Sessions map[CK_SESSION_HANDLE]*Session
 
 // A global variable that defines the session handles of the system.
-var SessionHandle = C.CK_SESSION_HANDLE(0)
+var SessionHandle = CK_SESSION_HANDLE(0)
 
 // The mutex that protects the global variable
 var SessionMutex = sync.Mutex{}
@@ -97,7 +97,7 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 	}
 
 	if len(attrs) == 0 {
-		session.foundObjects = make([]C.CK_OBJECT_HANDLE, len(objects))
+		session.foundObjects = make([]CK_OBJECT_HANDLE, len(objects))
 		for i, object := range objects {
 			session.foundObjects[i] = object.Handle
 		}
@@ -116,17 +116,17 @@ func (session *Session) FindObjectsInit(attrs Attributes) error {
 }
 
 // FindObjects returns a number of objects defined in arguments that have been found.
-func (session *Session) FindObjects(maxObjectCount C.CK_ULONG) ([]C.CK_OBJECT_HANDLE, error) {
+func (session *Session) FindObjects(maxObjectCount int) ([]CK_OBJECT_HANDLE, error) {
 	if !session.findInitialized {
 		return nil, NewError("Session.FindObjects", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
 	limit := len(session.foundObjects)
-	if int(maxObjectCount) < limit {
-		limit = int(maxObjectCount)
+	if maxObjectCount < limit {
+		limit = maxObjectCount
 	}
-	resul := session.foundObjects[:limit]
+	result := session.foundObjects[:limit]
 	session.foundObjects = session.foundObjects[limit:]
-	return resul, nil
+	return result, nil
 }
 
 // FindObjectsFinal resets the status and finishes the finding objects session.
@@ -141,7 +141,7 @@ func (session *Session) FindObjectsFinal() error {
 }
 
 // GetObject returns a CryptoObject in the token.
-func (session *Session) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, error) {
+func (session *Session) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error) {
 	token, err := session.Slot.GetToken()
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (session *Session) Logout() error {
 }
 
 // SignInit starts the signing process.
-func (session *Session) SignInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
+func (session *Session) SignInit(mechanism *Mechanism, hKey CK_OBJECT_HANDLE) error {
 	if session.signCtx != nil && session.signCtx.Initialized() {
 		return NewError("Session.SignInit", "operation active", CKR_OPERATION_ACTIVE)
 	}
@@ -251,7 +251,7 @@ func (session *Session) SignClear() {
 	session.signCtx = nil
 }
 
-func (session *Session) DecryptInit(mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) error {
+func (session *Session) DecryptInit(mechanism *Mechanism, hKey CK_OBJECT_HANDLE) error {
 	if session.decryptCtx != nil && session.decryptCtx.Initialized() {
 		return NewError("Session.DecryptInit", "operation active", CKR_OPERATION_ACTIVE)
 	}

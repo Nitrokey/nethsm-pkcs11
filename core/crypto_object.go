@@ -13,7 +13,7 @@ import (
 
 // A cryptoObject related to a token.
 type CryptoObject struct {
-	Handle     C.CK_OBJECT_HANDLE // Object's handle
+	Handle     CK_OBJECT_HANDLE // Object's handle
 	ID         string
 	Attributes Attributes // List of attributes of the object.
 }

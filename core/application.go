@@ -50,7 +50,7 @@ func NewApplication() (*Application, error) {
 			ctx = addBasicAuth(ctx, slotConf.User, password)
 		}
 		slot := &Slot{
-			ID:          C.CK_SLOT_ID(i),
+			ID:          CK_SLOT_ID(i),
 			description: slotConf.Description,
 			Sessions:    make(Sessions),
 			conf:        slotConf,
@@ -80,7 +80,7 @@ func NewApplication() (*Application, error) {
 }
 
 // GetSessionSlot returns the slot object related to a given session handle.
-func (app *Application) GetSessionSlot(handle C.CK_SESSION_HANDLE) (*Slot, error) {
+func (app *Application) GetSessionSlot(handle CK_SESSION_HANDLE) (*Slot, error) {
 	for _, slot := range app.Slots {
 		if slot.HasSession(handle) {
 			return slot, nil
@@ -90,7 +90,7 @@ func (app *Application) GetSessionSlot(handle C.CK_SESSION_HANDLE) (*Slot, error
 }
 
 // GetSession returns the session object related to a given handle.
-func (app *Application) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error) {
+func (app *Application) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
 	slot, err := app.GetSessionSlot(handle)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (app *Application) GetSession(handle C.CK_SESSION_HANDLE) (*Session, error)
 }
 
 // GetSlot returns the slot with the given ID.
-func (app *Application) GetSlot(id C.CK_SLOT_ID) (*Slot, error) {
+func (app *Application) GetSlot(id CK_SLOT_ID) (*Slot, error) {
 	if int(id) >= len(app.Slots) {
 		return nil, NewError("Application.GetSlot", "index out of bounds", CKR_SLOT_ID_INVALID)
 	}

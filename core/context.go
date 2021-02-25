@@ -19,7 +19,7 @@ type OpContext interface {
 	Initialized() bool
 }
 
-func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) (context OpContext, err error) {
+func NewSignContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (context OpContext, err error) {
 	keyObject, err := session.GetObject(hKey)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HAN
 	return context, nil
 }
 
-func NewDecryptContext(session *Session, mechanism *Mechanism, hKey C.CK_OBJECT_HANDLE) (context OpContext, err error) {
+func NewDecryptContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (context OpContext, err error) {
 	keyObject, err := session.GetObject(hKey)
 	if err != nil {
 		return nil, err

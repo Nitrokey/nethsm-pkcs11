@@ -15,9 +15,9 @@ import (
 	"unsafe"
 )
 
-var nextObjectHandle = func() func() C.CK_OBJECT_HANDLE {
-	var lastObjectHandle = C.CK_OBJECT_HANDLE(0)
-	return func() C.CK_OBJECT_HANDLE {
+var nextObjectHandle = func() func() CK_OBJECT_HANDLE {
+	var lastObjectHandle = CK_OBJECT_HANDLE(0)
+	return func() CK_OBJECT_HANDLE {
 		lastObjectHandle++
 		return lastObjectHandle
 	}
@@ -297,7 +297,7 @@ func (token *Token) GetLabel() string {
 }
 
 // Returns an object that uses the handle provided.
-func (token *Token) GetObject(handle C.CK_OBJECT_HANDLE) (*CryptoObject, error) {
+func (token *Token) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error) {
 	token.Lock()
 	defer token.Unlock()
 	for _, object := range token._objects {
