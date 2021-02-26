@@ -1,9 +1,5 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"context"
 	"os"

@@ -1,9 +1,5 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"fmt"
 	"net/http"
@@ -15,12 +11,12 @@ import (
 type P11Error struct {
 	Who         string
 	Description string
-	Code        C.CK_RV
+	Code        CK_RV
 }
 
 // NewError returns a new error. with the provided parameters.
-func NewError(who, description string, code C.CK_RV) P11Error {
-	if code == C.CK_RV(0) {
+func NewError(who, description string, code CK_RV) P11Error {
+	if code == CK_RV(0) {
 		code = CKR_GENERAL_ERROR
 	}
 	return P11Error{

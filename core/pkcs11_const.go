@@ -5,22 +5,22 @@
 package core
 
 const (
-	CKU_SO               uint = 0
-	CKU_USER             uint = 1
-	CKU_CONTEXT_SPECIFIC uint = 2
+	CKU_SO CK_USER_TYPE = iota
+	CKU_USER
+	CKU_CONTEXT_SPECIFIC
 )
 
 const (
-	CKO_DATA              uint = 0x00000000
-	CKO_CERTIFICATE       uint = 0x00000001
-	CKO_PUBLIC_KEY        uint = 0x00000002
-	CKO_PRIVATE_KEY       uint = 0x00000003
-	CKO_SECRET_KEY        uint = 0x00000004
-	CKO_HW_FEATURE        uint = 0x00000005
-	CKO_DOMAIN_PARAMETERS uint = 0x00000006
-	CKO_MECHANISM         uint = 0x00000007
-	CKO_OTP_KEY           uint = 0x00000008
-	CKO_VENDOR_DEFINED    uint = 0x80000000
+	CKO_DATA CK_ULONG = iota
+	CKO_CERTIFICATE
+	CKO_PUBLIC_KEY
+	CKO_PRIVATE_KEY
+	CKO_SECRET_KEY
+	CKO_HW_FEATURE
+	CKO_DOMAIN_PARAMETERS
+	CKO_MECHANISM
+	CKO_OTP_KEY
+	CKO_VENDOR_DEFINED CK_ULONG = 0x80000000
 )
 
 const (
@@ -738,5 +738,5 @@ const (
 
 	// CK_UNAVAILABLE_INFORMATION may be returned for several fields within CK_TOKEN_INFO. It indicates
 	// the token is unable or unwilling to provide the requested information.
-	CK_UNAVAILABLE_INFORMATION = ^uint(0)
+	CK_UNAVAILABLE_INFORMATION = ^CK_ULONG(0)
 )

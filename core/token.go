@@ -1,18 +1,10 @@
 package core
 
-/*
-#include <stdlib.h>
-#include <string.h>
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"context"
 	"fmt"
 	"p11nethsm/api"
 	"sync"
-	"time"
-	"unsafe"
 )
 
 var nextObjectHandle = func() func() CK_OBJECT_HANDLE {
@@ -24,7 +16,7 @@ var nextObjectHandle = func() func() CK_OBJECT_HANDLE {
 }()
 
 type loginData struct {
-	userType C.CK_USER_TYPE
+	userType CK_USER_TYPE
 	pin      string
 }
 
@@ -87,19 +79,19 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	object.Attributes = Attributes{}
 	object.Attributes.Set(
 		&Attribute{CKA_LABEL, []byte(keyID)},
-		&Attribute{CKA_CLASS, ulongToArr(uint64(CKO_PRIVATE_KEY))},
+		&Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
 		&Attribute{CKA_ID, []byte(keyID)},
 		&Attribute{CKA_SUBJECT, nil},
-		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(C.CK_UNAVAILABLE_INFORMATION)},
-		&Attribute{CKA_LOCAL, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_PRIVATE, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_MODIFIABLE, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_TOKEN, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_ALWAYS_AUTHENTICATE, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_SENSITIVE, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_ALWAYS_SENSITIVE, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_EXTRACTABLE, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_NEVER_EXTRACTABLE, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CK_UNAVAILABLE_INFORMATION)},
+		&Attribute{CKA_LOCAL, FalseAttr},
+		&Attribute{CKA_PRIVATE, TrueAttr},
+		&Attribute{CKA_MODIFIABLE, FalseAttr},
+		&Attribute{CKA_TOKEN, TrueAttr},
+		&Attribute{CKA_ALWAYS_AUTHENTICATE, FalseAttr},
+		&Attribute{CKA_SENSITIVE, TrueAttr},
+		&Attribute{CKA_ALWAYS_SENSITIVE, TrueAttr},
+		&Attribute{CKA_EXTRACTABLE, FalseAttr},
+		&Attribute{CKA_NEVER_EXTRACTABLE, TrueAttr},
 	)
 	// switch key.Algorithm {
 	// case api.KEYALGORITHM_RSA:
@@ -115,12 +107,12 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	// log.Debugf("pubExp: %v", key.Key.GetPublicExponent())
 	object.Attributes.Set(
 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
-		&Attribute{CKA_DERIVE, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_DECRYPT, []byte{C.CK_TRUE}},
-		&Attribute{CKA_SIGN, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-		&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-		&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+		&Attribute{CKA_DERIVE, FalseAttr},
+		&Attribute{CKA_DECRYPT, TrueAttr},
+		&Attribute{CKA_SIGN, TrueAttr},
+		&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+		&Attribute{CKA_UNWRAP, FalseAttr},
+		&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
 		// &Attribute{CKA_MODULUS, modulus},
 		// &Attribute{CKA_PUBLIC_EXPONENT, pubExp},
 	)
@@ -131,12 +123,12 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	// 	}
 	// 	object.Attributes.Set(
 	// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
-	// 		&Attribute{CKA_DERIVE, boolToArr(C.CK_TRUE)},
-	// 		&Attribute{CKA_DECRYPT, boolToArr(C.CK_FALSE)},
-	// 		&Attribute{CKA_SIGN, boolToArr(C.CK_TRUE)},
-	// 		&Attribute{CKA_SIGN_RECOVER, boolToArr(C.CK_TRUE)},
-	// 		&Attribute{CKA_UNWRAP, boolToArr(C.CK_FALSE)},
-	// 		&Attribute{CKA_WRAP_WITH_TRUSTED, boolToArr(C.CK_TRUE)},
+	// 		&Attribute{CKA_DERIVE, TrueAttr},
+	// 		&Attribute{CKA_DECRYPT, FalseAttr},
+	// 		&Attribute{CKA_SIGN, TrueAttr},
+	// 		&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+	// 		&Attribute{CKA_UNWRAP, FalseAttr},
+	// 		&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
 	// 		&Attribute{CKA_EC_POINT, data},
 	// 	)
 	// }
@@ -184,60 +176,6 @@ func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
 	return token._objects, nil
 }
 
-func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
-	if pInfo == nil {
-		return NewError("token.GetInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
-	}
-	info := (*C.CK_TOKEN_INFO)(unsafe.Pointer(pInfo))
-
-	str2Buf(token.Label, info.label[:])
-
-	if token.slot == nil {
-		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", CKR_ARGUMENTS_BAD)
-	}
-
-	if token.info == nil {
-		if token.slot.conf.Sparse {
-			var info api.InfoData
-			info.Product = "NetHSM"
-			info.Vendor = libManufacturerID
-			token.info = &info
-		} else {
-			info, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
-			if err != nil {
-				return NewAPIError("token.GetInfo", "InfoGet", r, err)
-			}
-			token.info = &info
-		}
-	}
-
-	str2Buf(token.info.Vendor, info.manufacturerID[:])
-	str2Buf(token.info.Product, info.model[:])
-	str2Buf(serialNumber, info.serialNumber[:])
-
-	info.flags = C.CK_ULONG(token.tokenFlags)
-	info.ulMaxSessionCount = C.CK_ULONG(App.Config.MaxSessionCount)
-	info.ulSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxRwSessionCount = 0
-	info.ulRwSessionCount = C.CK_UNAVAILABLE_INFORMATION
-	info.ulMaxPinLen = C.CK_ULONG(maxPinLength)
-	info.ulMinPinLen = C.CK_ULONG(minPinLength)
-	info.ulTotalPublicMemory = C.CK_UNAVAILABLE_INFORMATION
-	info.ulFreePublicMemory = C.CK_UNAVAILABLE_INFORMATION
-	info.ulTotalPrivateMemory = C.CK_UNAVAILABLE_INFORMATION
-	info.ulFreePrivateMemory = C.CK_UNAVAILABLE_INFORMATION
-	info.hardwareVersion.major = 0
-	info.hardwareVersion.minor = 1
-	info.firmwareVersion.major = 0
-	info.firmwareVersion.minor = 1
-
-	now := time.Now()
-	timeStr := []byte(now.Format("20060102150405") + "00")
-	C.memcpy(unsafe.Pointer(&info.utcTime[0]), unsafe.Pointer(&timeStr[0]), 16)
-
-	return nil
-}
-
 func (token *Token) CheckUserPin(pin string) error {
 	authCtx := addBasicAuth(token.ApiCtx(), token.slot.conf.User, pin)
 	_, r, err := App.Api.KeysGet(authCtx).Execute()
@@ -251,13 +189,13 @@ func (token *Token) CheckUserPin(pin string) error {
 }
 
 // Logs into the token, or returns an error if something goes wrong.
-func (token *Token) Login(userType C.CK_USER_TYPE, pin string) error {
-	if uint(userType) != CKU_CONTEXT_SPECIFIC && token.loginData != nil &&
+func (token *Token) Login(userType CK_USER_TYPE, pin string) error {
+	if userType != CKU_CONTEXT_SPECIFIC && token.loginData != nil &&
 		token.loginData.userType == userType {
 		return NewError("token.Login", "another user already logged in", CKR_USER_ALREADY_LOGGED_IN)
 	}
 
-	switch uint(userType) {
+	switch userType {
 	case CKU_USER:
 		if !token.slot.conf.Sparse {
 			err := token.CheckUserPin(pin)

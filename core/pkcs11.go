@@ -247,7 +247,7 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	if err != nil {
 		return ErrorToRV(err)
 	}
-	session, err := slot.OpenSession(flags)
+	session, err := slot.OpenSession(CK_FLAGS(flags))
 	if err != nil {
 		return ErrorToRV(err)
 	}
@@ -317,7 +317,7 @@ func C_Login(hSession C.CK_SESSION_HANDLE, userType C.CK_USER_TYPE, pPin C.CK_UT
 		return ErrorToRV(err)
 	}
 	pin := string(C.GoBytes(unsafe.Pointer(pPin), C.int(ulPinLen)))
-	err = session.Login(userType, pin)
+	err = session.Login(CK_USER_TYPE(userType), pin)
 	if err != nil {
 		return ErrorToRV(err)
 	}

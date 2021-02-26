@@ -1,13 +1,8 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"p11nethsm/log"
 	"sync"
-	"unsafe"
 )
 
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
@@ -15,7 +10,7 @@ type Session struct {
 	sync.Mutex
 	Slot            *Slot              // The slot where the session is being used
 	Handle          CK_SESSION_HANDLE  // A session handle
-	flags           C.CK_FLAGS         // Session flags
+	flags           CK_FLAGS           // Session flags
 	refreshedToken  bool               // True if the token have been refreshed
 	foundObjects    []CK_OBJECT_HANDLE // List of found objects
 	findInitialized bool               // True if the user executed a Find method and it has not finished yet.
@@ -36,7 +31,7 @@ var SessionHandle = CK_SESSION_HANDLE(0)
 // The mutex that protects the global variable
 var SessionMutex = sync.Mutex{}
 
-func NewSession(flags C.CK_FLAGS, currentSlot *Slot) *Session {
+func NewSession(flags CK_FLAGS, currentSlot *Slot) *Session {
 	SessionMutex.Lock()
 	defer SessionMutex.Unlock()
 	SessionHandle++
@@ -45,24 +40,6 @@ func NewSession(flags C.CK_FLAGS, currentSlot *Slot) *Session {
 		Handle: SessionHandle,
 		flags:  flags,
 		// randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
-	}
-}
-
-// GetInfo dumps session information into a C pointer.
-func (session *Session) GetInfo(pInfo C.CK_SESSION_INFO_PTR) error {
-	if pInfo != nil {
-		state, err := session.GetState()
-		if err != nil {
-			return err
-		}
-		info := (*C.CK_SESSION_INFO)(unsafe.Pointer(pInfo))
-		info.slotID = C.CK_SLOT_ID(session.Slot.ID)
-		info.state = C.CK_STATE(state)
-		info.flags = C.CK_FLAGS(session.flags)
-		return nil
-
-	} else {
-		return NewError("Session.GetSessionInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 }
 
@@ -154,7 +131,7 @@ func (session *Session) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error
 }
 
 // GetState returns the session state.
-func (session *Session) GetState() (C.CK_STATE, error) {
+func (session *Session) GetState() (CK_STATE, error) {
 	loginData := session.Slot.token.GetLoginData()
 	if loginData == nil {
 		if session.isReadOnly() {
@@ -163,7 +140,7 @@ func (session *Session) GetState() (C.CK_STATE, error) {
 			return CKS_RW_PUBLIC_SESSION, nil
 		}
 	}
-	switch uint(loginData.userType) {
+	switch loginData.userType {
 	case CKU_SO:
 		return CKS_RW_SO_FUNCTIONS, nil
 	case CKU_USER:
@@ -182,7 +159,7 @@ func (session *Session) isReadOnly() bool {
 }
 
 // Login logs in on a token with a pin and a defined user type.
-func (session *Session) Login(userType C.CK_USER_TYPE, pin string) error {
+func (session *Session) Login(userType CK_USER_TYPE, pin string) error {
 	token, err := session.Slot.GetToken()
 	if err != nil {
 		return err
@@ -224,11 +201,11 @@ func (session *Session) SignInit(mechanism *Mechanism, hKey CK_OBJECT_HANDLE) er
 }
 
 // SignLength returns the signature length.
-func (session *Session) SignLength() (C.ulong, error) {
+func (session *Session) SignLength() (int, error) {
 	if session.signCtx == nil || !session.signCtx.Initialized() {
 		return 0, NewError("Session.SignLength", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
-	return C.ulong(session.signCtx.ResultLength()), nil
+	return session.signCtx.ResultLength(), nil
 }
 
 // SignUpdate updates the signature with data to sign.
@@ -267,11 +244,11 @@ func (session *Session) DecryptInit(mechanism *Mechanism, hKey CK_OBJECT_HANDLE)
 	return nil
 }
 
-func (session *Session) DecryptLength() (C.ulong, error) {
+func (session *Session) DecryptLength() (int, error) {
 	if session.decryptCtx == nil || !session.decryptCtx.Initialized() {
 		return 0, NewError("Session.DecryptLength", "operation not initialized", CKR_OPERATION_NOT_INITIALIZED)
 	}
-	return C.ulong(session.decryptCtx.ResultLength()), nil
+	return session.decryptCtx.ResultLength(), nil
 }
 
 func (session *Session) DecryptUpdate(data []byte) error {
@@ -293,7 +270,7 @@ func (session *Session) DecryptClear() {
 }
 
 // GetUserAuthorization returns the authorization level of the state.
-func GetUserAuthorization(state C.CK_STATE, isToken, isPrivate, userAction bool) bool {
+func GetUserAuthorization(state CK_STATE, isToken, isPrivate, userAction bool) bool {
 	switch state {
 	case CKS_RW_SO_FUNCTIONS:
 		return !isPrivate

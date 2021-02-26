@@ -1,17 +1,10 @@
 package core
 
-/*
-#include <stdlib.h>
-#include <string.h>
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"context"
 	"fmt"
 	"p11nethsm/config"
 	"sync"
-	"unsafe"
 )
 
 // Slot represents a HSM slot. It has an ID and it can have a connected Token.
@@ -33,7 +26,7 @@ func (slot *Slot) IsTokenPresent() bool {
 }
 
 // OpenSession opens a new session with given flags.
-func (slot *Slot) OpenSession(flags C.CK_FLAGS) (CK_SESSION_HANDLE, error) {
+func (slot *Slot) OpenSession(flags CK_FLAGS) (CK_SESSION_HANDLE, error) {
 	if !slot.IsTokenPresent() {
 		return 0, NewError("Slot.OpenSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
@@ -85,33 +78,6 @@ func (slot *Slot) HasSession(handle CK_SESSION_HANDLE) bool {
 	defer slot.Unlock()
 	_, ok := slot.Sessions[handle]
 	return ok
-}
-
-// GetInfo returns the slot info.
-func (slot *Slot) GetInfo(pInfo C.CK_SLOT_INFO_PTR) error {
-	if pInfo == nil {
-		return NewError("Slot.GetInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
-	}
-	info := (*C.CK_SLOT_INFO)(unsafe.Pointer(pInfo))
-
-	description := slot.description
-	if slot.description == "" {
-		description = "Nitrokey NetHSM"
-	}
-	str2Buf(description, info.slotDescription[:])
-	str2Buf(libManufacturerID, info.manufacturerID[:])
-
-	slot.flags = CKF_REMOVABLE_DEVICE
-	if slot.token != nil {
-		slot.flags |= CKF_TOKEN_PRESENT
-	}
-
-	pInfo.flags = C.CK_ULONG(slot.flags)
-	pInfo.hardwareVersion.major = 0
-	pInfo.hardwareVersion.minor = 0
-	pInfo.firmwareVersion.major = 0
-	pInfo.firmwareVersion.minor = 0
-	return nil
 }
 
 // GetToken returns the token inserted into the slot.

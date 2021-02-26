@@ -2,7 +2,7 @@ package core
 
 import "fmt"
 
-func CKAString(attr uint32) string {
+func CKAString(attr CK_ATTRIBUTE_TYPE) string {
 	switch attr {
 	case CKA_CLASS:
 		return "CKA_CLASS"

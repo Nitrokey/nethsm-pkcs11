@@ -1,10 +1,5 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
-
 // type ECDSASignContext struct {
 // 	// randSrc io.Reader
 // 	// keyMeta     *tcecdsa.KeyMeta // Key Metainfo used in signing.
@@ -159,21 +154,21 @@ import "C"
 // 		&Attribute{CKA_CLASS, ulongToArr(CKO_PUBLIC_KEY)},
 // 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
 // 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_EC_KEY_PAIR_GEN)},
-// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(CK_TRUE)},
 
 // 		// This fields are our defaults
 // 		&Attribute{CKA_LABEL, nil},
 // 		&Attribute{CKA_ID, nil},
 // 		&Attribute{CKA_SUBJECT, nil},
-// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_ENCRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_VERIFY, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_VERIFY_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_WRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_TRUSTED, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_ENCRYPT, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_VERIFY, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_VERIFY_RECOVER, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_WRAP, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_TRUSTED, ulongToArr(CK_FALSE)},
 // 		&Attribute{CKA_START_DATE, make([]byte, 8)},
 // 		&Attribute{CKA_END_DATE, make([]byte, 8)},
 // 	)
@@ -207,27 +202,27 @@ import "C"
 // 		&Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
 // 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
 // 		&Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CKM_EC_KEY_PAIR_GEN)},
-// 		&Attribute{CKA_LOCAL, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_LOCAL, ulongToArr(CK_TRUE)},
 
 // 		// This fields are our defaults
 // 		&Attribute{CKA_LABEL, nil},
 // 		&Attribute{CKA_ID, nil},
 // 		&Attribute{CKA_SUBJECT, nil},
-// 		&Attribute{CKA_PRIVATE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_MODIFIABLE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_TOKEN, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_DERIVE, ulongToArr(C.CK_FALSE)},
+// 		&Attribute{CKA_PRIVATE, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_MODIFIABLE, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_TOKEN, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_DERIVE, ulongToArr(CK_FALSE)},
 
-// 		&Attribute{CKA_WRAP_WITH_TRUSTED, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_ALWAYS_AUTHENTICATE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_ALWAYS_SENSITIVE, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_DECRYPT, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_SIGN, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_SIGN_RECOVER, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_UNWRAP, ulongToArr(C.CK_TRUE)},
-// 		&Attribute{CKA_EXTRACTABLE, ulongToArr(C.CK_FALSE)},
-// 		&Attribute{CKA_NEVER_EXTRACTABLE, ulongToArr(C.CK_TRUE)},
+// 		&Attribute{CKA_WRAP_WITH_TRUSTED, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_AUTHENTICATE, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_SENSITIVE, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_ALWAYS_SENSITIVE, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_DECRYPT, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_SIGN, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_SIGN_RECOVER, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_UNWRAP, ulongToArr(CK_TRUE)},
+// 		&Attribute{CKA_EXTRACTABLE, ulongToArr(CK_FALSE)},
+// 		&Attribute{CKA_NEVER_EXTRACTABLE, ulongToArr(CK_TRUE)},
 // 		&Attribute{CKA_START_DATE, make([]byte, 8)},
 // 		&Attribute{CKA_END_DATE, make([]byte, 8)},
 // 	)

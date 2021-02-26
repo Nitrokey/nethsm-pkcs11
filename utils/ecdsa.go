@@ -1,7 +1,5 @@
 package utils
 
-import "C"
-
 // // from github.com/Thalesignite/crypto11
 // var CurveNameToASN1 = map[string]asn1.ObjectIdentifier{
 // 	"P-224": {1, 3, 132, 0, 33},

@@ -1,11 +1,7 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
 import (
-	"encoding/binary"
+	"unsafe"
 )
 
 // OpContext represents a structure which groups parameters that allow to sign
@@ -75,12 +71,12 @@ func NewDecryptContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HA
 	return context, nil
 }
 
-func ulongToArr(n uint64) []byte {
-	arr := make([]byte, 8)
-	binary.LittleEndian.PutUint64(arr, n)
+func ulongToArr(n CK_ULONG) []byte {
+	const size = unsafe.Sizeof(n)
+	arr := make([]byte, size)
+	for i := range arr {
+		arr[i] = byte(n)
+		n >>= 8
+	}
 	return arr
-}
-
-func boolToArr(n C.CK_BBOOL) []byte {
-	return []byte{byte(n)}
 }

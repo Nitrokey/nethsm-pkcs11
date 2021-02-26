@@ -1,10 +1,5 @@
 package core
 
-/*
-#include "pkcs11go.h"
-*/
-import "C"
-
 import (
 	"encoding/base64"
 	"p11nethsm/api"

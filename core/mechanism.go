@@ -1,11 +1,5 @@
 package core
 
-/*
-#include <stdlib.h>
-#include <string.h>
-#include "pkcs11go.h"
-*/
-import "C"
 import (
 	"p11nethsm/api"
 	"unsafe"
@@ -13,34 +7,8 @@ import (
 
 // Mechanism represents a cryptographic operation that the HSM supports.
 type Mechanism struct {
-	Type      C.CK_MECHANISM_TYPE // Mechanism Type
-	Parameter []byte              // Parameters for the mechanism
-}
-
-// CToMechanism transforms a C mechanism into a Mechanism Golang structure.
-func CToMechanism(pMechanism C.CK_MECHANISM_PTR) *Mechanism {
-	cMechanism := (*C.CK_MECHANISM)(unsafe.Pointer(pMechanism))
-	mechanismType := cMechanism.mechanism
-	mechanismVal := C.GoBytes(unsafe.Pointer(cMechanism.pParameter), C.int(cMechanism.ulParameterLen))
-	return &Mechanism{
-		Type:      mechanismType,
-		Parameter: mechanismVal,
-	}
-
-}
-
-// ToC transforms a Mechanism Golang Structure into a C structure.
-func (mechanism *Mechanism) ToC(cDst C.CK_MECHANISM_PTR) error {
-	cMechanism := (*C.CK_MECHANISM)(unsafe.Pointer(cDst))
-	paramLen := C.CK_ULONG(len(mechanism.Parameter))
-	if cMechanism.ulParameterLen >= paramLen {
-		cMechanism.mechanism = mechanism.Type
-		cMechanism.ulParameterLen = paramLen
-		C.memcpy(unsafe.Pointer(cMechanism.pParameter), unsafe.Pointer(&mechanism.Parameter[0]), paramLen)
-	} else {
-		return NewError("Mechanism.ToC", "Buffer too small", CKR_BUFFER_TOO_SMALL)
-	}
-	return nil
+	Type      CK_MECHANISM_TYPE // Mechanism Type
+	Parameter []byte            // Parameters for the mechanism
 }
 
 func (mechanism *Mechanism) SignMode() (mode api.SignMode, err error) {
@@ -80,7 +48,7 @@ func (mechanism *Mechanism) DecryptMode() (mode api.DecryptMode, err error) {
 			err = NewError("Mechanism.DecryptMode", "OAEP mechanism needs parameter", CKR_MECHANISM_INVALID)
 			return
 		}
-		params := (*C.CK_RSA_PKCS_OAEP_PARAMS)(unsafe.Pointer(&mechanism.Parameter[0]))
+		params := (*CK_RSA_PKCS_OAEP_PARAMS)(unsafe.Pointer(&mechanism.Parameter[0]))
 		switch params.hashAlg {
 		case CKM_MD5:
 			mode = api.DECRYPTMODE_OAEP_MD5
