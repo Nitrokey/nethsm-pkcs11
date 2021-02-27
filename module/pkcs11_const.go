@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE_miekg.txt file.
 
-package core
+package module
 
 const (
 	CKU_SO CK_USER_TYPE = iota

@@ -1,4 +1,4 @@
-package core
+package module
 
 // // This section is copied almost literally from the golang crypto/rsa source code
 // // https://golang.org/src/crypto/rsa/pkcs1v15.go

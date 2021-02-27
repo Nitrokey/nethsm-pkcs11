@@ -1,4 +1,4 @@
-package core
+package module
 
 // // incCounter increments a four byte, big-endian counter.
 // func incCounter(c *[4]byte) {

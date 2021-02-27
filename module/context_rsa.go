@@ -1,4 +1,4 @@
-package core
+package module
 
 import (
 	"encoding/base64"
@@ -57,7 +57,7 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 		return nil, err
 	}
 	reqBody.SetMode(mode)
-	sigData, r, err := Instance.Api.KeysKeyIDSignPost(
+	sigData, r, err := Api.KeysKeyIDSignPost(
 		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)
@@ -84,7 +84,7 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 		return nil, err
 	}
 	reqBody.SetMode(mode)
-	decryptData, r, err := Instance.Api.KeysKeyIDDecryptPost(
+	decryptData, r, err := Api.KeysKeyIDDecryptPost(
 		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)

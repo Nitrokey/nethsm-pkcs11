@@ -1,4 +1,4 @@
-package core
+package module
 
 import (
 	"context"
@@ -8,14 +8,12 @@ import (
 	"strings"
 )
 
-// Module contains the essential parts of the HSM
-type Module struct {
-	Slots  []*Slot        // Represents the slots of the HSM
-	Config *config.Config // has the complete configuration of the HSM
-	Api    *api.DefaultApiService
-}
-
-var Instance *Module
+var (
+	Slots       []*Slot        // Represents the slots of the HSM
+	Config      *config.Config // has the complete configuration of the HSM
+	Api         *api.DefaultApiService
+	Initialized bool
+)
 
 // Initialize returns a new application, using the configuration defined in the config file.
 func Initialize() error {
@@ -28,11 +26,10 @@ func Initialize() error {
 	apiConf.Debug = conf.Debug
 	client := api.NewAPIClient(apiConf)
 
-	app := &Module{
-		Slots:  slots,
-		Config: conf,
-		Api:    client.DefaultApi,
-	}
+	Slots = slots
+	Config = conf
+	Api = client.DefaultApi
+
 	for i, slotConf := range conf.Slots {
 		password := slotConf.Password
 		if prefix := "env:"; strings.HasPrefix(password, prefix) {
@@ -66,19 +63,19 @@ func Initialize() error {
 		if slotConf.Sparse {
 			slot.InsertToken(token)
 		} else {
-			r, e := app.Api.HealthReadyGet(ctx).Execute()
+			r, e := Api.HealthReadyGet(ctx).Execute()
 			if e == nil && r.StatusCode < 300 {
 				slot.InsertToken(token)
 			}
 		}
 	}
-	Instance = app
+	Initialized = true
 	return nil
 }
 
 // GetSessionSlot returns the slot object related to a given session handle.
-func (app *Module) GetSessionSlot(handle CK_SESSION_HANDLE) (*Slot, error) {
-	for _, slot := range app.Slots {
+func GetSessionSlot(handle CK_SESSION_HANDLE) (*Slot, error) {
+	for _, slot := range Slots {
 		if slot.HasSession(handle) {
 			return slot, nil
 		}
@@ -87,8 +84,8 @@ func (app *Module) GetSessionSlot(handle CK_SESSION_HANDLE) (*Slot, error) {
 }
 
 // GetSession returns the session object related to a given handle.
-func (app *Module) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
-	slot, err := app.GetSessionSlot(handle)
+func GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
+	slot, err := GetSessionSlot(handle)
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +97,20 @@ func (app *Module) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
 }
 
 // GetSlot returns the slot with the given ID.
-func (app *Module) GetSlot(id CK_SLOT_ID) (*Slot, error) {
-	if int(id) >= len(app.Slots) {
+func GetSlot(id CK_SLOT_ID) (*Slot, error) {
+	if int(id) >= len(Slots) {
 		return nil, NewError("Application.GetSlot", "index out of bounds", CKR_SLOT_ID_INVALID)
 	}
-	return app.Slots[int(id)], nil
+	return Slots[int(id)], nil
 }
 
 // GetSlot returns the slot with the given ID.
-func (app *Module) Finalize() error {
-	for _, slot := range app.Slots {
+func Finalize() error {
+	for _, slot := range Slots {
 		slot.ctxCancel()
 		slot = nil
 	}
+	Initialized = false
 	return nil
 }
 

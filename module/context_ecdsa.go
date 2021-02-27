@@ -1,4 +1,4 @@
-package core
+package module
 
 // type ECDSASignContext struct {
 // 	// randSrc io.Reader

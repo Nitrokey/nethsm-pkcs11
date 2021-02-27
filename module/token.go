@@ -1,4 +1,4 @@
-package core
+package module
 
 import (
 	"context"
@@ -138,7 +138,7 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 
 func (token *Token) FetchKeyIDs() ([]string, error) {
 	if token.keyIDs == nil {
-		keys, r, err := Instance.Api.KeysGet(token.ApiCtx()).Execute()
+		keys, r, err := Api.KeysGet(token.ApiCtx()).Execute()
 		if err != nil {
 			err = NewAPIError("token.FetchKeyIDs", "KeysGet", r, err)
 			return nil, err
@@ -178,7 +178,7 @@ func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
 
 func (token *Token) CheckUserPin(pin string) error {
 	authCtx := addBasicAuth(token.ApiCtx(), token.Slot.Conf.User, pin)
-	_, r, err := Instance.Api.KeysGet(authCtx).Execute()
+	_, r, err := Api.KeysGet(authCtx).Execute()
 	if err != nil {
 		if r.StatusCode == 401 {
 			return NewError("Login", "Authorization failed", CKR_PIN_INCORRECT)
