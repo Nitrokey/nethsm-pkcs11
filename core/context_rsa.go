@@ -57,8 +57,8 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 		return nil, err
 	}
 	reqBody.SetMode(mode)
-	sigData, r, err := App.Api.KeysKeyIDSignPost(
-		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
+	sigData, r, err := Instance.Api.KeysKeyIDSignPost(
+		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)
 		// log.Debugf("%v\n", r.Request.Body)
@@ -84,8 +84,8 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 		return nil, err
 	}
 	reqBody.SetMode(mode)
-	decryptData, r, err := App.Api.KeysKeyIDDecryptPost(
-		context.session.Slot.token.ApiCtx(), context.keyID).Body(reqBody).Execute()
+	decryptData, r, err := Instance.Api.KeysKeyIDDecryptPost(
+		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)
 		// log.Debugf("%v\n", r.Request.Body)

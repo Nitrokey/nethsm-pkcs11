@@ -10,19 +10,19 @@ import (
 // Slot represents a HSM slot. It has an ID and it can have a connected Token.
 type Slot struct {
 	ID          CK_SLOT_ID // ID of slot
-	description string
-	flags       uint64   // Flags related to the slot
-	token       *Token   // Token connected to slot. It could be nil
+	Description string
+	Flags       uint64   // Flags related to the slot
+	Token       *Token   // Token connected to slot. It could be nil
 	Sessions    Sessions // Sessions accessing to the slot
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
-	conf        *config.SlotsConfig
+	Conf        *config.SlotsConfig
 	sync.Mutex
 }
 
 // IsTokenPresent returns true if there is a token connected to the slot
 func (slot *Slot) IsTokenPresent() bool {
-	return slot.token != nil
+	return slot.Token != nil
 }
 
 // OpenSession opens a new session with given flags.
@@ -83,7 +83,7 @@ func (slot *Slot) HasSession(handle CK_SESSION_HANDLE) bool {
 // GetToken returns the token inserted into the slot.
 func (slot *Slot) GetToken() (*Token, error) {
 	if slot.IsTokenPresent() {
-		return slot.token, nil
+		return slot.Token, nil
 	} else {
 		return nil, NewError("Slot.GetToken", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
@@ -91,6 +91,6 @@ func (slot *Slot) GetToken() (*Token, error) {
 
 // InsertToken inserts a token into the slot.
 func (slot *Slot) InsertToken(token *Token) {
-	slot.token = token
-	token.slot = slot
+	slot.Token = token
+	token.Slot = slot
 }

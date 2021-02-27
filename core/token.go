@@ -27,10 +27,10 @@ type Token struct {
 	keyIDs     []string
 	_objects   CryptoObjects
 	fetchedAll bool
-	tokenFlags uint64
+	Flags      uint64
 	loginData  *loginData
-	slot       *Slot
-	info       *api.InfoData
+	Slot       *Slot
+	Info       *api.InfoData
 }
 
 // Creates a new token, but doesn't store it.
@@ -40,7 +40,7 @@ func NewToken(label string) (*Token, error) {
 	}
 	newToken := &Token{
 		Label: label,
-		tokenFlags: CKF_RNG |
+		Flags: CKF_RNG |
 			CKF_WRITE_PROTECTED |
 			// CKF_LOGIN_REQUIRED |
 			// CKF_PROTECTED_AUTHENTICATION_PATH |
@@ -56,9 +56,9 @@ func (token *Token) GetLoginData() *loginData {
 }
 
 func (token *Token) ApiCtx() context.Context {
-	ctx := token.slot.ctx
+	ctx := token.Slot.ctx
 	if token.loginData != nil {
-		ctx = addBasicAuth(ctx, token.slot.conf.User, token.loginData.pin)
+		ctx = addBasicAuth(ctx, token.Slot.Conf.User, token.loginData.pin)
 	}
 	return ctx
 }
@@ -138,7 +138,7 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 
 func (token *Token) FetchKeyIDs() ([]string, error) {
 	if token.keyIDs == nil {
-		keys, r, err := App.Api.KeysGet(token.ApiCtx()).Execute()
+		keys, r, err := Instance.Api.KeysGet(token.ApiCtx()).Execute()
 		if err != nil {
 			err = NewAPIError("token.FetchKeyIDs", "KeysGet", r, err)
 			return nil, err
@@ -177,8 +177,8 @@ func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
 }
 
 func (token *Token) CheckUserPin(pin string) error {
-	authCtx := addBasicAuth(token.ApiCtx(), token.slot.conf.User, pin)
-	_, r, err := App.Api.KeysGet(authCtx).Execute()
+	authCtx := addBasicAuth(token.ApiCtx(), token.Slot.Conf.User, pin)
+	_, r, err := Instance.Api.KeysGet(authCtx).Execute()
 	if err != nil {
 		if r.StatusCode == 401 {
 			return NewError("Login", "Authorization failed", CKR_PIN_INCORRECT)
@@ -197,7 +197,7 @@ func (token *Token) Login(userType CK_USER_TYPE, pin string) error {
 
 	switch userType {
 	case CKU_USER:
-		if !token.slot.conf.Sparse {
+		if !token.Slot.Conf.Sparse {
 			err := token.CheckUserPin(pin)
 			if err != nil {
 				return err

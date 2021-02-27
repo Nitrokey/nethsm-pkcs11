@@ -10,7 +10,7 @@ type Session struct {
 	sync.Mutex
 	Slot            *Slot              // The slot where the session is being used
 	Handle          CK_SESSION_HANDLE  // A session handle
-	flags           CK_FLAGS           // Session flags
+	Flags           CK_FLAGS           // Session flags
 	refreshedToken  bool               // True if the token have been refreshed
 	foundObjects    []CK_OBJECT_HANDLE // List of found objects
 	findInitialized bool               // True if the user executed a Find method and it has not finished yet.
@@ -38,7 +38,7 @@ func NewSession(flags CK_FLAGS, currentSlot *Slot) *Session {
 	return &Session{
 		Slot:   currentSlot,
 		Handle: SessionHandle,
-		flags:  flags,
+		Flags:  flags,
 		// randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
 	}
 }
@@ -132,7 +132,7 @@ func (session *Session) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error
 
 // GetState returns the session state.
 func (session *Session) GetState() (CK_STATE, error) {
-	loginData := session.Slot.token.GetLoginData()
+	loginData := session.Slot.Token.GetLoginData()
 	if loginData == nil {
 		if session.isReadOnly() {
 			return CKS_RO_PUBLIC_SESSION, nil
@@ -155,7 +155,7 @@ func (session *Session) GetState() (CK_STATE, error) {
 
 // IsReadOnly returns true if the session is read only.
 func (session *Session) isReadOnly() bool {
-	return (session.flags & CKF_RW_SESSION) != CKF_RW_SESSION
+	return (session.Flags & CKF_RW_SESSION) != CKF_RW_SESSION
 }
 
 // Login logs in on a token with a pin and a defined user type.

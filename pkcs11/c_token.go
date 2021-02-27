@@ -1,4 +1,4 @@
-package core
+package pkcs11
 
 /*
 #include <stdlib.h>
@@ -9,43 +9,44 @@ import "C"
 
 import (
 	"p11nethsm/api"
+	"p11nethsm/core"
 	"time"
 	"unsafe"
 )
 
-func (token *Token) GetInfo(pInfo C.CK_TOKEN_INFO_PTR) error {
+func GetTokenInfo(token *core.Token, pInfo C.CK_TOKEN_INFO_PTR) error {
 	if pInfo == nil {
-		return NewError("token.GetInfo", "got NULL pointer", CKR_ARGUMENTS_BAD)
+		return core.NewError("token.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
 	info := (*C.CK_TOKEN_INFO)(unsafe.Pointer(pInfo))
 
 	str2Buf(token.Label, info.label[:])
 
-	if token.slot == nil {
-		return NewError("token.GetInfo", "cannot get info: token is not bound to a slot", CKR_ARGUMENTS_BAD)
+	if token.Slot == nil {
+		return core.NewError("token.GetInfo", "cannot get info: token is not bound to a slot", C.CKR_ARGUMENTS_BAD)
 	}
 
-	if token.info == nil {
-		if token.slot.conf.Sparse {
+	if token.Info == nil {
+		if token.Slot.Conf.Sparse {
 			var info api.InfoData
 			info.Product = "NetHSM"
 			info.Vendor = libManufacturerID
-			token.info = &info
+			token.Info = &info
 		} else {
-			info, r, err := App.Api.InfoGet(token.ApiCtx()).Execute()
+			info, r, err := core.Instance.Api.InfoGet(token.ApiCtx()).Execute()
 			if err != nil {
-				return NewAPIError("token.GetInfo", "InfoGet", r, err)
+				return core.NewAPIError("token.GetInfo", "InfoGet", r, err)
 			}
-			token.info = &info
+			token.Info = &info
 		}
 	}
 
-	str2Buf(token.info.Vendor, info.manufacturerID[:])
-	str2Buf(token.info.Product, info.model[:])
+	str2Buf(token.Info.Vendor, info.manufacturerID[:])
+	str2Buf(token.Info.Product, info.model[:])
 	str2Buf(serialNumber, info.serialNumber[:])
 
-	info.flags = C.CK_ULONG(token.tokenFlags)
-	info.ulMaxSessionCount = C.CK_ULONG(App.Config.MaxSessionCount)
+	info.flags = C.CK_ULONG(token.Flags)
+	info.ulMaxSessionCount = C.CK_ULONG(core.Instance.Config.MaxSessionCount)
 	info.ulSessionCount = C.CK_UNAVAILABLE_INFORMATION
 	info.ulMaxRwSessionCount = 0
 	info.ulRwSessionCount = C.CK_UNAVAILABLE_INFORMATION
