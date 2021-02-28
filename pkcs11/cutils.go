@@ -11,10 +11,39 @@ import (
 	"math"
 	"p11nethsm/api"
 	"p11nethsm/log"
-	module "p11nethsm/module"
+	"p11nethsm/module"
 	"time"
 	"unsafe"
 )
+
+const (
+	libManufacturerID = "Nitrokey GmbH"
+	libDescription    = "NetHSM PKCS#11 module"
+	libVersionMajor   = 0
+	libVersionMinor   = 1
+	minPinLength      = 3
+	maxPinLength      = 256
+	serialNumber      = "0"
+)
+
+// assert that go module.CK_ULONG has correct size
+const _ = byte(C.sizeof_CK_ULONG-unsafe.Sizeof(module.CK_ULONG(0))) << 8
+
+// Extracts the Return Value from an error, and logs it.
+func errorToRV(err error) C.CK_RV {
+	if err == nil {
+		return C.CKR_OK
+	}
+	//log.Debugf("%+v\n", err)
+	switch err := err.(type) {
+	case module.P11Error:
+		log.Errorf("[%s] %s [Code %d]\n", err.Who, err.Description, int(err.Code))
+		return C.CK_RV(err.Code)
+	default:
+		log.Errorf("[General error] %+v\n", err)
+		return C.CKR_GENERAL_ERROR
+	}
+}
 
 func (v C.CK_ATTRIBUTE) String() string {
 	val := (*[math.MaxInt32]byte)(unsafe.Pointer(v.pValue))[:int(v.ulValueLen):int(v.ulValueLen)]
@@ -22,7 +51,7 @@ func (v C.CK_ATTRIBUTE) String() string {
 }
 
 // CToAttributes transform a C pointer of attributes into a Golang Attributes structure.
-func CToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (module.Attributes, error) {
+func cToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (module.Attributes, error) {
 	if ulCount <= 0 {
 		return nil, module.NewError("CToAttributes", "cannot transform: ulcount is not greater than 0", C.CKR_BUFFER_TOO_SMALL)
 	}
@@ -31,14 +60,14 @@ func CToAttributes(pAttributes C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) (module.A
 
 	attributes := make(module.Attributes, ulCount)
 	for _, cAttr := range cAttrSlice {
-		attr := CToAttribute(cAttr)
+		attr := cToAttribute(cAttr)
 		attributes[attr.Type] = attr
 	}
 	return attributes, nil
 }
 
 // CToAttribute transforms a single C attribute struct into an Attribute Golang struct.
-func CToAttribute(cAttr C.CK_ATTRIBUTE) *module.Attribute {
+func cToAttribute(cAttr C.CK_ATTRIBUTE) *module.Attribute {
 	attrVal := C.GoBytes(unsafe.Pointer(cAttr.pValue), C.int(cAttr.ulValueLen))
 	return &module.Attribute{
 		Type:  module.CK_ATTRIBUTE_TYPE(cAttr._type),
@@ -47,7 +76,7 @@ func CToAttribute(cAttr C.CK_ATTRIBUTE) *module.Attribute {
 }
 
 // ToC copies an attribute into a C pointer of attribute struct.
-func AttributeToC(attribute *module.Attribute, cDst C.CK_ATTRIBUTE_PTR) error {
+func attributeToC(attribute *module.Attribute, cDst C.CK_ATTRIBUTE_PTR) error {
 	if cDst.pValue == nil {
 		cDst.ulValueLen = C.CK_ULONG(len(attribute.Value))
 		return nil
@@ -64,7 +93,7 @@ func AttributeToC(attribute *module.Attribute, cDst C.CK_ATTRIBUTE_PTR) error {
 }
 
 // Copies the attributes of an object to a C pointer.
-func CopyAttributes(object *module.CryptoObject, pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) error {
+func copyAttributes(object *module.CryptoObject, pTemplate C.CK_ATTRIBUTE_PTR, ulCount C.CK_ULONG) error {
 	if pTemplate == nil {
 		return module.NewError("CryptoObject.CopyAttributes", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
@@ -78,7 +107,7 @@ func CopyAttributes(object *module.CryptoObject, pTemplate C.CK_ATTRIBUTE_PTR, u
 		src := object.FindAttribute(module.CK_ATTRIBUTE_TYPE(templateSlice[i]._type))
 		if src != nil {
 			log.Debugf("Attr: %v", src)
-			err := AttributeToC(src, &templateSlice[i])
+			err := attributeToC(src, &templateSlice[i])
 			if err != nil {
 				return err
 			}
@@ -95,7 +124,7 @@ func CopyAttributes(object *module.CryptoObject, pTemplate C.CK_ATTRIBUTE_PTR, u
 }
 
 // CToMechanism transforms a C mechanism into a Mechanism Golang structure.
-func CToMechanism(pMechanism C.CK_MECHANISM_PTR) *module.Mechanism {
+func cToMechanism(pMechanism C.CK_MECHANISM_PTR) *module.Mechanism {
 	cMechanism := (*C.CK_MECHANISM)(unsafe.Pointer(pMechanism))
 	mechanismType := cMechanism.mechanism
 	mechanismVal := C.GoBytes(unsafe.Pointer(cMechanism.pParameter), C.int(cMechanism.ulParameterLen))
@@ -107,21 +136,21 @@ func CToMechanism(pMechanism C.CK_MECHANISM_PTR) *module.Mechanism {
 }
 
 // ToC transforms a Mechanism Golang Structure into a C structure.
-func MechanismToC(mechanism *module.Mechanism, cDst C.CK_MECHANISM_PTR) error {
-	cMechanism := (*C.CK_MECHANISM)(unsafe.Pointer(cDst))
-	paramLen := C.CK_ULONG(len(mechanism.Parameter))
-	if cMechanism.ulParameterLen >= paramLen {
-		cMechanism.mechanism = C.CK_MECHANISM_TYPE(mechanism.Type)
-		cMechanism.ulParameterLen = paramLen
-		C.memcpy(unsafe.Pointer(cMechanism.pParameter), unsafe.Pointer(&mechanism.Parameter[0]), paramLen)
-	} else {
-		return module.NewError("Mechanism.ToC", "Buffer too small", C.CKR_BUFFER_TOO_SMALL)
-	}
-	return nil
-}
+// func mechanismToC(mechanism *module.Mechanism, cDst C.CK_MECHANISM_PTR) error {
+// 	cMechanism := (*C.CK_MECHANISM)(unsafe.Pointer(cDst))
+// 	paramLen := C.CK_ULONG(len(mechanism.Parameter))
+// 	if cMechanism.ulParameterLen >= paramLen {
+// 		cMechanism.mechanism = C.CK_MECHANISM_TYPE(mechanism.Type)
+// 		cMechanism.ulParameterLen = paramLen
+// 		C.memcpy(unsafe.Pointer(cMechanism.pParameter), unsafe.Pointer(&mechanism.Parameter[0]), paramLen)
+// 	} else {
+// 		return module.NewError("Mechanism.ToC", "Buffer too small", C.CKR_BUFFER_TOO_SMALL)
+// 	}
+// 	return nil
+// }
 
 // GetInfo dumps session information into a C pointer.
-func GetSessionInfo(session *module.Session, pInfo C.CK_SESSION_INFO_PTR) error {
+func getSessionInfo(session *module.Session, pInfo C.CK_SESSION_INFO_PTR) error {
 	if pInfo != nil {
 		state, err := session.GetState()
 		if err != nil {
@@ -139,7 +168,7 @@ func GetSessionInfo(session *module.Session, pInfo C.CK_SESSION_INFO_PTR) error 
 }
 
 // GetInfo returns the slot info.
-func GetSlotInfo(slot *module.Slot, pInfo C.CK_SLOT_INFO_PTR) error {
+func getSlotInfo(slot *module.Slot, pInfo C.CK_SLOT_INFO_PTR) error {
 	if pInfo == nil {
 		return module.NewError("Slot.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}
@@ -165,7 +194,7 @@ func GetSlotInfo(slot *module.Slot, pInfo C.CK_SLOT_INFO_PTR) error {
 	return nil
 }
 
-func GetTokenInfo(token *module.Token, pInfo C.CK_TOKEN_INFO_PTR) error {
+func getTokenInfo(token *module.Token, pInfo C.CK_TOKEN_INFO_PTR) error {
 	if pInfo == nil {
 		return module.NewError("token.GetInfo", "got NULL pointer", C.CKR_ARGUMENTS_BAD)
 	}

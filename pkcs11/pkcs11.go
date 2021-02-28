@@ -15,43 +15,14 @@ import (
 	"unsafe"
 )
 
-const (
-	libManufacturerID = "Nitrokey GmbH"
-	libDescription    = "NetHSM PKCS#11 module"
-	libVersionMajor   = 0
-	libVersionMinor   = 1
-	minPinLength      = 3
-	maxPinLength      = 256
-	serialNumber      = "1010101"
-)
-
-// assert that go module.CK_ULONG has correct size
-const _ = byte(C.sizeof_CK_ULONG-unsafe.Sizeof(module.CK_ULONG(0))) << 8
-
-// Extracts the Return Value from an error, and logs it.
-func ErrorToRV(err error) C.CK_RV {
-	if err == nil {
-		return C.CKR_OK
-	}
-	//log.Debugf("%+v\n", err)
-	switch err := err.(type) {
-	case module.P11Error:
-		log.Errorf("[%s] %s [Code %d]\n", err.Who, err.Description, int(err.Code))
-		return C.CK_RV(err.Code)
-	default:
-		log.Errorf("[General error] %+v\n", err)
-		return C.CKR_GENERAL_ERROR
-	}
-}
-
 func str2Buf(s string, b []C.uchar) {
 	sLen := len(s)
 	bLen := len(b)
 	if sLen < bLen {
 		s += strings.Repeat(" ", bLen-sLen)
 	}
-	s2 := []byte(s)
-	C.memcpy(unsafe.Pointer(&b[0]), unsafe.Pointer(&s2[0]), (C.size_t)(bLen))
+	dst := []byte(s)
+	C.memcpy(unsafe.Pointer(&b[0]), unsafe.Pointer(&dst[0]), (C.size_t)(bLen))
 }
 
 //export C_Initialize
@@ -68,7 +39,7 @@ func C_Initialize(pInitArgs C.CK_VOID_PTR) C.CK_RV {
 	log.Infof("Initializing p11nethsm module")
 	err := module.Initialize()
 	//log.Debugf("Created new app with %d slots.", len(module.App.Slots))
-	return ErrorToRV(err)
+	return errorToRV(err)
 }
 
 //export C_Finalize
@@ -81,7 +52,7 @@ func C_Finalize(pReserved C.CK_VOID_PTR) C.CK_RV {
 		return C.CKR_ARGUMENTS_BAD
 	}
 	err := module.Finalize()
-	return ErrorToRV(err)
+	return errorToRV(err)
 }
 
 //export C_InitToken
@@ -190,11 +161,11 @@ func C_GetSlotInfo(slotId C.CK_SLOT_ID, pInfo C.CK_SLOT_INFO_PTR) C.CK_RV {
 	}
 	slot, err := module.GetSlot(module.CK_SLOT_ID(slotId))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
-	err = GetSlotInfo(slot, pInfo)
+	err = getSlotInfo(slot, pInfo)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	//log.Debugf("pInfo: %v", *pInfo)
 	return C.CKR_OK
@@ -211,15 +182,15 @@ func C_GetTokenInfo(slotId C.CK_SLOT_ID, pInfo C.CK_TOKEN_INFO_PTR) C.CK_RV {
 	}
 	slot, err := module.GetSlot(module.CK_SLOT_ID(slotId))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	token, err := slot.GetToken()
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
-	err = GetTokenInfo(token, pInfo)
+	err = getTokenInfo(token, pInfo)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	//log.Debugf("pInfo: %v", *pInfo)
 	return C.CKR_OK
@@ -239,15 +210,15 @@ func C_OpenSession(slotId C.CK_SLOT_ID, flags C.CK_FLAGS, pApplication C.CK_VOID
 	}
 	slot, err := module.GetSlot(module.CK_SLOT_ID(slotId))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	_, err = slot.GetToken()
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	session, err := slot.OpenSession(module.CK_FLAGS(flags))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	*phSession = C.CK_SESSION_HANDLE(session)
 	return C.CKR_OK
@@ -261,11 +232,11 @@ func C_CloseSession(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	}
 	slot, err := module.GetSessionSlot(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	err = slot.CloseSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -278,7 +249,7 @@ func C_CloseAllSessions(slotId C.CK_SLOT_ID) C.CK_RV {
 	}
 	slot, err := module.GetSlot(module.CK_SLOT_ID(slotId))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	slot.CloseAllSessions()
 	return C.CKR_OK
@@ -292,11 +263,11 @@ func C_GetSessionInfo(hSession C.CK_SESSION_HANDLE, pInfo C.CK_SESSION_INFO_PTR)
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
-	err = GetSessionInfo(session, pInfo)
+	err = getSessionInfo(session, pInfo)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -312,12 +283,12 @@ func C_Login(hSession C.CK_SESSION_HANDLE, userType C.CK_USER_TYPE, pPin C.CK_UT
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	pin := string(C.GoBytes(unsafe.Pointer(pPin), C.int(ulPinLen)))
 	err = session.Login(module.CK_USER_TYPE(userType), pin)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -331,12 +302,12 @@ func C_Logout(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
 		// log.Errorf("error! %v\n", err)
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	err = session.Logout()
 	if err != nil {
 		// log.Errorf("error! %v", err)
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	// log.Debugf("Logged out.")
 	return C.CKR_OK
@@ -366,18 +337,18 @@ func C_FindObjectsInit(hSession C.CK_SESSION_HANDLE, pTemplate C.CK_ATTRIBUTE_PT
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	var attrs module.Attributes
 	if ulCount > 0 {
-		attrs, err = CToAttributes(pTemplate, ulCount)
+		attrs, err = cToAttributes(pTemplate, ulCount)
 		if err != nil {
-			return ErrorToRV(err)
+			return errorToRV(err)
 		}
 	}
 	err = session.FindObjectsInit(attrs)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -393,12 +364,12 @@ func C_FindObjects(hSession C.CK_SESSION_HANDLE, phObject C.CK_OBJECT_HANDLE_PTR
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 
 	handles, err := session.FindObjects(int(ulMaxObjectCount))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 
 	cObjectSlice := (*[math.MaxInt32]C.CK_OBJECT_HANDLE)(unsafe.Pointer(phObject))[:ulMaxObjectCount:ulMaxObjectCount]
@@ -423,11 +394,11 @@ func C_FindObjectsFinal(hSession C.CK_SESSION_HANDLE) C.CK_RV {
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	err = session.FindObjectsFinal()
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -447,15 +418,15 @@ func C_GetAttributeValue(hSession C.CK_SESSION_HANDLE, hObject C.CK_OBJECT_HANDL
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	object, err := session.GetObject(module.CK_OBJECT_HANDLE(hObject))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	// log.Debugf("Obj Attr: %+v", object.Attributes)
-	if err := CopyAttributes(object, pTemplate, ulCount); err != nil {
-		return ErrorToRV(err)
+	if err := copyAttributes(object, pTemplate, ulCount); err != nil {
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -474,12 +445,12 @@ func C_SignInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKe
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
-	mechanism := CToMechanism(pMechanism)
+	mechanism := cToMechanism(pMechanism)
 	err = session.SignInit(mechanism, module.CK_OBJECT_HANDLE(hKey))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -492,12 +463,12 @@ func C_SignUpdate(hSession C.CK_SESSION_HANDLE, pPart C.CK_BYTE_PTR, ulPartLen C
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	data := C.GoBytes(unsafe.Pointer(pPart), C.int(ulPartLen))
 	err = session.SignUpdate(data)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -510,7 +481,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	if pulSignatureLen == nil {
 		session.SignClear()
@@ -520,7 +491,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 	// log.Debugf("signFinal done")
 	if err != nil {
 		session.SignClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	sigLen := C.CK_ULONG(len(signature))
 	if pSignature == nil {
@@ -544,7 +515,7 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	if pulSignatureLen == nil {
 		session.SignClear()
@@ -555,12 +526,12 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 	err = session.SignUpdate(data)
 	if err != nil {
 		session.SignClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	signature, err := session.SignFinal()
 	if err != nil {
 		session.SignClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	sigLen := C.CK_ULONG(len(signature))
 	if pSignature == nil {
@@ -608,12 +579,12 @@ func C_DecryptInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, 
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
-	mechanism := CToMechanism(pMechanism)
+	mechanism := cToMechanism(pMechanism)
 	err = session.DecryptInit(mechanism, module.CK_OBJECT_HANDLE(hKey))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	return C.CKR_OK
 }
@@ -628,12 +599,12 @@ func C_DecryptUpdate(hSession C.CK_SESSION_HANDLE, pEncryptedPart C.CK_BYTE_PTR,
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	data := C.GoBytes(unsafe.Pointer(pEncryptedPart), C.int(ulEncryptedPartLen))
 	err = session.SignUpdate(data)
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	*pulPartLen = 0
 	return C.CKR_OK
@@ -647,7 +618,7 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	if pulLastPartLen == nil {
 		session.DecryptClear()
@@ -656,7 +627,7 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 	data, err := session.SignFinal()
 	if err != nil {
 		session.DecryptClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	dataLen := C.CK_ULONG(len(data))
 	if pLastPart == nil {
@@ -682,7 +653,7 @@ func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
 	}
 	session, err := module.GetSession(module.CK_SESSION_HANDLE(hSession))
 	if err != nil {
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	if pulDataLen == nil {
 		session.DecryptClear()
@@ -692,13 +663,13 @@ func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
 	err = session.DecryptUpdate(encrypted)
 	if err != nil {
 		session.DecryptClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	data, err := session.DecryptFinal()
 	// log.Debugf("signFinal ended")
 	if err != nil {
 		session.DecryptClear()
-		return ErrorToRV(err)
+		return errorToRV(err)
 	}
 	dataLen := C.CK_ULONG(len(data))
 	if pData == nil {
