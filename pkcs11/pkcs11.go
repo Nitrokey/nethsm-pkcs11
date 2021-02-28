@@ -466,8 +466,6 @@ func C_GenerateKeyPair(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_P
 	return C.CKR_FUNCTION_NOT_SUPPORTED
 }
 
-const _ = (C.sizeof_CK_OBJECT_HANDLE - unsafe.Sizeof(module.CK_OBJECT_HANDLE(0))) << 128
-
 //export C_SignInit
 func C_SignInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKey C.CK_OBJECT_HANDLE) C.CK_RV {
 	log.Debugf("Called: C_SignInit\n")
