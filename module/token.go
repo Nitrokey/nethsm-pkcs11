@@ -8,8 +8,13 @@ import (
 )
 
 var nextObjectHandle = func() func() CK_OBJECT_HANDLE {
-	var lastObjectHandle = CK_OBJECT_HANDLE(0)
+	var (
+		lastObjectHandle CK_OBJECT_HANDLE
+		m                sync.Mutex
+	)
 	return func() CK_OBJECT_HANDLE {
+		m.Lock()
+		defer m.Unlock()
 		lastObjectHandle++
 		return lastObjectHandle
 	}
@@ -22,15 +27,15 @@ type loginData struct {
 
 // A token of the PKCS11 device.
 type Token struct {
-	sync.Mutex
 	Label      string
 	keyIDs     []string
-	_objects   CryptoObjects
+	objects    CryptoObjects
 	fetchedAll bool
 	Flags      uint64
 	loginData  *loginData
 	Slot       *Slot
 	Info       *api.InfoData
+	sync.RWMutex
 }
 
 // Creates a new token, but doesn't store it.
@@ -137,21 +142,21 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 }
 
 func (token *Token) FetchKeyIDs() ([]string, error) {
+	token.Lock()
+	defer token.Unlock()
 	if token.keyIDs == nil {
 		keys, r, err := Api.KeysGet(token.ApiCtx()).Execute()
 		if err != nil {
 			err = NewAPIError("token.FetchKeyIDs", "KeysGet", r, err)
 			return nil, err
 		}
-		var ids []string
-		for _, k := range keys {
-			ids = append(ids, k.GetKey())
+		ids := make([]string, len(keys))
+		for i := range keys {
+			ids[i] = keys[i].GetKey()
 		}
-		token.Lock()
 		token.keyIDs = ids
-		token.Unlock()
 	}
-	return token.keyIDs, nil
+	return token.keyIDs, nil // no need to copy, because it will not change
 }
 
 func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
@@ -159,21 +164,19 @@ func (token *Token) FetchObjects(keyID string) (CryptoObjects, error) {
 		return token.FetchObjectsByID(keyID)
 	}
 	if !token.fetchedAll {
-		keyIDs, err := token.FetchKeyIDs()
+		ids, err := token.FetchKeyIDs()
 		if err != nil {
 			return nil, err
 		}
-		for _, id := range keyIDs {
+		for _, id := range ids {
 			_, err := token.FetchObjectsByID(id)
 			if err != nil {
 				return nil, err
 			}
 		}
-		token.Lock()
 		token.fetchedAll = true
-		token.Unlock()
 	}
-	return token._objects, nil
+	return token.objects, nil // no need to copy, because it will not change
 }
 
 func (token *Token) CheckUserPin(pin string) error {
@@ -226,7 +229,7 @@ func (token *Token) Logout() {
 func (token *Token) AddObject(object *CryptoObject) {
 	token.Lock()
 	defer token.Unlock()
-	token._objects = append(token._objects, object)
+	token.objects = append(token.objects, object)
 }
 
 // Returns the label of the token (should remove. Label is a public property!
@@ -236,9 +239,9 @@ func (token *Token) GetLabel() string {
 
 // Returns an object that uses the handle provided.
 func (token *Token) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error) {
-	token.Lock()
-	defer token.Unlock()
-	for _, object := range token._objects {
+	token.RLock()
+	defer token.RUnlock()
+	for _, object := range token.objects {
 		if object.Handle == handle {
 			return object, nil
 		}
@@ -247,10 +250,10 @@ func (token *Token) GetObject(handle CK_OBJECT_HANDLE) (*CryptoObject, error) {
 }
 
 func (token *Token) GetObjectsByID(keyID string) CryptoObjects {
-	token.Lock()
-	defer token.Unlock()
+	token.RLock()
+	defer token.RUnlock()
 	var objects CryptoObjects
-	for _, object := range token._objects {
+	for _, object := range token.objects {
 		if object.ID == keyID {
 			objects = append(objects, object)
 		}

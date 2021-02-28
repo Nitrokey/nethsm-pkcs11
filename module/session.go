@@ -7,7 +7,6 @@ import (
 
 // Session represents a session in the HSM. It saves all the session variables needed to preserve the user state.
 type Session struct {
-	sync.Mutex
 	Slot            *Slot              // The slot where the session is being used
 	Handle          CK_SESSION_HANDLE  // A session handle
 	Flags           CK_FLAGS           // Session flags
@@ -25,21 +24,25 @@ type Session struct {
 // Map of sessions identified by their handle. It's very similar to an array because the handles are integers.
 type Sessions map[CK_SESSION_HANDLE]*Session
 
-// A global variable that defines the session handles of the system.
-var SessionHandle = CK_SESSION_HANDLE(0)
-
-// The mutex that protects the global variable
-var SessionMutex = sync.Mutex{}
+var nextSessionHandle = func() func() CK_SESSION_HANDLE {
+	var (
+		sessionHandle CK_SESSION_HANDLE
+		m             sync.Mutex
+	)
+	return func() CK_SESSION_HANDLE {
+		m.Lock()
+		defer m.Unlock()
+		sessionHandle++
+		return sessionHandle
+	}
+}()
 
 func NewSession(flags CK_FLAGS, currentSlot *Slot) *Session {
-	SessionMutex.Lock()
-	defer SessionMutex.Unlock()
-	SessionHandle++
+	sessionHandle := nextSessionHandle()
 	return &Session{
 		Slot:   currentSlot,
-		Handle: SessionHandle,
+		Handle: sessionHandle,
 		Flags:  flags,
-		// randSrc: rand.New(rand.NewSource(int64(rand.Int()))),
 	}
 }
 

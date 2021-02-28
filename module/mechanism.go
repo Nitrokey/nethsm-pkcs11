@@ -49,7 +49,7 @@ func (mechanism *Mechanism) DecryptMode() (mode api.DecryptMode, err error) {
 			return
 		}
 		params := (*CK_RSA_PKCS_OAEP_PARAMS)(unsafe.Pointer(&mechanism.Parameter[0]))
-		switch params.hashAlg {
+		switch params.HashAlg {
 		case CKM_MD5:
 			mode = api.DECRYPTMODE_OAEP_MD5
 		case CKM_SHA_1:

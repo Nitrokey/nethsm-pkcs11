@@ -28,13 +28,25 @@ func str2Buf(s string, b []C.uchar) {
 //export C_Initialize
 func C_Initialize(pInitArgs C.CK_VOID_PTR) C.CK_RV {
 	log.Debugf("Called: C_Initialize")
-	// by now, we support only module.CKF_OS_LOCKING_OK
 	if module.Initialized {
 		return C.CKR_CRYPTOKI_ALREADY_INITIALIZED
 	}
-	cInitArgs := (*C.CK_C_INITIALIZE_ARGS)(unsafe.Pointer(pInitArgs))
-	if cInitArgs != nil && (cInitArgs.flags&module.CKF_OS_LOCKING_OK == 0 || cInitArgs.pReserved != nil) {
-		return C.CKR_ARGUMENTS_BAD
+	if pInitArgs != nil {
+		cInitArgs := (*C.CK_C_INITIALIZE_ARGS)(unsafe.Pointer(pInitArgs))
+		if cInitArgs.pReserved != nil ||
+			(cInitArgs.CreateMutex == nil && (cInitArgs.DestroyMutex != nil ||
+				cInitArgs.LockMutex != nil || cInitArgs.UnlockMutex != nil)) ||
+			(cInitArgs.CreateMutex != nil && (cInitArgs.DestroyMutex == nil ||
+				cInitArgs.LockMutex == nil || cInitArgs.UnlockMutex == nil)) {
+			return C.CKR_ARGUMENTS_BAD
+		}
+		if (cInitArgs.flags & C.CKF_LIBRARY_CANT_CREATE_OS_THREADS) != 0 {
+			return C.CKR_NEED_TO_CREATE_THREADS
+		}
+		if (cInitArgs.flags&C.CKF_OS_LOCKING_OK) == 0 &&
+			cInitArgs.CreateMutex != nil {
+			return C.CKR_CANT_LOCK
+		}
 	}
 	log.Infof("Initializing p11nethsm module")
 	err := module.Initialize()

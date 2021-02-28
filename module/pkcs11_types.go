@@ -13,11 +13,11 @@ var FalseAttr = []byte{CK_FALSE}
 var TrueAttr = []byte{CK_TRUE}
 
 type CK_RSA_PKCS_OAEP_PARAMS struct {
-	hashAlg CK_MECHANISM_TYPE
-	_/*mgf*/ CK_RSA_PKCS_MGF_TYPE
-	_/*source*/ CK_RSA_PKCS_OAEP_SOURCE_TYPE
-	_/*pSourceData*/ CK_VOID_PTR
-	_/*ulSourceDataLen*/ CK_ULONG
+	HashAlg         CK_MECHANISM_TYPE
+	Mgf             CK_RSA_PKCS_MGF_TYPE
+	Source          CK_RSA_PKCS_OAEP_SOURCE_TYPE
+	PSourceData     CK_VOID_PTR
+	ULSourceDataLen CK_ULONG
 }
 
 // created with

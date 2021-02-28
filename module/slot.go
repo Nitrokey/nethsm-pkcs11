@@ -17,12 +17,27 @@ type Slot struct {
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
 	Conf        *config.SlotsConfig
-	sync.Mutex
+	sync.RWMutex
 }
 
 // IsTokenPresent returns true if there is a token connected to the slot
 func (slot *Slot) IsTokenPresent() bool {
 	return slot.Token != nil
+}
+
+// GetToken returns the token inserted into the slot.
+func (slot *Slot) GetToken() (*Token, error) {
+	if slot.IsTokenPresent() {
+		return slot.Token, nil
+	} else {
+		return nil, NewError("Slot.GetToken", "token not present", CKR_TOKEN_NOT_PRESENT)
+	}
+}
+
+// InsertToken inserts a token into the slot.
+func (slot *Slot) InsertToken(token *Token) {
+	slot.Token = token
+	token.Slot = slot
 }
 
 // OpenSession opens a new session with given flags.
@@ -63,8 +78,8 @@ func (slot *Slot) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
 	if !slot.IsTokenPresent() {
 		return nil, NewError("Slot.GetSession", "token not present", CKR_TOKEN_NOT_PRESENT)
 	}
-	slot.Lock()
-	defer slot.Unlock()
+	slot.RLock()
+	defer slot.RUnlock()
 	if session, ok := slot.Sessions[handle]; !ok {
 		return nil, NewError("Slot.CloseSession", fmt.Sprintf("session handle '%v' doesn't exist in this slot", handle), CKR_SESSION_HANDLE_INVALID)
 	} else {
@@ -74,23 +89,8 @@ func (slot *Slot) GetSession(handle CK_SESSION_HANDLE) (*Session, error) {
 
 // HasSession returns true if the session with the handle as ID exists.
 func (slot *Slot) HasSession(handle CK_SESSION_HANDLE) bool {
-	slot.Lock()
-	defer slot.Unlock()
+	slot.RLock()
+	defer slot.RUnlock()
 	_, ok := slot.Sessions[handle]
 	return ok
-}
-
-// GetToken returns the token inserted into the slot.
-func (slot *Slot) GetToken() (*Token, error) {
-	if slot.IsTokenPresent() {
-		return slot.Token, nil
-	} else {
-		return nil, NewError("Slot.GetToken", "token not present", CKR_TOKEN_NOT_PRESENT)
-	}
-}
-
-// InsertToken inserts a token into the slot.
-func (slot *Slot) InsertToken(token *Token) {
-	slot.Token = token
-	token.Slot = slot
 }
