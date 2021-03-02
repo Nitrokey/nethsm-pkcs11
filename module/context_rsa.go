@@ -5,40 +5,41 @@ import (
 	"p11nethsm/api"
 )
 
-type OpContextRSA struct {
+type opContextRSA struct {
 	session     *Session
-	mechanism   *Mechanism // Mechanism used to sign in a Sign session.
-	keyID       string     // Key ID used in signing or decrypting.
-	data        []byte     // Data to sign or decrypt.
+	keyID       string // Key ID used in signing or decrypting.
+	data        []byte // Data to sign or decrypt.
 	result      []byte
 	initialized bool // // True if the user executed a Sign method and it has not finished yet.
 }
 
 type SignContextRSA struct {
-	OpContextRSA
+	opContextRSA
+	mode api.SignMode
 }
 
 type DecryptContextRSA struct {
-	OpContextRSA
+	opContextRSA
+	mode api.DecryptMode
 }
 
 //type VerifyContextRSA contextRSA
 
-func (context *OpContextRSA) Initialized() bool {
+func (context *opContextRSA) Initialized() bool {
 	return context.initialized
 }
 
-func (context *OpContextRSA) Init() (err error) {
+func (context *opContextRSA) Init() (err error) {
 	context.initialized = true
 	return
 }
 
-func (context *OpContextRSA) ResultLength() int {
+func (context *opContextRSA) ResultLength() int {
 	// log.Debugf("context: %v", context)
 	return 0 // XXX
 }
 
-func (context *OpContextRSA) Update(data []byte) error {
+func (context *opContextRSA) Update(data []byte) error {
 	if context.result == nil {
 		context.data = append(context.data, data...)
 	}
@@ -52,11 +53,7 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	var err error
 	var reqBody api.SignRequestData
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
-	mode, err := context.mechanism.SignMode()
-	if err != nil {
-		return nil, err
-	}
-	reqBody.SetMode(mode)
+	reqBody.SetMode(context.mode)
 	sigData, r, err := Api.KeysKeyIDSignPost(
 		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
@@ -79,11 +76,7 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 	var err error
 	var reqBody api.DecryptRequestData
 	reqBody.SetEncrypted(base64.StdEncoding.EncodeToString(context.data))
-	mode, err := context.mechanism.DecryptMode()
-	if err != nil {
-		return nil, err
-	}
-	reqBody.SetMode(mode)
+	reqBody.SetMode(context.mode)
 	decryptData, r, err := Api.KeysKeyIDDecryptPost(
 		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {

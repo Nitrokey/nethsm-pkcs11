@@ -15,7 +15,7 @@ type OpContext interface {
 	Initialized() bool
 }
 
-func NewSignContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (context OpContext, err error) {
+func NewSignContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (OpContext, error) {
 	keyObject, err := session.GetObject(hKey)
 	if err != nil {
 		return nil, err
@@ -24,26 +24,22 @@ func NewSignContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDL
 	if keyIDAttr == nil {
 		return nil, NewError("NewSignContext", "object does not contain a key ID", CKR_ARGUMENTS_BAD)
 	}
-	switch mechanism.Type {
-	case CKM_RSA_PKCS, CKM_MD5_RSA_PKCS, CKM_SHA1_RSA_PKCS, CKM_SHA256_RSA_PKCS, CKM_SHA384_RSA_PKCS, CKM_SHA512_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_SHA1_RSA_PKCS_PSS, CKM_SHA256_RSA_PKCS_PSS, CKM_SHA384_RSA_PKCS_PSS, CKM_SHA512_RSA_PKCS_PSS:
-		c := &SignContextRSA{OpContextRSA{
-			session:   session,
-			keyID:     string(keyIDAttr.Value),
-			mechanism: mechanism,
-			data:      make([]byte, 0),
-		}}
-		if err := c.Init(); err != nil {
-			return nil, err
-		}
-		context = c
-	default:
-		err = NewError("NewSignContext", "sign mechanism invalid", CKR_MECHANISM_INVALID)
+	mode, err := mechanism.SignMode()
+	if err != nil {
 		return nil, err
 	}
-	return context, nil
+	var ctx SignContextRSA
+	ctx.session = session
+	ctx.keyID = string(keyIDAttr.Value)
+	ctx.data = make([]byte, 0)
+	ctx.mode = mode
+	if err := ctx.Init(); err != nil {
+		return nil, err
+	}
+	return &ctx, nil
 }
 
-func NewDecryptContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (context OpContext, err error) {
+func NewDecryptContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HANDLE) (OpContext, error) {
 	keyObject, err := session.GetObject(hKey)
 	if err != nil {
 		return nil, err
@@ -52,23 +48,19 @@ func NewDecryptContext(session *Session, mechanism *Mechanism, hKey CK_OBJECT_HA
 	if keyIDAttr == nil {
 		return nil, NewError("NewDecryptContext", "object does not contain a key ID", CKR_ARGUMENTS_BAD)
 	}
-	switch mechanism.Type {
-	case CKM_RSA_X_509, CKM_RSA_PKCS, CKM_RSA_PKCS_OAEP:
-		c := &DecryptContextRSA{OpContextRSA{
-			session:   session,
-			keyID:     string(keyIDAttr.Value),
-			mechanism: mechanism,
-			data:      make([]byte, 0),
-		}}
-		if err := c.Init(); err != nil {
-			return nil, err
-		}
-		context = c
-	default:
-		err = NewError("NewDecryptContext", "decrypt mechanism invalid", CKR_MECHANISM_INVALID)
+	mode, err := mechanism.DecryptMode()
+	if err != nil {
 		return nil, err
 	}
-	return context, nil
+	var ctx DecryptContextRSA
+	ctx.session = session
+	ctx.keyID = string(keyIDAttr.Value)
+	ctx.data = make([]byte, 0)
+	ctx.mode = mode
+	if err := ctx.Init(); err != nil {
+		return nil, err
+	}
+	return &ctx, nil
 }
 
 func ulongToArr(n CK_ULONG) []byte {

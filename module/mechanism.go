@@ -1,6 +1,7 @@
 package module
 
 import (
+	"fmt"
 	"p11nethsm/api"
 	"unsafe"
 )
@@ -31,7 +32,7 @@ func (mechanism *Mechanism) SignMode() (mode api.SignMode, err error) {
 	// case CKM_EDDSA:
 	// 	mode = api.SIGNMODE_ED25519
 	default:
-		err = NewError("Mechanism.SignMode", "mechanism not supported for signing", CKR_MECHANISM_INVALID)
+		err = NewError("Mechanism.SignMode", fmt.Sprintf("mechanism not supported for signing: %v", CKMString(mechanism.Type)), CKR_MECHANISM_INVALID)
 		return
 	}
 	return
@@ -45,7 +46,7 @@ func (mechanism *Mechanism) DecryptMode() (mode api.DecryptMode, err error) {
 		mode = api.DECRYPTMODE_PKCS1
 	case CKM_RSA_PKCS_OAEP:
 		if len(mechanism.Parameter) == 0 {
-			err = NewError("Mechanism.DecryptMode", "OAEP mechanism needs parameter", CKR_MECHANISM_INVALID)
+			err = NewError("Mechanism.DecryptMode", "OAEP mechanism needs parameter", CKR_MECHANISM_PARAM_INVALID)
 			return
 		}
 		params := (*CK_RSA_PKCS_OAEP_PARAMS)(unsafe.Pointer(&mechanism.Parameter[0]))
@@ -63,11 +64,11 @@ func (mechanism *Mechanism) DecryptMode() (mode api.DecryptMode, err error) {
 		case CKM_SHA512:
 			mode = api.DECRYPTMODE_OAEP_SHA512
 		default:
-			err = NewError("Mechanism.DecryptMode", "unsupported hash for OAEP mechanism", CKR_MECHANISM_INVALID)
+			err = NewError("Mechanism.DecryptMode", fmt.Sprintf("unsupported hash for OAEP: %v", CKMString(params.HashAlg)), CKR_MECHANISM_PARAM_INVALID)
 			return
 		}
 	default:
-		err = NewError("Mechanism.SignMode", "mechanism not supported for signing", CKR_MECHANISM_INVALID)
+		err = NewError("Mechanism.SignMode", fmt.Sprintf("mechanism not supported for decryption: %v", CKMString(mechanism.Type)), CKR_MECHANISM_INVALID)
 		return
 	}
 	return

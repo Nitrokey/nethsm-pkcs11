@@ -460,6 +460,7 @@ func C_SignInit(hSession C.CK_SESSION_HANDLE, pMechanism C.CK_MECHANISM_PTR, hKe
 		return errorToRV(err)
 	}
 	mechanism := cToMechanism(pMechanism)
+	log.Debugf("Object: %v Mechanism: %v", hKey, module.CKMString(mechanism.Type))
 	err = session.SignInit(mechanism, module.CK_OBJECT_HANDLE(hKey))
 	if err != nil {
 		return errorToRV(err)

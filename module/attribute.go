@@ -12,7 +12,7 @@ type Attribute struct {
 }
 
 func (v Attribute) String() string {
-	return fmt.Sprintf("%v: %v/\"%v\"", CKAString(v.Type), v.Value, string(v.Value))
+	return fmt.Sprintf("%v: %+q", CKAString(v.Type), string(v.Value))
 }
 
 // A map of attributes
