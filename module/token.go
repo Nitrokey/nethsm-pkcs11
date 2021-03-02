@@ -2,6 +2,7 @@ package module
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"p11nethsm/api"
 	"sync"
@@ -72,11 +73,11 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	if objects := token.GetObjectsByID(keyID); objects != nil {
 		return objects, nil
 	}
-	// key, r, err := App.Api.KeysKeyIDGet(token.ApiCtx(), keyID).Execute()
-	// if err != nil {
-	// 	err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
-	// 	return nil, err
-	// }
+	key, r, err := Api.KeysKeyIDGet(token.ApiCtx(), keyID).Execute()
+	if err != nil {
+		err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
+		return nil, err
+	}
 	object := &CryptoObject{}
 	// object.Type = TokenObject
 	object.Handle = nextObjectHandle()
@@ -98,45 +99,52 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 		&Attribute{CKA_EXTRACTABLE, FalseAttr},
 		&Attribute{CKA_NEVER_EXTRACTABLE, TrueAttr},
 	)
-	// switch key.Algorithm {
-	// case api.KEYALGORITHM_RSA:
-	// modulus, err := base64.StdEncoding.DecodeString(key.GetModulus())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// log.Debugf("modulus: %v", key.Key.GetModulus())
-	// pubExp, err := base64.StdEncoding.DecodeString(key.Key.GetPublicExponent())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// log.Debugf("pubExp: %v", key.Key.GetPublicExponent())
-	object.Attributes.Set(
-		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
-		&Attribute{CKA_DERIVE, FalseAttr},
-		&Attribute{CKA_DECRYPT, TrueAttr},
-		&Attribute{CKA_SIGN, TrueAttr},
-		&Attribute{CKA_SIGN_RECOVER, TrueAttr},
-		&Attribute{CKA_UNWRAP, FalseAttr},
-		&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
-		// &Attribute{CKA_MODULUS, modulus},
-		// &Attribute{CKA_PUBLIC_EXPONENT, pubExp},
-	)
-	// case api.KEYALGORITHM_ED25519:
-	// 	data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	object.Attributes.Set(
-	// 		&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
-	// 		&Attribute{CKA_DERIVE, TrueAttr},
-	// 		&Attribute{CKA_DECRYPT, FalseAttr},
-	// 		&Attribute{CKA_SIGN, TrueAttr},
-	// 		&Attribute{CKA_SIGN_RECOVER, TrueAttr},
-	// 		&Attribute{CKA_UNWRAP, FalseAttr},
-	// 		&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
-	// 		&Attribute{CKA_EC_POINT, data},
-	// 	)
-	// }
+	switch key.Algorithm {
+	case api.KEYALGORITHM_RSA:
+		var modulusB64, pubExpB64 string
+		if data, ok := key.GetKeyOk(); !ok {
+			modulusB64 = data.GetModulus()
+			pubExpB64 = data.GetPublicExponent()
+		} else {
+			// bug in API, workaround
+			modulusB64, _ = key.AdditionalProperties["modulus"].(string)
+			pubExpB64, _ = key.AdditionalProperties["publicExponent"].(string)
+		}
+		modulus, err := base64.StdEncoding.DecodeString(modulusB64)
+		if err != nil {
+			return nil, err
+		}
+		pubExp, err := base64.StdEncoding.DecodeString(pubExpB64)
+		if err != nil {
+			return nil, err
+		}
+		object.Attributes.Set(
+			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
+			&Attribute{CKA_DERIVE, FalseAttr},
+			&Attribute{CKA_DECRYPT, TrueAttr},
+			&Attribute{CKA_SIGN, TrueAttr},
+			&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+			&Attribute{CKA_UNWRAP, FalseAttr},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
+			&Attribute{CKA_MODULUS, modulus},
+			&Attribute{CKA_PUBLIC_EXPONENT, pubExp},
+		)
+	case api.KEYALGORITHM_ED25519:
+		data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
+		if err != nil {
+			return nil, err
+		}
+		object.Attributes.Set(
+			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
+			&Attribute{CKA_DERIVE, TrueAttr},
+			&Attribute{CKA_DECRYPT, FalseAttr},
+			&Attribute{CKA_SIGN, TrueAttr},
+			&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+			&Attribute{CKA_UNWRAP, FalseAttr},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
+			&Attribute{CKA_EC_POINT, data},
+		)
+	}
 	token.AddObject(object)
 	return CryptoObjects{object}, nil
 }
