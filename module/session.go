@@ -195,7 +195,13 @@ func (session *Session) SignInit(mechanism *Mechanism, hKey CK_OBJECT_HANDLE) er
 		return NewError("Session.SignInit", "got NULL pointer", CKR_ARGUMENTS_BAD)
 	}
 
-	signCtx, err := NewSignContext(session, mechanism, hKey)
+	var signCtx OpContext
+	var err error
+	if mechanism.Type != CKM_RSA_X_509 {
+		signCtx, err = NewSignContext(session, mechanism, hKey)
+	} else {
+		signCtx, err = NewDecryptContext(session, mechanism, hKey)
+	}
 	if err != nil {
 		return err
 	}
