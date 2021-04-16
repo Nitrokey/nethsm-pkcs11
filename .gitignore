@@ -7,3 +7,5 @@ p11nethsm.h
 /tests/dns-tools/dtc/config/
 /tests/dns-tools/dtcnode/config/
 *~
+node_modules
+

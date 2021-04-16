@@ -2,7 +2,7 @@ FROM golang AS builder
 
 ADD .git/ /tmp/repo
 
-RUN git -s /tmp/repo build
+RUN git clone -s /tmp/repo build
 
 RUN cd build && ./build.sh
 

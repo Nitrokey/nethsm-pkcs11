@@ -16,19 +16,30 @@ func (mechanism *Mechanism) SignMode() (mode api.SignMode, err error) {
 	switch mechanism.Type {
 	case CKM_RSA_PKCS:
 		mode = api.SIGNMODE_PKCS1
-	case CKM_MD5_RSA_PKCS:
-		// XXX this is wrong I think
-		mode = api.SIGNMODE_PSS_MD5
-	case CKM_SHA1_RSA_PKCS_PSS:
-		mode = api.SIGNMODE_PSS_SHA1
-	case CKM_SHA224_RSA_PKCS_PSS:
-		mode = api.SIGNMODE_PSS_SHA224
-	case CKM_SHA256_RSA_PKCS_PSS:
-		mode = api.SIGNMODE_PSS_SHA256
-	case CKM_SHA384_RSA_PKCS_PSS:
-		mode = api.SIGNMODE_PSS_SHA384
-	case CKM_SHA512_RSA_PKCS_PSS:
-		mode = api.SIGNMODE_PSS_SHA512
+	// case CKM_MD5_RSA_PKCS:
+	case CKM_RSA_PKCS_PSS:
+		if len(mechanism.Parameter) == 0 {
+			err = NewError("Mechanism.SignMode", "PSS mechanism needs parameter", CKR_MECHANISM_PARAM_INVALID)
+			return
+		}
+		params := (*CK_RSA_PKCS_PSS_PARAMS)(unsafe.Pointer(&mechanism.Parameter[0]))
+		switch params.HashAlg {
+		case CKM_MD5:
+			mode = api.SIGNMODE_PSS_MD5
+		case CKM_SHA_1:
+			mode = api.SIGNMODE_PSS_SHA1
+		case CKM_SHA224:
+			mode = api.SIGNMODE_PSS_SHA224
+		case CKM_SHA256:
+			mode = api.SIGNMODE_PSS_SHA256
+		case CKM_SHA384:
+			mode = api.SIGNMODE_PSS_SHA384
+		case CKM_SHA512:
+			mode = api.SIGNMODE_PSS_SHA512
+		default:
+			err = NewError("Mechanism.SignMode", fmt.Sprintf("unsupported hash for PSS: %v", CKMString(params.HashAlg)), CKR_MECHANISM_PARAM_INVALID)
+			return
+		}
 	// case CKM_EDDSA:
 	// 	mode = api.SIGNMODE_ED25519
 	default:

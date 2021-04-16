@@ -20,6 +20,12 @@ type CK_RSA_PKCS_OAEP_PARAMS struct {
 	ULSourceDataLen CK_ULONG
 }
 
+type CK_RSA_PKCS_PSS_PARAMS struct {
+	HashAlg CK_MECHANISM_TYPE
+	Mgf     CK_RSA_PKCS_MGF_TYPE
+	Slen    CK_ULONG
+}
+
 // created with
 // sed -nE 's/typedef +(CK_[^ ]+) +(CK_[^ ]+);/type \2 \1/p' core/pkcs11t.h
 
