@@ -101,20 +101,23 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 	)
 	switch key.Algorithm {
 	case api.KEYALGORITHM_RSA:
-		var modulusB64, pubExpB64 string
-		if data, ok := key.GetKeyOk(); !ok {
-			modulusB64 = data.GetModulus()
-			pubExpB64 = data.GetPublicExponent()
-		} else {
-			// bug in API, workaround
-			modulusB64, _ = key.AdditionalProperties["modulus"].(string)
-			pubExpB64, _ = key.AdditionalProperties["publicExponent"].(string)
+		data, ok := key.GetKeyOk()
+		if !ok {
+			return nil, NewError("token.GetObjects", "Can't parse key data", CKR_DEVICE_ERROR)
 		}
-		modulus, err := base64.StdEncoding.DecodeString(modulusB64)
+		modulusB64, ok := data.GetModulusOk()
+		if !ok {
+			return nil, NewError("token.GetObjects", "Can't parse key modulus", CKR_DEVICE_ERROR)
+		}
+		pubExpB64, ok := data.GetPublicExponentOk()
+		if !ok {
+			return nil, NewError("token.GetObjects", "Can't parse public key exponent", CKR_DEVICE_ERROR)
+		}
+		modulus, err := base64.StdEncoding.DecodeString(*modulusB64)
 		if err != nil {
 			return nil, err
 		}
-		pubExp, err := base64.StdEncoding.DecodeString(pubExpB64)
+		pubExp, err := base64.StdEncoding.DecodeString(*pubExpB64)
 		if err != nil {
 			return nil, err
 		}

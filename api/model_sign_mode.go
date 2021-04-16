@@ -28,6 +28,10 @@ const (
 	SIGNMODE_PSS_SHA384 SignMode = "PSS_SHA384"
 	SIGNMODE_PSS_SHA512 SignMode = "PSS_SHA512"
 	SIGNMODE_ED25519    SignMode = "ED25519"
+	SIGNMODE_ECDSA_P224 SignMode = "ECDSA_P224"
+	SIGNMODE_ECDSA_P256 SignMode = "ECDSA_P256"
+	SIGNMODE_ECDSA_P384 SignMode = "ECDSA_P384"
+	SIGNMODE_ECDSA_P521 SignMode = "ECDSA_P521"
 )
 
 func (v *SignMode) UnmarshalJSON(src []byte) error {
@@ -37,7 +41,7 @@ func (v *SignMode) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := SignMode(value)
-	for _, existing := range []SignMode{"PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519"} {
+	for _, existing := range []SignMode{"PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519", "ECDSA_P224", "ECDSA_P256", "ECDSA_P384", "ECDSA_P521"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil

@@ -35,6 +35,14 @@
 
 * `ED25519_SIGNATURE` (value: `"ED25519_Signature"`)
 
+* `ECDSA_P224_SIGNATURE` (value: `"ECDSA_P224_Signature"`)
+
+* `ECDSA_P256_SIGNATURE` (value: `"ECDSA_P256_Signature"`)
+
+* `ECDSA_P384_SIGNATURE` (value: `"ECDSA_P384_Signature"`)
+
+* `ECDSA_P521_SIGNATURE` (value: `"ECDSA_P521_Signature"`)
+
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

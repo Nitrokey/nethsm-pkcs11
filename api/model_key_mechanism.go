@@ -36,6 +36,10 @@ const (
 	KEYMECHANISM_RSA_SIGNATURE_PSS_SHA384   KeyMechanism = "RSA_Signature_PSS_SHA384"
 	KEYMECHANISM_RSA_SIGNATURE_PSS_SHA512   KeyMechanism = "RSA_Signature_PSS_SHA512"
 	KEYMECHANISM_ED25519_SIGNATURE          KeyMechanism = "ED25519_Signature"
+	KEYMECHANISM_ECDSA_P224_SIGNATURE       KeyMechanism = "ECDSA_P224_Signature"
+	KEYMECHANISM_ECDSA_P256_SIGNATURE       KeyMechanism = "ECDSA_P256_Signature"
+	KEYMECHANISM_ECDSA_P384_SIGNATURE       KeyMechanism = "ECDSA_P384_Signature"
+	KEYMECHANISM_ECDSA_P521_SIGNATURE       KeyMechanism = "ECDSA_P521_Signature"
 )
 
 func (v *KeyMechanism) UnmarshalJSON(src []byte) error {
@@ -45,7 +49,7 @@ func (v *KeyMechanism) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := KeyMechanism(value)
-	for _, existing := range []KeyMechanism{"RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "ED25519_Signature"} {
+	for _, existing := range []KeyMechanism{"RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "ED25519_Signature", "ECDSA_P224_Signature", "ECDSA_P256_Signature", "ECDSA_P384_Signature", "ECDSA_P521_Signature"} {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil

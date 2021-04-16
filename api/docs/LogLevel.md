@@ -7,7 +7,7 @@
 
 * `INFO` (value: `"info"`)
 
-* `WARN` (value: `"warn"`)
+* `WARNING` (value: `"warning"`)
 
 * `ERROR` (value: `"error"`)
 

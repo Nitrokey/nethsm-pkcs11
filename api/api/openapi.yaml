@@ -1611,6 +1611,10 @@ components:
       - RSA_Signature_PSS_SHA384
       - RSA_Signature_PSS_SHA512
       - ED25519_Signature
+      - ECDSA_P224_Signature
+      - ECDSA_P256_Signature
+      - ECDSA_P384_Signature
+      - ECDSA_P521_Signature
       type: string
     ID:
       maxLength: 128
@@ -1757,6 +1761,10 @@ components:
       enum:
       - RSA
       - ED25519
+      - ECDSA_P224
+      - ECDSA_P256
+      - ECDSA_P384
+      - ECDSA_P521
       type: string
     ProvisionRequestData:
       example:
@@ -1821,7 +1829,7 @@ components:
       enum:
       - debug
       - info
-      - warn
+      - warning
       - error
       type: string
     UnlockRequestData:
@@ -1901,6 +1909,10 @@ components:
       - PSS_SHA384
       - PSS_SHA512
       - ED25519
+      - ECDSA_P224
+      - ECDSA_P256
+      - ECDSA_P384
+      - ECDSA_P521
       type: string
     UserPostData:
       example:
