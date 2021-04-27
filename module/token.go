@@ -132,7 +132,11 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 			&Attribute{CKA_MODULUS, modulus},
 			&Attribute{CKA_PUBLIC_EXPONENT, pubExp},
 		)
-	case api.KEYALGORITHM_ED25519:
+	case api.KEYALGORITHM_ED25519,
+		api.KEYALGORITHM_ECDSA_P224,
+		api.KEYALGORITHM_ECDSA_P256,
+		api.KEYALGORITHM_ECDSA_P384,
+		api.KEYALGORITHM_ECDSA_P521:
 		data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
 		if err != nil {
 			return nil, err
@@ -147,6 +151,8 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 			&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
 			&Attribute{CKA_EC_POINT, data},
 		)
+	default:
+		return nil, NewError("token.GetObjects", "Invalid algorithm", CKR_DEVICE_ERROR)
 	}
 	token.AddObject(object)
 	return CryptoObjects{object}, nil

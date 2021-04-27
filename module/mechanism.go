@@ -40,8 +40,10 @@ func (mechanism *Mechanism) SignMode() (mode api.SignMode, err error) {
 			err = NewError("Mechanism.SignMode", fmt.Sprintf("unsupported hash for PSS: %v", CKMString(params.HashAlg)), CKR_MECHANISM_PARAM_INVALID)
 			return
 		}
-	// case CKM_EDDSA:
-	// 	mode = api.SIGNMODE_ED25519
+	case CKM_EDDSA:
+		mode = api.SIGNMODE_ED25519
+	case CKM_ECDSA:
+		mode = api.SIGNMODE_ECDSA_P256
 	default:
 		err = NewError("Mechanism.SignMode", fmt.Sprintf("mechanism not supported for signing: %v", CKMString(mechanism.Type)), CKR_MECHANISM_INVALID)
 		return
