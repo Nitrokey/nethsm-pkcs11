@@ -30,6 +30,17 @@ const (
 	DECRYPTMODE_OAEP_SHA512 DecryptMode = "OAEP_SHA512"
 )
 
+var allowedDecryptModeEnumValues = []DecryptMode{
+	"RAW",
+	"PKCS1",
+	"OAEP_MD5",
+	"OAEP_SHA1",
+	"OAEP_SHA224",
+	"OAEP_SHA256",
+	"OAEP_SHA384",
+	"OAEP_SHA512",
+}
+
 func (v *DecryptMode) UnmarshalJSON(src []byte) error {
 	var value string
 	err := json.Unmarshal(src, &value)
@@ -37,7 +48,7 @@ func (v *DecryptMode) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := DecryptMode(value)
-	for _, existing := range []DecryptMode{"RAW", "PKCS1", "OAEP_MD5", "OAEP_SHA1", "OAEP_SHA224", "OAEP_SHA256", "OAEP_SHA384", "OAEP_SHA512"} {
+	for _, existing := range allowedDecryptModeEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -45,6 +56,27 @@ func (v *DecryptMode) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid DecryptMode", value)
+}
+
+// NewDecryptModeFromValue returns a pointer to a valid DecryptMode
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewDecryptModeFromValue(v string) (*DecryptMode, error) {
+	ev := DecryptMode(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for DecryptMode: valid values are %v", v, allowedDecryptModeEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v DecryptMode) IsValid() bool {
+	for _, existing := range allowedDecryptModeEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to DecryptMode value

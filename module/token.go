@@ -99,8 +99,8 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 		&Attribute{CKA_EXTRACTABLE, FalseAttr},
 		&Attribute{CKA_NEVER_EXTRACTABLE, TrueAttr},
 	)
-	switch key.Algorithm {
-	case api.KEYALGORITHM_RSA:
+	switch key.Type {
+	case api.KEYTYPE_RSA:
 		data, ok := key.GetKeyOk()
 		if !ok {
 			return nil, NewError("token.GetObjects", "Can't parse key data", CKR_DEVICE_ERROR)
@@ -132,11 +132,11 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 			&Attribute{CKA_MODULUS, modulus},
 			&Attribute{CKA_PUBLIC_EXPONENT, pubExp},
 		)
-	case api.KEYALGORITHM_ED25519,
-		api.KEYALGORITHM_ECDSA_P224,
-		api.KEYALGORITHM_ECDSA_P256,
-		api.KEYALGORITHM_ECDSA_P384,
-		api.KEYALGORITHM_ECDSA_P521:
+	case api.KEYTYPE_CURVE25519,
+		api.KEYTYPE_EC_P224,
+		api.KEYTYPE_EC_P256,
+		api.KEYTYPE_EC_P384,
+		api.KEYTYPE_EC_P521:
 		data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
 		if err != nil {
 			return nil, err

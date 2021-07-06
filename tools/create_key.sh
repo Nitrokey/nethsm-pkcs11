@@ -19,4 +19,4 @@ curl -k -i -w '\n' -u admin:adminadmin -X POST \
 "RSA_Signature_PSS_SHA256",
 "RSA_Signature_PSS_SHA384",
 "RSA_Signature_PSS_SHA512"
-],  "algorithm": "RSA",  "length": 2048 }'
+],  "type": "RSA",  "length": 2048 }'

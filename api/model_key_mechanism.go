@@ -35,12 +35,29 @@ const (
 	KEYMECHANISM_RSA_SIGNATURE_PSS_SHA256   KeyMechanism = "RSA_Signature_PSS_SHA256"
 	KEYMECHANISM_RSA_SIGNATURE_PSS_SHA384   KeyMechanism = "RSA_Signature_PSS_SHA384"
 	KEYMECHANISM_RSA_SIGNATURE_PSS_SHA512   KeyMechanism = "RSA_Signature_PSS_SHA512"
-	KEYMECHANISM_ED25519_SIGNATURE          KeyMechanism = "ED25519_Signature"
-	KEYMECHANISM_ECDSA_P224_SIGNATURE       KeyMechanism = "ECDSA_P224_Signature"
-	KEYMECHANISM_ECDSA_P256_SIGNATURE       KeyMechanism = "ECDSA_P256_Signature"
-	KEYMECHANISM_ECDSA_P384_SIGNATURE       KeyMechanism = "ECDSA_P384_Signature"
-	KEYMECHANISM_ECDSA_P521_SIGNATURE       KeyMechanism = "ECDSA_P521_Signature"
+	KEYMECHANISM_ED_DSA_SIGNATURE           KeyMechanism = "EdDSA_Signature"
+	KEYMECHANISM_ECDSA_SIGNATURE            KeyMechanism = "ECDSA_Signature"
 )
+
+var allowedKeyMechanismEnumValues = []KeyMechanism{
+	"RSA_Decryption_RAW",
+	"RSA_Decryption_PKCS1",
+	"RSA_Decryption_OAEP_MD5",
+	"RSA_Decryption_OAEP_SHA1",
+	"RSA_Decryption_OAEP_SHA224",
+	"RSA_Decryption_OAEP_SHA256",
+	"RSA_Decryption_OAEP_SHA384",
+	"RSA_Decryption_OAEP_SHA512",
+	"RSA_Signature_PKCS1",
+	"RSA_Signature_PSS_MD5",
+	"RSA_Signature_PSS_SHA1",
+	"RSA_Signature_PSS_SHA224",
+	"RSA_Signature_PSS_SHA256",
+	"RSA_Signature_PSS_SHA384",
+	"RSA_Signature_PSS_SHA512",
+	"EdDSA_Signature",
+	"ECDSA_Signature",
+}
 
 func (v *KeyMechanism) UnmarshalJSON(src []byte) error {
 	var value string
@@ -49,7 +66,7 @@ func (v *KeyMechanism) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := KeyMechanism(value)
-	for _, existing := range []KeyMechanism{"RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "ED25519_Signature", "ECDSA_P224_Signature", "ECDSA_P256_Signature", "ECDSA_P384_Signature", "ECDSA_P521_Signature"} {
+	for _, existing := range allowedKeyMechanismEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -57,6 +74,27 @@ func (v *KeyMechanism) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid KeyMechanism", value)
+}
+
+// NewKeyMechanismFromValue returns a pointer to a valid KeyMechanism
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewKeyMechanismFromValue(v string) (*KeyMechanism, error) {
+	ev := KeyMechanism(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for KeyMechanism: valid values are %v", v, allowedKeyMechanismEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v KeyMechanism) IsValid() bool {
+	for _, existing := range allowedKeyMechanismEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to KeyMechanism value

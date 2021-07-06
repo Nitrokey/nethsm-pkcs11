@@ -26,6 +26,13 @@ const (
 	LOGLEVEL_ERROR   LogLevel = "error"
 )
 
+var allowedLogLevelEnumValues = []LogLevel{
+	"debug",
+	"info",
+	"warning",
+	"error",
+}
+
 func (v *LogLevel) UnmarshalJSON(src []byte) error {
 	var value string
 	err := json.Unmarshal(src, &value)
@@ -33,7 +40,7 @@ func (v *LogLevel) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := LogLevel(value)
-	for _, existing := range []LogLevel{"debug", "info", "warning", "error"} {
+	for _, existing := range allowedLogLevelEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -41,6 +48,27 @@ func (v *LogLevel) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid LogLevel", value)
+}
+
+// NewLogLevelFromValue returns a pointer to a valid LogLevel
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewLogLevelFromValue(v string) (*LogLevel, error) {
+	ev := LogLevel(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for LogLevel: valid values are %v", v, allowedLogLevelEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v LogLevel) IsValid() bool {
+	for _, existing := range allowedLogLevelEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to LogLevel value

@@ -13,7 +13,7 @@ curl -k -i -w '\n' -u admin:adminadmin -X PUT \
         "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224",
         "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384",
         "RSA_Signature_PSS_SHA512" ],
-    "algorithm": "RSA",
+    "type": "RSA",
     "key": {
         "publicExponent": "AQAB",
         "primeP": "AOedR8mKUVN2jLE60cbESw+o88d2f19oyAjNLUtnLgYnBIKva10JYDRHa/EXqiStx+cDTNvd5xBVPXFrt56sdpHgW1rL9BkcXX5Z75eNQwCEZOxrHp7uSkefr3we7KCTEvFMnA8tp4tnA5y7J+anlgz5oucmS91JS8O8l/UGGk0Sx52N7aRjEVI8Rbm8Mz91jPPuHevvYy0uqkEwI2nxVTlNadmCrJi3DJ/xVm/8bUTCixBcs9LurDfUI70llz9XqHX/AfOOBc8giIAS8PUDa6djKMbKtKR2OurAdHLFMvUWEMEpUwjS+CyFkv+LtXCnl2J0KqKGDW5DYZOMuYSo71s=",

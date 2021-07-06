@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Mechanisms** | [**[]KeyMechanism**](KeyMechanism.md) |  | 
-**Algorithm** | [**KeyAlgorithm**](KeyAlgorithm.md) |  | 
+**Type** | [**KeyType**](KeyType.md) |  | 
 **Key** | [**KeyPublicData**](KeyPublicData.md) |  | 
 **Operations** | **int32** |  | 
 
@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 
 ### NewPublicKey
 
-`func NewPublicKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPublicData, operations int32, ) *PublicKey`
+`func NewPublicKey(mechanisms []KeyMechanism, type_ KeyType, key KeyPublicData, operations int32, ) *PublicKey`
 
 NewPublicKey instantiates a new PublicKey object
 This constructor will assign default values to properties that have it defined,
@@ -48,24 +48,24 @@ and a boolean to check if the value has been set.
 SetMechanisms sets Mechanisms field to given value.
 
 
-### GetAlgorithm
+### GetType
 
-`func (o *PublicKey) GetAlgorithm() KeyAlgorithm`
+`func (o *PublicKey) GetType() KeyType`
 
-GetAlgorithm returns the Algorithm field if non-nil, zero value otherwise.
+GetType returns the Type field if non-nil, zero value otherwise.
 
-### GetAlgorithmOk
+### GetTypeOk
 
-`func (o *PublicKey) GetAlgorithmOk() (*KeyAlgorithm, bool)`
+`func (o *PublicKey) GetTypeOk() (*KeyType, bool)`
 
-GetAlgorithmOk returns a tuple with the Algorithm field if it's non-nil, zero value otherwise
+GetTypeOk returns a tuple with the Type field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetAlgorithm
+### SetType
 
-`func (o *PublicKey) SetAlgorithm(v KeyAlgorithm)`
+`func (o *PublicKey) SetType(v KeyType)`
 
-SetAlgorithm sets Algorithm field to given value.
+SetType sets Type field to given value.
 
 
 ### GetKey

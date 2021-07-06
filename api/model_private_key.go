@@ -17,7 +17,7 @@ import (
 // PrivateKey struct for PrivateKey
 type PrivateKey struct {
 	Mechanisms           []KeyMechanism `json:"mechanisms"`
-	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Type                 KeyType        `json:"type"`
 	Key                  KeyPrivateData `json:"key"`
 	AdditionalProperties map[string]interface{}
 }
@@ -28,10 +28,10 @@ type _PrivateKey PrivateKey
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPrivateKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPrivateData) *PrivateKey {
+func NewPrivateKey(mechanisms []KeyMechanism, type_ KeyType, key KeyPrivateData) *PrivateKey {
 	this := PrivateKey{}
 	this.Mechanisms = mechanisms
-	this.Algorithm = algorithm
+	this.Type = type_
 	this.Key = key
 	return &this
 }
@@ -68,28 +68,28 @@ func (o *PrivateKey) SetMechanisms(v []KeyMechanism) {
 	o.Mechanisms = v
 }
 
-// GetAlgorithm returns the Algorithm field value
-func (o *PrivateKey) GetAlgorithm() KeyAlgorithm {
+// GetType returns the Type field value
+func (o *PrivateKey) GetType() KeyType {
 	if o == nil {
-		var ret KeyAlgorithm
+		var ret KeyType
 		return ret
 	}
 
-	return o.Algorithm
+	return o.Type
 }
 
-// GetAlgorithmOk returns a tuple with the Algorithm field value
+// GetTypeOk returns a tuple with the Type field value
 // and a boolean to check if the value has been set.
-func (o *PrivateKey) GetAlgorithmOk() (*KeyAlgorithm, bool) {
+func (o *PrivateKey) GetTypeOk() (*KeyType, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.Algorithm, true
+	return &o.Type, true
 }
 
-// SetAlgorithm sets field value
-func (o *PrivateKey) SetAlgorithm(v KeyAlgorithm) {
-	o.Algorithm = v
+// SetType sets field value
+func (o *PrivateKey) SetType(v KeyType) {
+	o.Type = v
 }
 
 // GetKey returns the Key field value
@@ -122,7 +122,7 @@ func (o PrivateKey) MarshalJSON() ([]byte, error) {
 		toSerialize["mechanisms"] = o.Mechanisms
 	}
 	if true {
-		toSerialize["algorithm"] = o.Algorithm
+		toSerialize["type"] = o.Type
 	}
 	if true {
 		toSerialize["key"] = o.Key
@@ -146,7 +146,7 @@ func (o *PrivateKey) UnmarshalJSON(bytes []byte) (err error) {
 
 	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
 		delete(additionalProperties, "mechanisms")
-		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "type")
 		delete(additionalProperties, "key")
 		o.AdditionalProperties = additionalProperties
 	}

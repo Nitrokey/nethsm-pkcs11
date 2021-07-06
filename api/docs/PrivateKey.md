@@ -5,14 +5,14 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Mechanisms** | [**[]KeyMechanism**](KeyMechanism.md) |  | 
-**Algorithm** | [**KeyAlgorithm**](KeyAlgorithm.md) |  | 
+**Type** | [**KeyType**](KeyType.md) |  | 
 **Key** | [**KeyPrivateData**](KeyPrivateData.md) |  | 
 
 ## Methods
 
 ### NewPrivateKey
 
-`func NewPrivateKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPrivateData, ) *PrivateKey`
+`func NewPrivateKey(mechanisms []KeyMechanism, type_ KeyType, key KeyPrivateData, ) *PrivateKey`
 
 NewPrivateKey instantiates a new PrivateKey object
 This constructor will assign default values to properties that have it defined,
@@ -47,24 +47,24 @@ and a boolean to check if the value has been set.
 SetMechanisms sets Mechanisms field to given value.
 
 
-### GetAlgorithm
+### GetType
 
-`func (o *PrivateKey) GetAlgorithm() KeyAlgorithm`
+`func (o *PrivateKey) GetType() KeyType`
 
-GetAlgorithm returns the Algorithm field if non-nil, zero value otherwise.
+GetType returns the Type field if non-nil, zero value otherwise.
 
-### GetAlgorithmOk
+### GetTypeOk
 
-`func (o *PrivateKey) GetAlgorithmOk() (*KeyAlgorithm, bool)`
+`func (o *PrivateKey) GetTypeOk() (*KeyType, bool)`
 
-GetAlgorithmOk returns a tuple with the Algorithm field if it's non-nil, zero value otherwise
+GetTypeOk returns a tuple with the Type field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetAlgorithm
+### SetType
 
-`func (o *PrivateKey) SetAlgorithm(v KeyAlgorithm)`
+`func (o *PrivateKey) SetType(v KeyType)`
 
-SetAlgorithm sets Algorithm field to given value.
+SetType sets Type field to given value.
 
 
 ### GetKey

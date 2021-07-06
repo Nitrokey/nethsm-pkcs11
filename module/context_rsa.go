@@ -2,7 +2,12 @@ package module
 
 import (
 	"encoding/base64"
+	"errors"
+	"math/big"
 	"p11nethsm/api"
+
+	"golang.org/x/crypto/cryptobyte"
+	"golang.org/x/crypto/cryptobyte/asn1"
 )
 
 type opContextRSA struct {
@@ -65,6 +70,12 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if context.mode == api.SIGNMODE_ECDSA {
+		signature, err = sigAsn1ToRS(signature)
+	}
+	if err != nil {
+		return nil, err
+	}
 	context.result = signature
 	return signature, nil
 }
@@ -90,4 +101,31 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 	}
 	context.result = decrypted
 	return decrypted, nil
+}
+
+func sigAsn1ToRS(sig []byte) ([]byte, error) {
+	var (
+		r, s = &big.Int{}, &big.Int{}
+		seq  cryptobyte.String
+	)
+	input := cryptobyte.String(sig)
+	if ok := input.ReadASN1(&seq, asn1.SEQUENCE) &&
+		input.Empty() &&
+		seq.ReadASN1Integer(r) &&
+		seq.ReadASN1Integer(s) &&
+		seq.Empty(); !ok {
+		return nil, errors.New("invalid ASN.1 signature")
+	}
+	var maxBytes = func(x, y *big.Int) int {
+		l := x.BitLen()
+		if ly := y.BitLen(); ly > l {
+			l = ly
+		}
+		return (l + 7) / 8
+	}
+	l := maxBytes(r, s)
+	result := make([]byte, l*2)
+	r.FillBytes(result[:l])
+	s.FillBytes(result[l:])
+	return result, nil
 }

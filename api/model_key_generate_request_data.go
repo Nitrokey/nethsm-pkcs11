@@ -17,7 +17,7 @@ import (
 // KeyGenerateRequestData struct for KeyGenerateRequestData
 type KeyGenerateRequestData struct {
 	Mechanisms           []KeyMechanism `json:"mechanisms"`
-	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Type                 KeyType        `json:"type"`
 	Length               *int32         `json:"length,omitempty"`
 	Id                   *string        `json:"id,omitempty"`
 	AdditionalProperties map[string]interface{}
@@ -29,10 +29,10 @@ type _KeyGenerateRequestData KeyGenerateRequestData
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewKeyGenerateRequestData(mechanisms []KeyMechanism, algorithm KeyAlgorithm) *KeyGenerateRequestData {
+func NewKeyGenerateRequestData(mechanisms []KeyMechanism, type_ KeyType) *KeyGenerateRequestData {
 	this := KeyGenerateRequestData{}
 	this.Mechanisms = mechanisms
-	this.Algorithm = algorithm
+	this.Type = type_
 	return &this
 }
 
@@ -68,28 +68,28 @@ func (o *KeyGenerateRequestData) SetMechanisms(v []KeyMechanism) {
 	o.Mechanisms = v
 }
 
-// GetAlgorithm returns the Algorithm field value
-func (o *KeyGenerateRequestData) GetAlgorithm() KeyAlgorithm {
+// GetType returns the Type field value
+func (o *KeyGenerateRequestData) GetType() KeyType {
 	if o == nil {
-		var ret KeyAlgorithm
+		var ret KeyType
 		return ret
 	}
 
-	return o.Algorithm
+	return o.Type
 }
 
-// GetAlgorithmOk returns a tuple with the Algorithm field value
+// GetTypeOk returns a tuple with the Type field value
 // and a boolean to check if the value has been set.
-func (o *KeyGenerateRequestData) GetAlgorithmOk() (*KeyAlgorithm, bool) {
+func (o *KeyGenerateRequestData) GetTypeOk() (*KeyType, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.Algorithm, true
+	return &o.Type, true
 }
 
-// SetAlgorithm sets field value
-func (o *KeyGenerateRequestData) SetAlgorithm(v KeyAlgorithm) {
-	o.Algorithm = v
+// SetType sets field value
+func (o *KeyGenerateRequestData) SetType(v KeyType) {
+	o.Type = v
 }
 
 // GetLength returns the Length field value if set, zero value otherwise.
@@ -162,7 +162,7 @@ func (o KeyGenerateRequestData) MarshalJSON() ([]byte, error) {
 		toSerialize["mechanisms"] = o.Mechanisms
 	}
 	if true {
-		toSerialize["algorithm"] = o.Algorithm
+		toSerialize["type"] = o.Type
 	}
 	if o.Length != nil {
 		toSerialize["length"] = o.Length
@@ -189,7 +189,7 @@ func (o *KeyGenerateRequestData) UnmarshalJSON(bytes []byte) (err error) {
 
 	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
 		delete(additionalProperties, "mechanisms")
-		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "type")
 		delete(additionalProperties, "length")
 		delete(additionalProperties, "id")
 		o.AdditionalProperties = additionalProperties

@@ -1200,7 +1200,7 @@ import (
 )
 
 func main() {
-    body := *openapiclient.NewKeyGenerateRequestData([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA")) // KeyGenerateRequestData |  (optional)
+    body := *openapiclient.NewKeyGenerateRequestData([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyType("RSA")) // KeyGenerateRequestData |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -1886,7 +1886,7 @@ import (
 
 func main() {
     keyID := "keyID_example" // string | 
-    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
+    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyType("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)
@@ -2028,7 +2028,7 @@ import (
 
 func main() {
     mechanisms := []openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")} // []KeyMechanism |  (optional)
-    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyAlgorithm("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
+    body := *openapiclient.NewPrivateKey([]openapiclient.KeyMechanism{openapiclient.KeyMechanism("RSA_Decryption_RAW")}, openapiclient.KeyType("RSA"), *openapiclient.NewKeyPrivateData()) // PrivateKey |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     api_client := openapiclient.NewAPIClient(configuration)

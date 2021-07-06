@@ -25,6 +25,12 @@ const (
 	SYSTEMSTATE_OPERATIONAL   SystemState = "Operational"
 )
 
+var allowedSystemStateEnumValues = []SystemState{
+	"Unprovisioned",
+	"Locked",
+	"Operational",
+}
+
 func (v *SystemState) UnmarshalJSON(src []byte) error {
 	var value string
 	err := json.Unmarshal(src, &value)
@@ -32,7 +38,7 @@ func (v *SystemState) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := SystemState(value)
-	for _, existing := range []SystemState{"Unprovisioned", "Locked", "Operational"} {
+	for _, existing := range allowedSystemStateEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -40,6 +46,27 @@ func (v *SystemState) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid SystemState", value)
+}
+
+// NewSystemStateFromValue returns a pointer to a valid SystemState
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewSystemStateFromValue(v string) (*SystemState, error) {
+	ev := SystemState(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for SystemState: valid values are %v", v, allowedSystemStateEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v SystemState) IsValid() bool {
+	for _, existing := range allowedSystemStateEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to SystemState value

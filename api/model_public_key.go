@@ -17,7 +17,7 @@ import (
 // PublicKey struct for PublicKey
 type PublicKey struct {
 	Mechanisms           []KeyMechanism `json:"mechanisms"`
-	Algorithm            KeyAlgorithm   `json:"algorithm"`
+	Type                 KeyType        `json:"type"`
 	Key                  KeyPublicData  `json:"key"`
 	Operations           int32          `json:"operations"`
 	AdditionalProperties map[string]interface{}
@@ -29,10 +29,10 @@ type _PublicKey PublicKey
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPublicKey(mechanisms []KeyMechanism, algorithm KeyAlgorithm, key KeyPublicData, operations int32) *PublicKey {
+func NewPublicKey(mechanisms []KeyMechanism, type_ KeyType, key KeyPublicData, operations int32) *PublicKey {
 	this := PublicKey{}
 	this.Mechanisms = mechanisms
-	this.Algorithm = algorithm
+	this.Type = type_
 	this.Key = key
 	this.Operations = operations
 	return &this
@@ -70,28 +70,28 @@ func (o *PublicKey) SetMechanisms(v []KeyMechanism) {
 	o.Mechanisms = v
 }
 
-// GetAlgorithm returns the Algorithm field value
-func (o *PublicKey) GetAlgorithm() KeyAlgorithm {
+// GetType returns the Type field value
+func (o *PublicKey) GetType() KeyType {
 	if o == nil {
-		var ret KeyAlgorithm
+		var ret KeyType
 		return ret
 	}
 
-	return o.Algorithm
+	return o.Type
 }
 
-// GetAlgorithmOk returns a tuple with the Algorithm field value
+// GetTypeOk returns a tuple with the Type field value
 // and a boolean to check if the value has been set.
-func (o *PublicKey) GetAlgorithmOk() (*KeyAlgorithm, bool) {
+func (o *PublicKey) GetTypeOk() (*KeyType, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.Algorithm, true
+	return &o.Type, true
 }
 
-// SetAlgorithm sets field value
-func (o *PublicKey) SetAlgorithm(v KeyAlgorithm) {
-	o.Algorithm = v
+// SetType sets field value
+func (o *PublicKey) SetType(v KeyType) {
+	o.Type = v
 }
 
 // GetKey returns the Key field value
@@ -148,7 +148,7 @@ func (o PublicKey) MarshalJSON() ([]byte, error) {
 		toSerialize["mechanisms"] = o.Mechanisms
 	}
 	if true {
-		toSerialize["algorithm"] = o.Algorithm
+		toSerialize["type"] = o.Type
 	}
 	if true {
 		toSerialize["key"] = o.Key
@@ -175,7 +175,7 @@ func (o *PublicKey) UnmarshalJSON(bytes []byte) (err error) {
 
 	if err = json.Unmarshal(bytes, &additionalProperties); err == nil {
 		delete(additionalProperties, "mechanisms")
-		delete(additionalProperties, "algorithm")
+		delete(additionalProperties, "type")
 		delete(additionalProperties, "key")
 		delete(additionalProperties, "operations")
 		o.AdditionalProperties = additionalProperties

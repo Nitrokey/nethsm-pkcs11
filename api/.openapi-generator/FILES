@@ -13,12 +13,12 @@ docs/DefaultApi.md
 docs/DistinguishedName.md
 docs/HealthStateData.md
 docs/InfoData.md
-docs/KeyAlgorithm.md
 docs/KeyGenerateRequestData.md
 docs/KeyItem.md
 docs/KeyMechanism.md
 docs/KeyPrivateData.md
 docs/KeyPublicData.md
+docs/KeyType.md
 docs/LogLevel.md
 docs/LoggingConfig.md
 docs/NetworkConfig.md
@@ -51,12 +51,12 @@ model_decrypt_request_data.go
 model_distinguished_name.go
 model_health_state_data.go
 model_info_data.go
-model_key_algorithm.go
 model_key_generate_request_data.go
 model_key_item.go
 model_key_mechanism.go
 model_key_private_data.go
 model_key_public_data.go
+model_key_type.go
 model_log_level.go
 model_logging_config.go
 model_network_config.go

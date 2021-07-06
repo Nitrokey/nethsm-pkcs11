@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Mechanisms** | [**[]KeyMechanism**](KeyMechanism.md) |  | 
-**Algorithm** | [**KeyAlgorithm**](KeyAlgorithm.md) |  | 
+**Type** | [**KeyType**](KeyType.md) |  | 
 **Length** | Pointer to **int32** |  | [optional] 
 **Id** | Pointer to **string** |  | [optional] 
 
@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 
 ### NewKeyGenerateRequestData
 
-`func NewKeyGenerateRequestData(mechanisms []KeyMechanism, algorithm KeyAlgorithm, ) *KeyGenerateRequestData`
+`func NewKeyGenerateRequestData(mechanisms []KeyMechanism, type_ KeyType, ) *KeyGenerateRequestData`
 
 NewKeyGenerateRequestData instantiates a new KeyGenerateRequestData object
 This constructor will assign default values to properties that have it defined,
@@ -48,24 +48,24 @@ and a boolean to check if the value has been set.
 SetMechanisms sets Mechanisms field to given value.
 
 
-### GetAlgorithm
+### GetType
 
-`func (o *KeyGenerateRequestData) GetAlgorithm() KeyAlgorithm`
+`func (o *KeyGenerateRequestData) GetType() KeyType`
 
-GetAlgorithm returns the Algorithm field if non-nil, zero value otherwise.
+GetType returns the Type field if non-nil, zero value otherwise.
 
-### GetAlgorithmOk
+### GetTypeOk
 
-`func (o *KeyGenerateRequestData) GetAlgorithmOk() (*KeyAlgorithm, bool)`
+`func (o *KeyGenerateRequestData) GetTypeOk() (*KeyType, bool)`
 
-GetAlgorithmOk returns a tuple with the Algorithm field if it's non-nil, zero value otherwise
+GetTypeOk returns a tuple with the Type field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetAlgorithm
+### SetType
 
-`func (o *KeyGenerateRequestData) SetAlgorithm(v KeyAlgorithm)`
+`func (o *KeyGenerateRequestData) SetType(v KeyType)`
 
-SetAlgorithm sets Algorithm field to given value.
+SetType sets Type field to given value.
 
 
 ### GetLength

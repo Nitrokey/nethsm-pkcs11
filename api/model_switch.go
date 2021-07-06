@@ -24,6 +24,11 @@ const (
 	SWITCH_OFF Switch = "off"
 )
 
+var allowedSwitchEnumValues = []Switch{
+	"on",
+	"off",
+}
+
 func (v *Switch) UnmarshalJSON(src []byte) error {
 	var value string
 	err := json.Unmarshal(src, &value)
@@ -31,7 +36,7 @@ func (v *Switch) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := Switch(value)
-	for _, existing := range []Switch{"on", "off"} {
+	for _, existing := range allowedSwitchEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -39,6 +44,27 @@ func (v *Switch) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid Switch", value)
+}
+
+// NewSwitchFromValue returns a pointer to a valid Switch
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewSwitchFromValue(v string) (*Switch, error) {
+	ev := Switch(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for Switch: valid values are %v", v, allowedSwitchEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v Switch) IsValid() bool {
+	for _, existing := range allowedSwitchEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to Switch value

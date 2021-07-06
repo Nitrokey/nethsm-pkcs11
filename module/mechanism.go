@@ -41,9 +41,9 @@ func (mechanism *Mechanism) SignMode() (mode api.SignMode, err error) {
 			return
 		}
 	case CKM_EDDSA:
-		mode = api.SIGNMODE_ED25519
+		mode = api.SIGNMODE_ED_DSA
 	case CKM_ECDSA:
-		mode = api.SIGNMODE_ECDSA_P256
+		mode = api.SIGNMODE_ECDSA
 	default:
 		err = NewError("Mechanism.SignMode", fmt.Sprintf("mechanism not supported for signing: %v", CKMString(mechanism.Type)), CKR_MECHANISM_INVALID)
 		return

@@ -27,12 +27,21 @@ const (
 	SIGNMODE_PSS_SHA256 SignMode = "PSS_SHA256"
 	SIGNMODE_PSS_SHA384 SignMode = "PSS_SHA384"
 	SIGNMODE_PSS_SHA512 SignMode = "PSS_SHA512"
-	SIGNMODE_ED25519    SignMode = "ED25519"
-	SIGNMODE_ECDSA_P224 SignMode = "ECDSA_P224"
-	SIGNMODE_ECDSA_P256 SignMode = "ECDSA_P256"
-	SIGNMODE_ECDSA_P384 SignMode = "ECDSA_P384"
-	SIGNMODE_ECDSA_P521 SignMode = "ECDSA_P521"
+	SIGNMODE_ED_DSA     SignMode = "EdDSA"
+	SIGNMODE_ECDSA      SignMode = "ECDSA"
 )
+
+var allowedSignModeEnumValues = []SignMode{
+	"PKCS1",
+	"PSS_MD5",
+	"PSS_SHA1",
+	"PSS_SHA224",
+	"PSS_SHA256",
+	"PSS_SHA384",
+	"PSS_SHA512",
+	"EdDSA",
+	"ECDSA",
+}
 
 func (v *SignMode) UnmarshalJSON(src []byte) error {
 	var value string
@@ -41,7 +50,7 @@ func (v *SignMode) UnmarshalJSON(src []byte) error {
 		return err
 	}
 	enumTypeValue := SignMode(value)
-	for _, existing := range []SignMode{"PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519", "ECDSA_P224", "ECDSA_P256", "ECDSA_P384", "ECDSA_P521"} {
+	for _, existing := range allowedSignModeEnumValues {
 		if existing == enumTypeValue {
 			*v = enumTypeValue
 			return nil
@@ -49,6 +58,27 @@ func (v *SignMode) UnmarshalJSON(src []byte) error {
 	}
 
 	return fmt.Errorf("%+v is not a valid SignMode", value)
+}
+
+// NewSignModeFromValue returns a pointer to a valid SignMode
+// for the value passed as argument, or an error if the value passed is not allowed by the enum
+func NewSignModeFromValue(v string) (*SignMode, error) {
+	ev := SignMode(v)
+	if ev.IsValid() {
+		return &ev, nil
+	} else {
+		return nil, fmt.Errorf("invalid value '%v' for SignMode: valid values are %v", v, allowedSignModeEnumValues)
+	}
+}
+
+// IsValid return true if the value is valid for the enum, false otherwise
+func (v SignMode) IsValid() bool {
+	for _, existing := range allowedSignModeEnumValues {
+		if existing == v {
+			return true
+		}
+	}
+	return false
 }
 
 // Ptr returns reference to SignMode value
