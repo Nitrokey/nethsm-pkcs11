@@ -28,7 +28,7 @@ type DecryptContextRSA struct {
 	mode api.DecryptMode
 }
 
-//type VerifyContextRSA contextRSA
+// type VerifyContextRSA contextRSA
 
 func (context *opContextRSA) Initialized() bool {
 	return context.initialized
@@ -57,10 +57,11 @@ func (context *SignContextRSA) Final() ([]byte, error) {
 	}
 	var err error
 	var reqBody api.SignRequestData
+	slot := context.session.Slot
 	reqBody.SetMessage(base64.StdEncoding.EncodeToString(context.data))
 	reqBody.SetMode(context.mode)
-	sigData, r, err := Api.KeysKeyIDSignPost(
-		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
+	sigData, r, err := slot.Api.KeysKeyIDSignPost(
+		slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)
 		// log.Debugf("%v\n", r.Request.Body)
@@ -86,10 +87,11 @@ func (context *DecryptContextRSA) Final() ([]byte, error) {
 	}
 	var err error
 	var reqBody api.DecryptRequestData
+	slot := context.session.Slot
 	reqBody.SetEncrypted(base64.StdEncoding.EncodeToString(context.data))
 	reqBody.SetMode(context.mode)
-	decryptData, r, err := Api.KeysKeyIDDecryptPost(
-		context.session.Slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
+	decryptData, r, err := slot.Api.KeysKeyIDDecryptPost(
+		slot.Token.ApiCtx(), context.keyID).Body(reqBody).Execute()
 	if err != nil {
 		// log.Debugf("%v\n", r)
 		// log.Debugf("%v\n", r.Request.Body)
@@ -116,7 +118,7 @@ func sigAsn1ToRS(sig []byte) ([]byte, error) {
 		seq.Empty(); !ok {
 		return nil, errors.New("invalid ASN.1 signature")
 	}
-	var maxBytes = func(x, y *big.Int) int {
+	maxBytes := func(x, y *big.Int) int {
 		l := x.BitLen()
 		if ly := y.BitLen(); ly > l {
 			l = ly

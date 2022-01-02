@@ -42,6 +42,7 @@ type SlotsConfig struct {
 	User        string
 	Password    string // Password to configure in Token
 	Pin         string
+	CertSHA256  string
 	Sparse      bool
 }
 

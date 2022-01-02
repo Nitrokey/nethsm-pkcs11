@@ -6,6 +6,7 @@ package pkcs11
 #include "pkcs11go.h"
 */
 import "C"
+
 import (
 	"fmt"
 	"math"
@@ -34,7 +35,7 @@ func errorToRV(err error) C.CK_RV {
 	if err == nil {
 		return C.CKR_OK
 	}
-	//log.Debugf("%+v\n", err)
+	// log.Debugf("%+v\n", err)
 	switch err := err.(type) {
 	case module.P11Error:
 		log.Errorf("[%s] %s [Code %d]\n", err.Who, err.Description, int(err.Code))
@@ -99,7 +100,7 @@ func copyAttributes(object *module.CryptoObject, pTemplate C.CK_ATTRIBUTE_PTR, u
 	}
 	templateSlice := (*[math.MaxInt32]C.CK_ATTRIBUTE)(unsafe.Pointer(pTemplate))[:ulCount:ulCount]
 
-	//log.Debugf("template:%v", templateSlice)
+	// log.Debugf("template:%v", templateSlice)
 
 	missingAttr := false
 
@@ -132,7 +133,6 @@ func cToMechanism(pMechanism C.CK_MECHANISM_PTR) *module.Mechanism {
 		Type:      module.CK_MECHANISM_TYPE(mechanismType),
 		Parameter: mechanismVal,
 	}
-
 }
 
 // ToC transforms a Mechanism Golang Structure into a C structure.
@@ -213,7 +213,7 @@ func getTokenInfo(token *module.Token, pInfo C.CK_TOKEN_INFO_PTR) error {
 			info.Vendor = libManufacturerID
 			token.Info = &info
 		} else {
-			info, r, err := module.Api.InfoGet(token.ApiCtx()).Execute()
+			info, r, err := token.Slot.Api.InfoGet(token.ApiCtx()).Execute()
 			if err != nil {
 				return module.NewAPIError("token.GetInfo", "InfoGet", r, err)
 			}

@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 	"fmt"
+	"p11nethsm/api"
 	"p11nethsm/config"
 	"sync"
 )
@@ -14,6 +15,7 @@ type Slot struct {
 	Flags       uint64   // Flags related to the slot
 	Token       *Token   // Token connected to slot. It could be nil
 	Sessions    Sessions // Sessions accessing to the slot
+	Api         *api.DefaultApiService
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
 	Conf        *config.SlotsConfig
