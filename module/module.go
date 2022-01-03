@@ -25,8 +25,12 @@ var hexFilter = regexp.MustCompile(`[^a-fA-F0-9]`)
 func pinnedClient(hashes []string) (*http.Client, error) {
 	pins := make([][32]byte, len(hashes))
 	for i := range hashes {
-		i, err := hex.Decode(pins[i][:], []byte(hexFilter.ReplaceAllString(hashes[i], "")))
-		if err != nil || i != 32 {
+		filtered := []byte(hexFilter.ReplaceAllString(hashes[i], ""))
+		if len(filtered) != 64 {
+			return nil, fmt.Errorf("Fingerprint (%s) has wrong length.", hashes[i])
+		}
+		_, err := hex.Decode(pins[i][:], filtered)
+		if err != nil {
 			return nil, fmt.Errorf("Fingerprint (%s) malformed: %w", hashes[i], err)
 		}
 	}
