@@ -1,7 +1,6 @@
 package module
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
@@ -11,7 +10,6 @@ import (
 	"os"
 	"p11nethsm/api"
 	"p11nethsm/config"
-	"p11nethsm/log"
 	"regexp"
 	"strings"
 )
@@ -24,25 +22,30 @@ var (
 
 var hexFilter = regexp.MustCompile(`[^a-fA-F0-9]`)
 
-func pinnedClient(hash string) *http.Client {
+func pinnedClient(hashes []string) (*http.Client, error) {
+	pins := make([][32]byte, len(hashes))
+	for i := range hashes {
+		i, err := hex.Decode(pins[i][:], []byte(hexFilter.ReplaceAllString(hashes[i], "")))
+		if err != nil || i != 32 {
+			return nil, fmt.Errorf("Fingerprint (%s) malformed: %w", hashes[i], err)
+		}
+	}
 	checkPinnedCert := func(c tls.ConnectionState) error {
-		pin, err := hex.DecodeString(hexFilter.ReplaceAllString(hash, ""))
-		if err != nil {
-			return fmt.Errorf("Fingerprint (%s) malformed: %w", hash, err)
-		}
 		sum := sha256.Sum256(c.PeerCertificates[0].Raw)
-		if !bytes.Equal(pin, sum[:]) {
-			return fmt.Errorf("Certificate does not match pinned fingerprint: %s != %s",
-				hex.EncodeToString(sum[:]), hex.EncodeToString(pin))
+		for i := range pins {
+			if pins[i] == sum {
+				return nil
+			}
 		}
-		return nil
+		return fmt.Errorf("Certificate does not match any pinned fingerprint: %s",
+			hex.EncodeToString(sum[:]))
 	}
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.TLSClientConfig = &tls.Config{
 		VerifyConnection:   checkPinnedCert,
 		InsecureSkipVerify: true,
 	}
-	return &http.Client{Transport: customTransport}
+	return &http.Client{Transport: customTransport}, nil
 }
 
 func parsePassword(pw string) string {
@@ -67,8 +70,13 @@ func Initialize() error {
 				Description: slotConf.Description,
 			},
 		}
-		if slotConf.CertSHA256 != "" {
-			apiConf.HTTPClient = pinnedClient(slotConf.CertSHA256)
+		if len(slotConf.CertSHA256) != 0 {
+			client, err := pinnedClient(slotConf.CertSHA256)
+			if err != nil {
+				desc := fmt.Sprintf("Slot %d (%s): %v", i, slotConf.Label, err)
+				return NewError("Initialize", desc, CKR_DEVICE_ERROR)
+			}
+			apiConf.HTTPClient = client
 		}
 		api := api.NewAPIClient(apiConf).DefaultApi
 
@@ -92,8 +100,7 @@ func Initialize() error {
 
 		token, err := NewToken(slotConf.Label)
 		if err != nil {
-			err = NewError("Initialize", err.Error(), CKR_DEVICE_ERROR)
-			return err
+			return NewError("Initialize", err.Error(), CKR_DEVICE_ERROR)
 		}
 		if password == "" {
 			token.Flags |= CKF_LOGIN_REQUIRED
@@ -102,11 +109,11 @@ func Initialize() error {
 			slot.InsertToken(token)
 		} else {
 			r, e := api.HealthReadyGet(ctx).Execute()
-			if e == nil && r.StatusCode < 300 {
-				slot.InsertToken(token)
-			} else {
-				log.Debugf("Couldn't reach NetHSM of slot %d (%s): %v", i, token.Label, e)
+			if e != nil || r.StatusCode >= 300 {
+				desc := fmt.Sprintf("Couldn't reach NetHSM of slot %d (%s): %v", i, slotConf.Label, e)
+				return NewError("Initialize", desc, CKR_DEVICE_ERROR)
 			}
+			slot.InsertToken(token)
 		}
 	}
 	Slots = slots
