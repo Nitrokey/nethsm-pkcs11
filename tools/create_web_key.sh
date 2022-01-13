@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 curl -k -i -w '\n' -u admin:adminadmin -X PUT \
   https://nethsmdemo.nitrokey.com/api/v1/keys/webserver \

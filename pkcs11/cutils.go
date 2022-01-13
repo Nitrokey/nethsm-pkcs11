@@ -86,7 +86,9 @@ func attributeToC(attribute *module.Attribute, cDst C.CK_ATTRIBUTE_PTR) error {
 		valueLen := C.CK_ULONG(len(attribute.Value))
 		cDst._type = C.CK_ATTRIBUTE_TYPE(attribute.Type)
 		cDst.ulValueLen = valueLen
-		C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(&attribute.Value[0]), valueLen)
+		if attribute.Value != nil {
+			C.memcpy(unsafe.Pointer(cDst.pValue), unsafe.Pointer(&attribute.Value[0]), valueLen)
+		}
 	} else {
 		return module.NewError("AttributeToC", fmt.Sprintf("Buffer too small: %d, need %d", cDst.ulValueLen, len(attribute.Value)), C.CKR_BUFFER_TOO_SMALL)
 	}

@@ -7,6 +7,7 @@ package pkcs11
 extern CK_FUNCTION_LIST functionList;
 */
 import "C"
+
 import (
 	"math"
 	"p11nethsm/log"
@@ -52,7 +53,7 @@ func C_Initialize(pInitArgs C.CK_VOID_PTR) C.CK_RV {
 	}
 	log.Infof("Initializing p11nethsm module")
 	err := module.Initialize()
-	//log.Debugf("Created new app with %d slots.", len(module.App.Slots))
+	// log.Debugf("Created new app with %d slots.", len(module.App.Slots))
 	return errorToRV(err)
 }
 
@@ -181,7 +182,7 @@ func C_GetSlotInfo(slotId C.CK_SLOT_ID, pInfo C.CK_SLOT_INFO_PTR) C.CK_RV {
 	if err != nil {
 		return errorToRV(err)
 	}
-	//log.Debugf("pInfo: %v", *pInfo)
+	// log.Debugf("pInfo: %v", *pInfo)
 	return C.CKR_OK
 }
 
@@ -206,7 +207,7 @@ func C_GetTokenInfo(slotId C.CK_SLOT_ID, pInfo C.CK_TOKEN_INFO_PTR) C.CK_RV {
 	if err != nil {
 		return errorToRV(err)
 	}
-	//log.Debugf("pInfo: %v", *pInfo)
+	// log.Debugf("pInfo: %v", *pInfo)
 	return C.CKR_OK
 }
 
@@ -394,7 +395,6 @@ func C_FindObjects(hSession C.CK_SESSION_HANDLE, phObject C.CK_OBJECT_HANDLE_PTR
 	}
 	for i := 0; i < l; i++ {
 		cObjectSlice[i] = C.CK_OBJECT_HANDLE(handles[i])
-
 	}
 	*pulObjectCount = C.ulong(len(handles))
 	return C.CKR_OK

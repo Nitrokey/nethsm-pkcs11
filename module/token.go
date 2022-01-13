@@ -2,9 +2,11 @@ package module
 
 import (
 	"context"
+	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
 	"p11nethsm/api"
+	"p11nethsm/utils"
 	"sync"
 )
 
@@ -78,12 +80,12 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 		err = NewAPIError("token.GetObjects", "KeysKeyIDGet", r, err)
 		return nil, err
 	}
-	object := &CryptoObject{}
+	privKey := &CryptoObject{}
 	// object.Type = TokenObject
-	object.Handle = nextObjectHandle()
-	object.ID = keyID
-	object.Attributes = Attributes{}
-	object.Attributes.Set(
+	privKey.Handle = nextObjectHandle()
+	privKey.ID = keyID
+	privKey.Attributes = Attributes{}
+	privKey.Attributes.Set(
 		&Attribute{CKA_LABEL, []byte(keyID)},
 		&Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
 		&Attribute{CKA_ID, []byte(keyID)},
@@ -121,41 +123,82 @@ func (token *Token) FetchObjectsByID(keyID string) (CryptoObjects, error) {
 		if err != nil {
 			return nil, err
 		}
-		object.Attributes.Set(
+		privKey.Attributes.Set(
 			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
 			&Attribute{CKA_DERIVE, FalseAttr},
 			&Attribute{CKA_DECRYPT, TrueAttr},
 			&Attribute{CKA_SIGN, TrueAttr},
-			&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+			&Attribute{CKA_SIGN_RECOVER, FalseAttr},
 			&Attribute{CKA_UNWRAP, FalseAttr},
-			&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
 			&Attribute{CKA_MODULUS, modulus},
 			&Attribute{CKA_PUBLIC_EXPONENT, pubExp},
+			&Attribute{CKA_MODULUS_BITS, nil},
 		)
 	case api.KEYTYPE_CURVE25519,
 		api.KEYTYPE_EC_P224,
 		api.KEYTYPE_EC_P256,
 		api.KEYTYPE_EC_P384,
 		api.KEYTYPE_EC_P521:
-		data, err := base64.StdEncoding.DecodeString(key.Key.GetData())
+		ecPointBytes, err := base64.StdEncoding.DecodeString(key.Key.GetData())
 		if err != nil {
 			return nil, err
 		}
-		object.Attributes.Set(
-			&Attribute{CKA_KEY_TYPE, ulongToArr(CKK_EC)},
+		ecPointSerialized, err := asn1.Marshal(ecPointBytes)
+		if err != nil {
+			return nil, err
+		}
+		ecParams, err := utils.KeyTypeToASN1Bytes(key.Type)
+		if err != nil {
+			return nil, err
+		}
+		var keyType CK_ULONG
+		if key.Type == api.KEYTYPE_CURVE25519 {
+			keyType = CKK_EC_EDWARDS
+		} else {
+			keyType = CKK_EC
+		}
+		privKey.Attributes.Set(
+			&Attribute{CKA_KEY_TYPE, ulongToArr(keyType)},
 			&Attribute{CKA_DERIVE, TrueAttr},
 			&Attribute{CKA_DECRYPT, FalseAttr},
 			&Attribute{CKA_SIGN, TrueAttr},
-			&Attribute{CKA_SIGN_RECOVER, TrueAttr},
+			&Attribute{CKA_SIGN_RECOVER, FalseAttr},
 			&Attribute{CKA_UNWRAP, FalseAttr},
-			&Attribute{CKA_WRAP_WITH_TRUSTED, TrueAttr},
-			&Attribute{CKA_EC_POINT, data},
+			&Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
+			&Attribute{CKA_EC_PARAMS, ecParams},
+			&Attribute{CKA_EC_POINT, ecPointSerialized},
 		)
 	default:
 		return nil, NewError("token.GetObjects", "Invalid algorithm", CKR_DEVICE_ERROR)
 	}
-	token.AddObject(object)
-	return CryptoObjects{object}, nil
+	pubKey := &CryptoObject{}
+	pubKey.Handle = nextObjectHandle()
+	pubKey.ID = keyID
+	pubKey.Attributes = Attributes{}
+	for k, v := range privKey.Attributes {
+		pubKey.Attributes[k] = v
+	}
+	pubKey.Attributes.Set(
+		&Attribute{CKA_CLASS, ulongToArr(CKO_PUBLIC_KEY)},
+		&Attribute{CKA_PRIVATE, FalseAttr},
+		&Attribute{CKA_SENSITIVE, FalseAttr},
+		&Attribute{CKA_ALWAYS_SENSITIVE, FalseAttr},
+		&Attribute{CKA_EXTRACTABLE, FalseAttr},
+		&Attribute{CKA_NEVER_EXTRACTABLE, FalseAttr},
+		&Attribute{CKA_DECRYPT, FalseAttr},
+		&Attribute{CKA_ENCRYPT, FalseAttr},
+		&Attribute{CKA_SIGN, FalseAttr},
+		&Attribute{CKA_VERIFY, FalseAttr},
+		&Attribute{CKA_DERIVE, FalseAttr},
+		&Attribute{CKA_SIGN_RECOVER, FalseAttr},
+		&Attribute{CKA_UNWRAP, FalseAttr},
+		&Attribute{CKA_WRAP, FalseAttr},
+		&Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
+	)
+	token.AddObject(privKey)
+	token.AddObject(pubKey)
+	return CryptoObjects{privKey, pubKey}, nil
 }
 
 func (token *Token) FetchKeyIDs() ([]string, error) {

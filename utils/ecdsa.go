@@ -1,20 +1,32 @@
 package utils
 
-// // from github.com/Thalesignite/crypto11
-// var CurveNameToASN1 = map[string]asn1.ObjectIdentifier{
-// 	"P-224": {1, 3, 132, 0, 33},
-// 	"P-256": {1, 2, 840, 10045, 3, 1, 7},
-// 	"P-384": {1, 3, 132, 0, 34},
-// 	"P-521": {1, 3, 132, 0, 35},
-// }
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/asn1"
+	"fmt"
+	"p11nethsm/api"
+)
 
-// func CurveNameToASN1Bytes(curve string) ([]byte, error) {
-// 	obj, ok := CurveNameToASN1[curve]
-// 	if !ok {
-// 		return nil, fmt.Errorf("curve unsupported")
-// 	}
-// 	return asn1.Marshal(obj)
-// }
+var keyTypeToASN1 = map[api.KeyType]asn1.ObjectIdentifier{
+	api.KEYTYPE_EC_P224:    {1, 3, 132, 0, 33},
+	api.KEYTYPE_EC_P256:    {1, 2, 840, 10045, 3, 1, 7},
+	api.KEYTYPE_EC_P384:    {1, 3, 132, 0, 34},
+	api.KEYTYPE_EC_P521:    {1, 3, 132, 0, 35},
+	api.KEYTYPE_CURVE25519: {1, 3, 101, 112},
+}
+
+func KeyTypeToASN1Bytes(curve api.KeyType) ([]byte, error) {
+	// if curve == api.KEYTYPE_CURVE25519 {
+	// 	obj, _ := asn1.Marshal("Edwards25519")
+	// 	return obj, nil
+	// }
+	obj, ok := keyTypeToASN1[curve]
+	if !ok {
+		return nil, fmt.Errorf("curve unsupported")
+	}
+	return asn1.Marshal(obj)
+}
 
 // func ASN1ToCurveName(b []byte) (string, error) {
 // 	var v asn1.ObjectIdentifier
@@ -33,14 +45,14 @@ package utils
 // 	return "", fmt.Errorf("curve unsupported")
 // }
 
-// func PubKeyToASN1Bytes(pk *ecdsa.PublicKey) ([]byte, error) {
-// 	ecPointBytes := elliptic.Marshal(pk.Curve, pk.X, pk.Y)
-// 	ecPointASN1, err := asn1.Marshal(ecPointBytes)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return ecPointASN1, nil
-// }
+func PubKeyToASN1Bytes(pk *ecdsa.PublicKey) ([]byte, error) {
+	ecPointBytes := elliptic.Marshal(pk.Curve, pk.X, pk.Y)
+	ecPointASN1, err := asn1.Marshal(ecPointBytes)
+	if err != nil {
+		return nil, err
+	}
+	return ecPointASN1, nil
+}
 
 // func ASN1BytesToPubKey(c elliptic.Curve, b []byte) (*ecdsa.PublicKey, error) {
 // 	var pointBytes []byte
