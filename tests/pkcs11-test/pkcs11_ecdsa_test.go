@@ -22,13 +22,12 @@ func getECPoint(p *pkcs11.Ctx, s pkcs11.SessionHandle, o pkcs11.ObjectHandle) ([
 		return nil, err
 	}
 	if len(attr) != 1 {
-		return nil, fmt.Errorf("Can't read public key")
+		return nil, fmt.Errorf("can't read public key")
 	}
-	fmt.Printf("attr[0].Value: %v\n", attr[0].Value)
 	var ecPoint []byte
 	rest, err := asn1.Unmarshal(attr[0].Value, &ecPoint)
 	if err != nil || len(rest) != 0 {
-		return nil, fmt.Errorf("Can't unserialize ecPoint")
+		return nil, fmt.Errorf("can't unserialize ECPoint")
 	}
 	return ecPoint, nil
 }

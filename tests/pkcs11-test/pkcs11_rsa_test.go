@@ -20,7 +20,7 @@ func getRSAPublicKey(p *pkcs11.Ctx, session pkcs11.SessionHandle, o pkcs11.Objec
 		return nil, err
 	}
 	if len(attr) != 2 {
-		return nil, fmt.Errorf("Can't read public key")
+		return nil, fmt.Errorf("can't read public key")
 	}
 	modulus := big.NewInt(0)
 	pubExp := 0

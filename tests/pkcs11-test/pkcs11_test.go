@@ -115,14 +115,18 @@ func TestMain(m *testing.M) {
 	}
 	ctx := context.WithValue(context.Background(), api.ContextBasicAuth, basicAuth)
 
+	check := func(resp *http.Response, err error) {
+		if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
+			fmt.Printf("err: %v\n", err)
+			fmt.Printf("resp: %v\n", resp)
+			os.Exit(1)
+		}
+	}
+
 	resp, err := service.UsersUserIDPut(ctx, operator).
 		Body(*api.NewUserPostData(
 			"Test Operator", api.USERROLE_OPERATOR, opPass)).Execute()
-	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
-		fmt.Printf("err: %v\n", err)
-		fmt.Printf("resp: %v\n", resp)
-		os.Exit(1)
-	}
+	check(resp, err)
 
 	keyData := api.NewKeyGenerateRequestData([]api.KeyMechanism{
 		api.KEYMECHANISM_RSA_DECRYPTION_RAW,
@@ -145,11 +149,7 @@ func TestMain(m *testing.M) {
 	keyData.SetLength(2048)
 	resp, err = service.KeysGeneratePost(ctx).
 		Body(*keyData).Execute()
-	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
-		fmt.Printf("err: %v\n", err)
-		fmt.Printf("resp: %v\n", resp)
-		os.Exit(1)
-	}
+	check(resp, err)
 
 	keyData = api.NewKeyGenerateRequestData([]api.KeyMechanism{
 		api.KEYMECHANISM_ECDSA_SIGNATURE,
@@ -158,11 +158,7 @@ func TestMain(m *testing.M) {
 	keyData.SetLength(2048)
 	resp, err = service.KeysGeneratePost(ctx).
 		Body(*keyData).Execute()
-	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
-		fmt.Printf("err: %v\n", err)
-		fmt.Printf("resp: %v\n", resp)
-		os.Exit(1)
-	}
+	check(resp, err)
 
 	keyData = api.NewKeyGenerateRequestData([]api.KeyMechanism{
 		api.KEYMECHANISM_ED_DSA_SIGNATURE,
@@ -171,21 +167,9 @@ func TestMain(m *testing.M) {
 	keyData.SetLength(2048)
 	resp, err = service.KeysGeneratePost(ctx).
 		Body(*keyData).Execute()
-	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
-		fmt.Printf("err: %v\n", err)
-		fmt.Printf("resp: %v\n", resp)
-		os.Exit(1)
-	}
+	check(resp, err)
 
 	os.Exit(m.Run())
-}
-
-func TestSetenv(t *testing.T) {
-	p := setenv(t)
-	if p == nil {
-		t.FailNow()
-	}
-	p.Destroy()
 }
 
 func getSession(p *pkcs11.Ctx, t *testing.T) pkcs11.SessionHandle {
@@ -211,14 +195,14 @@ func TestInitialize(t *testing.T) {
 	if e := p.Initialize(); e != nil {
 		t.Fatalf("init error %s\n", e)
 	}
-	p.Finalize()
+	check(t, p.Finalize())
 	p.Destroy()
 }
 
 func finishSession(p *pkcs11.Ctx, session pkcs11.SessionHandle) {
-	p.Logout(session)
-	p.CloseSession(session)
-	p.Finalize()
+	_ = p.Logout(session)
+	_ = p.CloseSession(session)
+	_ = p.Finalize()
 	p.Destroy()
 }
 
