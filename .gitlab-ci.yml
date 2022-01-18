@@ -1,0 +1,50 @@
+default:
+  image: golang:latest
+  tags:
+    - docker
+  interruptible: true
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+#variables:
+  # Please edit to your GitLab project
+  # REPO_NAME: gitlab.com/namespace/project
+
+# The problem is that to be able to use go get, one needs to put
+# the repository in the $GOPATH. So for example if your gitlab domain
+# is gitlab.com, and that your repository is namespace/project, and
+# the default GOPATH being /go, then you'd need to have your
+# repository in /go/src/gitlab.com/namespace/project
+# Thus, making a symbolic link corrects this.
+#before_script:
+#  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
+#  - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
+#  - cd $GOPATH/src/$REPO_NAME
+
+stages:
+  - check
+  - build
+  - test
+  - deploy
+
+format:
+  stage: check
+  script:
+    - go fmt $(go list ./... | grep -v /dummy)
+    - go vet $(go list ./... | grep -v /dummy)
+
+compile:
+  stage: build
+  script:
+    - ./build.sh
+  artifacts:
+    paths:
+      - p11nethsm.so
+
+test:
+  stage: test
+  script:
+    - ./test.sh
