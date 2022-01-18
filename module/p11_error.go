@@ -33,8 +33,10 @@ func NewAPIError(who, f string, r *http.Response, err error) P11Error {
 	desc += fmt.Sprintf("HTTP response: %+v\n", r)
 	if r.StatusCode == 401 {
 		return NewError(who, desc, CKR_PIN_INCORRECT)
+	} else if r.StatusCode == 404 {
+		return NewError(who, desc, CKR_ARGUMENTS_BAD)
 	}
-	return NewError(who, desc, CKR_DEVICE_ERROR)
+	return NewError(who, desc, CKR_GENERAL_ERROR)
 }
 
 func (err P11Error) Error() string {

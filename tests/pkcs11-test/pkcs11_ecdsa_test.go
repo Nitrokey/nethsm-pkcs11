@@ -1,73 +1,57 @@
 package pkcs11_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/sha256"
+	"encoding/asn1"
 	"fmt"
-	"github.com/miekg/pkcs11"
-	"log"
 	"math/big"
-	"os"
-	"p11nethsm/utils"
 	"testing"
+
+	"github.com/miekg/pkcs11"
 )
 
-/*
-Purpose: GenerateConfig ECDSA keypair with a given name and persistence.
-Inputs: test object
-	context
-	session handle
-	tokenLabel: string to set as the token labels
-	tokenPersistent: boolean. Whether or not the token should be
-			session based or persistent. If false, the
-			token will not be saved in the HSM and is
-			destroyed upon termination of the session.
-Outputs: creates persistent or ephemeral tokens within the HSM.
-Returns: object handles for public and private keys. Fatal on error.
-*/
-func generateECDSAKeyPair(t *testing.T, p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel string, tokenPersistent bool) (pkcs11.ObjectHandle, pkcs11.ObjectHandle) {
-	/*
-		inputs: test object, context, session handle
-			tokenLabel: string to set as the token labels
-			tokenPersistent: boolean. Whether or not the token should be
-					session based or persistent. If false, the
-					token will not be saved in the HSM and is
-					destroyed upon termination of the session.
-		outputs: creates persistent or ephemeral tokens within the HSM.
-		returns: object handles for public and private keys.
-	*/
-
-	ecParams, _ := utils.CurveNameToASN1Bytes("P-256")
-
-	publicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, tokenPersistent),
-		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
-		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, ecParams),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel),
+func getECPoint(p *pkcs11.Ctx, s pkcs11.SessionHandle, o pkcs11.ObjectHandle) ([]byte, error) {
+	attr, err := p.GetAttributeValue(s, o,
+		[]*pkcs11.Attribute{
+			pkcs11.NewAttribute(pkcs11.CKA_EC_POINT, nil),
+		})
+	if err != nil {
+		return nil, err
 	}
-	privateKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, tokenPersistent),
-		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel),
-		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
+	if len(attr) != 1 {
+		return nil, fmt.Errorf("Can't read public key")
 	}
-	pbk, pvk, e := p.GenerateKeyPair(session,
-		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA_KEY_PAIR_GEN, nil)},
-		publicKeyTemplate, privateKeyTemplate)
-	if e != nil {
-		t.Fatalf("failed to generate keypair: %s\n", e)
+	fmt.Printf("attr[0].Value: %v\n", attr[0].Value)
+	var ecPoint []byte
+	rest, err := asn1.Unmarshal(attr[0].Value, &ecPoint)
+	if err != nil || len(rest) != 0 {
+		return nil, fmt.Errorf("Can't unserialize ecPoint")
 	}
-
-	return pbk, pvk
+	return ecPoint, nil
 }
 
-func TestGenerateKeyPairECDSA(t *testing.T) {
-	p := setenv(t)
-	session := getSession(p, t)
-	defer finishSession(p, session)
-	tokenLabel := "TestGenerateKeyPairECDSA"
-	generateECDSAKeyPair(t, p, session, tokenLabel, false)
+func getP256PublicKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, o pkcs11.ObjectHandle) (*ecdsa.PublicKey, error) {
+	ecPoint, err := getECPoint(p, s, o)
+	if err != nil {
+		return nil, err
+	}
+	c := elliptic.P256()
+	x, y := elliptic.Unmarshal(c, ecPoint)
+	if x == nil {
+		return nil, fmt.Errorf("can't parse ECPoint")
+	}
+	return &ecdsa.PublicKey{X: x, Y: y, Curve: c}, nil
+}
+
+func getEd25519PublicKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, o pkcs11.ObjectHandle) (ed25519.PublicKey, error) {
+	ecPoint, err := getECPoint(p, s, o)
+	if err != nil {
+		return nil, err
+	}
+	return ed25519.PublicKey(ecPoint), nil
 }
 
 func TestSignECDSA(t *testing.T) {
@@ -75,42 +59,63 @@ func TestSignECDSA(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := "TestSignECDSA"
-	_, pvk := generateECDSAKeyPair(t, p, session, tokenLabel, false)
+	tokenLabel := keyEcP256
+	pbk, pvk := getKeyPair(t, p, session, tokenLabel)
 
-	err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA_SHA256, nil)}, pvk)
+	pubKey, err := getP256PublicKey(p, session, pbk)
+	if err != nil {
+		t.Fatalf("failed to get public key: %s", err)
+	}
+	err = p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}, pvk)
 	if err != nil {
 		t.Fatalf("failed to sign: %s", err)
 	}
-	_, e := p.Sign(session, []byte("Sign me!"))
+
+	digest := sha256.Sum256([]byte("Sign me!"))
+
+	sig, e := p.Sign(session, digest[:])
 	if e != nil {
 		t.Fatalf("failed to sign: %s\n", e)
 	}
+	var r, s big.Int
+	l := len(sig) / 2
+	r.SetBytes(sig[:l])
+	s.SetBytes(sig[l:])
+	if !ecdsa.Verify(pubKey, digest[:], &r, &s) {
+		t.Fatalf("Verification failed!")
+	}
 }
 
-func TestFindECDSAObject(t *testing.T) {
+func TestSignEdDSA(t *testing.T) {
 	p := setenv(t)
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := "TestFindECDSAObject"
-
-	// There are 2 keys in the db with this tag
-	generateECDSAKeyPair(t, p, session, tokenLabel, false)
-
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel)}
-	if e := p.FindObjectsInit(session, template); e != nil {
-		t.Fatalf("failed to init: %s\n", e)
+	tokenLabel := keyEd25519
+	pbk, pvk := getKeyPair(t, p, session, tokenLabel)
+	pubKey, err := getEd25519PublicKey(p, session, pbk)
+	if err != nil {
+		t.Fatalf("failed to get public key: %s", err)
 	}
-	obj, _, e := p.FindObjects(session, 2)
+
+	const CKM_EDDSA = 4183
+	err = p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(CKM_EDDSA, nil)}, pvk)
+	if err != nil {
+		t.Fatalf("failed to sign: %s", err)
+	}
+
+	digest := sha256.Sum256([]byte("Sign me!"))
+
+	sig, e := p.Sign(session, digest[:])
 	if e != nil {
-		t.Fatalf("failed to find: %s\n", e)
+		t.Fatalf("failed to sign: %s\n", e)
 	}
-	if e := p.FindObjectsFinal(session); e != nil {
-		t.Fatalf("failed to finalize: %s\n", e)
-	}
-	if len(obj) != 2 {
-		t.Fatal("should have found two objects")
+	var r, s big.Int
+	l := len(sig) / 2
+	r.SetBytes(sig[:l])
+	s.SetBytes(sig[l:])
+	if !ed25519.Verify(pubKey, digest[:], sig) {
+		t.Fatalf("Verification failed!")
 	}
 }
 
@@ -119,7 +124,7 @@ func TestGetECDSAAttributeValue(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	pbk, _ := generateECDSAKeyPair(t, p, session, "GetAttributeValue", false)
+	pbk, _ := getKeyPair(t, p, session, keyEd25519)
 
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, nil),
@@ -131,86 +136,5 @@ func TestGetECDSAAttributeValue(t *testing.T) {
 	}
 	for i, a := range attr {
 		t.Logf("attr %d, type %d, valuelen %d", i, a.Type, len(a.Value))
-		if a.Type == pkcs11.CKA_MODULUS {
-			mod := big.NewInt(0)
-			mod.SetBytes(a.Value)
-			t.Logf("modulus %s\n", mod.String())
-		}
 	}
 }
-
-// Create and destroy persistent keys
-func TestDestroyECDSAObject(t *testing.T) {
-	p := setenv(t)
-	session := getSession(p, t)
-	defer finishSession(p, session)
-
-	generateECDSAKeyPair(t, p, session, "TestDestroyKey", true)
-	if e := destroyObject(t, p, session, "TestDestroyKey", pkcs11.CKO_PUBLIC_KEY); e != nil {
-		t.Fatalf("Failed to destroy object: %s\n", e)
-	}
-	if e := destroyObject(t, p, session, "TestDestroyKey", pkcs11.CKO_PRIVATE_KEY); e != nil {
-		t.Fatalf("Failed to destroy object: %s\n", e)
-	}
-
-}
-
-// ExampleSign shows how to sign some data with a private key.
-// Note: error correction is not implemented in this example.
-func ExampleCtx_SignECDSA() {
-	if x := os.Getenv("PKCS11_LIB"); x != "" {
-		module = x
-	}
-	p := pkcs11.New(module)
-	if p == nil {
-		log.Fatal("Failed to init lib")
-	}
-
-	p.Initialize()
-	defer p.Destroy()
-	defer p.Finalize()
-	slots, _ := p.GetSlotList(true)
-	session, _ := p.OpenSession(slots[0], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	defer p.CloseSession(session)
-	p.Login(session, pkcs11.CKU_USER, pin)
-	defer p.Logout(session)
-
-	ecParams, _ := utils.CurveNameToASN1Bytes("P-256")
-
-	publicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
-		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
-		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, ecParams),
-
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "ExampleSign"),
-	}
-	privateKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
-		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "ExampleSign"),
-	}
-	_, priv, err := p.GenerateKeyPair(session,
-		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA_KEY_PAIR_GEN, nil)},
-		publicKeyTemplate, privateKeyTemplate)
-	if err != nil {
-		log.Fatal(err)
-	}
-	p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA_SHA256, nil)}, priv)
-	// Sign something with the private key.
-	data := []byte("Lets sign this data")
-
-	_, err = p.Sign(session, data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("It works!")
-	// Output: It works!
-}
-
-// Copyright 2013 Miek Gieben. All rights reserved.

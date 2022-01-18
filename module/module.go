@@ -82,7 +82,7 @@ func Initialize() error {
 			}
 			apiConf.HTTPClient = client
 		}
-		api := api.NewAPIClient(apiConf).DefaultApi
+		service := api.NewAPIClient(apiConf).DefaultApi
 
 		ctx, ctxCancel := context.WithCancel(context.Background())
 
@@ -96,7 +96,7 @@ func Initialize() error {
 			Description: slotConf.Description,
 			Sessions:    make(Sessions),
 			Conf:        slotConf,
-			Api:         api,
+			Api:         service,
 			ctx:         ctx,
 			ctxCancel:   ctxCancel,
 		}
@@ -112,7 +112,7 @@ func Initialize() error {
 		if slotConf.Sparse {
 			slot.InsertToken(token)
 		} else {
-			r, e := api.HealthReadyGet(ctx).Execute()
+			r, e := service.HealthReadyGet(ctx).Execute()
 			if e != nil || r.StatusCode >= 300 {
 				desc := fmt.Sprintf("Couldn't reach NetHSM of slot %d (%s): %v", i, slotConf.Label, e)
 				return NewError("Initialize", desc, CKR_DEVICE_ERROR)

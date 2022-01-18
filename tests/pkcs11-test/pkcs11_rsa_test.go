@@ -1,71 +1,49 @@
 package pkcs11_test
 
 import (
+	"crypto"
+	"crypto/rsa"
 	"fmt"
-	"github.com/miekg/pkcs11"
-	"log"
 	"math/big"
-	"os"
 	"testing"
+
+	"github.com/miekg/pkcs11"
 )
 
-/*
-Purpose: GenerateConfig RSA keypair with a given name and persistence.
-Inputs: test object
-	context
-	session handle
-	tokenLabel: string to set as the token labels
-	tokenPersistent: boolean. Whether or not the token should be
-			session based or persistent. If false, the
-			token will not be saved in the HSM and is
-			destroyed upon termination of the session.
-Outputs: creates persistent or ephemeral tokens within the HSM.
-Returns: object handles for public and private keys. Fatal on error.
-*/
-func generateRSAKeyPair(t *testing.T, p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel string, tokenPersistent bool) (pkcs11.ObjectHandle, pkcs11.ObjectHandle) {
-	/*
-		inputs: test object, context, session handle
-			tokenLabel: string to set as the token labels
-			tokenPersistent: boolean. Whether or not the token should be
-					session based or persistent. If false, the
-					token will not be saved in the HSM and is
-					destroyed upon termination of the session.
-		outputs: creates persistent or ephemeral tokens within the HSM.
-		returns: object handles for public and private keys.
-	*/
-
-	publicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, tokenPersistent),
-		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
-		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{1, 0, 1}),
-		pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, 2048),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel),
+func getRSAPublicKey(p *pkcs11.Ctx, session pkcs11.SessionHandle, o pkcs11.ObjectHandle) (*rsa.PublicKey, error) {
+	attr, err := p.GetAttributeValue(session, o,
+		[]*pkcs11.Attribute{
+			pkcs11.NewAttribute(pkcs11.CKA_MODULUS, nil),
+			pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, nil),
+		})
+	if err != nil {
+		return nil, err
 	}
-	privateKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, tokenPersistent),
-		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel),
-		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
+	if len(attr) != 2 {
+		return nil, fmt.Errorf("Can't read public key")
 	}
-	pbk, pvk, e := p.GenerateKeyPair(session,
-		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)},
-		publicKeyTemplate, privateKeyTemplate)
-	if e != nil {
-		t.Fatalf("failed to generate keypair: %s\n", e)
+	modulus := big.NewInt(0)
+	pubExp := 0
+	for i := range attr {
+		switch attr[i].Type {
+		case pkcs11.CKA_MODULUS:
+			modulus.SetBytes(attr[i].Value)
+		case pkcs11.CKA_PUBLIC_EXPONENT:
+			for _, x := range attr[i].Value {
+				pubExp <<= 8
+				pubExp += int(x)
+			}
+		}
 	}
-
-	return pbk, pvk
+	return &rsa.PublicKey{N: modulus, E: pubExp}, nil
 }
 
-func TestGenerateKeyPairRSA(t *testing.T) {
+func TestGetKeyPairRSA(t *testing.T) {
 	p := setenv(t)
 	session := getSession(p, t)
 	defer finishSession(p, session)
-	tokenLabel := "TestGenerateKeyPairRSA"
-	generateRSAKeyPair(t, p, session, tokenLabel, false)
+	label := keyRSA2048
+	getKeyPair(t, p, session, label)
 }
 
 func TestSignRSA(t *testing.T) {
@@ -73,16 +51,65 @@ func TestSignRSA(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := "TestSignRSA"
-	_, pvk := generateRSAKeyPair(t, p, session, tokenLabel, false)
+	tokenLabel := keyRSA2048
+	pbk, pvk := getKeyPair(t, p, session, tokenLabel)
 
-	err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_SHA1_RSA_PKCS, nil)}, pvk)
+	pubKey, _ := getRSAPublicKey(p, session, pbk)
+	err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, pvk)
 	if err != nil {
 		t.Fatalf("failed to sign: %s", err)
 	}
-	_, e := p.Sign(session, []byte("Sign me!"))
+
+	message := []byte("Sign me!")
+
+	sig, e := p.Sign(session, message)
 	if e != nil {
-		t.Fatalf("failed to sign: %s\n", e)
+		t.Fatalf("Failed to sign: %s\n", e)
+	}
+	if rsa.VerifyPKCS1v15(pubKey, 0, message, sig) != nil {
+		t.Fatalf("Verification failed!")
+	}
+}
+
+func TestSignRSAPSS(t *testing.T) {
+	p := setenv(t)
+	session := getSession(p, t)
+	defer finishSession(p, session)
+
+	hashes := []struct {
+		ck uint
+		cr crypto.Hash
+	}{
+		{pkcs11.CKM_SHA_1, crypto.SHA1},
+		{pkcs11.CKM_SHA224, crypto.SHA224},
+		{pkcs11.CKM_SHA256, crypto.SHA256},
+		{pkcs11.CKM_SHA384, crypto.SHA384},
+		{pkcs11.CKM_SHA512, crypto.SHA512},
+	}
+	for _, h := range hashes {
+		t.Run(h.cr.String(), func(t *testing.T) {
+			tokenLabel := keyRSA2048
+			pbk, pvk := getKeyPair(t, p, session, tokenLabel)
+
+			pubKey, _ := getRSAPublicKey(p, session, pbk)
+			params := pkcs11.NewPSSParams(h.ck, 0, 0)
+			err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_PSS, params)}, pvk)
+			if err != nil {
+				t.Fatalf("failed to sign: %s", err)
+			}
+
+			h2 := h.cr.New()
+			_, _ = h2.Write([]byte("Sign me!"))
+			digest := h2.Sum(nil)
+
+			sig, e := p.Sign(session, digest[:])
+			if e != nil {
+				t.Fatalf("Failed to sign: %s\n", e)
+			}
+			if rsa.VerifyPSS(pubKey, h.cr, digest, sig, nil) != nil {
+				t.Fatalf("Verification failed!")
+			}
+		})
 	}
 }
 
@@ -91,10 +118,7 @@ func TestFindRSAObject(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := "TestFindRSAObject"
-
-	// There are 2 keys in the db with this tag
-	generateRSAKeyPair(t, p, session, tokenLabel, false)
+	tokenLabel := keyRSA2048
 
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel)}
 	if e := p.FindObjectsInit(session, template); e != nil {
@@ -117,7 +141,7 @@ func TestGetRSAAttributeValue(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	pbk, _ := generateRSAKeyPair(t, p, session, "GetAttributeValue", false)
+	pbk, _ := getKeyPair(t, p, session, keyRSA2048)
 
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, nil),
@@ -138,76 +162,3 @@ func TestGetRSAAttributeValue(t *testing.T) {
 		}
 	}
 }
-
-// Create and destroy persistent keys
-func TestDestroyRSAObject(t *testing.T) {
-	p := setenv(t)
-	session := getSession(p, t)
-	defer finishSession(p, session)
-
-	generateRSAKeyPair(t, p, session, "TestDestroyKey", true)
-	if e := destroyObject(t, p, session, "TestDestroyKey", pkcs11.CKO_PUBLIC_KEY); e != nil {
-		t.Fatalf("Failed to destroy object: %s\n", e)
-	}
-	if e := destroyObject(t, p, session, "TestDestroyKey", pkcs11.CKO_PRIVATE_KEY); e != nil {
-		t.Fatalf("Failed to destroy object: %s\n", e)
-	}
-
-}
-
-// ExampleSign shows how to sign some data with a private key.
-// Note: error correction is not implemented in this example.
-func ExampleCtx_SignRSA() {
-	if x := os.Getenv("PKCS11_LIB"); x != "" {
-		module = x
-	}
-	p := pkcs11.New(module)
-	if p == nil {
-		log.Fatal("Failed to init lib")
-	}
-
-	p.Initialize()
-	defer p.Destroy()
-	defer p.Finalize()
-	slots, _ := p.GetSlotList(true)
-	session, _ := p.OpenSession(slots[0], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	defer p.CloseSession(session)
-	p.Login(session, pkcs11.CKU_USER, pin)
-	defer p.Logout(session)
-	publicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
-		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
-		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{3}),
-		pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, 2048),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "ExampleSign"),
-	}
-	privateKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
-		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "ExampleSign"),
-	}
-	_, priv, err := p.GenerateKeyPair(session,
-		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)},
-		publicKeyTemplate, privateKeyTemplate)
-	if err != nil {
-		log.Fatal(err)
-	}
-	p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_SHA1_RSA_PKCS, nil)}, priv)
-	// Sign something with the private key.
-	data := []byte("Lets sign this data")
-
-	_, err = p.Sign(session, data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("It works!")
-	// Output: It works!
-}
-
-// Copyright 2013 Miek Gieben. All rights reserved.

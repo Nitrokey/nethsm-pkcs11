@@ -8,48 +8,184 @@ package pkcs11_test
 // in /usr/lib/softhsm/libsofthsm.so
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
-	"github.com/miekg/pkcs11"
+	"net/http"
 	"os"
+	"p11nethsm/api"
+	"strings"
 	"testing"
+
+	"github.com/miekg/pkcs11"
 )
 
 var (
-	module = "./dtc.so"
-	pin    = "1234"
+	soFile   = "../../p11nethsm.so"
+	hsmURL   = "https://nethsmdemo.nitrokey.com/api/v1"
+	admin    = "admin"
+	admPass  = "adminadmin"
+	operator = "testOperator"
+	opPass   = "opPassphrase"
+)
+
+const (
+	keyRSA2048 = "testkeyrsa2048"
+	keyEcP256  = "testkeyecp256"
+	keyEd25519 = "testkeyed25519"
 )
 
 /*
 This test supports the following environment variables:
 
 * PKCS11_LIB: complete path to HSM Library
-* PKCS11_TOKENLABEL
-* PKCS11_PRIVKEYLABEL
-* PKCS11_PIN
 */
+
+func check(t *testing.T, e error) {
+	if e != nil {
+		t.Fatal(e)
+	}
+}
 
 func setenv(t *testing.T) *pkcs11.Ctx {
 	if x := os.Getenv("PKCS11_LIB"); x != "" {
-		module = x
+		soFile = x
 	}
-	t.Logf("loading %s", module)
-	p := pkcs11.New(module)
+	t.Logf("loading %s", soFile)
+	p := pkcs11.New(soFile)
 	if p == nil {
-		t.Fatal("Failed to init lib")
+		t.Fatal("Failed to init module")
 	}
 	return p
 }
 
-func TestSetenv(t *testing.T) {
-	if x := os.Getenv("PKCS11_LIB"); x != "" {
-		module = x
+func getKeyPair(t *testing.T, p *pkcs11.Ctx, session pkcs11.SessionHandle, label string) (pkcs11.ObjectHandle, pkcs11.ObjectHandle) {
+	var pbk, pvk pkcs11.ObjectHandle
+
+	pubKeyTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, label),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
 	}
-	p := pkcs11.New(module)
+	privKeyTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, label),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+	}
+	e := p.FindObjectsInit(session, pubKeyTemplate)
+	check(t, e)
+	obj, _, e := p.FindObjects(session, 1)
+	check(t, e)
+	if len(obj) == 0 {
+		t.Fatalf("Couldn't find public key %s", label)
+	}
+	pbk = obj[0]
+	e = p.FindObjectsFinal(session)
+	check(t, e)
+	e = p.FindObjectsInit(session, privKeyTemplate)
+	check(t, e)
+	obj, _, e = p.FindObjects(session, 1)
+	check(t, e)
+	if len(obj) == 0 {
+		t.Fatalf("Couldn't find private key %s", label)
+	}
+	pvk = obj[0]
+	e = p.FindObjectsFinal(session)
+	check(t, e)
+
+	return pbk, pvk
+}
+
+func TestMain(m *testing.M) {
+	apiConf := api.NewConfiguration()
+	apiConf.Debug = true
+	apiConf.Servers = api.ServerConfigurations{
+		{
+			URL: hsmURL,
+		},
+	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+	apiConf.HTTPClient = &http.Client{Transport: customTransport}
+	service := api.NewAPIClient(apiConf).DefaultApi
+
+	basicAuth := api.BasicAuth{
+		UserName: admin,
+		Password: admPass,
+	}
+	ctx := context.WithValue(context.Background(), api.ContextBasicAuth, basicAuth)
+
+	resp, err := service.UsersUserIDPut(ctx, operator).
+		Body(*api.NewUserPostData(
+			"Test Operator", api.USERROLE_OPERATOR, opPass)).Execute()
+	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
+		fmt.Printf("err: %v\n", err)
+		fmt.Printf("resp: %v\n", resp)
+		os.Exit(1)
+	}
+
+	keyData := api.NewKeyGenerateRequestData([]api.KeyMechanism{
+		api.KEYMECHANISM_RSA_DECRYPTION_RAW,
+		api.KEYMECHANISM_RSA_DECRYPTION_PKCS1,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_MD5,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_SHA1,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_SHA224,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_SHA256,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_SHA384,
+		api.KEYMECHANISM_RSA_DECRYPTION_OAEP_SHA512,
+		api.KEYMECHANISM_RSA_SIGNATURE_PKCS1,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_MD5,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_SHA1,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_SHA224,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_SHA256,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_SHA384,
+		api.KEYMECHANISM_RSA_SIGNATURE_PSS_SHA512,
+	}, api.KEYTYPE_RSA)
+	keyData.SetId(keyRSA2048)
+	keyData.SetLength(2048)
+	resp, err = service.KeysGeneratePost(ctx).
+		Body(*keyData).Execute()
+	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
+		fmt.Printf("err: %v\n", err)
+		fmt.Printf("resp: %v\n", resp)
+		os.Exit(1)
+	}
+
+	keyData = api.NewKeyGenerateRequestData([]api.KeyMechanism{
+		api.KEYMECHANISM_ECDSA_SIGNATURE,
+	}, api.KEYTYPE_EC_P256)
+	keyData.SetId(keyEcP256)
+	keyData.SetLength(2048)
+	resp, err = service.KeysGeneratePost(ctx).
+		Body(*keyData).Execute()
+	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
+		fmt.Printf("err: %v\n", err)
+		fmt.Printf("resp: %v\n", resp)
+		os.Exit(1)
+	}
+
+	keyData = api.NewKeyGenerateRequestData([]api.KeyMechanism{
+		api.KEYMECHANISM_ED_DSA_SIGNATURE,
+	}, api.KEYTYPE_CURVE25519)
+	keyData.SetId(keyEd25519)
+	keyData.SetLength(2048)
+	resp, err = service.KeysGeneratePost(ctx).
+		Body(*keyData).Execute()
+	if err != nil && resp != nil && !strings.Contains(fmt.Sprint(resp), "already exists") {
+		fmt.Printf("err: %v\n", err)
+		fmt.Printf("resp: %v\n", resp)
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
+
+func TestSetenv(t *testing.T) {
+	p := setenv(t)
 	if p == nil {
-		t.Fatal("Failed to init pkcs11")
+		t.FailNow()
 	}
 	p.Destroy()
-	return
 }
 
 func getSession(p *pkcs11.Ctx, t *testing.T) pkcs11.SessionHandle {
@@ -64,7 +200,7 @@ func getSession(p *pkcs11.Ctx, t *testing.T) pkcs11.SessionHandle {
 	if e != nil {
 		t.Fatalf("session %s\n", e)
 	}
-	if e := p.Login(session, pkcs11.CKU_USER, pin); e != nil {
+	if e := p.Login(session, pkcs11.CKU_USER, opPass); e != nil {
 		t.Fatalf("user pin %s\n", e)
 	}
 	return session
@@ -94,65 +230,8 @@ func TestGetInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("non zero error %s\n", err)
 	}
-	if info.ManufacturerID != "NICLabs" {
-		t.Fatalf("ID should be NICLabs and is %s", info.ManufacturerID)
+	if info.ManufacturerID != "Nitrokey GmbH" {
+		t.Fatalf("ID should be 'Nitrokey GmbH' and is '%s'", info.ManufacturerID)
 	}
 	t.Logf("%+v\n", info)
-}
-
-func TestDigest(t *testing.T) {
-	p := setenv(t)
-	session := getSession(p, t)
-	testDigest(t, p, session, []byte("this is a string"), "517592df8fec3ad146a79a9af153db2a4d784ec5")
-	finishSession(p, session)
-}
-
-func testDigest(t *testing.T, p *pkcs11.Ctx, session pkcs11.SessionHandle, input []byte, expected string) {
-	e := p.DigestInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_SHA_1, nil)})
-	if e != nil {
-		t.Fatalf("DigestInit: %s\n", e)
-	}
-
-	hash, e := p.Digest(session, input)
-	if e != nil {
-		t.Fatalf("digest: %s\n", e)
-	}
-	hex := ""
-	for _, d := range hash {
-		hex += fmt.Sprintf("%02x", d)
-	}
-	if hex != expected {
-		t.Fatalf("wrong digest: %s", hex)
-	}
-}
-
-/* destroyObject
-Purpose: destroy and object from the HSM
-Inputs: test handle
-	session handle
-	searchToken: String containing the token label to search for.
-	class: Key type (pkcs11.CKO_PRIVATE_KEY or CKO_PUBLIC_KEY) to remove.
-Outputs: removes object from HSM
-Returns: Fatal error on failure.
-*/
-func destroyObject(t *testing.T, p *pkcs11.Ctx, session pkcs11.SessionHandle, searchToken string, class uint) (err error) {
-	template := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, searchToken),
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class)}
-
-	if e := p.FindObjectsInit(session, template); e != nil {
-		t.Fatalf("failed to init: %s\n", e)
-	}
-	obj, _, e := p.FindObjects(session, 1)
-	if e != nil || len(obj) == 0 {
-		t.Fatalf("failed to find objects")
-	}
-	if e := p.FindObjectsFinal(session); e != nil {
-		t.Fatalf("failed to finalize: %s\n", e)
-	}
-
-	if e := p.DestroyObject(session, obj[0]); e != nil {
-		t.Fatalf("DestroyObject failed: %s\n", e)
-	}
-	return
 }
