@@ -1,0 +1,73 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+ 
+jobs:
+
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: go build -o out/p11nethsm.so -buildmode=c-shared -ldflags=-w -v
+
+    - name: Build
+      if: runner.os == 'Windows'
+      run: go build -o out/p11nethsm.dll -buildmode=c-shared -ldflags=-w -v
+
+    - name: Test
+      if: runner.os == 'Linux'
+      run: GODEBUG=cgocheck=2 PKCS11_LIB=../../out/p11nethsm.so ./test.sh
+      
+    - name: Zip
+      uses: TheDoctor0/zip-release@0.6.1
+      with:
+        filename: p11nethsm-${{ runner.os }}.zip
+        directory: out
+
+    - name: Update nightly release
+      uses: softprops/action-gh-release@v0.1.14
+      with:
+        # Note-worthy description of changes in release
+        #body: # optional
+        # Path to load note-worthy description of changes in release from
+        #body_path: # optional
+        # Gives the release a custom name. Defaults to tag name
+        #name: nightly
+        # Gives a tag name. Defaults to github.GITHUB_REF
+        tag_name: master # optional
+        # Creates a draft release. Defaults to false
+        #draft: false # optional
+        # Identify the release as a prerelease. Defaults to false
+        #prerelease: true # optional
+        # Newline-delimited list of path globs for asset files to upload
+        files: | # optional
+          out/p11nethsm-*.zip
+        # Fails if any of the `files` globs match nothing. Defaults to false
+        #fail_on_unmatched_files: # optional
+        # Repository to make releases against, in <owner>/<repo> format
+        #repository: # optional
+        # Authorized secret GitHub Personal Access Token. Defaults to github.token
+        #token: # optional, default is ${{ github.token }}
+        # Commitish value that determines where the Git tag is created from. Can be any branch or commit SHA.
+        #target_commitish: # optional
+        # If specified, a discussion of the specified category is created and linked to the release. The value must be a category that already exists in the repository. If there is already a discussion linked to the release, this parameter is ignored.
+        #discussion_category_name: # optional
+        # Whether to automatically generate the name and body for this release. If name is specified, the specified name will be used; otherwise, a name will be automatically generated. If body is specified, the body will be pre-pended to the automatically generated notes.
+        #generate_release_notes: # optional
