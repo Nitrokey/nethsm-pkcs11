@@ -28,7 +28,7 @@ const (
 )
 
 // assert that go module.CK_ULONG has correct size
-const _ = byte(C.sizeof_CK_ULONG-unsafe.Sizeof(module.CK_ULONG(0))) << 8
+const _ = -(C.sizeof_CK_ULONG - unsafe.Sizeof(module.CK_ULONG(0)))
 
 // Extracts the Return Value from an error, and logs it.
 func errorToRV(err error) C.CK_RV {

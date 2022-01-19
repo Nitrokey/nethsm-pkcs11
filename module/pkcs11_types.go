@@ -2,15 +2,20 @@ package module
 
 import "unsafe"
 
-type CK_BYTE byte
-type CK_ULONG uint
-type CK_VOID_PTR unsafe.Pointer
+type (
+	CK_BYTE     byte
+	CK_VOID_PTR unsafe.Pointer
+)
 
-const CK_FALSE = 0
-const CK_TRUE = 1
+const (
+	CK_FALSE = 0
+	CK_TRUE  = 1
+)
 
-var FalseAttr = []byte{CK_FALSE}
-var TrueAttr = []byte{CK_TRUE}
+var (
+	FalseAttr = []byte{CK_FALSE}
+	TrueAttr  = []byte{CK_TRUE}
+)
 
 type CK_RSA_PKCS_OAEP_PARAMS struct {
 	HashAlg         CK_MECHANISM_TYPE
@@ -29,36 +34,38 @@ type CK_RSA_PKCS_PSS_PARAMS struct {
 // created with
 // sed -nE 's/typedef +(CK_[^ ]+) +(CK_[^ ]+);/type \2 \1/p' core/pkcs11t.h
 
-type CK_CHAR CK_BYTE
-type CK_UTF8CHAR CK_BYTE
-type CK_BBOOL CK_BYTE
-type CK_FLAGS CK_ULONG
-type CK_NOTIFICATION CK_ULONG
-type CK_SLOT_ID CK_ULONG
-type CK_SESSION_HANDLE CK_ULONG
-type CK_USER_TYPE CK_ULONG
-type CK_STATE CK_ULONG
-type CK_OBJECT_HANDLE CK_ULONG
-type CK_OBJECT_CLASS CK_ULONG
-type CK_HW_FEATURE_TYPE CK_ULONG
-type CK_KEY_TYPE CK_ULONG
-type CK_CERTIFICATE_TYPE CK_ULONG
-type CK_ATTRIBUTE_TYPE CK_ULONG
-type CK_MECHANISM_TYPE CK_ULONG
-type CK_RV CK_ULONG
-type CK_RSA_PKCS_MGF_TYPE CK_ULONG
-type CK_RSA_PKCS_OAEP_SOURCE_TYPE CK_ULONG
-type CK_EC_KDF_TYPE CK_ULONG
-type CK_X9_42_DH_KDF_TYPE CK_ULONG
-type CK_RC2_PARAMS CK_ULONG
-type CK_MAC_GENERAL_PARAMS CK_ULONG
-type CK_EXTRACT_PARAMS CK_ULONG
-type CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE CK_ULONG
-type CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE CK_ULONG
-type CK_OTP_PARAM_TYPE CK_ULONG
-type CK_PARAM_TYPE CK_OTP_PARAM_TYPE /* backward compatibility */
-type CK_JAVA_MIDP_SECURITY_DOMAIN CK_ULONG
-type CK_CERTIFICATE_CATEGORY CK_ULONG
+type (
+	CK_CHAR                                    CK_BYTE
+	CK_UTF8CHAR                                CK_BYTE
+	CK_BBOOL                                   CK_BYTE
+	CK_FLAGS                                   CK_ULONG
+	CK_NOTIFICATION                            CK_ULONG
+	CK_SLOT_ID                                 CK_ULONG
+	CK_SESSION_HANDLE                          CK_ULONG
+	CK_USER_TYPE                               CK_ULONG
+	CK_STATE                                   CK_ULONG
+	CK_OBJECT_HANDLE                           CK_ULONG
+	CK_OBJECT_CLASS                            CK_ULONG
+	CK_HW_FEATURE_TYPE                         CK_ULONG
+	CK_KEY_TYPE                                CK_ULONG
+	CK_CERTIFICATE_TYPE                        CK_ULONG
+	CK_ATTRIBUTE_TYPE                          CK_ULONG
+	CK_MECHANISM_TYPE                          CK_ULONG
+	CK_RV                                      CK_ULONG
+	CK_RSA_PKCS_MGF_TYPE                       CK_ULONG
+	CK_RSA_PKCS_OAEP_SOURCE_TYPE               CK_ULONG
+	CK_EC_KDF_TYPE                             CK_ULONG
+	CK_X9_42_DH_KDF_TYPE                       CK_ULONG
+	CK_RC2_PARAMS                              CK_ULONG
+	CK_MAC_GENERAL_PARAMS                      CK_ULONG
+	CK_EXTRACT_PARAMS                          CK_ULONG
+	CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE CK_ULONG
+	CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE           CK_ULONG
+	CK_OTP_PARAM_TYPE                          CK_ULONG
+	CK_PARAM_TYPE                              CK_OTP_PARAM_TYPE /* backward compatibility */
+	CK_JAVA_MIDP_SECURITY_DOMAIN               CK_ULONG
+	CK_CERTIFICATE_CATEGORY                    CK_ULONG
+)
 
 // type CK_RV CK_ULONG
 // type CK_OBJECT_HANDLE CK_ULONG
