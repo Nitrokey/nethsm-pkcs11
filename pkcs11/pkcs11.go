@@ -517,7 +517,7 @@ func C_SignFinal(hSession C.CK_SESSION_HANDLE, pSignature C.CK_BYTE_PTR, pulSign
 		return C.CKR_BUFFER_TOO_SMALL
 	}
 	*pulSignatureLen = sigLen
-	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
+	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), C.size_t(*pulSignatureLen))
 	session.SignClear()
 	return C.CKR_OK
 }
@@ -557,7 +557,7 @@ func C_Sign(hSession C.CK_SESSION_HANDLE, pData C.CK_BYTE_PTR, ulDataLen C.CK_UL
 		return C.CKR_BUFFER_TOO_SMALL
 	}
 	*pulSignatureLen = sigLen
-	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), *pulSignatureLen)
+	C.memcpy(unsafe.Pointer(pSignature), unsafe.Pointer(&signature[0]), C.size_t(*pulSignatureLen))
 	session.SignClear()
 	return C.CKR_OK
 }
@@ -653,7 +653,7 @@ func C_DecryptFinal(hSession C.CK_SESSION_HANDLE, pLastPart C.CK_BYTE_PTR, pulLa
 		return C.CKR_BUFFER_TOO_SMALL
 	}
 	*pulLastPartLen = dataLen
-	C.memcpy(unsafe.Pointer(pLastPart), unsafe.Pointer(&data[0]), *pulLastPartLen)
+	C.memcpy(unsafe.Pointer(pLastPart), unsafe.Pointer(&data[0]), C.size_t(*pulLastPartLen))
 	session.DecryptClear()
 	return C.CKR_OK
 }
@@ -695,7 +695,7 @@ func C_Decrypt(hSession C.CK_SESSION_HANDLE, pEncryptedData C.CK_BYTE_PTR,
 		return C.CKR_BUFFER_TOO_SMALL
 	}
 	*pulDataLen = dataLen
-	C.memcpy(unsafe.Pointer(pData), unsafe.Pointer(&data[0]), *pulDataLen)
+	C.memcpy(unsafe.Pointer(pData), unsafe.Pointer(&data[0]), C.size_t(*pulDataLen))
 	session.DecryptClear()
 	return C.CKR_OK
 }
