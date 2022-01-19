@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
- 
+
 jobs:
 
   build:
@@ -24,17 +24,14 @@ jobs:
         go-version: 1.17
 
     - name: Build
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: go build -o out/p11nethsm.so -buildmode=c-shared -ldflags=-w -v
-
-    - name: Build
-      if: runner.os == 'Windows'
-      run: go build -o out/p11nethsm.dll -buildmode=c-shared -ldflags=-w -v
+      env:
+        lib_suffix: ${{ fromJSON('{"Linux":"so","macOS":"dylib","Windows":"dll"}')[runner.os] }}
+      run: go build -o out/p11nethsm.${{ env.lib_suffix }} -buildmode=c-shared -ldflags=-w -v
 
     - name: Test
       if: runner.os == 'Linux'
       run: GODEBUG=cgocheck=2 PKCS11_LIB=../../out/p11nethsm.so ./test.sh
-      
+
     - name: Zip
       if: github.event_name == 'push'
       uses: TheDoctor0/zip-release@0.6.1
