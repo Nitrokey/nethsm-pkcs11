@@ -1,7 +1,9 @@
 package pkcs11_test
 
 import (
+	"bytes"
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"math/big"
@@ -51,8 +53,8 @@ func TestSignRSA(t *testing.T) {
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := keyRSA2048
-	pbk, pvk := getKeyPair(t, p, session, tokenLabel)
+	label := keyRSA2048
+	pbk, pvk := getKeyPair(t, p, session, label)
 
 	pubKey, _ := getRSAPublicKey(p, session, pbk)
 	err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, pvk)
@@ -88,8 +90,8 @@ func TestSignRSAPSS(t *testing.T) {
 	}
 	for _, h := range hashes {
 		t.Run(h.cr.String(), func(t *testing.T) {
-			tokenLabel := keyRSA2048
-			pbk, pvk := getKeyPair(t, p, session, tokenLabel)
+			label := keyRSA2048
+			pbk, pvk := getKeyPair(t, p, session, label)
 
 			pubKey, _ := getRSAPublicKey(p, session, pbk)
 			params := pkcs11.NewPSSParams(h.ck, 0, 0)
@@ -113,14 +115,93 @@ func TestSignRSAPSS(t *testing.T) {
 	}
 }
 
+func TestDecryptRSA(t *testing.T) {
+	p := setenv(t)
+	session := getSession(p, t)
+	defer finishSession(p, session)
+
+	label := keyRSA2048
+	pbk, pvk := getKeyPair(t, p, session, label)
+
+	pubKey, _ := getRSAPublicKey(p, session, pbk)
+
+	message := []byte("Decrypt me!")
+
+	enc, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, message)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %s", err)
+	}
+
+	err = p.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, pvk)
+	if err != nil {
+		t.Fatalf("failed to decrypt: %s", err)
+	}
+
+	decr, err := p.Decrypt(session, enc)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %s\n", err)
+	}
+
+	if !bytes.Equal(decr, message) {
+		t.Fatalf("Decrypted message '%s' != '%s'", decr, message)
+	}
+}
+
+func TestDecryptRSAOAEP(t *testing.T) {
+	p := setenv(t)
+	session := getSession(p, t)
+	defer finishSession(p, session)
+
+	hashes := []struct {
+		ck uint
+		cr crypto.Hash
+	}{
+		{pkcs11.CKM_SHA_1, crypto.SHA1},
+		{pkcs11.CKM_SHA224, crypto.SHA224},
+		{pkcs11.CKM_SHA256, crypto.SHA256},
+		{pkcs11.CKM_SHA384, crypto.SHA384},
+		{pkcs11.CKM_SHA512, crypto.SHA512},
+	}
+	for _, h := range hashes {
+		t.Run(h.cr.String(), func(t *testing.T) {
+			label := keyRSA2048
+			pbk, pvk := getKeyPair(t, p, session, label)
+
+			pubKey, _ := getRSAPublicKey(p, session, pbk)
+
+			message := []byte("Decrypt me!")
+
+			enc, err := rsa.EncryptOAEP(h.cr.New(), rand.Reader, pubKey, message, nil)
+			if err != nil {
+				t.Fatalf("failed to encrypt: %s", err)
+			}
+
+			params := pkcs11.NewOAEPParams(h.ck, 0, 0, nil)
+			err = p.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, params)}, pvk)
+			if err != nil {
+				t.Fatalf("failed to decrypt: %s", err)
+			}
+
+			decr, err := p.Decrypt(session, enc)
+			if err != nil {
+				t.Fatalf("failed to decrypt: %s\n", err)
+			}
+
+			if !bytes.Equal(decr, message) {
+				t.Fatalf("decrypted message '%s' != '%s'", decr, message)
+			}
+		})
+	}
+}
+
 func TestFindRSAObject(t *testing.T) {
 	p := setenv(t)
 	session := getSession(p, t)
 	defer finishSession(p, session)
 
-	tokenLabel := keyRSA2048
+	label := keyRSA2048
 
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, tokenLabel)}
+	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_LABEL, label)}
 	if e := p.FindObjectsInit(session, template); e != nil {
 		t.Fatalf("failed to init: %s\n", e)
 	}
