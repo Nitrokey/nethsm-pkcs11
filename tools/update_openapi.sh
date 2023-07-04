@@ -12,3 +12,4 @@ API_DIR=api
 #  -c /local/tools/generator_conf.yaml
 
 docker run --rm -u $UID -v "${PWD}/api:/out" openapitools/openapi-generator-cli generate -i=https://nethsmdemo.nitrokey.com/api_docs/nethsm-api.yaml -o out -g rust
+cargo fmt
