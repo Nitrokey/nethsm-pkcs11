@@ -1,10 +1,21 @@
 #![allow(non_snake_case)]
+// for now we allow unused variables, but we should remove this when we have implemented all the functions we needI
+#![allow(unused_variables)]
 
-use cryptoki_sys::{CK_RV, CK_VOID_PTR, CK_INFO, CK_INFO_PTR};
-use log::{trace, debug};
-
+pub mod decrypt;
+pub mod digest;
+pub mod encrypt;
+pub mod key;
+pub mod object;
+pub mod pin;
+pub mod session;
+pub mod sign;
 pub mod token;
+pub mod verify;
+
 use crate::{data, defs, padded_str};
+use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
+use log::trace;
 
 #[no_mangle]
 pub extern "C" fn C_GetFunctionList(
@@ -42,7 +53,6 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     cryptoki_sys::CKR_OK
 }
 
-
 pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     trace!("C_Finalize() called");
     if !pReserved.is_null() {
@@ -55,17 +65,15 @@ pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     trace!("C_GetInfo() called");
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }   
-    
+    }
 
-    let infos = CK_INFO{
+    let infos = CK_INFO {
         cryptokiVersion: defs::CRYPTOKI_VERSION,
         manufacturerID: padded_str!("Rust PKCS#11", 32),
         flags: 0,
-        libraryDescription:  padded_str!("Rust PKCS#11", 32),
+        libraryDescription: padded_str!("Rust PKCS#11", 32),
         libraryVersion: defs::LIB_VERSION,
     };
-    
 
     unsafe {
         std::ptr::write(pInfo, infos);
