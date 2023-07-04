@@ -13,7 +13,7 @@ pub mod sign;
 pub mod token;
 pub mod verify;
 
-use crate::{data, defs, padded_str};
+use crate::{config::initialization::initialize_configuration, data, defs, padded_str};
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
 use log::trace;
 
@@ -32,7 +32,11 @@ pub extern "C" fn C_GetFunctionList(
 }
 
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
-    env_logger::init();
+    let result = initialize_configuration();
+    if let Err(e) = result {
+        eprintln!("Error initializing configuration: {:?}", e);
+        return cryptoki_sys::CKR_FUNCTION_FAILED;
+    }
 
     trace!("C_Initialize() called");
 

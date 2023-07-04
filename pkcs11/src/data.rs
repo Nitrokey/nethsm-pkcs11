@@ -1,10 +1,16 @@
+use crate::{api, config};
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_VERSION};
-
-use crate::api;
+use lazy_static::lazy_static;
+use std::sync::{Arc, RwLock};
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     major: 2,
     minor: 40,
 };
+
+lazy_static! {
+    pub static ref GLOBAL_CONFIG: Arc<RwLock<config::P11Config>> =
+        Arc::new(RwLock::new(Default::default()));
+}
 
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

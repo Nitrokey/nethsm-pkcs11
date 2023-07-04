@@ -27,3 +27,10 @@ To build on alpine you will need to add the C argument `target-feature=-crt-stat
 ```
 RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 ```
+
+
+## Test function (dev)
+
+```
+cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS=TEST pkcs11-tool --module target/debug/libnethsm_pkcs11.so -I 
+```
