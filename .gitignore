@@ -9,3 +9,8 @@ p11nethsm.h
 *~
 node_modules
 
+
+
+# Added by cargo
+
+/target
