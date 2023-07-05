@@ -1,6 +1,6 @@
 use cryptoki_sys::{
     CKF_LOGIN_REQUIRED, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CK_SLOT_ID, CK_SLOT_INFO,
-    CK_TOKEN_INFO, CK_ULONG,
+    CK_TOKEN_INFO, CK_ULONG, CKF_RNG,
 };
 use log::{error, trace};
 use openapi::models::SystemState;
@@ -150,7 +150,7 @@ pub extern "C" fn C_GetTokenInfo(
         manufacturerID: padded_str!(info.vendor, 32),
         model: padded_str!(info.product, 16),
         serialNumber: padded_str!("unknown", 16),
-        flags: CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_LOGIN_REQUIRED,
+        flags: CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_RNG,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
         firmwareVersion: DEFAULT_FIRMWARE_VERSION,
         ..Default::default()
