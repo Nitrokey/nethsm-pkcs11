@@ -1,6 +1,6 @@
 use cryptoki_sys::{
-    CKF_LOGIN_REQUIRED, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CK_SLOT_ID, CK_SLOT_INFO,
-    CK_TOKEN_INFO, CK_ULONG, CKF_RNG,
+    CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKR_OK, CK_SLOT_ID, CK_SLOT_INFO,
+    CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{error, trace};
 use openapi::models::SystemState;
@@ -8,7 +8,7 @@ use openapi::models::SystemState;
 use crate::{
     backend::slot::get_slot,
     data::DEVICE,
-    defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION},
+    defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     padded_str,
 };
 
@@ -181,7 +181,43 @@ pub extern "C" fn C_GetMechanismList(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetMechanismList() called");
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    if pulCount.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let count = MECHANISM_LIST.len() as u64;
+
+    // only the count is requested
+    if pMechanismList.is_null() {
+        unsafe {
+            std::ptr::write(pulCount, count);
+        }
+        return cryptoki_sys::CKR_OK;
+    }
+
+    let buffer_size = unsafe { std::ptr::read(pulCount) };
+
+    // set the buffer size
+    unsafe {
+        std::ptr::write(pulCount, count);
+    }
+    // check if the buffer is large enough
+    if buffer_size < count {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    // list the ids
+
+    let id_list: Vec<cryptoki_sys::CK_MECHANISM_TYPE> = MECHANISM_LIST
+        .iter()
+        .map(|mechanism| mechanism.mechanism_type)
+        .collect();
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(id_list.as_ptr(), pMechanismList, id_list.len());
+    }
+
+    CKR_OK
 }
 
 pub extern "C" fn C_GetMechanismInfo(
@@ -191,7 +227,32 @@ pub extern "C" fn C_GetMechanismInfo(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetMechanismInfo() called");
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    if let Err(e) = get_slot(slotID as usize) {
+        return e;
+    }
+
+    if pInfo.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    // find the mechanism in the list
+
+    let mechanism = match MECHANISM_LIST.iter().find(|m| m.mechanism_type == type_) {
+        Some(mechanism) => mechanism,
+        None => return cryptoki_sys::CKR_MECHANISM_INVALID,
+    };
+
+    let info = cryptoki_sys::CK_MECHANISM_INFO {
+        ulMinKeySize: mechanism.min_key_size,
+        ulMaxKeySize: mechanism.max_key_size,
+        flags: mechanism.flags,
+    };
+
+    unsafe {
+        std::ptr::write(pInfo, info);
+    }
+
+    CKR_OK
 }
 
 pub extern "C" fn C_Login(
