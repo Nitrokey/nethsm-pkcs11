@@ -1,6 +1,6 @@
 [package]
 name = "openapi"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["OpenAPI Generator team and contributors"]
 description = "All endpoints expect exactly the specified JSON. Additional properties will cause a Bad Request Error (400). All HTTP errors contain a JSON structure with an explanation of type string. All [base64](https://tools.ietf.org/html/rfc4648#section-4) encoded values are Big Endian. "
 # Override this license by providing a License Object in the OpenAPI.
@@ -13,6 +13,4 @@ serde_derive = "^1.0"
 serde_json = "^1.0"
 url = "^2.2"
 uuid = { version = "^1.0", features = ["serde"] }
-[dependencies.reqwest]
-version = "^0.11"
-features = ["json", "multipart"]
+reqwest = "0.9.24"
