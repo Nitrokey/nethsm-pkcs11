@@ -1,8 +1,12 @@
-use cryptoki_sys::{CK_SLOT_ID, CK_SLOT_INFO, CK_ULONG};
+use cryptoki_sys::{CK_SLOT_ID, CK_SLOT_INFO, CK_TOKEN_INFO, CK_ULONG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKF_LOGIN_REQUIRED};
 use log::{error, trace};
 use openapi::models::SystemState;
 
-use crate::{data::CLIENTS, padded_str, version_struct_from_str};
+use crate::{
+    backend::{client::get_client, slot_config::get_slot_config},
+    data::CLIENTS,
+    padded_str, version_struct_from_str,
+};
 
 pub extern "C" fn C_GetSlotList(
     tokenPresent: cryptoki_sys::CK_BBOOL,
@@ -65,17 +69,10 @@ pub extern "C" fn C_GetSlotInfo(
 
     // get the client
 
-    let client = match CLIENTS.read() {
-        Ok(clients) => match clients.get(slotID as usize) {
-            Some(client) => client.clone(),
-            None => {
-                error!("No client found for slotID: {}", slotID);
-                return cryptoki_sys::CKR_SLOT_ID_INVALID;
-            }
-        },
+    let client = match get_client(slotID as usize) {
+        Ok(client) => client,
         Err(e) => {
-            error!("Error reading clients: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
+            return e;
         }
     };
 
@@ -124,7 +121,7 @@ pub extern "C" fn C_GetSlotInfo(
         manufacturerID: padded_str!(info.vendor, 32),
         flags,
         hardwareVersion: version_struct_from_str!(system_info.hardware_version),
-        firmwareVersion: version_struct_from_str!(system_info.firmware_version),
+        firmwareVersion: version_struct_from_str!(system_info.software_version),
     };
 
     unsafe {
@@ -138,9 +135,63 @@ pub extern "C" fn C_GetTokenInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetTokenInfo() called");
+    trace!("C_GetTokenInfo() called with slotID: {}", slotID);
+    // get the client
+    let client = match get_client(slotID as usize) {
+        Ok(client) => client,
+        Err(e) => {
+            return e;
+        }
+    };
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    // fetch the slot info
+    let slot = match get_slot_config(slotID as usize) {
+        Ok(slot) => slot,
+        Err(e) => {
+            return e;
+        }
+    };
+
+    if pInfo.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    // fetch info from the device
+
+    let info = match openapi::apis::default_api::info_get(&client) {
+        Ok(info) => info,
+        Err(e) => {
+            error!("Error getting info: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    // fetch system info from the device
+
+    let system_info = match openapi::apis::default_api::system_info_get(&client) {
+        Ok(info) => info,
+        Err(e) => {
+            error!("Error getting system info: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    let token_info = CK_TOKEN_INFO {
+        label: padded_str!(slot.label, 32),
+        manufacturerID: padded_str!(info.vendor, 32),
+        model: padded_str!(info.product, 16),
+        serialNumber: padded_str!(system_info.device_id, 16),
+        flags: CKF_TOKEN_INITIALIZED|CKF_USER_PIN_INITIALIZED|CKF_LOGIN_REQUIRED,
+        hardwareVersion: version_struct_from_str!(system_info.hardware_version),
+        firmwareVersion: version_struct_from_str!(system_info.firmware_version),
+        ..Default::default()
+    };
+
+    unsafe {
+        std::ptr::write(pInfo, token_info);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_InitToken(

@@ -60,18 +60,18 @@ pub fn read_configuration() -> Result<P11Config, ConfigError> {
 // representation of the config file to parse
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Default)]
 pub struct P11Config {
-    log_file: Option<String>,
+    pub log_file: Option<String>,
     #[merge(strategy = merge::vec::append)]
-    slots: Vec<SlotConfig>,
+    pub slots: Vec<SlotConfig>,
 }
 
 // A slot/server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SlotConfig {
-    label: String,
-    description: Option<String>,
-    url: String,
-    user: String,
+    pub label: String,
+    pub description: Option<String>,
+    pub url: String,
+    pub user: String,
     #[serde(deserialize_with = "deserialize_password")]
     password: String,
     #[serde(default)]
