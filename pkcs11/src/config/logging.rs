@@ -1,4 +1,5 @@
-use super::P11Config;
+use super::config_file::P11Config;
+
 
 // output to stdout and a file
 pub fn configure_logger(config: &P11Config) {

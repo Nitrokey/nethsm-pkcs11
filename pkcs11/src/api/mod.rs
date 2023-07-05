@@ -13,14 +13,18 @@ pub mod sign;
 pub mod token;
 pub mod verify;
 
-use crate::{config::initialization::initialize_configuration, data, defs, padded_str};
+use crate::{
+    data::{self, DEVICE},
+    defs, padded_str,
+};
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
-use log::trace;
+use log::{debug, trace};
 
 #[no_mangle]
 pub extern "C" fn C_GetFunctionList(
     pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
 ) -> cryptoki_sys::CK_RV {
+    trace!("C_GetFunctionList() called");
     if pp_fn_list.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -32,13 +36,10 @@ pub extern "C" fn C_GetFunctionList(
 }
 
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
-    let result = initialize_configuration();
-    if let Err(e) = result {
-        eprintln!("Error initializing configuration: {:?}", e);
-        return cryptoki_sys::CKR_FUNCTION_FAILED;
+    // we force the initialization of the lazy static here
+    if DEVICE.slots.is_empty() {
+        debug!("No slots configured");
     }
-
-    trace!("C_Initialize() called");
 
     trace!("C_Initialize() called with args: {:?}", pInitArgs);
     if defs::CRYPTOKI_VERSION.major == 2

@@ -1,17 +1,23 @@
-use crate::{api, config};
+use crate::{
+    api,
+    config::{self, device::Device},
+};
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_VERSION};
 use lazy_static::lazy_static;
-use std::sync::{Arc, RwLock};
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     major: 2,
     minor: 40,
 };
 
 lazy_static! {
-    pub static ref GLOBAL_CONFIG: Arc<RwLock<config::P11Config>> =
-        Arc::new(RwLock::new(Default::default()));
-    pub static ref CLIENTS: Arc<RwLock<Vec<openapi::apis::configuration::Configuration>>> =
-        Arc::new(RwLock::new(Vec::new()));
+    #[derive(Debug)]
+    pub static ref DEVICE: Device = match config::initialization::initialize_configuration() {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Error initializing configuration: {:?}", e);
+            unsafe { libc::exit(1) }
+        }
+    };
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

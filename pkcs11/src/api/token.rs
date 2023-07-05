@@ -6,8 +6,8 @@ use log::{error, trace};
 use openapi::models::SystemState;
 
 use crate::{
-    backend::{client::get_client, slot_config::get_slot_config},
-    data::CLIENTS,
+    backend::slot::get_slot,
+    data::DEVICE,
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION},
     padded_str,
 };
@@ -23,15 +23,7 @@ pub extern "C" fn C_GetSlotList(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let clients = match CLIENTS.read() {
-        Ok(clients) => clients,
-        Err(e) => {
-            error!("Error reading clients: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
-
-    let count = clients.len() as u64;
+    let count = DEVICE.slots.len() as u64;
 
     // only the count is requested
     if pSlotList.is_null() {
@@ -51,7 +43,8 @@ pub extern "C" fn C_GetSlotList(
 
     // list the ids
 
-    let id_list: Vec<CK_SLOT_ID> = clients
+    let id_list: Vec<CK_SLOT_ID> = DEVICE
+        .slots
         .iter()
         .enumerate()
         .map(|(i, client)| i as CK_SLOT_ID)
@@ -71,9 +64,9 @@ pub extern "C" fn C_GetSlotInfo(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetSlotInfo() called with slotID: {}", slotID);
 
-    // get the client
+    // get the slot
 
-    let client = match get_client(slotID as usize) {
+    let slot = match get_slot(slotID as usize) {
         Ok(client) => client,
         Err(e) => {
             return e;
@@ -88,7 +81,7 @@ pub extern "C" fn C_GetSlotInfo(
 
     // fetch info from the device
 
-    let info = match openapi::apis::default_api::info_get(&client) {
+    let info = match openapi::apis::default_api::info_get(&slot.api_config) {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting info: {:?}", e);
@@ -98,7 +91,7 @@ pub extern "C" fn C_GetSlotInfo(
 
     // fetch the sysem state
 
-    let system_state = match openapi::apis::default_api::health_state_get(&client) {
+    let system_state = match openapi::apis::default_api::health_state_get(&slot.api_config) {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting system state: {:?}", e);
@@ -130,16 +123,8 @@ pub extern "C" fn C_GetTokenInfo(
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetTokenInfo() called with slotID: {}", slotID);
-    // get the client
-    let client = match get_client(slotID as usize) {
-        Ok(client) => client,
-        Err(e) => {
-            return e;
-        }
-    };
-
-    // fetch the slot info
-    let slot = match get_slot_config(slotID as usize) {
+    // get the slot
+    let slot = match get_slot(slotID as usize) {
         Ok(slot) => slot,
         Err(e) => {
             return e;
@@ -152,7 +137,7 @@ pub extern "C" fn C_GetTokenInfo(
 
     // fetch info from the device
 
-    let info = match openapi::apis::default_api::info_get(&client) {
+    let info = match openapi::apis::default_api::info_get(&slot.api_config) {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting info: {:?}", e);
