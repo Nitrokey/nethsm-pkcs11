@@ -1,19 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
-
-// modified from the ACM project
-/// The `#[macro_export]` attribute is used in Rust to mark a macro definition as public and available
-/// for use outside of the current crate. This allows other crates to import and use the macro.
-#[macro_export]
-macro_rules! padded_str {
-    ($src:expr, $len: expr) => {{
-        let mut ret = [b' '; $len];
-        let count = std::cmp::min($src.len(), $len);
-        ret[..count].copy_from_slice(&$src.as_bytes()[..count]);
-        ret
-    }};
-}
-
+// makes a CK_VERSION struct from a string like "1.2"
 #[macro_export]
 macro_rules! version_struct_from_str {
     ($version_str:expr) => {{
@@ -31,5 +16,19 @@ macro_rules! version_struct_from_str {
             major: major as ::std::os::raw::c_uchar,
             minor: minor as ::std::os::raw::c_uchar,
         }
+    }};
+}
+
+
+// Modified from the ACM project : https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/util/mod.rs
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+#[macro_export]
+macro_rules! padded_str {
+    ($src:expr, $len: expr) => {{
+        let mut ret = [b' '; $len];
+        let count = std::cmp::min($src.len(), $len);
+        ret[..count].copy_from_slice(&$src.as_bytes()[..count]);
+        ret
     }};
 }

@@ -210,7 +210,7 @@ pub extern "C" fn C_GetMechanismList(
 
     let id_list: Vec<cryptoki_sys::CK_MECHANISM_TYPE> = MECHANISM_LIST
         .iter()
-        .map(|mechanism| mechanism.mechanism_type)
+        .map(|mechanism| mechanism.ck_type())
         .collect();
 
     unsafe {
@@ -237,19 +237,13 @@ pub extern "C" fn C_GetMechanismInfo(
 
     // find the mechanism in the list
 
-    let mechanism = match MECHANISM_LIST.iter().find(|m| m.mechanism_type == type_) {
+    let mechanism = match MECHANISM_LIST.iter().find(|m| m.ck_type() == type_) {
         Some(mechanism) => mechanism,
         None => return cryptoki_sys::CKR_MECHANISM_INVALID,
     };
 
-    let info = cryptoki_sys::CK_MECHANISM_INFO {
-        ulMinKeySize: mechanism.min_key_size,
-        ulMaxKeySize: mechanism.max_key_size,
-        flags: mechanism.flags,
-    };
-
     unsafe {
-        std::ptr::write(pInfo, info);
+        std::ptr::write(pInfo, mechanism.ck_info());
     }
 
     CKR_OK
