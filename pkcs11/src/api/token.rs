@@ -1,11 +1,15 @@
-use cryptoki_sys::{CK_SLOT_ID, CK_SLOT_INFO, CK_TOKEN_INFO, CK_ULONG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKF_LOGIN_REQUIRED};
+use cryptoki_sys::{
+    CKF_LOGIN_REQUIRED, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CK_SLOT_ID, CK_SLOT_INFO,
+    CK_TOKEN_INFO, CK_ULONG,
+};
 use log::{error, trace};
 use openapi::models::SystemState;
 
 use crate::{
     backend::{client::get_client, slot_config::get_slot_config},
     data::CLIENTS,
-    padded_str, version_struct_from_str,
+    defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION},
+    padded_str,
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -92,16 +96,6 @@ pub extern "C" fn C_GetSlotInfo(
         }
     };
 
-    // fetch system info from the device
-
-    let system_info = match openapi::apis::default_api::system_info_get(&client) {
-        Ok(info) => info,
-        Err(e) => {
-            error!("Error getting system info: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
-
     // fetch the sysem state
 
     let system_state = match openapi::apis::default_api::health_state_get(&client) {
@@ -120,8 +114,8 @@ pub extern "C" fn C_GetSlotInfo(
         slotDescription: padded_str!(info.product, 64),
         manufacturerID: padded_str!(info.vendor, 32),
         flags,
-        hardwareVersion: version_struct_from_str!(system_info.hardware_version),
-        firmwareVersion: version_struct_from_str!(system_info.software_version),
+        hardwareVersion: DEFAULT_HARDWARE_VERSION,
+        firmwareVersion: DEFAULT_FIRMWARE_VERSION,
     };
 
     unsafe {
@@ -166,24 +160,14 @@ pub extern "C" fn C_GetTokenInfo(
         }
     };
 
-    // fetch system info from the device
-
-    let system_info = match openapi::apis::default_api::system_info_get(&client) {
-        Ok(info) => info,
-        Err(e) => {
-            error!("Error getting system info: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
-
     let token_info = CK_TOKEN_INFO {
         label: padded_str!(slot.label, 32),
         manufacturerID: padded_str!(info.vendor, 32),
         model: padded_str!(info.product, 16),
-        serialNumber: padded_str!(system_info.device_id, 16),
-        flags: CKF_TOKEN_INITIALIZED|CKF_USER_PIN_INITIALIZED|CKF_LOGIN_REQUIRED,
-        hardwareVersion: version_struct_from_str!(system_info.hardware_version),
-        firmwareVersion: version_struct_from_str!(system_info.firmware_version),
+        serialNumber: padded_str!("unknown", 16),
+        flags: CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_LOGIN_REQUIRED,
+        hardwareVersion: DEFAULT_HARDWARE_VERSION,
+        firmwareVersion: DEFAULT_FIRMWARE_VERSION,
         ..Default::default()
     };
 
