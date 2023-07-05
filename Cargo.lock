@@ -576,6 +576,7 @@ dependencies = [
  "libc",
  "log",
  "merge",
+ "openapi",
  "serde",
  "serde_json",
  "serde_yaml",

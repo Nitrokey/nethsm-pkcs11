@@ -10,8 +10,9 @@ pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
 lazy_static! {
     pub static ref GLOBAL_CONFIG: Arc<RwLock<config::P11Config>> =
         Arc::new(RwLock::new(Default::default()));
+    pub static ref CLIENTS: Arc<RwLock<Vec<openapi::apis::configuration::Configuration>>> =
+        Arc::new(RwLock::new(Vec::new()));
 }
-
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,
     C_Initialize: Some(api::C_Initialize),
