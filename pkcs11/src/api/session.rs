@@ -53,12 +53,12 @@ pub extern "C" fn C_GetFunctionStatus(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetFunctionStatus() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
 
 pub extern "C" fn C_CancelFunction(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_CancelFunction() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
