@@ -73,9 +73,9 @@ pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
 
     let infos = CK_INFO {
         cryptokiVersion: defs::CRYPTOKI_VERSION,
-        manufacturerID: padded_str!("Rust PKCS#11", 32),
+        manufacturerID: padded_str!(defs::LIB_MANUFACTURER, 32),
         flags: 0,
-        libraryDescription: padded_str!("Rust PKCS#11", 32),
+        libraryDescription: padded_str!(defs::LIB_DESCRIPTION, 32),
         libraryVersion: defs::LIB_VERSION,
     };
 

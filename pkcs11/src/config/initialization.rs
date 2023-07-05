@@ -1,7 +1,8 @@
+use log::error;
+
 use crate::data;
 
-
-const DEFAULT_USER_AGENT : &str = "pkcs11-rs/0.1.0";
+const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
 
 #[derive(Debug)]
 pub enum InitializationError {
@@ -38,10 +39,33 @@ pub fn initialize_configuration() -> Result<(), InitializationError> {
             .write()
             .map_err(InitializationError::WLockClients)?;
         for slot in config.slots.iter() {
-            let mut client = openapi::apis::configuration::Configuration::new();
-            client.base_path = slot.url.clone();
-            client.basic_auth = Some((slot.user.clone(), Some(slot.password.clone())));
-            client.user_agent = Some(DEFAULT_USER_AGENT.to_string());
+
+            // configure the reqwest client
+
+            let reqwest_client = match reqwest::Client::builder()
+                .danger_accept_invalid_certs(slot.danger_insecure_cert)
+                .build()
+            {
+                Ok(client) => client,
+                Err(e) => {
+                    error!("Error building reqwest client: {:?}", e);
+                    return Err(InitializationError::Config(crate::config::ConfigError::Io(
+                        std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "Error building reqwest client",
+                        ),
+                    )));
+                }
+            };
+
+            let client = openapi::apis::configuration::Configuration {
+                client: reqwest_client,
+                base_path: slot.url.clone(),
+                basic_auth: Some((slot.user.clone(), Some(slot.password.clone()))),
+                user_agent: Some(DEFAULT_USER_AGENT.to_string()),
+                ..Default::default()
+            };
+
             clients.push(client);
         }
     }

@@ -74,6 +74,8 @@ pub struct SlotConfig {
     user: String,
     #[serde(deserialize_with = "deserialize_password")]
     password: String,
+    #[serde(default)]
+    danger_insecure_cert: bool,
 }
 
 const PASSWORD_ENV_PREFIX: &str = "env:";
