@@ -1,4 +1,6 @@
-use log::trace;
+use log::{error, trace};
+
+use crate::{data::SESSION_MANAGER, lock_mutex};
 
 pub extern "C" fn C_SignInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -9,6 +11,19 @@ pub extern "C" fn C_SignInit(
     if pMechanism.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
+    let manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_SignInit() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 

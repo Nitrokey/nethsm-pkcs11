@@ -84,18 +84,21 @@ pub extern "C" fn C_GetSessionInfo(
 
     let manager = lock_mutex!(SESSION_MANAGER);
 
-    let session_info = manager.get_session_info(hSession);
+    let session = manager.get_session(hSession);
 
-    if session_info.is_none() {
-        error!(
-            "C_GetSessionInfo() called with invalid session handle {}.",
-            hSession
-        );
-        return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-    }
+    let session_info = match session {
+        Some(session) => session.get_ck_info(),
+        None => {
+            error!(
+                "C_GetSessionInfo() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
 
     unsafe {
-        *pInfo = *session_info.unwrap();
+        std::ptr::write(pInfo, session_info);
     }
 
     cryptoki_sys::CKR_OK
