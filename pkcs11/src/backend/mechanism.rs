@@ -1,7 +1,8 @@
 use cryptoki_sys::{
     CKM_MD5, CKM_RSA_PKCS_OAEP, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512, CKM_SHA_1,
+    CK_MECHANISM_TYPE,
 };
-use openapi::models::{DecryptMode, EncryptMode, SignMode};
+use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -17,6 +18,7 @@ pub struct CkRawMechanism {
 }
 pub trait MechParams {}
 impl MechParams for cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS {}
+impl MechParams for cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS {}
 
 impl CkRawMechanism {
     pub unsafe fn from_raw_ptr_unchecked(ptr: *mut cryptoki_sys::CK_MECHANISM) -> Self {
@@ -49,22 +51,47 @@ pub enum Error {
     UnknownMech,
 }
 
-// #[derive(Clone, Copy, Debug)]
-// pub enum MechDigest {
-//     Sha1,
-//     Sha224,
-//     Sha256,
-//     Sha384,
-//     Sha512,
-// }
+#[derive(Clone, Copy, Debug)]
+pub enum MechDigest {
+    Md5,
+    Sha1,
+    Sha224,
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
+impl MechDigest {
+    pub fn ck_type(&self) -> CK_MECHANISM_TYPE {
+        match self {
+            Self::Md5 => cryptoki_sys::CKM_MD5,
+            Self::Sha1 => cryptoki_sys::CKM_SHA_1,
+            Self::Sha224 => cryptoki_sys::CKM_SHA224,
+            Self::Sha256 => cryptoki_sys::CKM_SHA256,
+            Self::Sha384 => cryptoki_sys::CKM_SHA384,
+            Self::Sha512 => cryptoki_sys::CKM_SHA512,
+        }
+    }
+    pub fn from_ck_mech(mech: CK_MECHANISM_TYPE) -> Option<Self> {
+        match mech {
+            cryptoki_sys::CKM_MD5 => Some(Self::Md5),
+            cryptoki_sys::CKM_SHA_1 => Some(Self::Sha1),
+            cryptoki_sys::CKM_SHA224 => Some(Self::Sha224),
+            cryptoki_sys::CKM_SHA256 => Some(Self::Sha256),
+            cryptoki_sys::CKM_SHA384 => Some(Self::Sha384),
+            cryptoki_sys::CKM_SHA512 => Some(Self::Sha512),
+            _ => None,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum Mechanism {
     // Digest(MechDigest),
     AesCbc,
     RsaPkcs,
-    RsaPkcsOaep(Option<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>),
-    RsaPkcsPss(Option<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>),
+    RsaPkcsOaep(MechDigest),
+    RsaPkcsPss(MechDigest),
     RsaX509,
     EdDsa,
     Ecdsa,
@@ -82,6 +109,57 @@ impl Mechanism {
     const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 224;
     const EC_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 521;
 
+    pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
+        match api_mech {
+            KeyMechanism::AesDecryptionCbc => Self::AesCbc,
+            KeyMechanism::AesEncryptionCbc => Self::AesCbc,
+            KeyMechanism::EcdsaSignature => Self::Ecdsa,
+            KeyMechanism::EdDsaSignature => Self::EdDsa,
+            KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaPkcsOaep(MechDigest::Md5),
+            KeyMechanism::RsaDecryptionOaepSha1 => Self::RsaPkcsOaep(MechDigest::Sha1),
+            KeyMechanism::RsaDecryptionOaepSha224 => Self::RsaPkcsOaep(MechDigest::Sha224),
+            KeyMechanism::RsaDecryptionOaepSha256 => Self::RsaPkcsOaep(MechDigest::Sha256),
+            KeyMechanism::RsaDecryptionOaepSha384 => Self::RsaPkcsOaep(MechDigest::Sha384),
+            KeyMechanism::RsaDecryptionOaepSha512 => Self::RsaPkcsOaep(MechDigest::Sha512),
+            KeyMechanism::RsaSignaturePssMd5 => Self::RsaPkcsPss(MechDigest::Md5),
+            KeyMechanism::RsaSignaturePssSha1 => Self::RsaPkcsPss(MechDigest::Sha1),
+            KeyMechanism::RsaSignaturePssSha224 => Self::RsaPkcsPss(MechDigest::Sha224),
+            KeyMechanism::RsaSignaturePssSha256 => Self::RsaPkcsPss(MechDigest::Sha256),
+            KeyMechanism::RsaSignaturePssSha384 => Self::RsaPkcsPss(MechDigest::Sha384),
+            KeyMechanism::RsaSignaturePssSha512 => Self::RsaPkcsPss(MechDigest::Sha512),
+            KeyMechanism::RsaDecryptionPkcs1 => Self::RsaPkcs,
+            KeyMechanism::RsaDecryptionRaw => Self::RsaX509,
+
+            KeyMechanism::RsaSignaturePkcs1 => Self::RsaPkcs,
+        }
+    }
+
+    pub fn to_api_mech(&self) -> Option<KeyMechanism> {
+        match self {
+            Self::AesCbc => Some(KeyMechanism::AesDecryptionCbc),
+            Self::RsaPkcs => Some(KeyMechanism::RsaDecryptionPkcs1),
+            Self::RsaPkcsOaep(digest) => match digest {
+                MechDigest::Md5 => Some(KeyMechanism::RsaDecryptionOaepMd5),
+                MechDigest::Sha1 => Some(KeyMechanism::RsaDecryptionOaepSha1),
+                MechDigest::Sha224 => Some(KeyMechanism::RsaDecryptionOaepSha224),
+                MechDigest::Sha256 => Some(KeyMechanism::RsaDecryptionOaepSha256),
+                MechDigest::Sha384 => Some(KeyMechanism::RsaDecryptionOaepSha384),
+                MechDigest::Sha512 => Some(KeyMechanism::RsaDecryptionOaepSha512),
+            },
+            Self::RsaPkcsPss(digest) => match digest {
+                MechDigest::Md5 => Some(KeyMechanism::RsaSignaturePssMd5),
+                MechDigest::Sha1 => Some(KeyMechanism::RsaSignaturePssSha1),
+                MechDigest::Sha224 => Some(KeyMechanism::RsaSignaturePssSha224),
+                MechDigest::Sha256 => Some(KeyMechanism::RsaSignaturePssSha256),
+                MechDigest::Sha384 => Some(KeyMechanism::RsaSignaturePssSha384),
+                MechDigest::Sha512 => Some(KeyMechanism::RsaSignaturePssSha512),
+            },
+            Self::RsaX509 => Some(KeyMechanism::RsaDecryptionRaw),
+            Self::Ecdsa => Some(KeyMechanism::EcdsaSignature),
+            Self::EdDsa => Some(KeyMechanism::EdDsaSignature),
+        }
+    }
+
     pub fn from_ckraw_mech(raw_mech: &CkRawMechanism) -> Result<Self, Error> {
         let mech = match raw_mech.type_() {
             // cryptoki_sys::CKM_SHA_1 => Self::Digest(MechDigest::Sha1),
@@ -91,16 +169,24 @@ impl Mechanism {
             // cryptoki_sys::CKM_SHA512 => Self::Digest(MechDigest::Sha512),
             cryptoki_sys::CKM_AES_CBC => Self::AesCbc,
             cryptoki_sys::CKM_RSA_PKCS => Self::RsaPkcs,
-            cryptoki_sys::CKM_RSA_PKCS_PSS => Self::RsaPkcsPss(
-                // Safe because Self::RsaPkcsPss defines the correct params struct type
-                // (i.e. CK_RSA_PKCS_PSS_PARAMS).
-                unsafe { raw_mech.params() }.map_err(Error::CkRaw)?,
-            ),
-            cryptoki_sys::CKM_RSA_PKCS_OAEP => Self::RsaPkcsOaep(
-                // Safe because Self::RsaPkcsOaep defines the correct params struct type
-                // (i.e. CK_RSA_PKCS_OAEP_PARAMS).
-                unsafe { raw_mech.params() }.map_err(Error::CkRaw)?,
-            ),
+            cryptoki_sys::CKM_RSA_PKCS_PSS => {
+                let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>() }
+                    .map_err(Error::CkRaw)?;
+                let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
+
+                Self::RsaPkcsPss(
+                    MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
+                )
+            }
+            cryptoki_sys::CKM_RSA_PKCS_OAEP => {
+                let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS>() }
+                    .map_err(Error::CkRaw)?;
+                let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
+
+                Self::RsaPkcsOaep(
+                    MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
+                )
+            }
 
             cryptoki_sys::CKM_RSA_X_509 => Self::RsaX509,
             cryptoki_sys::CKM_ECDSA => Self::Ecdsa,
@@ -183,14 +269,13 @@ impl Mechanism {
     pub fn sign_name(&self) -> Option<SignMode> {
         match self {
             Self::RsaPkcs => Some(SignMode::EdDsa),
-            Self::RsaPkcsPss(Some(params)) => match params.hashAlg {
-                CKM_MD5 => Some(SignMode::PssMd5),
-                CKM_SHA_1 => Some(SignMode::PssSha1),
-                CKM_SHA224 => Some(SignMode::PssSha256),
-                CKM_SHA256 => Some(SignMode::PssSha256),
-                CKM_SHA384 => Some(SignMode::PssSha384),
-                CKM_SHA512 => Some(SignMode::PssSha512),
-                _ => None,
+            Self::RsaPkcsPss(digest) => match digest {
+                MechDigest::Md5 => Some(SignMode::PssSha1),
+                MechDigest::Sha1 => Some(SignMode::PssSha1),
+                MechDigest::Sha224 => Some(SignMode::PssSha224),
+                MechDigest::Sha256 => Some(SignMode::PssSha256),
+                MechDigest::Sha384 => Some(SignMode::PssSha384),
+                MechDigest::Sha512 => Some(SignMode::PssSha512),
             },
             Self::Ecdsa => Some(SignMode::Ecdsa),
             Self::EdDsa => Some(SignMode::EdDsa),
@@ -211,16 +296,14 @@ impl Mechanism {
             Self::AesCbc => Some(DecryptMode::AesCbc),
             Self::RsaX509 => Some(DecryptMode::Raw),
             Self::RsaPkcs => Some(DecryptMode::Pkcs1),
-            Self::RsaPkcsOaep(Some(param)) => match param.hashAlg {
-                CKM_MD5 => Some(DecryptMode::OaepMd5),
-                CKM_SHA_1 => Some(DecryptMode::OaepSha1),
-                CKM_SHA224 => Some(DecryptMode::OaepSha224),
-                CKM_SHA256 => Some(DecryptMode::OaepSha256),
-                CKM_SHA384 => Some(DecryptMode::OaepSha384),
-                CKM_SHA512 => Some(DecryptMode::OaepSha512),
-                _ => None,
+            Self::RsaPkcsOaep(digest) => match digest {
+                MechDigest::Md5 => Some(DecryptMode::OaepMd5),
+                MechDigest::Sha1 => Some(DecryptMode::OaepSha1),
+                MechDigest::Sha224 => Some(DecryptMode::OaepSha224),
+                MechDigest::Sha256 => Some(DecryptMode::OaepSha256),
+                MechDigest::Sha384 => Some(DecryptMode::OaepSha384),
+                MechDigest::Sha512 => Some(DecryptMode::OaepSha512),
             },
-
             _ => None,
         }
     }

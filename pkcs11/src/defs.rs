@@ -16,8 +16,8 @@ pub const MECHANISM_LIST: [Mechanism; 7] = [
     Mechanism::AesCbc,
     Mechanism::RsaX509,
     Mechanism::RsaPkcs,
-    Mechanism::RsaPkcsPss(None),
-    Mechanism::RsaPkcsOaep(None),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Md5),
+    Mechanism::RsaPkcsOaep(crate::backend::mechanism::MechDigest::Md5),
     Mechanism::EdDsa,
     Mechanism::Ecdsa,
 ];

@@ -1,7 +1,11 @@
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use cryptoki_sys::CK_ULONG;
+use cryptoki_sys::{
+    CK_C_GetMechanismInfo, CKA_ALLOWED_MECHANISMS, CKA_CLASS, CKA_ID, CKA_KEY_TYPE, CKK_EC,
+    CKK_ECDSA, CKK_GENERIC_SECRET, CKK_RSA, CKM_AES_CBC, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG,
+};
+use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 
@@ -57,7 +61,7 @@ impl From<ObjectHandle> for usize {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Attr {
     Bytes(Vec<u8>),
     CkBbool([u8; size_of::<cryptoki_sys::CK_BBOOL>()]),
@@ -101,6 +105,7 @@ impl Attr {
             Self::CkObjectClass(v) => v,
             Self::CkUlong(v) => v,
             Self::Bytes(v) => v,
+
             Self::Sensitive => &[0u8; 0],
         }
     }
@@ -129,6 +134,11 @@ impl Attr {
         Self::CkMechanismType(src.to_le_bytes())
     }
 
+    fn from_ck_mechanism_type_vec(src: Vec<cryptoki_sys::CK_MECHANISM_TYPE>) -> Self {
+        #[cfg(target_endian = "little")]
+        Self::Bytes(src.iter().flat_map(|x| x.to_le_bytes()).collect())
+    }
+
     fn from_ck_object_class(src: cryptoki_sys::CK_OBJECT_CLASS) -> Self {
         #[cfg(target_endian = "little")]
         Self::CkObjectClass(src.to_le_bytes())
@@ -148,217 +158,53 @@ impl PartialEq<Attr> for Attr {
 
 #[derive(Clone, Debug)]
 pub enum ObjectKind {
-    RsaPrivateKey(String),
-    RsaPublicKey(String),
-    EcPrivateKey(String),
-    EcPublicKey(String),
-    Certificate,
     Mechanism(Mechanism),
+    Data,
+    Key,
+    Certificate,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     kind: ObjectKind,
 }
 
 impl Object {
-    pub fn new_mechanism(mech: Mechanism) -> Self {
+    pub fn from_key_data(key_data: PublicKey, id: String) -> Self {
         let mut attrs = HashMap::new();
-        attrs.insert(
-            cryptoki_sys::CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_MECHANISM),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_MECHANISM_TYPE,
-            Attr::from_ck_mechanism_type(mech.ck_type()),
-        );
-        Self {
-            kind: ObjectKind::Mechanism(mech),
-            attrs,
-        }
-    }
 
-    pub fn new_rsa_private_key(info: RsaKeyInfo) -> Self {
-        let mut attrs = HashMap::new();
+        attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
         attrs.insert(
-            cryptoki_sys::CKA_CLASS,
+            CKA_CLASS,
             Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
         );
-        attrs.insert(
-            cryptoki_sys::CKA_KEY_TYPE,
-            Attr::from_ck_key_type(cryptoki_sys::CKK_RSA),
-        );
-        attrs.insert(cryptoki_sys::CKA_ID, Attr::from_ck_byte(info.id));
-        attrs.insert(cryptoki_sys::CKA_LABEL, Attr::Bytes(info.label.into()));
-        attrs.insert(cryptoki_sys::CKA_PRIVATE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_ALWAYS_AUTHENTICATE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_SENSITIVE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_EXTRACTABLE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_SIGN, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DECRYPT, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DERIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_WRAP, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_LOCAL, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_TOKEN, Attr::CK_TRUE);
-        attrs.insert(
-            cryptoki_sys::CKA_MODULUS_BITS,
-            Attr::from_ck_ulong(info.num_bits),
-        );
-        attrs.insert(cryptoki_sys::CKA_MODULUS, Attr::Bytes(info.modulus));
-        attrs.insert(
-            cryptoki_sys::CKA_PUBLIC_EXPONENT,
-            Attr::Bytes(info.public_exponent),
-        );
-        attrs.insert(cryptoki_sys::CKA_PRIVATE_EXPONENT, Attr::Sensitive);
-        attrs.insert(cryptoki_sys::CKA_PRIME_1, Attr::Sensitive);
-        attrs.insert(cryptoki_sys::CKA_PRIME_2, Attr::Sensitive);
-        attrs.insert(cryptoki_sys::CKA_EXPONENT_1, Attr::Sensitive);
-        attrs.insert(cryptoki_sys::CKA_EXPONENT_2, Attr::Sensitive);
-        attrs.insert(cryptoki_sys::CKA_COEFFICIENT, Attr::Sensitive);
-        Self {
-            kind: ObjectKind::RsaPrivateKey(info.priv_pem),
-            attrs,
-        }
-    }
 
-    pub fn new_rsa_public_key(info: RsaKeyInfo) -> Self {
-        let mut attrs = HashMap::new();
-        attrs.insert(
-            cryptoki_sys::CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_PUBLIC_KEY),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_KEY_TYPE,
-            Attr::from_ck_key_type(cryptoki_sys::CKK_RSA),
-        );
-        attrs.insert(cryptoki_sys::CKA_ID, Attr::from_ck_byte(info.id));
-        attrs.insert(cryptoki_sys::CKA_LABEL, Attr::Bytes(info.label.into()));
-        attrs.insert(cryptoki_sys::CKA_PRIVATE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_SENSITIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_EXTRACTABLE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_VERIFY, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_ENCRYPT, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DERIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_WRAP, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_LOCAL, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_TOKEN, Attr::CK_TRUE);
-        attrs.insert(
-            cryptoki_sys::CKA_MODULUS_BITS,
-            Attr::from_ck_ulong(info.num_bits),
-        );
-        attrs.insert(cryptoki_sys::CKA_MODULUS, Attr::Bytes(info.modulus));
-        attrs.insert(
-            cryptoki_sys::CKA_PUBLIC_EXPONENT,
-            Attr::Bytes(info.public_exponent),
-        );
-        Self {
-            kind: ObjectKind::RsaPublicKey(info.priv_pem),
-            attrs,
-        }
-    }
-
-    pub fn new_ec_private_key(info: EcKeyInfo) -> Self {
-        let mut attrs = HashMap::new();
-        attrs.insert(
-            cryptoki_sys::CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_KEY_TYPE,
-            Attr::from_ck_key_type(cryptoki_sys::CKK_EC),
-        );
-        attrs.insert(cryptoki_sys::CKA_ID, Attr::from_ck_byte(info.id));
-        attrs.insert(cryptoki_sys::CKA_LABEL, Attr::Bytes(info.label.into()));
-        attrs.insert(cryptoki_sys::CKA_PRIVATE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_SENSITIVE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_EXTRACTABLE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_SIGN, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DECRYPT, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DERIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_WRAP, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_LOCAL, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_TOKEN, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_EC_PARAMS, Attr::Bytes(info.params_x962));
-        attrs.insert(cryptoki_sys::CKA_EC_POINT, Attr::Bytes(info.point_q_x962));
-        attrs.insert(cryptoki_sys::CKA_VALUE, Attr::Sensitive);
-        Self {
-            kind: ObjectKind::EcPrivateKey(info.priv_pem),
-            attrs,
-        }
-    }
-
-    pub fn new_ec_public_key(info: EcKeyInfo) -> Self {
-        let mut attrs = HashMap::new();
-        attrs.insert(
-            cryptoki_sys::CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_PUBLIC_KEY),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_KEY_TYPE,
-            Attr::from_ck_key_type(cryptoki_sys::CKK_EC),
-        );
-        attrs.insert(cryptoki_sys::CKA_ID, Attr::from_ck_byte(info.id));
-        attrs.insert(cryptoki_sys::CKA_LABEL, Attr::Bytes(info.label.into()));
-        attrs.insert(cryptoki_sys::CKA_PRIVATE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_SENSITIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_EXTRACTABLE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_VERIFY, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_ENCRYPT, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_DERIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_WRAP, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_LOCAL, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_TOKEN, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_EC_PARAMS, Attr::Bytes(info.params_x962));
-        attrs.insert(cryptoki_sys::CKA_EC_POINT, Attr::Bytes(info.point_q_x962));
-        Self {
-            kind: ObjectKind::EcPublicKey(info.priv_pem),
-            attrs,
-        }
-    }
-
-    pub fn new_x509_cert(info: CertInfo) -> Self {
-        let mut attrs = HashMap::new();
-        attrs.insert(
-            cryptoki_sys::CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_CERTIFICATE_TYPE,
-            Attr::from_ck_cert_type(cryptoki_sys::CKC_X_509),
-        );
-        let categ = match info.categ {
-            CertCategory::Unverified => CK_CERTIFICATE_CATEGORY_UNSPECIFIED,
-            CertCategory::Token => CK_CERTIFICATE_CATEGORY_TOKEN_USER,
-            CertCategory::Authority => CK_CERTIFICATE_CATEGORY_AUTHORITY,
-            CertCategory::Other => CK_CERTIFICATE_CATEGORY_OTHER_ENTITY,
+        let key_type: CK_KEY_TYPE = match key_data.r#type {
+            KeyType::Rsa => CKK_RSA,
+            KeyType::Curve25519 => CKK_EC,
+            KeyType::EcP224 => CKK_ECDSA,
+            KeyType::EcP256 => CKK_ECDSA,
+            KeyType::EcP384 => CKK_ECDSA,
+            KeyType::EcP521 => CKK_ECDSA,
+            KeyType::Generic => CKK_GENERIC_SECRET,
         };
+        attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
+
+        let allowed_mechanism: Vec<CK_MECHANISM_TYPE> = key_data
+            .mechanisms
+            .iter()
+            .map(|mech| Mechanism::from_api_mech(mech).ck_type())
+            .collect();
+
         attrs.insert(
-            cryptoki_sys::CKA_CERTIFICATE_CATEGORY,
-            Attr::from_ck_cert_category(categ),
+            CKA_ALLOWED_MECHANISMS,
+            Attr::from_ck_mechanism_type_vec(allowed_mechanism),
         );
-        attrs.insert(cryptoki_sys::CKA_ID, Attr::from_ck_byte(info.id));
-        attrs.insert(cryptoki_sys::CKA_LABEL, Attr::Bytes(info.label.into()));
-        attrs.insert(cryptoki_sys::CKA_TOKEN, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_SENSITIVE, Attr::CK_FALSE);
-        attrs.insert(cryptoki_sys::CKA_EXTRACTABLE, Attr::CK_TRUE);
-        attrs.insert(cryptoki_sys::CKA_TRUSTED, Attr::CK_TRUE);
-        attrs.insert(
-            cryptoki_sys::CKA_SUBJECT,
-            Attr::Bytes(info.subject_der.into()),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_ISSUER,
-            Attr::Bytes(info.issuer_der.into()),
-        );
-        attrs.insert(
-            cryptoki_sys::CKA_SERIAL_NUMBER,
-            Attr::Bytes(info.serno_der.into()),
-        );
-        attrs.insert(cryptoki_sys::CKA_VALUE, Attr::Bytes(info.cert_der.into()));
+
         Self {
-            kind: ObjectKind::Certificate,
             attrs,
+            kind: ObjectKind::Key,
         }
     }
 
