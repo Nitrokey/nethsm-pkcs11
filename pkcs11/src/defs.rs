@@ -12,10 +12,12 @@ pub const LIB_MANUFACTURER: &str = "Nitrokey";
 pub const DEFAULT_FIRMWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 pub const DEFAULT_HARDWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 
-// TODO: add more mechanisms
-pub const MECHANISM_LIST: [Mechanism; 4] = [
+pub const MECHANISM_LIST: [Mechanism; 7] = [
+    Mechanism::AesCbc,
     Mechanism::RsaX509,
     Mechanism::RsaPkcs,
     Mechanism::RsaPkcsPss(None),
     Mechanism::RsaPkcsOaep(None),
+    Mechanism::EdDsa,
+    Mechanism::Ecdsa,
 ];
