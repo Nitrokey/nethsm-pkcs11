@@ -1,7 +1,8 @@
 mod api;
 
 mod data;
-mod utils;
+
+pub mod utils;
 
 mod defs;
 mod config;

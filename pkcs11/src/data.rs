@@ -1,5 +1,8 @@
+use std::sync::{Arc, Mutex};
+
 use crate::{
     api,
+    backend::session::SessionManager,
     config::{self, device::Device},
 };
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_VERSION};
@@ -18,6 +21,7 @@ lazy_static! {
             unsafe { libc::exit(1) }
         }
     };
+    pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

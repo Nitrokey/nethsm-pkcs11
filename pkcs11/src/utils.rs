@@ -1,3 +1,17 @@
+// lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
+#[macro_export]
+macro_rules! lock_mutex {
+    ($session_manager:expr) => {
+        match $session_manager.lock() {
+            Ok(manager) => manager,
+            Err(e) => {
+                error!("Failed to lock : {:?}", e);
+                return cryptoki_sys::CKR_FUNCTION_FAILED;
+            }
+        }
+    };
+}
+
 // makes a CK_VERSION struct from a string like "1.2"
 #[macro_export]
 macro_rules! version_struct_from_str {
@@ -18,7 +32,6 @@ macro_rules! version_struct_from_str {
         }
     }};
 }
-
 
 // Modified from the ACM project : https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/util/mod.rs
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
