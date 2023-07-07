@@ -88,6 +88,8 @@ pub extern "C" fn C_Sign(
         std::ptr::write(pulSignatureLen, signature.len() as u64);
     }
 
+    session.sign_clear();
+
     cryptoki_sys::CKR_OK
 }
 
@@ -159,6 +161,7 @@ pub extern "C" fn C_SignFinal(
         std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
         std::ptr::write(pulSignatureLen, signature.len() as u64);
     }
+    session.sign_clear();
 
     CKR_OK
 }
