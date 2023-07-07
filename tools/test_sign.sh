@@ -1,15 +1,18 @@
 #!/bin/sh -x
 
+set -e 
 KEYID=$1
 
-HEXID=$(echo ${KEYID}'\c' | xxd -ps)
+HEXID=$(echo -n ${KEYID} | xxd -ps)
 
-rm _data.sig _public.pem
+rm -rf _data.sig _public.pem
 
-curl -s -u operator:opPassphrase -X GET \
-  https://nethsmdemo.nitrokey.com/api/v1/keys/$KEYID/public.pem -o _public.pem
+curl -s -k -u operator:opPassphrase -v -X GET \
+  https://localhost:8443/api/v1/keys/$KEYID/public.pem -o _public.pem
 
-echo 'NetHSM rulez!' | pkcs11-tool --module p11nethsm.so -v -p opPassphrase \
-  --sign --mechanism RSA-PKCS --output-file _data.sig --id $HEXID
+echo 'NetHSM rulez!' | pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v \
+  --sign --mechanism RSA-PKCS --output-file _data.sig 
+  
+  #--id $HEXID
 
 openssl rsautl -verify -inkey _public.pem -in _data.sig -pubin

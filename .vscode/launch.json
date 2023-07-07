@@ -9,7 +9,10 @@
       "type": "gdb",
       "request": "launch",
       "target": "/usr/bin/pkcs11-tool",
-      "arguments": "--module target/debug/libnethsm_pkcs11.so -I ",
+      "arguments": "--module target/debug/libnethsm_pkcs11.so -M",
+      "env": {
+        "P11NETHSM_CONFIG_FILE": "./p11nethsm.conf"
+      },
       "cwd": "${workspaceRoot}",
       "valuesFormatting": "parseText"
     }

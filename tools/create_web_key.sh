@@ -1,7 +1,7 @@
 #!/bin/bash
 
-curl -k -i -w '\n' -u admin:adminadmin -X PUT \
-  https://nethsmdemo.nitrokey.com/api/v1/keys/webserver \
+curl -k -i -w '\n' -u admin:Administrator -X PUT \
+  https://localhost:8443/api/v1/keys/webserver \
   -H "content-type: application/json" \
   -d '{
     "mechanisms": [

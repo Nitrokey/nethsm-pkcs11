@@ -1,7 +1,7 @@
 #!/bin/bash
 
-curl -k -i -w '\n' -u admin:adminadmin -X POST \
-  https://nethsmdemo.nitrokey.com/api/v1/keys/generate \
+curl -k -i -w '\n' -u admin:Administrator -X POST \
+  https://localhost:8443/api/v1/keys/generate \
   -H "content-type: application/json" \
   -d '{ "mechanisms": [ 
 "RSA_Decryption_RAW", 
@@ -19,4 +19,4 @@ curl -k -i -w '\n' -u admin:adminadmin -X POST \
 "RSA_Signature_PSS_SHA256",
 "RSA_Signature_PSS_SHA384",
 "RSA_Signature_PSS_SHA512"
-],  "type": "RSA",  "length": 2048 }'
+],  "type": "RSA",  "length": 2048, "id": "rsakey" }'
