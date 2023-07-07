@@ -1,3 +1,4 @@
+use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
 use crate::{backend::db::attr::CkRawAttrTemplate, data::SESSION_MANAGER, lock_mutex};
@@ -9,7 +10,7 @@ pub extern "C" fn C_FindObjectsInit(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsInit() called");
 
-    if pTemplate.is_null() {
+    if ulCount > 0 && pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
@@ -42,7 +43,37 @@ pub extern "C" fn C_FindObjects(
     pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjects() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if phObject.is_null() || pulObjectCount.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_FindObjects() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let objects = session.enum_next_chunk(ulMaxObjectCount as usize);
+    trace!("C_FindObjects() objects: {:?}", objects);
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            objects.as_ptr(),
+            phObject,
+            objects.len().min(ulMaxObjectCount as usize),
+        );
+        std::ptr::write(pulObjectCount, objects.len() as CK_ULONG);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 pub extern "C" fn C_FindObjectsFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -56,8 +87,40 @@ pub extern "C" fn C_GetAttributeValue(
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetAttributeValue() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    trace!("C_GetAttributeValue() called for object {}.", hObject);
+
+    if pTemplate.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_GetAttributeValue() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let object = match session.get_object(hObject) {
+        Some(object) => object,
+        None => {
+            error!(
+                "C_GetAttributeValue() called with invalid object handle {}.",
+                hObject
+            );
+            return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
+        }
+    };
+
+    let mut template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+
+    object.fill_attr_template(&mut template)
 }
 pub extern "C" fn C_GetObjectSize(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,

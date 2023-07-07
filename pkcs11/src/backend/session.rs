@@ -12,7 +12,7 @@ use crate::config::device::Slot;
 use super::db::{
     self,
     attr::{CkRawAttr, CkRawAttrTemplate},
-    Db, Object,
+    Db, Object, ObjectHandle,
 };
 
 #[derive(Clone, Debug)]
@@ -126,10 +126,23 @@ impl Session {
             Err(err) => return err,
         };
 
-        self.enum_ctx = Some(EnumCtx { handles });
+        self.enum_ctx = Some(EnumCtx::new(handles));
 
         cryptoki_sys::CKR_OK
     }
+
+    pub fn enum_next_chunk(&mut self, count: usize) -> Vec<CK_SESSION_HANDLE> {
+        let mut result = Vec::new();
+        if let Some(enum_ctx) = &mut self.enum_ctx {
+            result = enum_ctx.next_chunck(count);
+        }
+        result
+    }
+
+    pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {
+        self.db.object(ObjectHandle::from(handle))
+    }
+
     fn find_key(&mut self, key_id: Option<String>) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
         match key_id {
             Some(key_id) => Ok(self
@@ -227,4 +240,23 @@ pub struct DecryptCtx {}
 #[derive(Clone, Debug)]
 pub struct EnumCtx {
     pub handles: Vec<CK_SESSION_HANDLE>,
+    index: usize,
+}
+
+impl EnumCtx {
+    pub fn new(handles: Vec<CK_SESSION_HANDLE>) -> Self {
+        Self { handles, index: 0 }
+    }
+    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CK_SESSION_HANDLE> {
+        let mut result = Vec::new();
+        for _ in 0..chunk_size {
+            if let Some(handle) = self.handles.get(self.index) {
+                result.push(*handle);
+                self.index += 1;
+            } else {
+                break;
+            }
+        }
+        result
+    }
 }
