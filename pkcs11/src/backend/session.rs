@@ -9,13 +9,10 @@ use openapi::apis::default_api;
 
 use crate::config::device::Slot;
 
-use super::{
-    db::{
-        self,
-        attr::{CkRawAttr, CkRawAttrTemplate},
-        Db, Object,
-    },
-    mechanism::Mechanism,
+use super::db::{
+    self,
+    attr::{CkRawAttr, CkRawAttrTemplate},
+    Db, Object,
 };
 
 #[derive(Clone, Debug)]
@@ -135,10 +132,11 @@ impl Session {
     }
     fn find_key(&mut self, key_id: Option<String>) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
         match key_id {
-            Some(key_id) => {
-                let (handle, _) = self.fetch_key(key_id)?;
-                Ok(vec![handle])
-            }
+            Some(key_id) => Ok(self
+                .fetch_key(key_id)?
+                .iter()
+                .map(|(handle, _)| *handle)
+                .collect()),
             None => self.fetch_all_keys(),
         }
     }
@@ -163,25 +161,34 @@ impl Session {
         let mut handles = Vec::new();
 
         for key in keys {
-            let (handle, __library) = self.fetch_key(key.key)?;
-
-            handles.push(handle);
+            let objects = self.fetch_key(key.key)?;
+            for (handle, _) in objects {
+                handles.push(handle);
+            }
         }
         Ok(handles)
     }
 
-    fn fetch_key(&mut self, key_id: String) -> Result<(CK_OBJECT_HANDLE, Object), CK_RV> {
+    fn fetch_key(&mut self, key_id: String) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
         let key_data =
             default_api::keys_key_id_get(&self.slot.api_config, &key_id).map_err(|err| {
                 error!("Failed to fetch key {}: {:?}", key_id, err);
                 CKR_DEVICE_ERROR
             })?;
 
-        let object = db::object::Object::from_key_data(key_data, key_id);
+        let objects = db::object::from_key_data(key_data, key_id.clone()).map_err(|err| {
+            error!("Failed to convert key {}: {:?}", key_id, err);
+            CKR_DEVICE_ERROR
+        })?;
 
-        let handle = self.db.add_object(object.clone());
+        let mut result = Vec::new();
 
-        Ok((handle, object))
+        for object in objects {
+            let handle = self.db.add_object(object.clone());
+            result.push((handle, object));
+        }
+
+        Ok(result)
     }
 }
 

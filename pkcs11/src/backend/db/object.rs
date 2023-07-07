@@ -1,11 +1,22 @@
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
-use cryptoki_sys::{
-    CK_C_GetMechanismInfo, CKA_ALLOWED_MECHANISMS, CKA_CLASS, CKA_ID, CKA_KEY_TYPE, CKK_EC,
-    CKK_ECDSA, CKK_GENERIC_SECRET, CKK_RSA, CKM_AES_CBC, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG,
+use base64::{
+    alphabet,
+    engine::{self, general_purpose},
+    Engine as _,
 };
-use openapi::models::{KeyMechanism, KeyType, PublicKey};
+
+use base64::engine::GeneralPurpose;
+use cryptoki_sys::{
+    CK_C_GetMechanismInfo, CKA_ALLOWED_MECHANISMS, CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE,
+    CKA_CLASS, CKA_DECRYPT, CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_EXTRACTABLE, CKA_ID,
+    CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
+    CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
+    CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_WRAP_WITH_TRUSTED, CKK_EC, CKK_ECDSA,
+    CKK_GENERIC_SECRET, CKK_RSA, CKM_AES_CBC, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG,
+    CK_UNAVAILABLE_INFORMATION, CKA_ENCRYPT, CKA_VERIFY, CKA_WRAP,
+};
+use openapi::models::{private_key, public_key, KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 
@@ -170,44 +181,334 @@ pub struct Object {
     kind: ObjectKind,
 }
 
-impl Object {
-    pub fn from_key_data(key_data: PublicKey, id: String) -> Self {
-        let mut attrs = HashMap::new();
+const KEYTYPE_EC_P224: &str = "1.3.132.0.33";
+const KEYTYPE_EC_P256: &str = "1.2.840.10045.3.1.7";
+const KEYTYPE_EC_P384: &str = "1.3.132.0.34";
+const KEYTYPE_EC_P521: &str = "1.3.132.0.35";
+const KEYTYPE_CURVE25519: &str = "1.3.101.112";
 
-        attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
-        attrs.insert(
-            CKA_CLASS,
-            Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
-        );
+fn key_type_to_asn1(key_type: KeyType) -> Result<asn1::ObjectIdentifier, Error> {
+    match key_type {
+        KeyType::EcP224 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P224)
+            .ok_or(Error::KeyData("parsing key".to_string())),
+        KeyType::EcP256 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P256)
+            .ok_or(Error::KeyData("parsing key".to_string())),
+        KeyType::EcP384 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P384)
+            .ok_or(Error::KeyData("parsing key".to_string())),
+        KeyType::EcP521 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P521)
+            .ok_or(Error::KeyData("parsing key".to_string())),
+        KeyType::Curve25519 => asn1::ObjectIdentifier::from_string(KEYTYPE_CURVE25519)
+            .ok_or(Error::KeyData("parsing key".to_string())),
+        _ => Err(Error::KeyData("key_type".to_string())),
+    }
+}
 
-        let key_type: CK_KEY_TYPE = match key_data.r#type {
-            KeyType::Rsa => CKK_RSA,
-            KeyType::Curve25519 => CKK_EC,
-            KeyType::EcP224 => CKK_ECDSA,
-            KeyType::EcP256 => CKK_ECDSA,
-            KeyType::EcP384 => CKK_ECDSA,
-            KeyType::EcP521 => CKK_ECDSA,
-            KeyType::Generic => CKK_GENERIC_SECRET,
-        };
-        attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
+#[derive(Debug, Clone)]
+pub struct KeyPair {
+    pub public_key: Object,
+    pub private_key: Object,
+}
 
-        let allowed_mechanism: Vec<CK_MECHANISM_TYPE> = key_data
-            .mechanisms
-            .iter()
-            .map(|mech| Mechanism::from_api_mech(mech).ck_type())
-            .collect();
+/*
+   privKey := &CryptoObject{}
+   // object.Type = TokenObject
+   privKey.Handle = nextObjectHandle()
+   privKey.ID = keyID
+   privKey.Attributes = Attributes{}
+   privKey.Attributes.Set(
+       &Attribute{CKA_LABEL, []byte(keyID)},
+       &Attribute{CKA_CLASS, ulongToArr(CKO_PRIVATE_KEY)},
+       &Attribute{CKA_ID, []byte(keyID)},
+       &Attribute{CKA_SUBJECT, nil},
+       &Attribute{CKA_KEY_GEN_MECHANISM, ulongToArr(CK_UNAVAILABLE_INFORMATION)},
+       &Attribute{CKA_LOCAL, FalseAttr},
+       &Attribute{CKA_PRIVATE, TrueAttr},
+       &Attribute{CKA_MODIFIABLE, FalseAttr},
+       &Attribute{CKA_TOKEN, TrueAttr},
+       &Attribute{CKA_ALWAYS_AUTHENTICATE, FalseAttr},
+       &Attribute{CKA_SENSITIVE, TrueAttr},
+       &Attribute{CKA_ALWAYS_SENSITIVE, TrueAttr},
+       &Attribute{CKA_EXTRACTABLE, FalseAttr},
+       &Attribute{CKA_NEVER_EXTRACTABLE, TrueAttr},
+   )
+   switch key.Type {
+   case api.KEYTYPE_RSA:
+       data, ok := key.GetKeyOk()
+       if !ok {
+           return nil, NewError("token.GetObjects", "Can't parse key data", CKR_DEVICE_ERROR)
+       }
+       modulusB64, ok := data.GetModulusOk()
+       if !ok {
+           return nil, NewError("token.GetObjects", "Can't parse key modulus", CKR_DEVICE_ERROR)
+       }
+       pubExpB64, ok := data.GetPublicExponentOk()
+       if !ok {
+           return nil, NewError("token.GetObjects", "Can't parse public key exponent", CKR_DEVICE_ERROR)
+       }
+       modulus, err := base64.StdEncoding.DecodeString(*modulusB64)
+       if err != nil {
+           return nil, err
+       }
+       pubExp, err := base64.StdEncoding.DecodeString(*pubExpB64)
+       if err != nil {
+           return nil, err
+       }
+       privKey.Attributes.Set(
+           &Attribute{CKA_KEY_TYPE, ulongToArr(CKK_RSA)},
+           &Attribute{CKA_DERIVE, FalseAttr},
+           &Attribute{CKA_DECRYPT, TrueAttr},
+           &Attribute{CKA_SIGN, TrueAttr},
+           &Attribute{CKA_SIGN_RECOVER, FalseAttr},
+           &Attribute{CKA_UNWRAP, FalseAttr},
+           &Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
+           &Attribute{CKA_MODULUS, modulus},
+           &Attribute{CKA_PUBLIC_EXPONENT, pubExp},
+           &Attribute{CKA_MODULUS_BITS, nil},
+       )
+   case api.KEYTYPE_CURVE25519,
+       api.KEYTYPE_EC_P224,
+       api.KEYTYPE_EC_P256,
+       api.KEYTYPE_EC_P384,
+       api.KEYTYPE_EC_P521:
+       ecPointBytes, err := base64.StdEncoding.DecodeString(key.Key.GetData())
+       if err != nil {
+           return nil, err
+       }
+       ecPointSerialized, err := asn1.Marshal(ecPointBytes)
+       if err != nil {
+           return nil, err
+       }
+       ecParams, err := utils.KeyTypeToASN1Bytes(key.Type)
+       if err != nil {
+           return nil, err
+       }
+       var keyType CK_ULONG
+       if key.Type == api.KEYTYPE_CURVE25519 {
+           keyType = CKK_EC_EDWARDS
+       } else {
+           keyType = CKK_EC
+       }
+       privKey.Attributes.Set(
+           &Attribute{CKA_KEY_TYPE, ulongToArr(keyType)},
+           &Attribute{CKA_DERIVE, TrueAttr},
+           &Attribute{CKA_DECRYPT, FalseAttr},
+           &Attribute{CKA_SIGN, TrueAttr},
+           &Attribute{CKA_SIGN_RECOVER, FalseAttr},
+           &Attribute{CKA_UNWRAP, FalseAttr},
+           &Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
+           &Attribute{CKA_EC_PARAMS, ecParams},
+           &Attribute{CKA_EC_POINT, ecPointSerialized},
+       )
+   default:
+       return nil, NewError("token.GetObjects", "Invalid algorithm", CKR_DEVICE_ERROR)
+   }
+   pubKey := &CryptoObject{}
+   pubKey.Handle = nextObjectHandle()
+   pubKey.ID = keyID
+   pubKey.Attributes = Attributes{}
+   for k, v := range privKey.Attributes {
+       pubKey.Attributes[k] = v
+   }
+   pubKey.Attributes.Set(
+       &Attribute{CKA_CLASS, ulongToArr(CKO_PUBLIC_KEY)},
+       &Attribute{CKA_PRIVATE, FalseAttr},
+       &Attribute{CKA_SENSITIVE, FalseAttr},
+       &Attribute{CKA_ALWAYS_SENSITIVE, FalseAttr},
+       &Attribute{CKA_EXTRACTABLE, FalseAttr},
+       &Attribute{CKA_NEVER_EXTRACTABLE, FalseAttr},
+       &Attribute{CKA_DECRYPT, FalseAttr},
+       &Attribute{CKA_ENCRYPT, FalseAttr},
+       &Attribute{CKA_SIGN, FalseAttr},
+       &Attribute{CKA_VERIFY, FalseAttr},
+       &Attribute{CKA_DERIVE, FalseAttr},
+       &Attribute{CKA_SIGN_RECOVER, FalseAttr},
+       &Attribute{CKA_UNWRAP, FalseAttr},
+       &Attribute{CKA_WRAP, FalseAttr},
+       &Attribute{CKA_WRAP_WITH_TRUSTED, FalseAttr},
+   )
+   token.AddObject(privKey)
+   token.AddObject(pubKey)
+*/
+#[derive(Debug)]
+pub enum Error {
+    KeyData(String),
+    Decode(base64::DecodeError),
+    Asn1Write(asn1::WriteError),
+    Asn1Parse(asn1::ParseError),
+    UnsupportedType,
+}
 
-        attrs.insert(
-            CKA_ALLOWED_MECHANISMS,
-            Attr::from_ck_mechanism_type_vec(allowed_mechanism),
-        );
+fn configure_rsa(private_key: &mut Object, key_data: PublicKey) -> Result<(), Error> {
+    let key_data = key_data.key;
 
-        Self {
-            attrs,
-            kind: ObjectKind::Key,
+    let modulus = key_data
+        .modulus
+        .ok_or(Error::KeyData("modulus".to_string()))?;
+    let public_exponent = key_data
+        .public_exponent
+        .ok_or(Error::KeyData("public_exponent".to_string()))?;
+    let modulus = general_purpose::STANDARD
+        .decode(modulus.as_bytes())
+        .map_err(Error::Decode)?;
+    let public_exponent = general_purpose::STANDARD
+        .decode(public_exponent.as_bytes())
+        .map_err(Error::Decode)?;
+
+    private_key
+        .attrs
+        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(cryptoki_sys::CKK_RSA));
+    private_key.attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_DECRYPT, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_SIGN, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
+    private_key
+        .attrs
+        .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_MODULUS, Attr::Bytes(modulus));
+    private_key
+        .attrs
+        .insert(CKA_PUBLIC_EXPONENT, Attr::Bytes(public_exponent));
+    Ok(())
+}
+
+fn configure_ec(private_key: &mut Object, key_data: PublicKey) -> Result<(), Error> {
+    let ec_points = key_data
+        .key
+        .data
+        .ok_or(Error::KeyData("data".to_string()))?;
+
+    let ec_point_bytes = general_purpose::STANDARD
+        .decode(ec_points.as_bytes())
+        .map_err(Error::Decode)?;
+    let ec_point_serialized = asn1::write(|w| {
+        w.write_element(&asn1::SequenceWriter::new(&|w| {
+            w.write_element(&ec_point_bytes.as_slice())?;
+            Ok(())
+        }))
+    })
+    .map_err(Error::Asn1Write)?;
+
+    let key_params = key_type_to_asn1(key_data.r#type)?;
+    let ec_params = asn1::write(|w| {
+        w.write_element(&asn1::SequenceWriter::new(&|w| {
+            w.write_element(&key_params)?;
+            Ok(())
+        }))
+    })
+    .map_err(Error::Asn1Write)?;
+
+    let key_type = match key_data.r#type {
+        KeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
+        _ => cryptoki_sys::CKK_EC,
+    };
+
+    private_key
+        .attrs
+        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
+    private_key.attrs.insert(CKA_DERIVE, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_DECRYPT, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_SIGN, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
+    private_key
+        .attrs
+        .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
+    private_key
+        .attrs
+        .insert(CKA_EC_PARAMS, Attr::Bytes(ec_params));
+    private_key
+        .attrs
+        .insert(CKA_EC_POINT, Attr::Bytes(ec_point_serialized));
+    Ok(())
+}
+
+pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Error> {
+    let mut public_key = Object {
+        attrs: HashMap::new(),
+        kind: ObjectKind::Key,
+    };
+
+    let mut private_key = Object {
+        attrs: HashMap::new(),
+        kind: ObjectKind::Key,
+    };
+
+    private_key
+        .attrs
+        .insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
+    private_key.attrs.insert(
+        CKA_CLASS,
+        Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
+    );
+    private_key
+        .attrs
+        .insert(CKA_LABEL, Attr::Bytes(id.as_bytes().to_vec()));
+    private_key.attrs.insert(
+        CKA_KEY_GEN_MECHANISM,
+        Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
+    );
+    private_key.attrs.insert(CKA_LOCAL, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_PRIVATE, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_MODIFIABLE, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_TOKEN, Attr::CK_TRUE);
+    private_key
+        .attrs
+        .insert(CKA_ALWAYS_AUTHENTICATE, Attr::CK_FALSE);
+    private_key.attrs.insert(CKA_SENSITIVE, Attr::CK_TRUE);
+    private_key
+        .attrs
+        .insert(CKA_ALWAYS_SENSITIVE, Attr::CK_TRUE);
+    private_key.attrs.insert(CKA_EXTRACTABLE, Attr::CK_FALSE);
+    private_key
+        .attrs
+        .insert(CKA_NEVER_EXTRACTABLE, Attr::CK_TRUE);
+
+    match key_data.r#type {
+        KeyType::Rsa => {
+            configure_rsa(&mut private_key, key_data)?;
+        }
+        KeyType::Curve25519
+        | KeyType::EcP224
+        | KeyType::EcP256
+        | KeyType::EcP384
+        | KeyType::EcP521 => {
+            configure_ec(&mut private_key, key_data)?;
+        }
+        _ => {
+            return Err(Error::UnsupportedType);
         }
     }
 
+    public_key
+        .attrs
+        .insert(CKA_CLASS, Attr::from_ck_object_class(cryptoki_sys::CKO_PUBLIC_KEY));
+    public_key.attrs.insert(CKA_PRIVATE, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_SENSITIVE, Attr::CK_FALSE);
+    public_key
+        .attrs
+        .insert(CKA_ALWAYS_SENSITIVE, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_EXTRACTABLE, Attr::CK_FALSE);
+    public_key
+        .attrs
+        .insert(CKA_NEVER_EXTRACTABLE, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_DECRYPT, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_ENCRYPT, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_SIGN, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_VERIFY, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
+    public_key.attrs.insert(CKA_WRAP, Attr::CK_FALSE);
+    public_key
+        .attrs
+        .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
+    
+
+    Ok(vec![public_key, private_key])
+}
+
+impl Object {
     pub fn attr(&self, attr_type: cryptoki_sys::CK_ATTRIBUTE_TYPE) -> Option<&Attr> {
         self.attrs.get(&attr_type)
     }

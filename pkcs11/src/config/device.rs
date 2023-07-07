@@ -1,5 +1,3 @@
-use crate::backend::db::Db;
-
 #[derive(Debug, Clone)]
 pub struct Device {
     pub log_file: Option<String>,

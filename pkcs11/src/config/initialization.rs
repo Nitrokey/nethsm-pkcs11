@@ -1,5 +1,3 @@
-use crate::backend::db::Db;
-
 use super::device::{Device, Slot};
 
 const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
@@ -8,7 +6,6 @@ const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
 pub enum InitializationError {
     Config(crate::config::config_file::ConfigError),
     Reqwest(reqwest::Error),
-    Db(crate::backend::db::Error),
 }
 
 pub fn initialize_configuration() -> Result<Device, InitializationError> {
