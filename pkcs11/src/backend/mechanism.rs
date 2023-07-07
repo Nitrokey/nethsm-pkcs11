@@ -2,11 +2,13 @@ use cryptoki_sys::{
     CKM_MD5, CKM_RSA_PKCS_OAEP, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512, CKM_SHA_1,
     CK_MECHANISM_TYPE,
 };
+use log::trace;
 use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+#[derive(Debug)]
 pub enum CkRawError {
     BufTooSmall,
     MechParamTypeMismatch,
@@ -45,6 +47,7 @@ impl CkRawMechanism {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     CkRaw(CkRawError),
     DigestMechMismatch,
@@ -173,7 +176,7 @@ impl Mechanism {
                 let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>() }
                     .map_err(Error::CkRaw)?;
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
-
+                trace!("params.hashAlg: {:?}", params.hashAlg);
                 Self::RsaPkcsPss(
                     MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
                 )

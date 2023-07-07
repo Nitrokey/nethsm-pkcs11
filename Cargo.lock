@@ -27,6 +27,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "asn1"
+version = "0.15.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de594fb2adce376d7955c41e273e1ba22b0476b8763c383362b99c3d78fee593"
+dependencies = [
+ "asn1_derive",
+]
+
+[[package]]
+name = "asn1_derive"
+version = "0.15.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc6da21a2122ddd982cab7a7a73b961d12398e96c2faae5cd4d62593a5e7342f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.23",
+]
+
+[[package]]
 name = "autocfg"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -64,6 +84,12 @@ checksum = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
 dependencies = [
  "byteorder",
 ]
+
+[[package]]
+name = "base64"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
 
 [[package]]
 name = "bitflags"
@@ -823,6 +849,8 @@ dependencies = [
 name = "nethsm_pkcs11"
 version = "0.1.0"
 dependencies = [
+ "asn1",
+ "base64 0.21.2",
  "cryptoki-sys",
  "env_logger",
  "lazy_static",
@@ -1175,7 +1203,7 @@ version = "0.9.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f88643aea3c1343c804950d7bf983bd2067f5ab59db6d613a08e05572f2714ab"
 dependencies = [
- "base64",
+ "base64 0.10.1",
  "bytes",
  "cookie",
  "cookie_store",

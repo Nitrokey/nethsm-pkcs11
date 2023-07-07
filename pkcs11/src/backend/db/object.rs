@@ -183,6 +183,7 @@ pub enum ObjectKind {
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     kind: ObjectKind,
+    pub id: String,
 }
 
 const KEYTYPE_EC_P224: &str = "1.3.132.0.33";
@@ -459,11 +460,13 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     let mut public_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::Key,
+        id: id.clone(),
     };
 
     let private_key = Object {
         attrs,
         kind: ObjectKind::Key,
+        id,
     };
 
     public_key.attrs.insert(

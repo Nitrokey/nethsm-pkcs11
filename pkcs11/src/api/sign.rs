@@ -1,19 +1,35 @@
 use log::{error, trace};
 
-use crate::{data::SESSION_MANAGER, lock_mutex};
+use crate::{
+    backend::mechanism::{CkRawMechanism, Mechanism},
+    data::SESSION_MANAGER,
+    lock_mutex,
+};
 
 pub extern "C" fn C_SignInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_SignInit() called");
+    trace!("C_SignInit() called with hKey {} and mech", hKey);
     if pMechanism.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
-    let manager = lock_mutex!(SESSION_MANAGER);
+    trace!("C_SignInit() mech: {:?}", unsafe { *pMechanism });
 
-    let session = match manager.get_session(hSession) {
+    let raw_mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+
+    let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
+        Ok(mech) => mech,
+        Err(e) => {
+            error!("C_SignInit() failed to convert mechanism: {:?}", e);
+            return cryptoki_sys::CKR_MECHANISM_INVALID;
+        }
+    };
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
         Some(session) => session,
         None => {
             error!(
@@ -24,7 +40,7 @@ pub extern "C" fn C_SignInit(
         }
     };
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    session.sign_init(&mech, hKey)
 }
 
 pub extern "C" fn C_Sign(
@@ -39,7 +55,29 @@ pub extern "C" fn C_Sign(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("C_Sign() called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
+
+    let signature = match session.sign(data) {
+        Ok(signature) => signature,
+        Err(err) => return err,
+    };
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
+        *pulSignatureLen = signature.len() as u64;
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_SignUpdate(

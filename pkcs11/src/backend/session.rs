@@ -1,18 +1,26 @@
 use std::collections::HashMap;
 
+use base64::{
+    alphabet,
+    engine::{self, general_purpose},
+    Engine as _,
+};
 use cryptoki_sys::{
     CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_OK, CKS_RO_PUBLIC_SESSION,
     CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
 };
-use log::error;
+use log::{error, trace};
 use openapi::apis::default_api;
 
 use crate::config::device::Slot;
 
-use super::db::{
-    self,
-    attr::{CkRawAttr, CkRawAttrTemplate},
-    Db, Object, ObjectHandle,
+use super::{
+    db::{
+        self,
+        attr::{CkRawAttr, CkRawAttrTemplate},
+        Db, Object, ObjectHandle,
+    },
+    mechanism::Mechanism,
 };
 
 #[derive(Clone, Debug)]
@@ -139,6 +147,57 @@ impl Session {
         result
     }
 
+    pub fn sign_init(&mut self, mechanism: &Mechanism, key_handle: CK_OBJECT_HANDLE) -> CK_RV {
+        if self.sign_ctx.is_some() {
+            return cryptoki_sys::CKR_OPERATION_ACTIVE;
+        }
+
+        self.sign_ctx = Some(SignCtx {
+            mechanism: *mechanism,
+            key_handle,
+        });
+
+        cryptoki_sys::CKR_OK
+    }
+
+    pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+        let sign_ctx = self
+            .sign_ctx
+            .as_ref()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        let key = self
+            .db
+            .object(ObjectHandle::from(sign_ctx.key_handle))
+            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)?;
+
+        let b64_message = general_purpose::STANDARD.encode(data);
+
+        let mode = sign_ctx.mechanism.sign_name().ok_or(CKR_ARGUMENTS_BAD)?;
+        trace!("Signing with mode: {:?}", mode);
+
+        let signature = default_api::keys_key_id_sign_post(
+            &self.slot.api_config,
+            &key.id,
+            openapi::models::SignRequestData {
+                mode,
+                message: b64_message,
+            },
+        )
+        .map_err(|err| {
+            error!("Failed to sign: {:?}", err);
+            CKR_DEVICE_ERROR
+        })?;
+
+        let signature = general_purpose::STANDARD
+            .decode(signature.signature)
+            .map_err(|err| {
+                error!("Failed to decode signature: {:?}", err);
+                CKR_DEVICE_ERROR
+            })?;
+        Ok(signature)
+    }
+
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {
         self.db.object(ObjectHandle::from(handle))
     }
@@ -230,7 +289,10 @@ fn parse_str_from_attr(attr: &CkRawAttr) -> Result<String, CK_RV> {
 }
 
 #[derive(Clone, Debug)]
-pub struct SignCtx {}
+pub struct SignCtx {
+    pub mechanism: Mechanism,
+    pub key_handle: CK_OBJECT_HANDLE,
+}
 #[derive(Clone, Debug)]
 pub struct EncryptCtx {}
 #[derive(Clone, Debug)]
