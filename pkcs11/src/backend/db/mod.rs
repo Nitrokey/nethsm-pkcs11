@@ -1,4 +1,5 @@
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
 // modified from https://github.com/aws/aws-nitro-enclaves-acm
 

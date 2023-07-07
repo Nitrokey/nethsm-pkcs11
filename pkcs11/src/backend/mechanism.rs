@@ -1,3 +1,7 @@
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2023 Nitrokey
+// SPDX-License-Identifier: Apache-2.0
+
 use cryptoki_sys::{
     CKM_MD5, CKM_RSA_PKCS_OAEP, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512, CKM_SHA_1,
     CK_MECHANISM_TYPE,
@@ -6,8 +10,6 @@ use log::trace;
 use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
 #[derive(Debug)]
 pub enum CkRawError {
     BufTooSmall,
@@ -202,13 +204,6 @@ impl Mechanism {
 
     pub fn ck_type(&self) -> cryptoki_sys::CK_MECHANISM_TYPE {
         match self {
-            // Self::Digest(digest) => match digest {
-            //     MechDigest::Sha1 => cryptoki_sys::CKM_SHA_1,
-            //     MechDigest::Sha224 => cryptoki_sys::CKM_SHA224,
-            //     MechDigest::Sha256 => cryptoki_sys::CKM_SHA256,
-            //     MechDigest::Sha384 => cryptoki_sys::CKM_SHA384,
-            //     MechDigest::Sha512 => cryptoki_sys::CKM_SHA512,
-            // },
             Self::AesCbc => cryptoki_sys::CKM_AES_CBC,
             Self::RsaPkcs => cryptoki_sys::CKM_RSA_PKCS,
 

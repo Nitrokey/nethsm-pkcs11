@@ -1,3 +1,4 @@
+use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 
 use crate::{
@@ -51,9 +52,6 @@ pub extern "C" fn C_Sign(
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Sign() called");
-    if pData.is_null() || pSignature.is_null() || pulSignatureLen.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
 
     let mut manager = lock_mutex!(SESSION_MANAGER);
 
@@ -65,6 +63,12 @@ pub extern "C" fn C_Sign(
         }
     };
 
+    // TODO: if pSignature is NULL, then this function should return the maximum length of the signature
+    if pData.is_null() || pSignature.is_null() || pulSignatureLen.is_null() {
+        session.sign_clear();
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
     let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
 
     let signature = match session.sign(data) {
@@ -72,9 +76,16 @@ pub extern "C" fn C_Sign(
         Err(err) => return err,
     };
 
+    if signature.len() > unsafe { *pulSignatureLen } as usize {
+        unsafe {
+            std::ptr::write(pulSignatureLen, signature.len() as u64);
+        }
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
     unsafe {
         std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
-        *pulSignatureLen = signature.len() as u64;
+        std::ptr::write(pulSignatureLen, signature.len() as u64);
     }
 
     cryptoki_sys::CKR_OK
@@ -86,10 +97,31 @@ pub extern "C" fn C_SignUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignUpdate() called");
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("C_Sign() called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
     if pPart.is_null() {
+        session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    let part = unsafe { std::slice::from_raw_parts(pPart, ulPartLen as usize) };
+
+    match session.sign_update(part) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(err) => {
+            session.sign_clear();
+            err
+        }
+    }
 }
 
 pub extern "C" fn C_SignFinal(
@@ -99,11 +131,36 @@ pub extern "C" fn C_SignFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignFinal() called");
 
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("C_Sign() called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    // TODO: if pSignature is NULL, then this function should return the maximum length of the signature
     if pSignature.is_null() || pulSignatureLen.is_null() {
+        session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    let signature = match session.sign_final() {
+        Ok(signature) => signature,
+        Err(err) => {
+            session.sign_clear();
+            return err;
+        }
+    };
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
+        std::ptr::write(pulSignatureLen, signature.len() as u64);
+    }
+
+    CKR_OK
 }
 
 pub extern "C" fn C_SignRecoverInit(

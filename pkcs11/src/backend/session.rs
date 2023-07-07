@@ -153,6 +153,7 @@ impl Session {
         }
 
         self.sign_ctx = Some(SignCtx {
+            data: Vec::new(),
             mechanism: *mechanism,
             key_handle,
         });
@@ -160,18 +161,27 @@ impl Session {
         cryptoki_sys::CKR_OK
     }
 
-    pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+    pub fn sign_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {
         let sign_ctx = self
             .sign_ctx
-            .as_ref()
+            .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+        sign_ctx.data.extend_from_slice(data);
 
+        Ok(())
+    }
+
+    pub fn sign_final(&mut self) -> Result<Vec<u8>, CK_RV> {
+        let sign_ctx = self
+            .sign_ctx
+            .take()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
         let key = self
             .db
             .object(ObjectHandle::from(sign_ctx.key_handle))
             .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)?;
 
-        let b64_message = general_purpose::STANDARD.encode(data);
+        let b64_message = general_purpose::STANDARD.encode(sign_ctx.data.as_slice());
 
         let mode = sign_ctx.mechanism.sign_name().ok_or(CKR_ARGUMENTS_BAD)?;
         trace!("Signing with mode: {:?}", mode);
@@ -196,6 +206,15 @@ impl Session {
                 CKR_DEVICE_ERROR
             })?;
         Ok(signature)
+    }
+
+    pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+        self.sign_update(data)?;
+        self.sign_final()
+    }
+
+    pub fn sign_clear(&mut self) {
+        self.sign_ctx = None;
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {
@@ -292,6 +311,7 @@ fn parse_str_from_attr(attr: &CkRawAttr) -> Result<String, CK_RV> {
 pub struct SignCtx {
     pub mechanism: Mechanism,
     pub key_handle: CK_OBJECT_HANDLE,
+    pub data: Vec<u8>,
 }
 #[derive(Clone, Debug)]
 pub struct EncryptCtx {}
