@@ -4,6 +4,9 @@
 
 pub mod attr;
 pub mod object;
+use std::collections::HashMap;
+
+use cryptoki_sys::CK_OBJECT_HANDLE;
 pub use object::{Object, ObjectHandle, ObjectKind};
 use openapi::apis::default_api::{self, KeysGetError, KeysKeyIdGetError};
 
@@ -70,35 +73,37 @@ pub enum Error {
 
 #[derive(Debug, Clone)]
 pub struct Db {
-    objects: Vec<Object>,
+    objects: HashMap<CK_OBJECT_HANDLE, Object>,
+    next_handle: CK_OBJECT_HANDLE,
 }
 
 impl Db {
-    pub fn new(api_config: openapi::apis::configuration::Configuration) -> Result<Self, Error> {
-        let mut objects = Vec::new();
-
-        let keys = default_api::keys_get(&api_config, None).map_err(Error::ListKeys)?;
-
-        for key in keys.iter() {
-            let key_data =
-                default_api::keys_key_id_get(&api_config, &key.key).map_err(Error::GetKey)?;
-            objects.push(Object::from_key_data(key_data, key.key.clone()));
+    pub fn new() -> Self {
+        Self {
+            objects: HashMap::new(),
+            next_handle: 1,
         }
+    }
 
-        Ok(Self { objects })
+    pub fn clear(&mut self) {
+        self.objects.clear();
     }
 
     pub fn enumerate(&self) -> impl Iterator<Item = (ObjectHandle, &Object)> {
         self.objects
             .iter()
             .enumerate()
-            .map(|(i, o)| (ObjectHandle::from(i), o))
+            .map(|(_, (handle, object))| (ObjectHandle::from(*handle), object))
+    }
+
+    pub fn add_object(&mut self, object: Object) -> CK_OBJECT_HANDLE {
+        let handle = self.next_handle;
+        self.objects.insert(handle, object);
+        self.next_handle += 1;
+        handle
     }
 
     pub fn object(&self, handle: ObjectHandle) -> Option<&Object> {
-        if self.objects.len() <= usize::from(handle) {
-            return None;
-        }
-        Some(&self.objects[usize::from(handle)])
+        self.objects.get(&CK_OBJECT_HANDLE::from(handle))
     }
 }

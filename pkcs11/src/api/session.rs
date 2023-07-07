@@ -21,14 +21,17 @@ pub extern "C" fn C_OpenSession(
         return cryptoki_sys::CKR_SESSION_PARALLEL_NOT_SUPPORTED;
     }
 
-    if get_slot(slotID as usize).is_err() {
-        error!("C_OpenSession() called with invalid slotID {}.", slotID);
-        return cryptoki_sys::CKR_SLOT_ID_INVALID;
-    }
+    let slot = match get_slot(slotID as usize) {
+        Ok(slot) => slot,
+        Err(_) => {
+            error!("C_OpenSession() called with invalid slotID {}.", slotID);
+            return cryptoki_sys::CKR_SLOT_ID_INVALID;
+        }
+    };
 
     // create the session in memory
     let mut manager = lock_mutex!(SESSION_MANAGER);
-    let session = manager.create_session(slotID, flags);
+    let session = manager.create_session(slotID, slot, flags);
 
     unsafe {
         *phSession = session;

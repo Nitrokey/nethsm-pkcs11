@@ -1,4 +1,6 @@
-use log::trace;
+use log::{error, trace};
+
+use crate::{backend::db::attr::CkRawAttrTemplate, data::SESSION_MANAGER, lock_mutex};
 
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -6,7 +8,31 @@ pub extern "C" fn C_FindObjectsInit(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsInit() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if pTemplate.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_FindObjectsInit() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let template = if !pTemplate.is_null() {
+        Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) })
+    } else {
+        None
+    };
+    trace!("C_FindObjectsInit() template: {:?}", template);
+    session.enum_init(template)
 }
 
 pub extern "C" fn C_FindObjects(

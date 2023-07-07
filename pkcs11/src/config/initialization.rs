@@ -38,7 +38,6 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
             api_config: api_config.clone(),
             description: slot.description.clone(),
             label: slot.label.clone(),
-            db: Db::new(api_config).map_err(InitializationError::Db)?,
         });
     }
 

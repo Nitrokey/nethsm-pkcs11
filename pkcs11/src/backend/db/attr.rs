@@ -56,6 +56,7 @@ impl CkRawAttr {
     }
 }
 
+#[derive(Debug)]
 pub struct CkRawAttrTemplate {
     ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: usize,

@@ -11,5 +11,4 @@ pub struct Slot {
     pub label: String,
     pub description: Option<String>,
     pub api_config: openapi::apis::configuration::Configuration,
-    pub db : Db,
 }
