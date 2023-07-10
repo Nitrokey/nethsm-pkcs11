@@ -145,12 +145,19 @@ pub extern "C" fn C_GetTokenInfo(
         }
     };
 
+    let mut flags = CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_RNG;
+
+    // if the slot has no password, set the login required flag
+    if !slot.is_connected() {
+        flags |= cryptoki_sys::CKF_LOGIN_REQUIRED;
+    }
+
     let token_info = CK_TOKEN_INFO {
         label: padded_str!(slot.label, 32),
         manufacturerID: padded_str!(info.vendor, 32),
         model: padded_str!(info.product, 16),
         serialNumber: padded_str!("unknown", 16),
-        flags: CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_RNG,
+        flags,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
         firmwareVersion: DEFAULT_FIRMWARE_VERSION,
         ..Default::default()

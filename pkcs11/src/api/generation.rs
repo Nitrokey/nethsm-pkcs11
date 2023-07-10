@@ -63,13 +63,14 @@ pub extern "C" fn C_DeriveKey(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+// we silently ignore this function as NetHSM handles the random number generation
 pub extern "C" fn C_SeedRandom(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSeed: cryptoki_sys::CK_BYTE_PTR,
     ulSeedLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SeedRandom() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_GenerateRandom(

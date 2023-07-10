@@ -5,7 +5,7 @@
 pub mod decrypt;
 pub mod digest;
 pub mod encrypt;
-pub mod key;
+pub mod generation;
 pub mod object;
 pub mod pin;
 pub mod session;

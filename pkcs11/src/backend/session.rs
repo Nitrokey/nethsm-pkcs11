@@ -177,6 +177,9 @@ impl Session {
             None => Err(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED),
         }
     }
+    pub fn enum_final(&mut self) {
+        self.enum_ctx = None;
+    }
 
     pub fn sign_init(&mut self, mechanism: &Mechanism, key_handle: CK_OBJECT_HANDLE) -> CK_RV {
         if self.sign_ctx.is_some() {

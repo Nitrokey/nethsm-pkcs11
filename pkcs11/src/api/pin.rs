@@ -1,3 +1,7 @@
+/*
+    We won't implement these function as it is not a feature of NetHSM.
+*/
+
 use log::trace;
 
 pub extern "C" fn C_InitPIN(
