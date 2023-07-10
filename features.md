@@ -56,7 +56,7 @@
 | Feature         | Status | Notes                                                        |
 | --------------- | ------ | ------------------------------------------------------------ |
 | C_EncryptInit   | ✔️      |                                                              |
-| C_Encrypt       | ⚠️      | Getting the size by setting pData to null is not implemented |
+| C_Encrypt       | ⚠️      | Getting the size by setting pData to null is not implemented. TODO : map the "CBC: argument length" to CKR_DATA_LEN_RANGE |
 | C_EncryptUpdate | 🗓️      |                                                              |
 | C_EncryptFinal  | 🗓️      |                                                              |
 

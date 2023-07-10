@@ -43,6 +43,8 @@ impl EncryptCtx {
             .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
         trace!("iv: {:?}", iv);
 
+        // TODO : map the "CBC: argument length" to CKR_DATA_LEN_RANGE
+
         let output = default_api::keys_key_id_encrypt_post(
             &self.api_config,
             &self.key_id,
