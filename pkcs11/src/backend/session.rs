@@ -156,7 +156,7 @@ impl Session {
             }
         };
 
-        self.sign_ctx = Some(SignCtx::new(*mechanism, key_id, self.slot.clone()));
+        self.sign_ctx = Some(SignCtx::new(mechanism.clone(), key_id, self.slot.clone()));
 
         cryptoki_sys::CKR_OK
     }
@@ -187,6 +187,118 @@ impl Session {
 
     pub fn sign_clear(&mut self) {
         self.sign_ctx = None;
+    }
+
+    pub fn encrypt_init(&mut self, mechanism: &Mechanism, key_handle: CK_OBJECT_HANDLE) -> CK_RV {
+        if self.encrypt_ctx.is_some() {
+            return cryptoki_sys::CKR_OPERATION_ACTIVE;
+        }
+
+        // get key id from the handle
+
+        let key_id = match self
+            .db
+            .object(ObjectHandle::from(key_handle))
+            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
+        {
+            Ok(object) => object.id.clone(),
+            Err(err) => {
+                error!("Failed to get key: {:?}", err);
+                return err;
+            }
+        };
+
+        self.encrypt_ctx = Some(EncryptCtx::new(
+            mechanism.clone(),
+            key_id,
+            self.slot.clone(),
+        ));
+
+        cryptoki_sys::CKR_OK
+    }
+
+    pub fn encrypt_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {
+        let encrypt_ctx = self
+            .encrypt_ctx
+            .as_mut()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        encrypt_ctx.update(data);
+        Ok(())
+    }
+
+    pub fn encrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
+        let encrypt_ctx = self
+            .encrypt_ctx
+            .as_ref()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        encrypt_ctx.encrypt_final()
+    }
+
+    pub fn encrypt(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+        self.encrypt_update(data)?;
+        self.encrypt_final()
+    }
+
+    pub fn encrypt_clear(&mut self) {
+        self.encrypt_ctx = None;
+    }
+
+    pub fn decrypt_init(&mut self, mechanism: &Mechanism, key_handle: CK_OBJECT_HANDLE) -> CK_RV {
+        if self.decrypt_ctx.is_some() {
+            return cryptoki_sys::CKR_OPERATION_ACTIVE;
+        }
+
+        // get key id from the handle
+
+        let key_id = match self
+            .db
+            .object(ObjectHandle::from(key_handle))
+            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
+        {
+            Ok(object) => object.id.clone(),
+            Err(err) => {
+                error!("Failed to get key: {:?}", err);
+                return err;
+            }
+        };
+
+        self.decrypt_ctx = Some(DecryptCtx::new(
+            mechanism.clone(),
+            key_id,
+            self.slot.clone(),
+        ));
+
+        cryptoki_sys::CKR_OK
+    }
+
+    pub fn decrypt_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {
+        let decrypt_ctx = self
+            .decrypt_ctx
+            .as_mut()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        decrypt_ctx.update(data);
+        Ok(())
+    }
+
+    pub fn decrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
+        let decrypt_ctx = self
+            .decrypt_ctx
+            .as_ref()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        decrypt_ctx.decrypt_final()
+    }
+
+    pub fn decrypt(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+        self.decrypt_update(data)?;
+        self.decrypt_final()
+    }
+
+    pub fn decrypt_clear(&mut self) {
+        self.decrypt_ctx = None;
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {

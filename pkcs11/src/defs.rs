@@ -13,7 +13,7 @@ pub const DEFAULT_FIRMWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1
 pub const DEFAULT_HARDWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 
 pub const MECHANISM_LIST: [Mechanism; 7] = [
-    Mechanism::AesCbc,
+    Mechanism::AesCbc(None),
     Mechanism::RsaX509,
     Mechanism::RsaPkcs,
     Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Md5),

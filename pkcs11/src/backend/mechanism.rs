@@ -23,6 +23,7 @@ pub struct CkRawMechanism {
 pub trait MechParams {}
 impl MechParams for cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS {}
 impl MechParams for cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS {}
+impl MechParams for cryptoki_sys::CK_AES_CBC_ENCRYPT_DATA_PARAMS {}
 
 impl CkRawMechanism {
     pub unsafe fn from_raw_ptr_unchecked(ptr: *mut cryptoki_sys::CK_MECHANISM) -> Self {
@@ -90,10 +91,12 @@ impl MechDigest {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+pub type InitializationVector = Option<[u8; 16]>;
+
+#[derive(Clone, Debug)]
 pub enum Mechanism {
     // Digest(MechDigest),
-    AesCbc,
+    AesCbc(InitializationVector),
     RsaPkcs,
     RsaPkcsOaep(MechDigest),
     RsaPkcsPss(MechDigest),
@@ -116,8 +119,8 @@ impl Mechanism {
 
     pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
         match api_mech {
-            KeyMechanism::AesDecryptionCbc => Self::AesCbc,
-            KeyMechanism::AesEncryptionCbc => Self::AesCbc,
+            KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
+            KeyMechanism::AesEncryptionCbc => Self::AesCbc(None),
             KeyMechanism::EcdsaSignature => Self::Ecdsa,
             KeyMechanism::EdDsaSignature => Self::EdDsa,
             KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaPkcsOaep(MechDigest::Md5),
@@ -141,7 +144,7 @@ impl Mechanism {
 
     pub fn to_api_mech(&self) -> Option<KeyMechanism> {
         match self {
-            Self::AesCbc => Some(KeyMechanism::AesDecryptionCbc),
+            Self::AesCbc(_) => Some(KeyMechanism::AesDecryptionCbc),
             Self::RsaPkcs => Some(KeyMechanism::RsaDecryptionPkcs1),
             Self::RsaPkcsOaep(digest) => match digest {
                 MechDigest::Md5 => Some(KeyMechanism::RsaDecryptionOaepMd5),
@@ -167,12 +170,15 @@ impl Mechanism {
 
     pub fn from_ckraw_mech(raw_mech: &CkRawMechanism) -> Result<Self, Error> {
         let mech = match raw_mech.type_() {
-            // cryptoki_sys::CKM_SHA_1 => Self::Digest(MechDigest::Sha1),
-            // cryptoki_sys::CKM_SHA224 => Self::Digest(MechDigest::Sha224),
-            // cryptoki_sys::CKM_SHA256 => Self::Digest(MechDigest::Sha256),
-            // cryptoki_sys::CKM_SHA384 => Self::Digest(MechDigest::Sha384),
-            // cryptoki_sys::CKM_SHA512 => Self::Digest(MechDigest::Sha512),
-            cryptoki_sys::CKM_AES_CBC => Self::AesCbc,
+            cryptoki_sys::CKM_AES_CBC => {
+                let params =
+                    unsafe { raw_mech.params::<cryptoki_sys::CK_AES_CBC_ENCRYPT_DATA_PARAMS>() }
+                        .map_err(Error::CkRaw)?;
+                let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
+
+                let iv = params.iv;
+                Self::AesCbc(Some(iv))
+            }
             cryptoki_sys::CKM_RSA_PKCS => Self::RsaPkcs,
             cryptoki_sys::CKM_RSA_PKCS_PSS => {
                 let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>() }
@@ -204,7 +210,7 @@ impl Mechanism {
 
     pub fn ck_type(&self) -> cryptoki_sys::CK_MECHANISM_TYPE {
         match self {
-            Self::AesCbc => cryptoki_sys::CKM_AES_CBC,
+            Self::AesCbc(_) => cryptoki_sys::CKM_AES_CBC,
             Self::RsaPkcs => cryptoki_sys::CKM_RSA_PKCS,
 
             Self::RsaPkcsPss(_) => cryptoki_sys::CKM_RSA_PKCS_PSS,
@@ -219,7 +225,7 @@ impl Mechanism {
     pub fn ck_info(&self) -> cryptoki_sys::CK_MECHANISM_INFO {
         let (min_bits, max_bits) = match self {
             // Self::Digest(_) => (0, 0),
-            Self::AesCbc => (128, 256),
+            Self::AesCbc(_) => (128, 256),
             Self::RsaPkcs | Self::RsaPkcsPss(_) | Self::RsaX509 => {
                 (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS)
             }
@@ -234,12 +240,20 @@ impl Mechanism {
         }
     }
 
+    // get the initialization vector for AES CBC
+    pub fn iv(&self) -> Option<[u8; 16]> {
+        match self {
+            Self::AesCbc(Some(iv)) => Some(*iv),
+            _ => None,
+        }
+    }
+
     pub fn ck_flags(&self) -> cryptoki_sys::CK_FLAGS {
         // NOTE: Though we have a soft-token, we stamp the cryptoki_sys::CKF_HW flag since most unit
         // tests out there seem to check for it
         cryptoki_sys::CKF_HW
             | match self {
-                Self::AesCbc => cryptoki_sys::CKF_ENCRYPT | cryptoki_sys::CKF_DECRYPT,
+                Self::AesCbc(_) => cryptoki_sys::CKF_ENCRYPT | cryptoki_sys::CKF_DECRYPT,
                 // Self::Digest(_) => cryptoki_sys::CKF_DIGEST,
                 // Single-part CKM_RSA_PKCS also has encrypt/decrypt
                 Self::RsaPkcs => cryptoki_sys::CKF_SIGN | cryptoki_sys::CKF_DECRYPT,
@@ -283,7 +297,7 @@ impl Mechanism {
 
     pub fn encrypt_name(&self) -> Option<EncryptMode> {
         match self {
-            Self::AesCbc => Some(EncryptMode::AesCbc),
+            Self::AesCbc(_) => Some(EncryptMode::AesCbc),
             _ => None,
         }
     }
@@ -291,7 +305,7 @@ impl Mechanism {
     /// Returns the name to use in the api, None if not supported
     pub fn decrypt_name(&self) -> Option<DecryptMode> {
         match self {
-            Self::AesCbc => Some(DecryptMode::AesCbc),
+            Self::AesCbc(_) => Some(DecryptMode::AesCbc),
             Self::RsaX509 => Some(DecryptMode::Raw),
             Self::RsaPkcs => Some(DecryptMode::Pkcs1),
             Self::RsaPkcsOaep(digest) => match digest {
