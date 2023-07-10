@@ -69,8 +69,8 @@ pub struct SlotConfig {
     pub description: Option<String>,
     pub url: String,
     pub user: String,
-    #[serde(deserialize_with = "deserialize_password")]
-    pub password: String,
+    #[serde(deserialize_with = "deserialize_password", default)]
+    pub password: Option<String>,
     #[serde(default)]
     pub danger_insecure_cert: bool,
 }
@@ -78,17 +78,19 @@ pub struct SlotConfig {
 const PASSWORD_ENV_PREFIX: &str = "env:";
 
 // Deserialize a string, but if it starts with "env:" then read the environment variable corresponding to the rest of the string
-fn deserialize_password<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_password<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-
-    if s.starts_with(PASSWORD_ENV_PREFIX) {
-        let var = s.trim_start_matches(PASSWORD_ENV_PREFIX);
-        let val = std::env::var(var).map_err(serde::de::Error::custom)?;
-        return Ok(val);
+    match Option::<String>::deserialize(deserializer)? {
+        Some(s) => {
+            if s.starts_with(PASSWORD_ENV_PREFIX) {
+                let var = s.trim_start_matches(PASSWORD_ENV_PREFIX);
+                let val = std::env::var(var).map_err(serde::de::Error::custom)?;
+                return Ok(Some(val));
+            }
+            Ok(Some(s))
+        }
+        None => Ok(None),
     }
-
-    Ok(s)
 }

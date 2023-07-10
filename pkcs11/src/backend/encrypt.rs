@@ -1,28 +1,29 @@
-use std::sync::Arc;
-
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
 use log::{error, trace};
 use openapi::apis::default_api;
 
 use super::mechanism::Mechanism;
-use crate::config::device::Slot;
 
 #[derive(Clone, Debug)]
 pub struct EncryptCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    pub slot: Arc<Slot>,
+    api_config: openapi::apis::configuration::Configuration,
 }
 
 impl EncryptCtx {
-    pub fn new(mechanism: Mechanism, key_id: String, slot: Arc<Slot>) -> Self {
+    pub fn new(
+        mechanism: Mechanism,
+        key_id: String,
+        api_config: openapi::apis::configuration::Configuration,
+    ) -> Self {
         Self {
             mechanism,
             key_id,
             data: Vec::new(),
-            slot,
+            api_config,
         }
     }
 
@@ -43,7 +44,7 @@ impl EncryptCtx {
         trace!("iv: {:?}", iv);
 
         let output = default_api::keys_key_id_encrypt_post(
-            &self.slot.api_config,
+            &self.api_config,
             &self.key_id,
             openapi::models::EncryptRequestData {
                 mode,

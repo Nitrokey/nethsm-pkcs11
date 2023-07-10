@@ -28,7 +28,7 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
         let api_config = openapi::apis::configuration::Configuration {
             client: reqwest_client,
             base_path: slot.url.clone(),
-            basic_auth: Some((slot.user.clone(), Some(slot.password.clone()))),
+            basic_auth: Some((slot.user.clone(), slot.password.clone())),
             user_agent: Some(DEFAULT_USER_AGENT.to_string()),
             ..Default::default()
         };

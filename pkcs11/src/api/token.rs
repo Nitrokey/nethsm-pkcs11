@@ -7,9 +7,9 @@ use openapi::models::SystemState;
 
 use crate::{
     backend::slot::get_slot,
-    data::DEVICE,
+    data::{DEVICE, SESSION_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    padded_str,
+    lock_mutex, padded_str,
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -257,12 +257,48 @@ pub extern "C" fn C_Login(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Login() called");
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    if pPin.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let pin = unsafe { std::slice::from_raw_parts(pPin, ulPinLen as usize) };
+
+    // parse string to utf8
+
+    let pin = match std::str::from_utf8(pin) {
+        Ok(pin) => pin,
+        Err(_) => return cryptoki_sys::CKR_PIN_INCORRECT,
+    };
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("C_Login() called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    session.login(userType, pin.to_string())
 }
 pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_Logout() called");
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_Logout() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    session.logout()
 }
 
 pub extern "C" fn C_WaitForSlotEvent(

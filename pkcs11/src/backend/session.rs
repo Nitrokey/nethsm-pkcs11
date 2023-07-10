@@ -1,11 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_OK, CKS_RO_PUBLIC_SESSION, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV,
-    CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
+    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
+    CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
+    CK_USER_TYPE,
 };
 use log::error;
-use openapi::apis::default_api;
+use openapi::apis::default_api::{self, KeysGetError};
+use reqwest::StatusCode;
 
 use crate::config::device::Slot;
 
@@ -77,7 +79,7 @@ impl SessionManager {
 #[derive(Clone, Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
-    slot: Arc<Slot>,
+    api_config: openapi::apis::configuration::Configuration,
     pub flags: CK_FLAGS,
     pub state: CK_STATE,
     pub device_error: CK_RV,
@@ -91,8 +93,12 @@ pub struct Session {
 
 impl Session {
     pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
+        // cloning the api config should keep the connection pool as it's behind an Arc
+
+        let api_configuration = slot.api_config.clone();
+
         Self {
-            slot,
+            api_config: api_configuration,
             slot_id,
             flags,
             state: CKS_RO_PUBLIC_SESSION,
@@ -112,6 +118,41 @@ impl Session {
             flags: self.flags,
             ulDeviceError: self.device_error,
         }
+    }
+
+    pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> CK_RV {
+        if user_type != CKU_USER {
+            return CKR_USER_TYPE_INVALID;
+        }
+
+        // we can unwrap here, because the auth should always be set
+        self.api_config.basic_auth = Some((
+            self.api_config.basic_auth.as_ref().unwrap().0.clone(),
+            Some(pin),
+        ));
+
+        // try an authenticated request to see if the pin is correct
+        match default_api::keys_get(&self.api_config, None) {
+            Ok(_) => CKR_OK,
+            Err(err) => match err {
+                openapi::apis::Error::ResponseError(api_response) => match api_response.status {
+                    StatusCode::UNAUTHORIZED => CKR_PIN_INCORRECT,
+                    _ => {
+                        error!("Failed to login: {:?}", api_response);
+                        CKR_DEVICE_ERROR
+                    }
+                },
+                _ => {
+                    error!("Failed to login: {:?}", err);
+                    CKR_DEVICE_ERROR
+                }
+            },
+        }
+    }
+
+    pub fn logout(&mut self) -> CK_RV {
+        self.api_config.basic_auth = None;
+        CKR_OK
     }
 
     pub fn enum_init(&mut self, template: Option<CkRawAttrTemplate>) -> CK_RV {
@@ -156,7 +197,11 @@ impl Session {
             }
         };
 
-        self.sign_ctx = Some(SignCtx::new(mechanism.clone(), key_id, self.slot.clone()));
+        self.sign_ctx = Some(SignCtx::new(
+            mechanism.clone(),
+            key_id,
+            self.api_config.clone(),
+        ));
 
         cryptoki_sys::CKR_OK
     }
@@ -211,7 +256,7 @@ impl Session {
         self.encrypt_ctx = Some(EncryptCtx::new(
             mechanism.clone(),
             key_id,
-            self.slot.clone(),
+            self.api_config.clone(),
         ));
 
         cryptoki_sys::CKR_OK
@@ -267,7 +312,7 @@ impl Session {
         self.decrypt_ctx = Some(DecryptCtx::new(
             mechanism.clone(),
             key_id,
-            self.slot.clone(),
+            self.api_config.clone(),
         ));
 
         cryptoki_sys::CKR_OK
@@ -331,7 +376,7 @@ impl Session {
         // clear the db to not have any double entries
         self.db.clear();
 
-        let keys = default_api::keys_get(&self.slot.api_config, None).map_err(|err| {
+        let keys = default_api::keys_get(&self.api_config, None).map_err(|err| {
             error!("Failed to fetch keys: {:?}", err);
             CKR_DEVICE_ERROR
         })?;
@@ -348,11 +393,10 @@ impl Session {
     }
 
     fn fetch_key(&mut self, key_id: String) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        let key_data =
-            default_api::keys_key_id_get(&self.slot.api_config, &key_id).map_err(|err| {
-                error!("Failed to fetch key {}: {:?}", key_id, err);
-                CKR_DEVICE_ERROR
-            })?;
+        let key_data = default_api::keys_key_id_get(&self.api_config, &key_id).map_err(|err| {
+            error!("Failed to fetch key {}: {:?}", key_id, err);
+            CKR_DEVICE_ERROR
+        })?;
 
         let objects = db::object::from_key_data(key_data, key_id.clone()).map_err(|err| {
             error!("Failed to convert key {}: {:?}", key_id, err);

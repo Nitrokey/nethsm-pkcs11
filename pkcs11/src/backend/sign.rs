@@ -1,27 +1,28 @@
 use super::mechanism::Mechanism;
-use crate::config::device::Slot;
 use base64::{engine::general_purpose, Engine as _};
 use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
 use log::{error, trace};
 use openapi::apis::default_api;
-
-use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct SignCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    pub slot: Arc<Slot>,
+    pub api_config: openapi::apis::configuration::Configuration,
 }
 
 impl SignCtx {
-    pub fn new(mechanism: Mechanism, key_id: String, slot: Arc<Slot>) -> Self {
+    pub fn new(
+        mechanism: Mechanism,
+        key_id: String,
+        api_config: openapi::apis::configuration::Configuration,
+    ) -> Self {
         Self {
             mechanism,
             key_id,
             data: Vec::new(),
-            slot,
+            api_config,
         }
     }
     pub fn update(&mut self, data: &[u8]) {
@@ -35,7 +36,7 @@ impl SignCtx {
         trace!("Signing with mode: {:?}", mode);
 
         let signature = default_api::keys_key_id_sign_post(
-            &self.slot.api_config,
+            &self.api_config,
             &self.key_id,
             openapi::models::SignRequestData {
                 mode,

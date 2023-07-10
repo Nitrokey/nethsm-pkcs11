@@ -1,11 +1,7 @@
-use std::sync::Arc;
-
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
-use log::{trace, error};
+use log::{error, trace};
 use openapi::apis::default_api;
-
-use crate::config::device::Slot;
 
 use super::mechanism::Mechanism;
 
@@ -14,16 +10,20 @@ pub struct DecryptCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    pub slot: Arc<Slot>,
+    api_config: openapi::apis::configuration::Configuration,
 }
 
 impl DecryptCtx {
-    pub fn new(mechanism: Mechanism, key_id: String, slot: Arc<Slot>) -> Self {
+    pub fn new(
+        mechanism: Mechanism,
+        key_id: String,
+        api_config: openapi::apis::configuration::Configuration,
+    ) -> Self {
         Self {
             mechanism,
             key_id,
             data: Vec::new(),
-            slot,
+            api_config,
         }
     }
     pub fn update(&mut self, data: &[u8]) {
@@ -36,10 +36,13 @@ impl DecryptCtx {
         let mode = self.mechanism.decrypt_name().ok_or(CKR_ARGUMENTS_BAD)?;
         trace!("Signing with mode: {:?}", mode);
 
-        let iv = self.mechanism.iv().map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
+        let iv = self
+            .mechanism
+            .iv()
+            .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
 
         let output = default_api::keys_key_id_decrypt_post(
-            &self.slot.api_config,
+            &self.api_config,
             &self.key_id,
             openapi::models::DecryptRequestData {
                 mode,
