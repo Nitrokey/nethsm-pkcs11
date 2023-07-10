@@ -10,7 +10,7 @@ rm -rf _data.crypt _public.pem
 
 IV=$(openssl rand -hex 16)
 
-echo "NetHSM rulez!" | pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --encrypt \
+echo "NetHSM rulez!                  " | pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --encrypt \
   --mechanism AES-CBC --id $HEXID \
   --output-file _data.crypt --iv $IV
 

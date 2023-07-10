@@ -48,7 +48,7 @@ impl DecryptCtx {
             },
         )
         .map_err(|err| {
-            error!("Failed to sign: {:?}", err);
+            error!("Failed to decrypt: {:?}", err);
             CKR_DEVICE_ERROR
         })?;
 

@@ -23,7 +23,7 @@ pub struct CkRawMechanism {
 pub trait MechParams {}
 impl MechParams for cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS {}
 impl MechParams for cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS {}
-impl MechParams for cryptoki_sys::CK_AES_CBC_ENCRYPT_DATA_PARAMS {}
+impl MechParams for [cryptoki_sys::CK_BYTE; 16] {}
 
 impl CkRawMechanism {
     pub unsafe fn from_raw_ptr_unchecked(ptr: *mut cryptoki_sys::CK_MECHANISM) -> Self {
@@ -171,13 +171,12 @@ impl Mechanism {
     pub fn from_ckraw_mech(raw_mech: &CkRawMechanism) -> Result<Self, Error> {
         let mech = match raw_mech.type_() {
             cryptoki_sys::CKM_AES_CBC => {
-                let params =
-                    unsafe { raw_mech.params::<cryptoki_sys::CK_AES_CBC_ENCRYPT_DATA_PARAMS>() }
-                        .map_err(Error::CkRaw)?;
+                let params = unsafe { raw_mech.params::<[cryptoki_sys::CK_BYTE; 16]>() }
+                    .map_err(Error::CkRaw)?;
+
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
 
-                let iv = params.iv;
-                Self::AesCbc(Some(iv))
+                Self::AesCbc(Some(params))
             }
             cryptoki_sys::CKM_RSA_PKCS => Self::RsaPkcs,
             cryptoki_sys::CKM_RSA_PKCS_PSS => {

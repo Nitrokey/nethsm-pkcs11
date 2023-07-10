@@ -225,15 +225,20 @@ pub enum Error {
 }
 
 fn configure_rsa(
-    key_data: PublicKey,
+    key_data: &PublicKey,
 ) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
-    let key_data = key_data.key.ok_or(Error::KeyData("key".to_string()))?;
+    let key_data = key_data
+        .key
+        .as_ref()
+        .ok_or(Error::KeyData("key".to_string()))?;
 
     let modulus = key_data
         .modulus
+        .as_ref()
         .ok_or(Error::KeyData("modulus".to_string()))?;
     let public_exponent = key_data
         .public_exponent
+        .as_ref()
         .ok_or(Error::KeyData("public_exponent".to_string()))?;
     let modulus = general_purpose::STANDARD
         .decode(modulus.as_bytes())
@@ -258,12 +263,14 @@ fn configure_rsa(
 }
 
 fn configure_ec(
-    key_data: PublicKey,
+    key_data: &PublicKey,
 ) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
     let ec_points = key_data
         .key
+        .as_ref()
         .ok_or(Error::KeyData("key".to_string()))?
         .data
+        .as_ref()
         .ok_or(Error::KeyData("data".to_string()))?;
 
     let ec_point_bytes = general_purpose::STANDARD
@@ -304,6 +311,25 @@ fn configure_ec(
     Ok((key_type, attrs))
 }
 
+// should be an aes key ??
+fn configure_generic() -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
+    let mut attrs = HashMap::new();
+
+    attrs.insert(
+        CKA_KEY_TYPE,
+        Attr::from_ck_key_type(cryptoki_sys::CKK_GENERIC_SECRET),
+    );
+    attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
+    attrs.insert(CKA_DECRYPT, Attr::CK_TRUE);
+    attrs.insert(CKA_ENCRYPT, Attr::CK_TRUE);
+    attrs.insert(CKA_SIGN, Attr::CK_FALSE);
+    attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
+    attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
+    attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
+
+    Ok((CKK_GENERIC_SECRET, attrs))
+}
+
 pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Error> {
     let mut attrs = HashMap::new();
     attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
@@ -326,27 +352,29 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     attrs.insert(CKA_NEVER_EXTRACTABLE, Attr::CK_TRUE);
     attrs.insert(CKA_PRIVATE, Attr::CK_TRUE);
 
-    let key_data = match key_data.r#type {
-        KeyType::Rsa => configure_rsa(key_data)?,
+    let key_attrs = match key_data.r#type {
+        KeyType::Rsa => configure_rsa(&key_data)?,
         KeyType::Curve25519
         | KeyType::EcP224
         | KeyType::EcP256
         | KeyType::EcP384
-        | KeyType::EcP521 => configure_ec(key_data)?,
-        _ => {
-            return Err(Error::UnsupportedType);
-        }
+        | KeyType::EcP521 => configure_ec(&key_data)?,
+        KeyType::Generic => configure_generic()?,
     };
-    attrs.extend(key_data.1);
+    attrs.extend(key_attrs.1);
 
-    let mut public_key = Object {
+    let private_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::Key,
         id: id.clone(),
     };
 
-    let private_key = Object {
-        attrs,
+    if key_data.r#type == KeyType::Generic {
+        return Ok(vec![private_key]);
+    }
+
+    let mut public_key = Object {
+        attrs: attrs.clone(),
         kind: ObjectKind::Key,
         id,
     };
@@ -357,7 +385,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     );
     public_key
         .attrs
-        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_data.0));
+        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_attrs.0));
 
     public_key.attrs.insert(CKA_PRIVATE, Attr::CK_FALSE);
     public_key.attrs.insert(CKA_SENSITIVE, Attr::CK_FALSE);

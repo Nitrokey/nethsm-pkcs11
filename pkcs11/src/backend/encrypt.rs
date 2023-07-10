@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
-use log::{trace, error};
+use log::{error, trace};
 use openapi::apis::default_api;
 
 use super::mechanism::Mechanism;
@@ -16,9 +16,7 @@ pub struct EncryptCtx {
     pub slot: Arc<Slot>,
 }
 
-
 impl EncryptCtx {
-
     pub fn new(mechanism: Mechanism, key_id: String, slot: Arc<Slot>) -> Self {
         Self {
             mechanism,
@@ -38,7 +36,11 @@ impl EncryptCtx {
         let mode = self.mechanism.encrypt_name().ok_or(CKR_ARGUMENTS_BAD)?;
         trace!("Signing with mode: {:?}", mode);
 
-        let iv = self.mechanism.iv().map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
+        let iv = self
+            .mechanism
+            .iv()
+            .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
+        trace!("iv: {:?}", iv);
 
         let output = default_api::keys_key_id_encrypt_post(
             &self.slot.api_config,
@@ -50,11 +52,9 @@ impl EncryptCtx {
             },
         )
         .map_err(|err| {
-            error!("Failed to sign: {:?}", err);
+            error!("Failed to decrypt: {:?}", err);
             CKR_DEVICE_ERROR
         })?;
-
-
 
         general_purpose::STANDARD
             .decode(output.encrypted)
@@ -63,5 +63,4 @@ impl EncryptCtx {
                 CKR_DEVICE_ERROR
             })
     }
-    
 }
