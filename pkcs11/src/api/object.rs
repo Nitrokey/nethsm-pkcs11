@@ -61,7 +61,13 @@ pub extern "C" fn C_FindObjects(
         }
     };
 
-    let objects = session.enum_next_chunk(ulMaxObjectCount as usize);
+    let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
+        Ok(objects) => objects,
+        Err(err) => {
+            error!("C_FindObjects() failed: {:?}", err);
+            return err;
+        }
+    };
     trace!("C_FindObjects() objects: {:?}", objects);
 
     unsafe {

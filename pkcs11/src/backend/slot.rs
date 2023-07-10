@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use crate::{config::device::Slot, data::DEVICE};
 
-pub fn get_slot(slot_id: usize) -> Result<Slot, cryptoki_sys::CK_RV> {
+pub fn get_slot(slot_id: usize) -> Result<Arc<Slot>, cryptoki_sys::CK_RV> {
     let slot = DEVICE
         .slots
         .get(slot_id)

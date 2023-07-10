@@ -1,7 +1,9 @@
+use std::{sync::Arc};
+
 #[derive(Debug, Clone)]
 pub struct Device {
     pub log_file: Option<String>,
-    pub slots: Vec<Slot>,
+    pub slots: Vec<Arc<Slot>>,
 }
 
 #[derive(Debug, Clone)]

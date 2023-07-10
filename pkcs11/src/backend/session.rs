@@ -1,26 +1,21 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use base64::{
-    alphabet,
-    engine::{self, general_purpose},
-    Engine as _,
-};
 use cryptoki_sys::{
-    CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_OK, CKS_RO_PUBLIC_SESSION,
-    CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
+    CKR_DEVICE_ERROR, CKR_OK, CKS_RO_PUBLIC_SESSION, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV,
+    CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
 };
-use log::{error, trace};
+use log::error;
 use openapi::apis::default_api;
 
 use crate::config::device::Slot;
 
 use super::{
-    db::{
-        self,
-        attr::{CkRawAttr, CkRawAttrTemplate},
-        Db, Object, ObjectHandle,
-    },
+    db::{self, attr::CkRawAttrTemplate, Db, Object, ObjectHandle},
+    decrypt::DecryptCtx,
+    encrypt::EncryptCtx,
     mechanism::Mechanism,
+    object::EnumCtx,
+    sign::SignCtx,
 };
 
 #[derive(Clone, Debug)]
@@ -40,7 +35,7 @@ impl SessionManager {
     pub fn create_session(
         &mut self,
         slot_id: CK_SLOT_ID,
-        slot: Slot,
+        slot: Arc<Slot>,
         flags: CK_FLAGS,
     ) -> CK_SESSION_HANDLE {
         let session = Session::new(slot_id, slot, flags);
@@ -82,7 +77,7 @@ impl SessionManager {
 #[derive(Clone, Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
-    slot: Slot,
+    slot: Arc<Slot>,
     pub flags: CK_FLAGS,
     pub state: CK_STATE,
     pub device_error: CK_RV,
@@ -95,7 +90,7 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new(slot_id: CK_SLOT_ID, slot: Slot, flags: CK_FLAGS) -> Self {
+    pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
         Self {
             slot,
             slot_id,
@@ -124,27 +119,22 @@ impl Session {
             return cryptoki_sys::CKR_OPERATION_ACTIVE;
         }
 
-        let key_id = match find_key_id(template) {
-            Ok(key_id) => key_id,
-            Err(err) => return err,
-        };
-
-        let handles = match self.find_key(key_id) {
-            Ok(handles) => handles,
-            Err(err) => return err,
-        };
-
-        self.enum_ctx = Some(EnumCtx::new(handles));
+        self.enum_ctx = Some(match EnumCtx::enum_init(self, template) {
+            Ok(ctx) => ctx,
+            Err(err) => {
+                error!("Failed to initialize enum context: {:?}", err);
+                return err;
+            }
+        });
 
         cryptoki_sys::CKR_OK
     }
 
-    pub fn enum_next_chunk(&mut self, count: usize) -> Vec<CK_SESSION_HANDLE> {
-        let mut result = Vec::new();
-        if let Some(enum_ctx) = &mut self.enum_ctx {
-            result = enum_ctx.next_chunck(count);
+    pub fn enum_next_chunk(&mut self, count: usize) -> Result<Vec<CK_SESSION_HANDLE>, CK_RV> {
+        match self.enum_ctx {
+            Some(ref mut enum_ctx) => Ok(enum_ctx.next_chunck(count)),
+            None => Err(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED),
         }
-        result
     }
 
     pub fn sign_init(&mut self, mechanism: &Mechanism, key_handle: CK_OBJECT_HANDLE) -> CK_RV {
@@ -152,11 +142,21 @@ impl Session {
             return cryptoki_sys::CKR_OPERATION_ACTIVE;
         }
 
-        self.sign_ctx = Some(SignCtx {
-            data: Vec::new(),
-            mechanism: *mechanism,
-            key_handle,
-        });
+        // get key id from the handle
+
+        let key_id = match self
+            .db
+            .object(ObjectHandle::from(key_handle))
+            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
+        {
+            Ok(object) => object.id.clone(),
+            Err(err) => {
+                error!("Failed to get key: {:?}", err);
+                return err;
+            }
+        };
+
+        self.sign_ctx = Some(SignCtx::new(*mechanism, key_id, self.slot.clone()));
 
         cryptoki_sys::CKR_OK
     }
@@ -166,46 +166,18 @@ impl Session {
             .sign_ctx
             .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
-        sign_ctx.data.extend_from_slice(data);
 
+        sign_ctx.update(data);
         Ok(())
     }
 
     pub fn sign_final(&mut self) -> Result<Vec<u8>, CK_RV> {
         let sign_ctx = self
             .sign_ctx
-            .take()
+            .as_ref()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
-        let key = self
-            .db
-            .object(ObjectHandle::from(sign_ctx.key_handle))
-            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)?;
 
-        let b64_message = general_purpose::STANDARD.encode(sign_ctx.data.as_slice());
-
-        let mode = sign_ctx.mechanism.sign_name().ok_or(CKR_ARGUMENTS_BAD)?;
-        trace!("Signing with mode: {:?}", mode);
-
-        let signature = default_api::keys_key_id_sign_post(
-            &self.slot.api_config,
-            &key.id,
-            openapi::models::SignRequestData {
-                mode,
-                message: b64_message,
-            },
-        )
-        .map_err(|err| {
-            error!("Failed to sign: {:?}", err);
-            CKR_DEVICE_ERROR
-        })?;
-
-        let signature = general_purpose::STANDARD
-            .decode(signature.signature)
-            .map_err(|err| {
-                error!("Failed to decode signature: {:?}", err);
-                CKR_DEVICE_ERROR
-            })?;
-        Ok(signature)
+        sign_ctx.sign_final()
     }
 
     pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
@@ -221,7 +193,10 @@ impl Session {
         self.db.object(ObjectHandle::from(handle))
     }
 
-    fn find_key(&mut self, key_id: Option<String>) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
+    pub(super) fn find_key(
+        &mut self,
+        key_id: Option<String>,
+    ) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
         match key_id {
             Some(key_id) => Ok(self
                 .fetch_key(key_id)?
@@ -280,65 +255,5 @@ impl Session {
         }
 
         Ok(result)
-    }
-}
-
-fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<Option<String>, CK_RV> {
-    match template {
-        Some(template) => {
-            let mut key_id = None;
-            for attr in template.iter() {
-                if attr.type_() == CKA_ID {
-                    key_id = Some(parse_str_from_attr(&attr)?);
-                    break;
-                }
-                if attr.type_() == CKA_LABEL {
-                    key_id = Some(parse_str_from_attr(&attr)?);
-                }
-            }
-            Ok(key_id)
-        }
-        None => Ok(None),
-    }
-}
-
-fn parse_str_from_attr(attr: &CkRawAttr) -> Result<String, CK_RV> {
-    let bytes = attr.val_bytes().ok_or(CKR_ARGUMENTS_BAD)?;
-    String::from_utf8(bytes.to_vec()).map_err(|_| CKR_ARGUMENTS_BAD)
-}
-
-#[derive(Clone, Debug)]
-pub struct SignCtx {
-    pub mechanism: Mechanism,
-    pub key_handle: CK_OBJECT_HANDLE,
-    pub data: Vec<u8>,
-}
-#[derive(Clone, Debug)]
-pub struct EncryptCtx {}
-#[derive(Clone, Debug)]
-pub struct DecryptCtx {}
-
-// context to find objects
-#[derive(Clone, Debug)]
-pub struct EnumCtx {
-    pub handles: Vec<CK_SESSION_HANDLE>,
-    index: usize,
-}
-
-impl EnumCtx {
-    pub fn new(handles: Vec<CK_SESSION_HANDLE>) -> Self {
-        Self { handles, index: 0 }
-    }
-    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CK_SESSION_HANDLE> {
-        let mut result = Vec::new();
-        for _ in 0..chunk_size {
-            if let Some(handle) = self.handles.get(self.index) {
-                result.push(*handle);
-                self.index += 1;
-            } else {
-                break;
-            }
-        }
-        result
     }
 }

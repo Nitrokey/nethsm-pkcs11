@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::device::{Device, Slot};
 
 const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
@@ -31,11 +33,11 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
             ..Default::default()
         };
 
-        slots.push(Slot {
+        slots.push(Arc::new(Slot {
             api_config: api_config.clone(),
             description: slot.description.clone(),
             label: slot.label.clone(),
-        });
+        }));
     }
 
     Ok(Device {
