@@ -1,4 +1,4 @@
-use cryptoki_sys::{CKR_OK, CK_ULONG};
+use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
 use crate::{

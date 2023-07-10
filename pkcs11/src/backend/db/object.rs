@@ -227,7 +227,7 @@ pub enum Error {
 fn configure_rsa(
     key_data: PublicKey,
 ) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
-    let key_data = key_data.key;
+    let key_data = key_data.key.ok_or(Error::KeyData("key".to_string()))?;
 
     let modulus = key_data
         .modulus
@@ -262,6 +262,7 @@ fn configure_ec(
 ) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
     let ec_points = key_data
         .key
+        .ok_or(Error::KeyData("key".to_string()))?
         .data
         .ok_or(Error::KeyData("data".to_string()))?;
 
