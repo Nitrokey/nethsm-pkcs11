@@ -126,25 +126,13 @@ pub extern "C" fn C_DecryptUpdate(
 
     let data = unsafe { std::slice::from_raw_parts(pEncryptedPart, ulEncryptedPartLen as usize) };
 
-    let decrypted_data = match session.decrypt(data) {
-        Ok(data) => data,
-        Err(e) => return e,
-    };
-
-    if decrypted_data.len() > unsafe { *pulPartLen } as usize {
-        unsafe {
-            std::ptr::write(pulPartLen, decrypted_data.len() as CK_ULONG);
-        }
-
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
-    }
-
     unsafe {
-        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pPart, decrypted_data.len());
-        std::ptr::write(pulPartLen, decrypted_data.len() as CK_ULONG);
+        std::ptr::write(pulPartLen, 0 as CK_ULONG);
     }
-
-    cryptoki_sys::CKR_OK
+    match session.decrypt_update(data) {
+        Ok(()) => cryptoki_sys::CKR_OK,
+        Err(e) => e,
+    }
 }
 
 pub extern "C" fn C_DecryptFinal(
@@ -172,10 +160,22 @@ pub extern "C" fn C_DecryptFinal(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    // write 0 to the length
+    let decrypted_data = match session.decrypt_final() {
+        Ok(data) => data,
+        Err(e) => return e,
+    };
+
+    if decrypted_data.len() > unsafe { *pulLastPartLen } as usize {
+        unsafe {
+            std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
+        }
+
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
 
     unsafe {
-        std::ptr::write(pulLastPartLen, 0);
+        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pLastPart, decrypted_data.len());
+        std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
     }
 
     session.decrypt_clear();
