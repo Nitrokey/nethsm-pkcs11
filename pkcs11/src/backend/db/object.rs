@@ -17,10 +17,11 @@ use cryptoki_sys::{
     CKA_WRAP_WITH_TRUSTED, CKK_EC, CKK_ECDSA, CKK_GENERIC_SECRET, CKK_RSA, CKM_AES_CBC,
     CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
-use log::debug;
+use log::{debug, trace};
 use openapi::models::{key_type, private_key, public_key, KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
+use yasna::models::ObjectIdentifier;
 
 // these were not in the lib
 const CK_CERTIFICATE_CATEGORY_UNSPECIFIED: CK_ULONG = 0x00000000;
@@ -120,7 +121,6 @@ impl Attr {
             Self::CkObjectClass(v) => v,
             Self::CkUlong(v) => v,
             Self::Bytes(v) => v,
-
             Self::Sensitive => &[0u8; 0],
             Self::Null => &[0u8; 0],
         }
@@ -188,22 +188,21 @@ pub struct Object {
     pub size: Option<usize>,
 }
 
-const KEYTYPE_EC_P224: &str = "1.3.132.0.33";
-const KEYTYPE_EC_P256: &str = "1.2.840.10045.3.1.7";
-const KEYTYPE_EC_P384: &str = "1.3.132.0.34";
-const KEYTYPE_EC_P521: &str = "1.3.132.0.35";
-const KEYTYPE_CURVE25519: &str = "1.3.101.112";
+const KEYTYPE_EC_P224: [u64; 5] = [1, 3, 132, 0, 33];
+const KEYTYPE_EC_P256: [u64; 7] = [1, 2, 840, 10045, 3, 1, 7];
+const KEYTYPE_EC_P384: [u64; 5] = [1, 3, 132, 0, 34];
+const KEYTYPE_EC_P521: [u64; 5] = [1, 3, 132, 0, 35];
+const KEYTYPE_CURVE25519: [u64; 4] = [1, 3, 101, 112];
 
-fn key_type_to_asn1(key_type: KeyType) -> Result<asn1::ObjectIdentifier, Error> {
-    asn1::ObjectIdentifier::from_string(match key_type {
-        KeyType::EcP224 => KEYTYPE_EC_P224,
-        KeyType::EcP256 => KEYTYPE_EC_P256,
-        KeyType::EcP384 => KEYTYPE_EC_P384,
-        KeyType::EcP521 => KEYTYPE_EC_P521,
-        KeyType::Curve25519 => KEYTYPE_CURVE25519,
+fn key_type_to_asn1(key_type: KeyType) -> Result<ObjectIdentifier, Error> {
+    Ok(ObjectIdentifier::from_slice(match key_type {
+        KeyType::EcP224 => &KEYTYPE_EC_P224,
+        KeyType::EcP256 => &KEYTYPE_EC_P256,
+        KeyType::EcP384 => &KEYTYPE_EC_P384,
+        KeyType::EcP521 => &KEYTYPE_EC_P521,
+        KeyType::Curve25519 => &KEYTYPE_CURVE25519,
         _ => return Err(Error::KeyData("invalid_key_type".to_string())),
-    })
-    .ok_or(Error::KeyData("parsing key".to_string()))
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -216,8 +215,7 @@ pub struct KeyPair {
 pub enum Error {
     KeyData(String),
     Decode(base64::DecodeError),
-    Asn1Write(asn1::WriteError),
-    Asn1Parse(asn1::ParseError),
+    Asn1(yasna::ASN1Error),
     UnsupportedType,
 }
 
@@ -278,29 +276,29 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         .as_ref()
         .ok_or(Error::KeyData("data".to_string()))?;
 
+    trace!("EC key data: {:?}", ec_points);
+
     let ec_point_bytes = general_purpose::STANDARD
         .decode(ec_points.as_bytes())
         .map_err(Error::Decode)?;
 
-    let ec_point_serialized = asn1::write(|w| {
-        w.write_element(&asn1::SequenceWriter::new(&|w| {
-            w.write_element(&ec_point_bytes.as_slice())
-        }))
-    })
-    .map_err(Error::Asn1Write)?;
+    trace!("EC key data bytes: {:?}", ec_point_bytes);
+
+    let encoded_points = yasna::construct_der(|writer| {
+        writer.write_bytes(&ec_point_bytes);
+    });
 
     let key_params = key_type_to_asn1(key_data.r#type)?;
-    let ec_params = asn1::write(|w| {
-        w.write_element(&asn1::SequenceWriter::new(&|w| {
-            w.write_element(&key_params)
-        }))
-    })
-    .map_err(Error::Asn1Write)?;
+
+    let ec_params = yasna::construct_der(|writer| {
+        writer.write_oid(&key_params);
+    });
 
     let key_type = match key_data.r#type {
         KeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
         _ => cryptoki_sys::CKK_EC,
     };
+
     let mut attrs = HashMap::new();
 
     let size = ec_point_bytes.len();
@@ -313,7 +311,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_EC_PARAMS, Attr::Bytes(ec_params));
-    attrs.insert(CKA_EC_POINT, Attr::Bytes(ec_point_serialized));
+    attrs.insert(CKA_EC_POINT, Attr::Bytes(encoded_points));
 
     Ok(KeyData {
         key_type,
