@@ -106,7 +106,45 @@ pub extern "C" fn C_DecryptUpdate(
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptUpdate() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_DecryptFinal() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    if pPart.is_null() || pulPartLen.is_null() || pEncryptedPart.is_null() {
+        session.decrypt_clear();
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let data = unsafe { std::slice::from_raw_parts(pEncryptedPart, ulEncryptedPartLen as usize) };
+
+    let decrypted_data = match session.decrypt(data) {
+        Ok(data) => data,
+        Err(e) => return e,
+    };
+
+    if decrypted_data.len() > unsafe { *pulPartLen } as usize {
+        unsafe {
+            std::ptr::write(pulPartLen, decrypted_data.len() as CK_ULONG);
+        }
+
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pPart, decrypted_data.len());
+        std::ptr::write(pulPartLen, decrypted_data.len() as CK_ULONG);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_DecryptFinal(
@@ -115,7 +153,34 @@ pub extern "C" fn C_DecryptFinal(
     pulLastPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptFinal() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_DecryptFinal() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    if pLastPart.is_null() || pulLastPartLen.is_null() {
+        session.decrypt_clear();
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    // write 0 to the length
+
+    unsafe {
+        std::ptr::write(pulLastPartLen, 0);
+    }
+
+    session.decrypt_clear();
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_DecryptVerifyUpdate(
