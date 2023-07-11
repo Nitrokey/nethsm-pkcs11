@@ -63,29 +63,45 @@ pub extern "C" fn C_Sign(
         }
     };
 
-    // TODO: if pSignature is NULL, then this function should return the maximum length of the signature
-    if pData.is_null() || pSignature.is_null() || pulSignatureLen.is_null() {
+    if pData.is_null() || pulSignatureLen.is_null() {
         session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
     let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
 
+    let buffer_size = unsafe { *pulSignatureLen } as usize;
+
+    let theoretical_size = session.sign_theoretical_size();
+    unsafe {
+        std::ptr::write(pulSignatureLen, theoretical_size as u64);
+    }
+
+    if pSignature.is_null() {
+        // only the size was requested
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if buffer_size < theoretical_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
     let signature = match session.sign(data) {
         Ok(signature) => signature,
         Err(err) => return err,
     };
+    unsafe {
+        std::ptr::write(pulSignatureLen, signature.len() as u64);
+    }
 
-    if signature.len() > unsafe { *pulSignatureLen } as usize {
-        unsafe {
-            std::ptr::write(pulSignatureLen, signature.len() as u64);
-        }
+    // double check the buffer size
+
+    if signature.len() > buffer_size {
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     unsafe {
         std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
-        std::ptr::write(pulSignatureLen, signature.len() as u64);
     }
 
     session.sign_clear();
@@ -143,10 +159,26 @@ pub extern "C" fn C_SignFinal(
         }
     };
 
-    // TODO: if pSignature is NULL, then this function should return the maximum length of the signature
-    if pSignature.is_null() || pulSignatureLen.is_null() {
+    if pulSignatureLen.is_null() {
         session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let buffer_size = unsafe { *pulSignatureLen } as usize;
+
+    let theoretical_size = session.sign_theoretical_size();
+
+    unsafe {
+        std::ptr::write(pulSignatureLen, theoretical_size as u64);
+    }
+
+    if pSignature.is_null() {
+        // only the size was requested
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if buffer_size < theoretical_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     let signature = match session.sign_final() {
@@ -158,8 +190,17 @@ pub extern "C" fn C_SignFinal(
     };
 
     unsafe {
-        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
         std::ptr::write(pulSignatureLen, signature.len() as u64);
+    }
+
+    // double check the buffer size
+
+    if signature.len() > buffer_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
     }
     session.sign_clear();
 

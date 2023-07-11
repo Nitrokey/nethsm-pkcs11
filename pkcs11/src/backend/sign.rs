@@ -8,6 +8,7 @@ use openapi::apis::default_api;
 pub struct SignCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
+    pub key_size: Option<usize>,
     pub data: Vec<u8>,
     pub api_config: openapi::apis::configuration::Configuration,
 }
@@ -16,6 +17,7 @@ impl SignCtx {
     pub fn new(
         mechanism: Mechanism,
         key_id: String,
+        key_size: Option<usize>,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Self {
         Self {
@@ -23,6 +25,7 @@ impl SignCtx {
             key_id,
             data: Vec::new(),
             api_config,
+            key_size,
         }
     }
     pub fn update(&mut self, data: &[u8]) {
@@ -54,5 +57,9 @@ impl SignCtx {
                 error!("Failed to decode signature: {:?}", err);
                 CKR_DEVICE_ERROR
             })
+    }
+
+    pub fn get_theoretical_size(&self) -> usize {
+        self.mechanism.get_theoretical_signed_size(self.key_size)
     }
 }

@@ -320,4 +320,14 @@ impl Mechanism {
             _ => None,
         }
     }
+
+    pub fn get_theoretical_signed_size(&self, key_size: Option<usize>) -> usize {
+        match self {
+            Self::RsaPkcs => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
+            Self::RsaPkcsPss(_) => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
+            Self::Ecdsa => key_size.unwrap_or((Self::EC_MAX_KEY_BITS / 8) as usize),
+            Self::EdDsa => key_size.unwrap_or((Self::ED_MAX_KEY_BITS / 8) as usize),
+            _ => (Self::RSA_MAX_KEY_BITS / 8) as usize,
+        }
+    }
 }

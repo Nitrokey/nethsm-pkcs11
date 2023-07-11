@@ -62,15 +62,15 @@
 
 ## Sign
 
-| Feature             | Status | Notes                                                        |
-| ------------------- | ------ | ------------------------------------------------------------ |
-| C_SignInit          | ✔️      |                                                              |
-| C_Sign              | ⚠️      | Getting the size by setting pData to null is not implemented |
-| C_SignUpdate        | ✔️      |                                                              |
-| C_SignFinal         | ⚠️      | Getting the size by setting pData to null is not implemented |
-| C_SignRecoverInit   | ❌      | May be implemented later                                     |
-| C_SignRecover       | ❌      | May be implemented later                                     |
-| C_SignEncryptUpdate | ❌      | Not supported by NetHSM                                      |
+| Feature             | Status | Notes                    |
+| ------------------- | ------ | ------------------------ |
+| C_SignInit          | ✔️      |                          |
+| C_Sign              | ✔️      |                          |
+| C_SignUpdate        | ✔️      |                          |
+| C_SignFinal         | ✔️      |                          |
+| C_SignRecoverInit   | ❌      | May be implemented later |
+| C_SignRecover       | ❌      | May be implemented later |
+| C_SignEncryptUpdate | ❌      | Not supported by NetHSM  |
 
 ## Digest ❌
 

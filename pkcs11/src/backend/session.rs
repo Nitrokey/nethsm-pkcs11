@@ -188,12 +188,12 @@ impl Session {
 
         // get key id from the handle
 
-        let key_id = match self
+        let key = match self
             .db
             .object(ObjectHandle::from(key_handle))
             .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
         {
-            Ok(object) => object.id.clone(),
+            Ok(object) => object,
             Err(err) => {
                 error!("Failed to get key: {:?}", err);
                 return err;
@@ -202,11 +202,21 @@ impl Session {
 
         self.sign_ctx = Some(SignCtx::new(
             mechanism.clone(),
-            key_id,
+            key.id.clone(),
+            key.size,
             self.api_config.clone(),
         ));
 
         cryptoki_sys::CKR_OK
+    }
+
+    pub fn sign_theoretical_size(&self) -> usize {
+        let sign_ctx = self
+            .sign_ctx
+            .as_ref()
+            .expect("sign context should be initialized");
+
+        sign_ctx.get_theoretical_size()
     }
 
     pub fn sign_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {

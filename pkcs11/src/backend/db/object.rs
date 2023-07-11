@@ -185,6 +185,7 @@ pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     kind: ObjectKind,
     pub id: String,
+    pub size: Option<usize>,
 }
 
 const KEYTYPE_EC_P224: &str = "1.3.132.0.33";
@@ -224,9 +225,13 @@ pub enum Error {
     UnsupportedType,
 }
 
-fn configure_rsa(
-    key_data: &PublicKey,
-) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
+struct KeyData {
+    key_type: CK_KEY_TYPE,
+    key_size: Option<usize>,
+    attrs: HashMap<CK_ATTRIBUTE_TYPE, Attr>,
+}
+
+fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     let key_data = key_data
         .key
         .as_ref()
@@ -249,6 +254,7 @@ fn configure_rsa(
 
     let mut attrs = HashMap::new();
 
+    let size = modulus.len();
     attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(cryptoki_sys::CKK_RSA));
     attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
     attrs.insert(CKA_DECRYPT, Attr::CK_TRUE);
@@ -258,13 +264,16 @@ fn configure_rsa(
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_MODULUS, Attr::Bytes(modulus));
     attrs.insert(CKA_PUBLIC_EXPONENT, Attr::Bytes(public_exponent));
-    attrs.insert(CKA_MODULUS_BITS, Attr::Null);
-    Ok((cryptoki_sys::CKK_RSA, attrs))
+    attrs.insert(CKA_MODULUS_BITS, Attr::from_ck_ulong(size as u64));
+
+    Ok(KeyData {
+        key_type: cryptoki_sys::CKK_RSA,
+        key_size: Some(size),
+        attrs,
+    })
 }
 
-fn configure_ec(
-    key_data: &PublicKey,
-) -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
+fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let ec_points = key_data
         .key
         .as_ref()
@@ -299,6 +308,8 @@ fn configure_ec(
     };
     let mut attrs = HashMap::new();
 
+    let size = ec_point_bytes.len();
+
     attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
     attrs.insert(CKA_DERIVE, Attr::CK_TRUE);
     attrs.insert(CKA_DECRYPT, Attr::CK_FALSE);
@@ -308,11 +319,16 @@ fn configure_ec(
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_EC_PARAMS, Attr::Bytes(ec_params));
     attrs.insert(CKA_EC_POINT, Attr::Bytes(ec_point_serialized));
-    Ok((key_type, attrs))
+
+    Ok(KeyData {
+        key_type,
+        key_size: Some(size),
+        attrs,
+    })
 }
 
 // should be an aes key ??
-fn configure_generic() -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>), Error> {
+fn configure_generic() -> Result<KeyData, Error> {
     let mut attrs = HashMap::new();
 
     attrs.insert(
@@ -328,7 +344,11 @@ fn configure_generic() -> Result<(CK_KEY_TYPE, HashMap<CK_ATTRIBUTE_TYPE, Attr>)
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(0));
 
-    Ok((CKK_GENERIC_SECRET, attrs))
+    Ok(KeyData {
+        key_type: cryptoki_sys::CKK_GENERIC_SECRET,
+        key_size: None,
+        attrs,
+    })
 }
 
 pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Error> {
@@ -362,12 +382,13 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         | KeyType::EcP521 => configure_ec(&key_data)?,
         KeyType::Generic => configure_generic()?,
     };
-    attrs.extend(key_attrs.1);
+    attrs.extend(key_attrs.attrs);
 
     let private_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::Key,
         id: id.clone(),
+        size: key_attrs.key_size,
     };
 
     if key_data.r#type == KeyType::Generic {
@@ -378,6 +399,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         attrs: attrs.clone(),
         kind: ObjectKind::Key,
         id,
+        size: key_attrs.key_size,
     };
 
     public_key.attrs.insert(
@@ -386,7 +408,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     );
     public_key
         .attrs
-        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_attrs.0));
+        .insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_attrs.key_type));
 
     public_key.attrs.insert(CKA_PRIVATE, Attr::CK_FALSE);
     public_key.attrs.insert(CKA_SENSITIVE, Attr::CK_FALSE);
