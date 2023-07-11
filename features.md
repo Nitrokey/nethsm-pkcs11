@@ -43,13 +43,13 @@
 
 ## Decrypt
 
-| Feature               | Status | Notes                                                                                                   |
-| --------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
-| C_DecryptInit         | ✔️      |                                                                                                         |
-| C_Decrypt             | ⚠️      | Getting the size by setting pData to null is not implemented                                            |
-| C_DecryptUpdate       | ⚠️      | The length of the output buffer will always be 0, the decrypted data will be all sent in the final call |
-| C_DecryptFinal        | ⚠️      | Getting the size by setting pData to null is not implemented                                            |
-| C_DecryptVerifyUpdate | ❌      | Verify is not supported by NetHSM                                                                       |
+| Feature               | Status | Notes                                                                                                            |
+| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| C_DecryptInit         | ✔️      |                                                                                                                  |
+| C_Decrypt             | ✔️      |                                                                                                                  |
+| C_DecryptUpdate       | ✔️      | The length of the output buffer will always be 0, the decrypted data will be all sent in the C_DecryptFinal call |
+| C_DecryptFinal        | ✔️      |                                                                                                                  |
+| C_DecryptVerifyUpdate | ❌      | Verify is not supported by NetHSM                                                                                |
 
 ## Encrypt
 

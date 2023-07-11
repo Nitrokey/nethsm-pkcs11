@@ -68,9 +68,25 @@ pub extern "C" fn C_Decrypt(
         }
     };
 
-    if pData.is_null() || pulDataLen.is_null() || pEncryptedData.is_null() {
+    if pulDataLen.is_null() || pEncryptedData.is_null() {
         session.decrypt_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let buffer_size = unsafe { *pulDataLen } as usize;
+
+    let theoretical_size = session.decrypt_theoretical_size(ulEncryptedDataLen as usize);
+
+    unsafe {
+        std::ptr::write(pulDataLen, theoretical_size as CK_ULONG);
+    }
+
+    if pData.is_null() {
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if theoretical_size > buffer_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     let data = unsafe { std::slice::from_raw_parts(pEncryptedData, ulEncryptedDataLen as usize) };
@@ -80,17 +96,17 @@ pub extern "C" fn C_Decrypt(
         Err(e) => return e,
     };
 
-    if decrypted_data.len() > unsafe { *pulDataLen } as usize {
-        unsafe {
-            std::ptr::write(pulDataLen, decrypted_data.len() as CK_ULONG);
-        }
+    unsafe {
+        std::ptr::write(pulDataLen, decrypted_data.len() as CK_ULONG);
+    }
 
+    // we double-check the buffer size here, in case the theoretical size was wrong
+    if decrypted_data.len() > buffer_size {
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     unsafe {
         std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pData, decrypted_data.len());
-        std::ptr::write(pulDataLen, decrypted_data.len() as CK_ULONG);
     }
 
     session.decrypt_clear();
@@ -119,13 +135,14 @@ pub extern "C" fn C_DecryptUpdate(
         }
     };
 
-    if pPart.is_null() || pulPartLen.is_null() || pEncryptedPart.is_null() {
+    if pulPartLen.is_null() || pEncryptedPart.is_null() {
         session.decrypt_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
     let data = unsafe { std::slice::from_raw_parts(pEncryptedPart, ulEncryptedPartLen as usize) };
 
+    // we only add to the buffer, so we don't need to check the size
     unsafe {
         std::ptr::write(pulPartLen, 0 as CK_ULONG);
     }
@@ -155,9 +172,28 @@ pub extern "C" fn C_DecryptFinal(
         }
     };
 
-    if pLastPart.is_null() || pulLastPartLen.is_null() {
+    if pulLastPartLen.is_null() {
         session.decrypt_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let buffer_size = unsafe { *pulLastPartLen } as usize;
+
+    let theoretical_size = match session.decrypt_theoretical_final_size() {
+        Ok(size) => size,
+        Err(e) => return e,
+    };
+
+    unsafe {
+        std::ptr::write(pulLastPartLen, theoretical_size as CK_ULONG);
+    }
+
+    if pLastPart.is_null() {
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if theoretical_size > buffer_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     let decrypted_data = match session.decrypt_final() {
@@ -165,17 +201,17 @@ pub extern "C" fn C_DecryptFinal(
         Err(e) => return e,
     };
 
-    if decrypted_data.len() > unsafe { *pulLastPartLen } as usize {
-        unsafe {
-            std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
-        }
+    unsafe {
+        std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
+    }
 
+    // we double-check the buffer size here, in case the theoretical size was wrong
+    if decrypted_data.len() > buffer_size {
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
     unsafe {
         std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pLastPart, decrypted_data.len());
-        std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
     }
 
     session.decrypt_clear();

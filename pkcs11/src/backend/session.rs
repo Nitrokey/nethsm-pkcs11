@@ -343,6 +343,7 @@ impl Session {
         cryptoki_sys::CKR_OK
     }
 
+    // only adds data to the decrypt context, does not decrypt anything
     pub fn decrypt_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {
         let decrypt_ctx = self
             .decrypt_ctx
@@ -351,6 +352,20 @@ impl Session {
 
         decrypt_ctx.update(data);
         Ok(())
+    }
+
+    // For now we go safe and lazy and just return the same size as the input
+    pub fn decrypt_theoretical_size(&self, input_size: usize) -> usize {
+        input_size
+    }
+
+    pub fn decrypt_theoretical_final_size(&self) -> Result<usize, CK_RV> {
+        let decrypt_ctx = self
+            .decrypt_ctx
+            .as_ref()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        Ok(decrypt_ctx.data.len())
     }
 
     pub fn decrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
