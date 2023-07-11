@@ -264,7 +264,7 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_MODULUS, Attr::Bytes(modulus));
     attrs.insert(CKA_PUBLIC_EXPONENT, Attr::Bytes(public_exponent));
-    attrs.insert(CKA_MODULUS_BITS, Attr::from_ck_ulong(size as u64));
+    attrs.insert(CKA_MODULUS_BITS, Attr::from_ck_ulong((size * 8) as u64));
 
     Ok(KeyData {
         key_type: cryptoki_sys::CKK_RSA,
