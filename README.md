@@ -70,3 +70,5 @@ slots:
     # - via the login function of pkcs11, example for pcks11-tool : `pkcs11-tool --module libnethsm_pkcs11.so -O -p opPassphrase`
     password: "env:LOCALHSMPASS"    
 ```
+
+A NetHSM that is not operational is considered as a slot wit the token not present.
