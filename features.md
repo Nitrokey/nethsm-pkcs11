@@ -34,7 +34,7 @@
 | C_GetSlotList      | ✔️      |                                           |
 | C_GetSlotInfo      | ✔️      |                                           |
 | C_GetTokenInfo     | ✔️      |                                           |
-| C_InitToken        | ❌      |                                           |
+| C_InitToken        | 🗓️      | Read passwords from stdin or separator ?? |
 | C_GetMechanismList | ✔️      |                                           |
 | C_GetMechanismInfo | ✔️      | Length of the RSA public keys is set to 0 |
 | C_Login            | ✔️      | The pin is used as the password           |
@@ -84,8 +84,8 @@ Verify is not supported by NetHSM
 
 | Feature           | Status | Notes                                    |
 | ----------------- | ------ | ---------------------------------------- |
-| C_GenerateKey     | 🗓️      |                                          |
-| C_GenerateKeyPair | 🗓️      |                                          |
+| C_GenerateKey     | 🗓️      | Needs admin                              |
+| C_GenerateKeyPair | 🗓️      | Needs admin                              |
 | C_GenerateRandom  | 🗓️      |                                          |
 | C_SeedRandom      | ⚠️      | Returns OK but the arguments are ignored |
 | C_WrapKey         | ❌      |                                          |
@@ -101,14 +101,14 @@ Verify is not supported by NetHSM
 | C_FindObjectsFinal  | ✔️      |                                      |
 | C_GetAttributeValue | ✔️      |                                      |
 | C_GetObjectSize     | 🗓️      |                                      |
-| C_CreateObject      | 🗓️      | maybe ? need to be admin ?           |
+| C_CreateObject      | 🗓️      | needs admin                          |
 | C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED |
-| C_DestroyObject     | 🗓️      | maybe ?                              |
+| C_DestroyObject     | 🗓️      | needs admin                          |
 | C_SetAttributeValue | ✔️      | Always returns CKR_ACTION_PROHIBITED |
 
-## Pin management ❌
+## Pin management
 
-| Feature   | Status | Notes         |
-| --------- | ------ | ------------- |
-| C_InitPIN | ❌      | Not supported |
-| C_SetPIN  | ❌      |               |
+| Feature   | Status | Notes                                 |
+| --------- | ------ | ------------------------------------- |
+| C_InitPIN | ❌      | The user would already have a pin set |
+| C_SetPIN  | 🗓️      |                                       |
