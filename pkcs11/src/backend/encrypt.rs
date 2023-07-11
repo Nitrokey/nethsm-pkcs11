@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose, Engine};
-use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
+use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR};
 use log::{error, trace};
 use openapi::apis::default_api;
 
@@ -43,8 +43,6 @@ impl EncryptCtx {
             .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
         trace!("iv: {:?}", iv);
 
-        // TODO : map the "CBC: argument length" to CKR_DATA_LEN_RANGE
-
         let output = default_api::keys_key_id_encrypt_post(
             &self.api_config,
             &self.key_id,
@@ -55,6 +53,14 @@ impl EncryptCtx {
             },
         )
         .map_err(|err| {
+            if let openapi::apis::Error::ResponseError(ref resp) = err {
+                if resp.status == reqwest::StatusCode::BAD_REQUEST {
+                    if resp.content.contains("argument length") {
+                        return CKR_DATA_LEN_RANGE;
+                    }
+                    return CKR_DATA_INVALID;
+                }
+            }
             error!("Failed to decrypt: {:?}", err);
             CKR_DEVICE_ERROR
         })?;
