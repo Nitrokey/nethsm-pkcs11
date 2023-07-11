@@ -36,7 +36,7 @@
 | C_GetTokenInfo     | ✔️      |                                                                          |
 | C_InitToken        | 🗓️      | Read passwords from stdin or use a separator ?                           |
 | C_GetMechanismList | ✔️      |                                                                          |
-| C_GetMechanismInfo | ✔️      | Length of the RSA public keys is set to 0                                |
+| C_GetMechanismInfo | ✔️      |                                                                          |
 | C_Login            | ✔️      | The pin is used as the password                                          |
 | C_Logout           | ✔️      |                                                                          |
 | C_WaitForSlotEvent | ❌      | May be used to poll for the status of the server, requires a lot of work |
