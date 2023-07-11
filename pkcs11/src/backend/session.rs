@@ -265,14 +265,31 @@ impl Session {
         cryptoki_sys::CKR_OK
     }
 
-    pub fn encrypt_update(&mut self, data: &[u8]) -> Result<(), CK_RV> {
+    pub fn encrypt_add_data(&mut self, data: &[u8]) -> Result<(), CK_RV> {
         let encrypt_ctx = self
             .encrypt_ctx
             .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
 
-        encrypt_ctx.update(data);
+        encrypt_ctx.add_data(data);
         Ok(())
+    }
+    pub fn encrypt_biggest_chunk(&self) -> Result<usize, CK_RV> {
+        let encrypt_ctx = self
+            .encrypt_ctx
+            .as_ref()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        Ok(encrypt_ctx.get_biggest_chunk_len())
+    }
+
+    pub fn encrypt_available_data(&mut self) -> Result<Vec<u8>, CK_RV> {
+        let encrypt_ctx = self
+            .encrypt_ctx
+            .as_mut()
+            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
+
+        encrypt_ctx.encrypt_available_data()
     }
 
     pub fn encrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
@@ -285,7 +302,7 @@ impl Session {
     }
 
     pub fn encrypt(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
-        self.encrypt_update(data)?;
+        self.encrypt_add_data(data)?;
         self.encrypt_final()
     }
 

@@ -1,7 +1,10 @@
 use log::{error, trace};
 
 use crate::{
-    backend::mechanism::{CkRawMechanism, Mechanism},
+    backend::{
+        encrypt::ENCRYPT_BLOCK_SIZE,
+        mechanism::{CkRawMechanism, Mechanism},
+    },
     data::SESSION_MANAGER,
     lock_mutex,
 };
@@ -67,12 +70,31 @@ pub extern "C" fn C_Encrypt(
         }
     };
 
-    if pData.is_null() || pEncryptedData.is_null() || pulEncryptedDataLen.is_null() {
+    if pData.is_null() || pulEncryptedDataLen.is_null() {
         session.encrypt_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
     let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
+
+    // We only support AES-CBC for now the size of the encrypted data is the same as the size of the input
+
+    if pEncryptedData.is_null() {
+        unsafe {
+            std::ptr::write(pulEncryptedDataLen, data.len() as u64);
+        }
+        return cryptoki_sys::CKR_OK;
+    }
+
+    let buffer_len = unsafe { *pulEncryptedDataLen } as usize;
+
+    unsafe {
+        std::ptr::write(pulEncryptedDataLen, data.len() as u64);
+    }
+
+    if data.len() > buffer_len {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
 
     let encrypted_data = match session.encrypt(data) {
         Ok(data) => data,
@@ -82,10 +104,13 @@ pub extern "C" fn C_Encrypt(
         }
     };
 
-    if encrypted_data.len() > unsafe { *pulEncryptedDataLen } as usize {
-        unsafe {
-            std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as u64);
-        }
+    unsafe {
+        std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as u64);
+    }
+
+    // this shouldn't happen as it's checked above, but it's safe to keep it if encrypted_data.len() != data.len()
+
+    if encrypted_data.len() > buffer_len {
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
@@ -95,7 +120,6 @@ pub extern "C" fn C_Encrypt(
             pEncryptedData,
             encrypted_data.len(),
         );
-        std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as u64);
     }
 
     session.encrypt_clear();
@@ -125,7 +149,7 @@ pub extern "C" fn C_EncryptUpdate(
         }
     };
 
-    if pPart.is_null() || pEncryptedPart.is_null() || pulEncryptedPartLen.is_null() {
+    if pPart.is_null() || pulEncryptedPartLen.is_null() {
         session.encrypt_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -133,6 +157,23 @@ pub extern "C" fn C_EncryptUpdate(
     trace!("C_EncryptUpdate() called with {} bytes", ulPartLen);
 
     let data = unsafe { std::slice::from_raw_parts(pPart, ulPartLen as usize) };
+
+    let buffer_len = unsafe { std::ptr::read(pulEncryptedPartLen) as usize };
+
+    // We only support AES-CBC for now the size of the encrypted data is the same as the size of the input
+
+    let theoretical_size = ENCRYPT_BLOCK_SIZE * (data.len() / ENCRYPT_BLOCK_SIZE + 1);
+
+    unsafe {
+        std::ptr::write(pulEncryptedPartLen, theoretical_size as u64);
+    }
+    if pEncryptedPart.is_null() {
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if buffer_len < theoretical_size {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
 
     let encrypted_data = match session.encrypt(data) {
         Ok(data) => data,
@@ -142,10 +183,11 @@ pub extern "C" fn C_EncryptUpdate(
         }
     };
 
-    if encrypted_data.len() > unsafe { *pulEncryptedPartLen } as usize {
-        unsafe {
-            std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
-        }
+    unsafe {
+        std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
+    }
+    // shouldn't happen
+    if encrypted_data.len() > buffer_len {
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
@@ -155,7 +197,6 @@ pub extern "C" fn C_EncryptUpdate(
             pEncryptedPart,
             encrypted_data.len(),
         );
-        std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
     }
 
     cryptoki_sys::CKR_OK
@@ -186,10 +227,45 @@ pub extern "C" fn C_EncryptFinal(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    // write 0 to the length
+    // enverything should be encrypted at this point, so we just need to return the last block
+
+    let buffer_len = unsafe { std::ptr::read(pulLastEncryptedPartLen) as usize };
+    unsafe {
+        std::ptr::write(pulLastEncryptedPartLen, ENCRYPT_BLOCK_SIZE as u64);
+    }
+
+    if pLastEncryptedPart.is_null() {
+        return cryptoki_sys::CKR_OK;
+    }
+
+    if buffer_len < ENCRYPT_BLOCK_SIZE {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    let encrypted_data = match session.encrypt_final() {
+        Ok(data) => data,
+        Err(e) => {
+            session.encrypt_clear();
+            return e;
+        }
+    };
 
     unsafe {
-        std::ptr::write(pulLastEncryptedPartLen, 0);
+        std::ptr::write(pulLastEncryptedPartLen, encrypted_data.len() as u64);
+    }
+
+    // shouldn't happen
+
+    if encrypted_data.len() > buffer_len {
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            encrypted_data.as_ptr(),
+            pLastEncryptedPart,
+            encrypted_data.len(),
+        );
     }
 
     session.encrypt_clear();
