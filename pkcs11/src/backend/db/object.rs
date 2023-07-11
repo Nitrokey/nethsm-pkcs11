@@ -195,19 +195,15 @@ const KEYTYPE_EC_P521: &str = "1.3.132.0.35";
 const KEYTYPE_CURVE25519: &str = "1.3.101.112";
 
 fn key_type_to_asn1(key_type: KeyType) -> Result<asn1::ObjectIdentifier, Error> {
-    match key_type {
-        KeyType::EcP224 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P224)
-            .ok_or(Error::KeyData("parsing key".to_string())),
-        KeyType::EcP256 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P256)
-            .ok_or(Error::KeyData("parsing key".to_string())),
-        KeyType::EcP384 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P384)
-            .ok_or(Error::KeyData("parsing key".to_string())),
-        KeyType::EcP521 => asn1::ObjectIdentifier::from_string(KEYTYPE_EC_P521)
-            .ok_or(Error::KeyData("parsing key".to_string())),
-        KeyType::Curve25519 => asn1::ObjectIdentifier::from_string(KEYTYPE_CURVE25519)
-            .ok_or(Error::KeyData("parsing key".to_string())),
-        _ => Err(Error::KeyData("key_type".to_string())),
-    }
+    asn1::ObjectIdentifier::from_string(match key_type {
+        KeyType::EcP224 => KEYTYPE_EC_P224,
+        KeyType::EcP256 => KEYTYPE_EC_P256,
+        KeyType::EcP384 => KEYTYPE_EC_P384,
+        KeyType::EcP521 => KEYTYPE_EC_P521,
+        KeyType::Curve25519 => KEYTYPE_CURVE25519,
+        _ => return Err(Error::KeyData("invalid_key_type".to_string())),
+    })
+    .ok_or(Error::KeyData("parsing key".to_string()))
 }
 
 #[derive(Debug, Clone)]
