@@ -281,10 +281,10 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let ec_point_bytes = general_purpose::STANDARD
         .decode(ec_points.as_bytes())
         .map_err(Error::Decode)?;
+
     let ec_point_serialized = asn1::write(|w| {
         w.write_element(&asn1::SequenceWriter::new(&|w| {
-            w.write_element(&ec_point_bytes.as_slice())?;
-            Ok(())
+            w.write_element(&ec_point_bytes.as_slice())
         }))
     })
     .map_err(Error::Asn1Write)?;
@@ -292,8 +292,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let key_params = key_type_to_asn1(key_data.r#type)?;
     let ec_params = asn1::write(|w| {
         w.write_element(&asn1::SequenceWriter::new(&|w| {
-            w.write_element(&key_params)?;
-            Ok(())
+            w.write_element(&key_params)
         }))
     })
     .map_err(Error::Asn1Write)?;
