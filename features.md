@@ -43,22 +43,22 @@
 
 ## Decrypt
 
-| Feature               | Status | Notes                                                        |
-| --------------------- | ------ | ------------------------------------------------------------ |
-| C_DecryptInit         | ✔️      |                                                              |
-| C_Decrypt             | ⚠️      | Getting the size by setting pData to null is not implemented |
-| C_DecryptUpdate       | 🗓️      |                                                              |
-| C_DecryptFinal        | 🗓️      |                                                              |
-| C_DecryptVerifyUpdate | ❌      | Verify is not supported by NetHSM                            |
+| Feature               | Status | Notes                                                                                              |
+| --------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| C_DecryptInit         | ✔️      |                                                                                                    |
+| C_Decrypt             | ⚠️      | Getting the size by setting pData to null is not implemented                                       |
+| C_DecryptUpdate       | ⚠️      | Partial blocks are not yet supported. Getting the size by setting pData to null is not implemented |
+| C_DecryptFinal        | ✔️      | The length will always be 0                                                                        |
+| C_DecryptVerifyUpdate | ❌      | Verify is not supported by NetHSM                                                                  |
 
 ## Encrypt
 
-| Feature         | Status | Notes                                                         |
-| --------------- | ------ | ------------------------------------------------------------- |
-| C_EncryptInit   | ✔️      |                                                               |
-| C_Encrypt       | ⚠️      | Getting the size by setting pData to null is not implemented. |
-| C_EncryptUpdate | 🗓️      |                                                               |
-| C_EncryptFinal  | 🗓️      |                                                               |
+| Feature         | Status | Notes                                                                                               |
+| --------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| C_EncryptInit   | ✔️      |                                                                                                     |
+| C_Encrypt       | ⚠️      | Getting the size by setting pData to null is not implemented.                                       |
+| C_EncryptUpdate | ⚠️      | Partial blocks are not yet supported. Getting the size by setting pData to null is not implemented. |
+| C_EncryptFinal  | ✔️      | The buffer length will alwayse be 0                                                                 |
 
 ## Sign
 
