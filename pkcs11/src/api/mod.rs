@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-// for now we allow unused variables, but we should remove this when we have implemented all the functions we needI
+// for now we allow unused variables, but we should remove this when we have implemented all the functions we need
 #![allow(unused_variables)]
 
 pub mod decrypt;

@@ -111,7 +111,54 @@ pub extern "C" fn C_EncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptUpdate() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_EncryptUpdate() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    if pPart.is_null() || pEncryptedPart.is_null() || pulEncryptedPartLen.is_null() {
+        session.encrypt_clear();
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    trace!("C_EncryptUpdate() called with {} bytes", ulPartLen);
+
+    let data = unsafe { std::slice::from_raw_parts(pPart, ulPartLen as usize) };
+
+    let encrypted_data = match session.encrypt(data) {
+        Ok(data) => data,
+        Err(e) => {
+            session.encrypt_clear();
+            return e;
+        }
+    };
+
+    if encrypted_data.len() > unsafe { *pulEncryptedPartLen } as usize {
+        unsafe {
+            std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
+        }
+        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            encrypted_data.as_ptr(),
+            pEncryptedPart,
+            encrypted_data.len(),
+        );
+        std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_EncryptFinal(
@@ -120,5 +167,32 @@ pub extern "C" fn C_EncryptFinal(
     pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptFinal() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_EncryptFinal() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    if pLastEncryptedPart.is_null() || pulLastEncryptedPartLen.is_null() {
+        session.encrypt_clear();
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    // write 0 to the length
+
+    unsafe {
+        std::ptr::write(pulLastEncryptedPartLen, 0);
+    }
+
+    session.encrypt_clear();
+
+    cryptoki_sys::CKR_OK
 }
