@@ -116,6 +116,8 @@ impl Mechanism {
     const RSA_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 8192;
     const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 224;
     const EC_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 521;
+    const ED_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
+    const ED_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
 
     pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
         match api_mech {
@@ -230,7 +232,7 @@ impl Mechanism {
             }
             Self::Ecdsa => (Self::EC_MIN_KEY_BITS, Self::EC_MAX_KEY_BITS),
             Self::RsaPkcsOaep(_) => (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS),
-            Self::EdDsa => (0, 0),
+            Self::EdDsa => (Self::ED_MIN_KEY_BITS, Self::ED_MAX_KEY_BITS),
         };
         cryptoki_sys::CK_MECHANISM_INFO {
             ulMinKeySize: min_bits,
