@@ -175,7 +175,7 @@ pub extern "C" fn C_EncryptUpdate(
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
-    let encrypted_data = match session.encrypt(data) {
+    let encrypted_data = match session.encrypt_update(data) {
         Ok(data) => data,
         Err(e) => {
             session.encrypt_clear();

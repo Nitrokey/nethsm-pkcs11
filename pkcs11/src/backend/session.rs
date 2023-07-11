@@ -292,6 +292,11 @@ impl Session {
         encrypt_ctx.encrypt_available_data()
     }
 
+    pub fn encrypt_update(&mut self, data: &[u8]) -> Result<Vec<u8>, CK_RV> {
+        self.encrypt_add_data(data)?;
+        self.encrypt_available_data()
+    }
+
     pub fn encrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
         let encrypt_ctx = self
             .encrypt_ctx
