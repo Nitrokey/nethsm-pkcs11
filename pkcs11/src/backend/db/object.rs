@@ -9,7 +9,7 @@ use cryptoki_sys::{
     CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS, CKA_MODULUS_BITS,
     CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
     CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
-    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
+    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
 use openapi::models::{KeyType, PublicKey};
@@ -17,14 +17,7 @@ use std::collections::HashMap;
 use std::mem::size_of;
 use yasna::models::ObjectIdentifier;
 
-// these were not in the lib
-const CK_CERTIFICATE_CATEGORY_UNSPECIFIED: CK_ULONG = 0x00000000;
-const CK_CERTIFICATE_CATEGORY_TOKEN_USER: CK_ULONG = 0x00000001;
-const CK_CERTIFICATE_CATEGORY_AUTHORITY: CK_ULONG = 0x00000002;
-const CK_CERTIFICATE_CATEGORY_OTHER_ENTITY: CK_ULONG = 0x00000003;
-
 use super::attr::{self, CkRawAttrTemplate};
-use crate::backend::mechanism::Mechanism;
 
 /// Object and object attribute handling logic. See the PKCS#11
 /// Section 4 on objects for more details on how these attributes
@@ -77,8 +70,8 @@ pub enum Attr {
     CkMechanismType([u8; size_of::<cryptoki_sys::CK_MECHANISM_TYPE>()]),
     CkObjectClass([u8; size_of::<cryptoki_sys::CK_OBJECT_CLASS>()]),
     CkUlong([u8; size_of::<cryptoki_sys::CK_ULONG>()]),
+    #[allow(dead_code)]
     Sensitive,
-    Null,
 }
 
 impl Attr {
@@ -97,7 +90,6 @@ impl Attr {
             Self::CkUlong(v) => v.len(),
             Self::Bytes(v) => v.len(),
             Self::Sensitive => 0,
-            Self::Null => 0,
         }
     }
 
@@ -113,10 +105,10 @@ impl Attr {
             Self::CkUlong(v) => v,
             Self::Bytes(v) => v,
             Self::Sensitive => &[0u8; 0],
-            Self::Null => &[0u8; 0],
         }
     }
 
+    #[allow(dead_code)]
     fn from_ck_byte(src: cryptoki_sys::CK_BYTE) -> Self {
         #[cfg(target_endian = "little")]
         Self::CkByte(src.to_le_bytes())
@@ -127,10 +119,13 @@ impl Attr {
         Self::CkKeyType(src.to_le_bytes())
     }
 
+    #[allow(dead_code)]
     fn from_ck_cert_type(src: cryptoki_sys::CK_CERTIFICATE_TYPE) -> Self {
         #[cfg(target_endian = "little")]
         Self::CkCertType(src.to_le_bytes())
     }
+
+    #[allow(dead_code)]
     fn from_ck_cert_category(src: cryptoki_sys::CK_ULONG) -> Self {
         #[cfg(target_endian = "little")]
         Self::CkCertCategory(src.to_le_bytes())
@@ -141,6 +136,7 @@ impl Attr {
         Self::CkMechanismType(src.to_le_bytes())
     }
 
+    #[allow(dead_code)]
     fn from_ck_mechanism_type_vec(src: Vec<cryptoki_sys::CK_MECHANISM_TYPE>) -> Self {
         #[cfg(target_endian = "little")]
         Self::Bytes(src.iter().flat_map(|x| x.to_le_bytes()).collect())
@@ -163,18 +159,18 @@ impl PartialEq<Attr> for Attr {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum ObjectKind {
-    Mechanism(Mechanism),
-    Data,
-    Key,
-    Certificate,
-}
+// #[derive(Clone, Debug)]
+// pub enum ObjectKind {
+//     Mechanism(Mechanism),
+//     Data,
+//     Key,
+//     Certificate,
+// }
 
 #[derive(Debug, Clone)]
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
-    kind: ObjectKind,
+    // kind: ObjectKind,
     pub id: String,
     pub size: Option<usize>,
 }
@@ -206,8 +202,6 @@ pub struct KeyPair {
 pub enum Error {
     KeyData(String),
     Decode(base64::DecodeError),
-    Asn1(yasna::ASN1Error),
-    UnsupportedType,
 }
 
 struct KeyData {
@@ -370,7 +364,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
 
     let private_key = Object {
         attrs: attrs.clone(),
-        kind: ObjectKind::Key,
+        // kind: ObjectKind::Key,
         id: id.clone(),
         size: key_attrs.key_size,
     };
@@ -381,7 +375,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
 
     let mut public_key = Object {
         attrs: attrs.clone(),
-        kind: ObjectKind::Key,
+        // kind: ObjectKind::Key,
         id,
         size: key_attrs.key_size,
     };
@@ -421,50 +415,6 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
 impl Object {
     pub fn attr(&self, attr_type: cryptoki_sys::CK_ATTRIBUTE_TYPE) -> Option<&Attr> {
         self.attrs.get(&attr_type)
-    }
-
-    pub fn kind(&self) -> &ObjectKind {
-        &self.kind
-    }
-
-    pub fn is_private(&self) -> bool {
-        match self.attr(cryptoki_sys::CKA_PRIVATE) {
-            Some(attr) => *attr == Attr::CK_TRUE,
-            _ => false,
-        }
-    }
-
-    pub fn is_mechanism(&self) -> bool {
-        match self.kind {
-            ObjectKind::Mechanism(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn match_attr_template(&self, tpl: &CkRawAttrTemplate) -> bool {
-        let mut class_matched = false;
-        for raw_attr in tpl.iter() {
-            match self.attr(raw_attr.type_()) {
-                Some(attr) => match raw_attr.val_bytes() {
-                    Some(raw_bytes) => {
-                        if attr.as_bytes() != raw_bytes {
-                            return false;
-                        }
-                    }
-                    None => return false,
-                },
-                None => return false,
-            };
-            class_matched = class_matched || (raw_attr.type_() == cryptoki_sys::CKA_CLASS);
-        }
-
-        // Per the PKCS#11 v2.40 spec, mechanism objects must only match templates that
-        // explicitely provide CKA_CLASS = CKO_MECHANISM.
-        if self.is_mechanism() {
-            class_matched
-        } else {
-            true
-        }
     }
 
     pub fn fill_attr_template(&self, tpl: &mut CkRawAttrTemplate) -> cryptoki_sys::CK_RV {

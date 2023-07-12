@@ -284,14 +284,6 @@ impl Session {
         encrypt_ctx.add_data(data);
         Ok(())
     }
-    pub fn encrypt_biggest_chunk(&self) -> Result<usize, CK_RV> {
-        let encrypt_ctx = self
-            .encrypt_ctx
-            .as_ref()
-            .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
-
-        Ok(encrypt_ctx.get_biggest_chunk_len())
-    }
 
     pub fn encrypt_available_data(&mut self) -> Result<Vec<u8>, CK_RV> {
         let encrypt_ctx = self

@@ -5,7 +5,6 @@
 use std::iter::Iterator;
 pub enum Error {
     BufTooSmall,
-    MechParamTypeMismatch,
     NullPtrDeref,
 }
 

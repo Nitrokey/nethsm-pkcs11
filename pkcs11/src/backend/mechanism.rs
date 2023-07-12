@@ -9,7 +9,6 @@ use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 #[derive(Debug)]
 pub enum CkRawError {
-    BufTooSmall,
     MechParamTypeMismatch,
     NullPtrDeref,
 }
@@ -50,7 +49,6 @@ impl CkRawMechanism {
 #[derive(Debug)]
 pub enum Error {
     CkRaw(CkRawError),
-    DigestMechMismatch,
     UnknownMech,
 }
 
@@ -65,6 +63,7 @@ pub enum MechDigest {
 }
 
 impl MechDigest {
+    #[allow(dead_code)]
     pub fn ck_type(&self) -> CK_MECHANISM_TYPE {
         match self {
             Self::Md5 => cryptoki_sys::CKM_MD5,
@@ -116,6 +115,7 @@ impl Mechanism {
     const ED_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const ED_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
 
+    #[allow(dead_code)]
     pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
         match api_mech {
             KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
@@ -141,6 +141,7 @@ impl Mechanism {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_api_mech(&self) -> Option<KeyMechanism> {
         match self {
             Self::AesCbc(_) => Some(KeyMechanism::AesDecryptionCbc),
@@ -269,10 +270,6 @@ impl Mechanism {
                 Self::RsaPkcsOaep(_) => cryptoki_sys::CKF_SIGN,
                 Self::EdDsa => cryptoki_sys::CKF_SIGN,
             }
-    }
-
-    pub fn is_multipart(&self) -> bool {
-        matches!(self, Self::RsaPkcsOaep(_) | Self::RsaPkcsPss(_))
     }
 
     /// returns the name to use in the api, None if not supported
