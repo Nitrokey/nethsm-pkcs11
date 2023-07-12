@@ -27,7 +27,7 @@ use super::attr::{self, CkRawAttrTemplate};
 /// Since there is no R/W session support these objects are created
 /// from the user provisioned database.
 #[derive(Clone, Copy, Debug, Hash)]
-pub struct ObjectHandle(u64);
+pub struct ObjectHandle(cryptoki_sys::CK_OBJECT_HANDLE);
 
 impl From<cryptoki_sys::CK_OBJECT_HANDLE> for ObjectHandle {
     fn from(src: cryptoki_sys::CK_OBJECT_HANDLE) -> Self {
@@ -37,12 +37,6 @@ impl From<cryptoki_sys::CK_OBJECT_HANDLE> for ObjectHandle {
 
 impl From<usize> for ObjectHandle {
     fn from(src: usize) -> Self {
-        Self(src as u64)
-    }
-}
-
-impl From<u32> for ObjectHandle {
-    fn from(src: u32) -> Self {
         Self(src as u64)
     }
 }
