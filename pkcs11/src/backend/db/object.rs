@@ -9,7 +9,7 @@ use cryptoki_sys::{
     CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS, CKA_MODULUS_BITS,
     CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
     CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
-    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_UNAVAILABLE_INFORMATION,
+    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
 use openapi::models::{KeyType, PublicKey};
@@ -37,11 +37,11 @@ impl From<cryptoki_sys::CK_OBJECT_HANDLE> for ObjectHandle {
 
 impl From<usize> for ObjectHandle {
     fn from(src: usize) -> Self {
-        Self(src as u64)
+        Self(src as CK_ULONG)
     }
 }
 
-impl From<ObjectHandle> for u64 {
+impl From<ObjectHandle> for CK_ULONG {
     fn from(src: ObjectHandle) -> Self {
         src.0
     }
@@ -237,7 +237,10 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_MODULUS, Attr::Bytes(modulus));
     attrs.insert(CKA_PUBLIC_EXPONENT, Attr::Bytes(public_exponent));
-    attrs.insert(CKA_MODULUS_BITS, Attr::from_ck_ulong((size * 8) as u64));
+    attrs.insert(
+        CKA_MODULUS_BITS,
+        Attr::from_ck_ulong((size * 8) as CK_ULONG),
+    );
 
     Ok(KeyData {
         key_type: cryptoki_sys::CKK_RSA,

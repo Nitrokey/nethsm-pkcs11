@@ -183,7 +183,10 @@ impl Mechanism {
                 let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>() }
                     .map_err(Error::CkRaw)?;
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
-                trace!("params.hashAlg: {:?}", params.hashAlg);
+
+                let hash_alg = params.hashAlg;
+
+                trace!("params.hashAlg: {:?}", hash_alg);
                 Self::RsaPkcsPss(
                     MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
                 )

@@ -11,6 +11,10 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: read
+      checks: write
+      
     runs-on: ubuntu-latest
 
     steps:
@@ -20,16 +24,21 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt, clippy
 
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run Clippy on the pkcs11 crate
-        run: cargo clippy --all-targets --all-features -p nethsm_pkcs11 -- -D warnings --no-deps
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
+
+      # - name: Run Clippy on the pkcs11 crate
+      #   run: cargo clippy --all-targets --all-features -p nethsm_pkcs11 -- -D warnings --no-deps
 
       - name: Run tests
         run: cargo test
-
 
   integration-tests:
     runs-on: ubuntu-latest
