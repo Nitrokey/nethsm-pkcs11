@@ -108,7 +108,7 @@ Verify is not supported by NetHSM
 
 ## Pin management
 
-| Feature   | Status | Notes                                           |
-| --------- | ------ | ----------------------------------------------- |
-| C_InitPIN | ❌      | May be later used to create an user             |
-| C_SetPIN  | 🗓️      | Will be used to change the password of the user |
+| Feature   | Status | Notes                            |
+| --------- | ------ | -------------------------------- |
+| C_InitPIN | ❌      |                                  |
+| C_SetPIN  | ✔️      | Changes the password of the user |
