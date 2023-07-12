@@ -79,7 +79,7 @@ impl SessionManager {
 #[derive(Clone, Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
-    api_config: openapi::apis::configuration::Configuration,
+    pub api_config: openapi::apis::configuration::Configuration,
     pub flags: CK_FLAGS,
     pub state: CK_STATE,
     pub device_error: CK_RV,
