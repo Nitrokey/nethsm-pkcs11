@@ -200,12 +200,15 @@ impl Session {
             }
         };
 
-        self.sign_ctx = Some(SignCtx::new(
+        self.sign_ctx = match SignCtx::init(
             mechanism.clone(),
             key.id.clone(),
             key.size,
             self.api_config.clone(),
-        ));
+        ) {
+            Ok(ctx) => Some(ctx),
+            Err(err) => return err,
+        };
 
         cryptoki_sys::CKR_OK
     }

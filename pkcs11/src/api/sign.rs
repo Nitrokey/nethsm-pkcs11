@@ -63,7 +63,12 @@ pub extern "C" fn C_Sign(
         }
     };
 
+    trace!("pData null {}", pData.is_null());
+    trace!("pulSignatureLen null {}", pulSignatureLen.is_null());
+
     if pData.is_null() || pulSignatureLen.is_null() {
+
+        trace!("aborting sign due to null");
         session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -78,11 +83,13 @@ pub extern "C" fn C_Sign(
     }
 
     if pSignature.is_null() {
+        trace!("sending only the size");
         // only the size was requested
         return cryptoki_sys::CKR_OK;
     }
 
     if buffer_size < theoretical_size {
+        trace!("buffer too small");
         return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
     }
 
