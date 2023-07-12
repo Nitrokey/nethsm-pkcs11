@@ -55,7 +55,7 @@ jobs:
         run: cargo build
       
       - name: install opensc
-        run: apt-get install opensc
+        run: sudo apt-get install opensc
       
       - name: Run integration tests
         run: ./tools/ci_setup.sh && ./tools/ci_integration_tests.sh
