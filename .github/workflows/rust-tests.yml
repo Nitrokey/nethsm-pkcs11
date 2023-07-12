@@ -25,8 +25,8 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run Clippy
-        run: cargo clippy --all-targets --all-features --exclude openapi -- -D warnings
+      - name: Run Clippy on the pkcs11 crate
+        run: cargo clippy --all-targets --all-features -p nethsm_pkcs11 -- -D warnings --no-deps
 
       - name: Run tests
         run: cargo test
