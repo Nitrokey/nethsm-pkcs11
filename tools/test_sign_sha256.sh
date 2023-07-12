@@ -1,12 +1,10 @@
 #!/bin/sh -x
 set -e
 
-KEYID=$1
+KEYID=rsakey
 
 HEXID=$(echo -n ${KEYID}| xxd -ps)
 
-echo $HEXID
-echo $KEYID
 
 rm -rf _data.sig _public.pem
 

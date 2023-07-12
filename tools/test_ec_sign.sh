@@ -1,7 +1,7 @@
 #!/bin/sh -x
 set -e
 
-KEYID=$1
+KEYID=eckey
 
 HEXID=$(echo -n ${KEYID} | xxd -ps)
 

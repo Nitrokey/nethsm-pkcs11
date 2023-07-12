@@ -1,0 +1,63 @@
+name: Rust CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features --exclude openapi -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      RUST_BACKTRACE: full
+      RUST_LOG: trace
+
+    services:
+      nethsm:
+        image: nitrokey/nethsm:testing
+        ports:
+          - 8443:8443
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Build in debug mode
+        run: cargo build
+      
+      - name: install opensc
+        run: apt-get install opensc
+      
+      - name: Run integration tests
+        run: ./tools/ci_setup.sh && ./tools/ci_integration_tests.sh
+      
+    

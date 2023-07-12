@@ -281,7 +281,7 @@ impl Mechanism {
     /// returns the name to use in the api, None if not supported
     pub fn sign_name(&self) -> Option<SignMode> {
         match self {
-            Self::RsaPkcs => Some(SignMode::EdDsa),
+            Self::RsaPkcs => Some(SignMode::Pkcs1),
             Self::RsaPkcsPss(digest) => match digest {
                 MechDigest::Md5 => Some(SignMode::PssSha1),
                 MechDigest::Sha1 => Some(SignMode::PssSha1),
