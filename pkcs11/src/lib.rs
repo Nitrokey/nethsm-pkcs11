@@ -4,9 +4,9 @@ mod data;
 
 pub mod utils;
 
-mod defs;
-mod config;
 mod backend;
+mod config;
+mod defs;
 
 #[macro_use]
 extern crate std;

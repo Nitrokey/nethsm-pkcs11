@@ -1,9 +1,8 @@
 use super::config_file::P11Config;
 
-
 // output to stdout and a file
 pub fn configure_logger(config: &P11Config) {
-  let mut builder = env_logger::Builder::from_default_env();
+    let mut builder = env_logger::Builder::from_default_env();
 
     builder.target(env_logger::Target::Stdout);
 
