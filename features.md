@@ -100,7 +100,7 @@ Verify is not supported by NetHSM
 | C_FindObjects       | ⚠️      | Only lists the available keys        |
 | C_FindObjectsFinal  | ✔️      |                                      |
 | C_GetAttributeValue | ✔️      |                                      |
-| C_GetObjectSize     | 🗓️      |                                      |
+| C_GetObjectSize     | ✔️      |                                      |
 | C_CreateObject      | 🗓️      | Needs admin                          |
 | C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED |
 | C_DestroyObject     | 🗓️      | Needs admin                          |
