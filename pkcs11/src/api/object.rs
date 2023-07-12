@@ -149,7 +149,34 @@ pub extern "C" fn C_GetObjectSize(
     pulSize: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetObjectSize() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if pulSize.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("function called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let object = match session.get_object(hObject) {
+        Some(object) => object,
+        None => {
+            error!("function called with invalid object handle {}.", hObject);
+            return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
+        }
+    };
+
+    unsafe {
+        std::ptr::write(pulSize, object.size.unwrap_or(0) as CK_ULONG);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_CreateObject(

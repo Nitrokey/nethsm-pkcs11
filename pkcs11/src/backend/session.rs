@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
+    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RW_USER_FUNCTIONS,
     CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
     CK_USER_TYPE,
 };
@@ -101,7 +101,7 @@ impl Session {
             api_config: api_configuration,
             slot_id,
             flags,
-            state: CKS_RO_PUBLIC_SESSION,
+            state: CKS_RW_USER_FUNCTIONS,
             fetched_all_keys: false,
             db: Db::new(),
             device_error: CKR_OK,
