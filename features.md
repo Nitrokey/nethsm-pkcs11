@@ -1,4 +1,4 @@
-# Status of the pkcs implementation
+# Status of the pkcs11 module implementation
 
 - ✔️ : Fully functionnal
 - ⚠️ : Some behaviors may not be implemented

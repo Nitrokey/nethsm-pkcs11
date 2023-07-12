@@ -1,41 +1,12 @@
-# PKCS#11 Driver for the Nitrokey NetHSM
+# PKCS#11 Module for the Nitrokey NetHSM
 
-## Note
+This module allows to use a Nitrokey NetHSM as a backend for pkcs11 operations.
 
-This driver is still an early Proof of Concept implementation that only
-implements the functions that are necessary for operating TLS servers like for
-example an HTTPS server.
+Some features of pkcs11 are not supported, see the feature list here : [features.md](./features.md)
 
-See feature list here : [features.md](./features.md)
+## Download
 
-## Building
-
-```
-cargo build --release
-```
-
-The dynamic library will be in `target/release/libnethsm_pkcs11.so`.
-
-### Alpine
-
-You need to install musl-dev, openssl-dev :
-
-```
-apk add musl-dev openssl-dev
-```
-
-To build on alpine you will need to add the C argument `target-feature=-crt-static` : 
-
-```
-RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
-```
-
-
-## Test function (dev)
-
-```
-cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS=TEST pkcs11-tool --module target/debug/libnethsm_pkcs11.so -I 
-```
+Download the binary corresponding to your system here : [latest release](https://github.com/Nitrokey/nethsm-pkcs11/releases).
 
 ## Configuration
 
@@ -72,3 +43,32 @@ slots:
 ```
 
 A NetHSM that is not operational is considered as a slot wit the token not present.
+
+## Building
+
+```
+cargo build --release
+```
+
+The dynamic library will be in `target/release/libnethsm_pkcs11.so`.
+
+### Alpine
+
+You need to install musl-dev, openssl-dev :
+
+```
+apk add musl-dev openssl-dev
+```
+
+To build on alpine you will need to add the C argument `target-feature=-crt-static` : 
+
+```
+RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
+```
+
+
+## Test function (dev)
+
+```
+cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS=TEST pkcs11-tool --module target/debug/libnethsm_pkcs11.so -I 
+```
