@@ -8,15 +8,37 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+
     strategy:
       matrix:
-        os: [ubuntu-latest, debian-latest, fedora-latest, alpine/latest]
-        rust-version: [stable, beta, nightly]
+        os: ["ubuntu:22.04", "debian:12", "fedora:38", "alpine:3.18"]
+        rust-version: [stable]
 
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ matrix.os }}-${{ github.event.release.tag_name }}.so
+      HOME: /root
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: install dependencies
+        run: |
+          case ${{matrix.os}} in 
+            ubuntu* | debian* )
+              apt-get update
+              apt-get install -y curl build-essential pkg-config libssl-dev
+              ;;
+            alpine*)
+              apk add openssl-dev musl-dev gcc pkgconfig
+              echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
+              ;;
+            fedora*)
+              dnf install -y curl gcc openssl-devel pkg-config
+              ;;
+          esac
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -26,9 +48,13 @@ jobs:
 
       - name: Build project
         run: cargo build --release
+        
+
+
+      - name: rename file
+        run: mv target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
 
       - name: Upload to the release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ matrix.os }}-${{ matrix.rust-version }}.so
-          path: target/release/libnethsm_pkcs11.so
+          files: ${{ env.FILE_NAME }}
