@@ -12,7 +12,7 @@ use cryptoki_sys::{
     CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
-use openapi::models::{KeyType, PublicKey};
+use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 use yasna::models::ObjectIdentifier;
@@ -167,6 +167,7 @@ pub struct Object {
     // kind: ObjectKind,
     pub id: String,
     pub size: Option<usize>,
+    pub mechanisms: Vec<KeyMechanism>,
 }
 
 const KEYTYPE_EC_P224: [u64; 5] = [1, 3, 132, 0, 33];
@@ -364,6 +365,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         // kind: ObjectKind::Key,
         id: id.clone(),
         size: key_attrs.key_size,
+        mechanisms: key_data.mechanisms,
     };
 
     if key_data.r#type == KeyType::Generic {
@@ -375,6 +377,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         // kind: ObjectKind::Key,
         id,
         size: key_attrs.key_size,
+        mechanisms: Vec::new(),
     };
 
     public_key.attrs.insert(

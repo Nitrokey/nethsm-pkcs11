@@ -141,7 +141,6 @@ impl Mechanism {
         }
     }
 
-    #[allow(dead_code)]
     pub fn to_api_mech(&self) -> Option<KeyMechanism> {
         match self {
             Self::AesCbc(_) => Some(KeyMechanism::AesDecryptionCbc),

@@ -200,12 +200,8 @@ impl Session {
             }
         };
 
-        self.sign_ctx = match SignCtx::init(
-            mechanism.clone(),
-            key.id.clone(),
-            key.size,
-            self.api_config.clone(),
-        ) {
+        self.sign_ctx = match SignCtx::init(mechanism.clone(), key.clone(), self.api_config.clone())
+        {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };

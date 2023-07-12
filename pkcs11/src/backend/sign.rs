@@ -1,4 +1,4 @@
-use super::mechanism::Mechanism;
+use super::{db::Object, mechanism::Mechanism};
 use base64::{engine::general_purpose, Engine as _};
 use cryptoki_sys::{CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, CK_RV};
 use log::{debug, error, trace};
@@ -8,8 +8,7 @@ use openapi::{apis::default_api, models::SignMode};
 pub struct SignCtx {
     pub mechanism: Mechanism,
     pub sign_name: SignMode,
-    pub key_id: String,
-    pub key_size: Option<usize>,
+    pub key: Object,
     pub data: Vec<u8>,
     pub api_config: openapi::apis::configuration::Configuration,
 }
@@ -17,8 +16,7 @@ pub struct SignCtx {
 impl SignCtx {
     pub fn init(
         mechanism: Mechanism,
-        key_id: String,
-        key_size: Option<usize>,
+        key: Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
         let sign_name = mechanism.sign_name().ok_or_else(|| {
@@ -26,13 +24,25 @@ impl SignCtx {
             CKR_MECHANISM_INVALID
         })?;
 
+        let api_mech = match mechanism.to_api_mech() {
+            Some(mech) => mech,
+            None => {
+                debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
+                return Err(CKR_MECHANISM_INVALID);
+            }
+        };
+
+        if !key.mechanisms.contains(&api_mech) {
+            debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
+            return Err(CKR_MECHANISM_INVALID);
+        }
+
         Ok(Self {
             mechanism,
-            key_id,
+            key,
             sign_name,
             data: Vec::new(),
             api_config,
-            key_size,
         })
     }
     pub fn update(&mut self, data: &[u8]) {
@@ -47,7 +57,7 @@ impl SignCtx {
 
         let signature = default_api::keys_key_id_sign_post(
             &self.api_config,
-            &self.key_id,
+            &self.key.id,
             openapi::models::SignRequestData {
                 mode,
                 message: b64_message,
@@ -67,6 +77,6 @@ impl SignCtx {
     }
 
     pub fn get_theoretical_size(&self) -> usize {
-        self.mechanism.get_theoretical_signed_size(self.key_size)
+        self.mechanism.get_theoretical_signed_size(self.key.size)
     }
 }
