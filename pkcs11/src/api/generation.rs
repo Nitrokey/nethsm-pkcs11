@@ -1,4 +1,9 @@
-use log::trace;
+use base64::{engine::general_purpose, Engine};
+use cryptoki_sys::CKR_OK;
+use log::{error, info, trace};
+use openapi::apis::default_api;
+
+use crate::{data::SESSION_MANAGER, lock_mutex};
 
 pub extern "C" fn C_GenerateKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -79,5 +84,62 @@ pub extern "C" fn C_GenerateRandom(
     ulRandomLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateRandom() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if RandomData.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    if ulRandomLen == 0 {
+        return CKR_OK;
+    }
+
+    if ulRandomLen > 1024 {
+        error!(
+            "C_GenerateRandom() called with invalid length {}, NetHSM supports up to 1024 bytes",
+            ulRandomLen
+        );
+
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!(
+                "C_GenerateRandom() called with invalid session handle {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let data = match default_api::random_post(
+        &session.api_config,
+        openapi::models::RandomRequestData {
+            length: ulRandomLen as i32,
+        },
+    ) {
+        Ok(data) => data,
+        Err(e) => {
+            error!("C_GenerateRandom() failed to generate random data: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    // parse base64 string to bytes
+
+    let raw_data = match general_purpose::STANDARD.decode(data.random) {
+        Ok(raw_data) => raw_data,
+        Err(e) => {
+            error!("C_GenerateRandom() failed to decode random data: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(raw_data.as_ptr(), RandomData, ulRandomLen as usize);
+    }
+
+    CKR_OK
 }
