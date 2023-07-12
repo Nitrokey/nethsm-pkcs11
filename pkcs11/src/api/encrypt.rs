@@ -1,3 +1,4 @@
+use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
 use crate::{
@@ -81,7 +82,7 @@ pub extern "C" fn C_Encrypt(
 
     if pEncryptedData.is_null() {
         unsafe {
-            std::ptr::write(pulEncryptedDataLen, data.len() as u64);
+            std::ptr::write(pulEncryptedDataLen, data.len() as CK_ULONG);
         }
         return cryptoki_sys::CKR_OK;
     }
@@ -89,7 +90,7 @@ pub extern "C" fn C_Encrypt(
     let buffer_len = unsafe { *pulEncryptedDataLen } as usize;
 
     unsafe {
-        std::ptr::write(pulEncryptedDataLen, data.len() as u64);
+        std::ptr::write(pulEncryptedDataLen, data.len() as CK_ULONG);
     }
 
     if data.len() > buffer_len {
@@ -105,7 +106,7 @@ pub extern "C" fn C_Encrypt(
     };
 
     unsafe {
-        std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as u64);
+        std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as CK_ULONG);
     }
 
     // this shouldn't happen as it's checked above, but it's safe to keep it if encrypted_data.len() != data.len()
@@ -165,7 +166,7 @@ pub extern "C" fn C_EncryptUpdate(
     let theoretical_size = ENCRYPT_BLOCK_SIZE * (data.len() / ENCRYPT_BLOCK_SIZE + 1);
 
     unsafe {
-        std::ptr::write(pulEncryptedPartLen, theoretical_size as u64);
+        std::ptr::write(pulEncryptedPartLen, theoretical_size as CK_ULONG);
     }
     if pEncryptedPart.is_null() {
         return cryptoki_sys::CKR_OK;
@@ -184,7 +185,7 @@ pub extern "C" fn C_EncryptUpdate(
     };
 
     unsafe {
-        std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as u64);
+        std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as CK_ULONG);
     }
     // shouldn't happen
     if encrypted_data.len() > buffer_len {
@@ -231,7 +232,7 @@ pub extern "C" fn C_EncryptFinal(
 
     let buffer_len = unsafe { std::ptr::read(pulLastEncryptedPartLen) as usize };
     unsafe {
-        std::ptr::write(pulLastEncryptedPartLen, ENCRYPT_BLOCK_SIZE as u64);
+        std::ptr::write(pulLastEncryptedPartLen, ENCRYPT_BLOCK_SIZE as CK_ULONG);
     }
 
     if pLastEncryptedPart.is_null() {
@@ -251,7 +252,7 @@ pub extern "C" fn C_EncryptFinal(
     };
 
     unsafe {
-        std::ptr::write(pulLastEncryptedPartLen, encrypted_data.len() as u64);
+        std::ptr::write(pulLastEncryptedPartLen, encrypted_data.len() as CK_ULONG);
     }
 
     // shouldn't happen

@@ -1,4 +1,4 @@
-use cryptoki_sys::CKR_OK;
+use cryptoki_sys::{CKR_OK, CK_ULONG};
 use log::{error, trace};
 
 use crate::{
@@ -74,7 +74,7 @@ pub extern "C" fn C_Sign(
 
     let theoretical_size = session.sign_theoretical_size();
     unsafe {
-        std::ptr::write(pulSignatureLen, theoretical_size as u64);
+        std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
     }
 
     if pSignature.is_null() {
@@ -91,7 +91,7 @@ pub extern "C" fn C_Sign(
         Err(err) => return err,
     };
     unsafe {
-        std::ptr::write(pulSignatureLen, signature.len() as u64);
+        std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
     }
 
     // double check the buffer size
@@ -169,7 +169,7 @@ pub extern "C" fn C_SignFinal(
     let theoretical_size = session.sign_theoretical_size();
 
     unsafe {
-        std::ptr::write(pulSignatureLen, theoretical_size as u64);
+        std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
     }
 
     if pSignature.is_null() {
@@ -190,7 +190,7 @@ pub extern "C" fn C_SignFinal(
     };
 
     unsafe {
-        std::ptr::write(pulSignatureLen, signature.len() as u64);
+        std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
     }
 
     // double check the buffer size

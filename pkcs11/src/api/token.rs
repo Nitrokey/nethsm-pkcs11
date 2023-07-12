@@ -23,7 +23,7 @@ pub extern "C" fn C_GetSlotList(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let count = DEVICE.slots.len() as u64;
+    let count = DEVICE.slots.len() as CK_ULONG;
 
     // only the count is requested
     if pSlotList.is_null() {
@@ -192,7 +192,7 @@ pub extern "C" fn C_GetMechanismList(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let count = MECHANISM_LIST.len() as u64;
+    let count = MECHANISM_LIST.len() as CK_ULONG;
 
     // only the count is requested
     if pMechanismList.is_null() {
