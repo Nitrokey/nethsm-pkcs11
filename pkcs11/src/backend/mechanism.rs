@@ -2,10 +2,7 @@
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
 
-use cryptoki_sys::{
-    CKM_MD5, CKM_RSA_PKCS_OAEP, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512, CKM_SHA_1,
-    CK_MECHANISM_TYPE,
-};
+use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE};
 use log::trace;
 use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
 

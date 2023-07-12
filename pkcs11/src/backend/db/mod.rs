@@ -9,9 +9,7 @@ use std::collections::HashMap;
 
 use cryptoki_sys::CK_OBJECT_HANDLE;
 pub use object::{Object, ObjectHandle, ObjectKind};
-use openapi::apis::default_api::{self, KeysGetError, KeysKeyIdGetError};
-
-use crate::config::device::Slot;
+use openapi::apis::default_api::{KeysGetError, KeysKeyIdGetError};
 
 // NOTE: for now, we use these *Info structs to construct key objects. The source PEM is
 // preserved, so that a crypto::Pkey (an EVP_PKEY wrapper) can be constructed whenever

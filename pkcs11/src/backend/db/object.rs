@@ -1,24 +1,18 @@
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
-use base64::{
-    alphabet,
-    engine::{self, general_purpose},
-    Engine as _,
-};
+use base64::{engine::general_purpose, Engine as _};
 
-use base64::engine::GeneralPurpose;
 use cryptoki_sys::{
-    CK_C_GetMechanismInfo, CKA_ALLOWED_MECHANISMS, CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE,
-    CKA_CLASS, CKA_DECRYPT, CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE,
-    CKA_ID, CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
-    CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
-    CKA_SIGN, CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
-    CKA_WRAP_WITH_TRUSTED, CKK_EC, CKK_ECDSA, CKK_GENERIC_SECRET, CKK_RSA, CKM_AES_CBC,
-    CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
+    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CLASS, CKA_DECRYPT, CKA_DERIVE,
+    CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_KEY_GEN_MECHANISM,
+    CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS, CKA_MODULUS_BITS,
+    CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
+    CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
+    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
-use openapi::models::{key_type, private_key, public_key, KeyMechanism, KeyType, PublicKey};
+use openapi::models::{KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 use yasna::models::ObjectIdentifier;
@@ -29,10 +23,7 @@ const CK_CERTIFICATE_CATEGORY_TOKEN_USER: CK_ULONG = 0x00000001;
 const CK_CERTIFICATE_CATEGORY_AUTHORITY: CK_ULONG = 0x00000002;
 const CK_CERTIFICATE_CATEGORY_OTHER_ENTITY: CK_ULONG = 0x00000003;
 
-use super::{
-    attr::{self, CkRawAttrTemplate},
-    CertCategory, CertInfo, EcKeyInfo, RsaKeyInfo,
-};
+use super::attr::{self, CkRawAttrTemplate};
 use crate::backend::mechanism::Mechanism;
 
 /// Object and object attribute handling logic. See the PKCS#11

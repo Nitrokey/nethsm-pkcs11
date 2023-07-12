@@ -6,7 +6,7 @@ use cryptoki_sys::{
     CK_USER_TYPE,
 };
 use log::error;
-use openapi::apis::default_api::{self, KeysGetError};
+use openapi::apis::default_api::{self};
 use reqwest::StatusCode;
 
 use crate::config::device::Slot;
