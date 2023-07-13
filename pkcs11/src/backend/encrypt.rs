@@ -22,11 +22,9 @@ pub struct EncryptCtx {
 impl EncryptCtx {
     pub fn init(
         mechanism: Mechanism,
-        key: Object,
+        key: &Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
-        let key_id = key.id;
-
         let api_mech = match mechanism.to_api_mech() {
             Some(mech) => mech,
             None => {
@@ -48,7 +46,7 @@ impl EncryptCtx {
 
         Ok(Self {
             mechanism,
-            key_id,
+            key_id: key.id.clone(),
             data: Vec::new(),
             api_config,
         })

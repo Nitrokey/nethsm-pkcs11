@@ -265,11 +265,10 @@ impl Session {
             }
         };
 
-        self.encrypt_ctx =
-            match EncryptCtx::init(mechanism.clone(), key.clone(), self.api_config.clone()) {
-                Ok(ctx) => Some(ctx),
-                Err(err) => return err,
-            };
+        self.encrypt_ctx = match EncryptCtx::init(mechanism.clone(), key, self.api_config.clone()) {
+            Ok(ctx) => Some(ctx),
+            Err(err) => return err,
+        };
 
         cryptoki_sys::CKR_OK
     }
@@ -323,23 +322,22 @@ impl Session {
 
         // get key id from the handle
 
-        let key_id = match self
+        let key = match self
             .db
             .object(ObjectHandle::from(key_handle))
             .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
         {
-            Ok(object) => object.id.clone(),
+            Ok(object) => object,
             Err(err) => {
                 error!("Failed to get key: {:?}", err);
                 return err;
             }
         };
 
-        self.decrypt_ctx = Some(DecryptCtx::new(
-            mechanism.clone(),
-            key_id,
-            self.api_config.clone(),
-        ));
+        self.decrypt_ctx = match DecryptCtx::init(mechanism.clone(), key, self.api_config.clone()) {
+            Ok(ctx) => Some(ctx),
+            Err(err) => return err,
+        };
 
         cryptoki_sys::CKR_OK
     }

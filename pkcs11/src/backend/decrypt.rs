@@ -1,9 +1,9 @@
 use base64::{engine::general_purpose, Engine};
-use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR};
+use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CK_RV, CKR_MECHANISM_INVALID};
 use log::{error, trace};
 use openapi::apis::default_api;
 
-use super::mechanism::Mechanism;
+use super::{db::Object, mechanism::Mechanism};
 
 #[derive(Clone, Debug)]
 pub struct DecryptCtx {
@@ -14,17 +14,37 @@ pub struct DecryptCtx {
 }
 
 impl DecryptCtx {
-    pub fn new(
+    pub fn init(
         mechanism: Mechanism,
-        key_id: String,
+        key: &Object,
         api_config: openapi::apis::configuration::Configuration,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, CK_RV> {
+
+        let api_mech = match mechanism.to_api_mech() {
+            Some(mech) => mech,
+            None => {
+                error!(
+                    "Tried to decrypt with an invalid mechanism: {:?}",
+                    mechanism
+                );
+                return Err(CKR_MECHANISM_INVALID);
+            }
+        };
+
+        if !key.mechanisms.contains(&api_mech) {
+            error!(
+                "Tried to decrypt with an invalid mechanism: {:?}",
+                mechanism
+            );
+            return Err(CKR_MECHANISM_INVALID);
+        }
+
+        Ok(Self {
             mechanism,
-            key_id,
+            key_id: key.id.clone(),
             data: Vec::new(),
             api_config,
-        }
+        })
     }
     pub fn update(&mut self, data: &[u8]) {
         self.data.extend_from_slice(data);
