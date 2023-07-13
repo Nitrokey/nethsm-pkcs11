@@ -25,7 +25,7 @@ impl EncryptCtx {
         key: &Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
-        let api_mech = match mechanism.to_api_mech() {
+        let api_mech = match mechanism.to_api_mech(super::mechanism::MechMode::Encrypt) {
             Some(mech) => mech,
             None => {
                 debug!(

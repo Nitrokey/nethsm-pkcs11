@@ -4,7 +4,7 @@
 
 use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE};
 use log::trace;
-use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, SignMode};
+use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 #[derive(Debug)]
@@ -101,6 +101,12 @@ pub enum Mechanism {
     Ecdsa,
 }
 
+pub enum MechMode {
+    Sign,
+    Encrypt,
+    Decrypt,
+}
+
 /// The token supported mechanisms and their capabilities.
 /// See PKCS#11 Mechanisms Specification Version 2.40 for details on how these
 /// mechanisms should behave.
@@ -114,6 +120,22 @@ impl Mechanism {
     const EC_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 521;
     const ED_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const ED_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
+
+    pub fn from_key_type(key_type: KeyType) -> Vec<Self> {
+        match key_type {
+            KeyType::Generic => vec![Self::AesCbc(None)],
+            KeyType::Rsa => vec![
+                Self::RsaPkcs,
+                Self::RsaPkcsOaep(MechDigest::Sha256),
+                Self::RsaPkcsPss(MechDigest::Sha256),
+                Self::RsaX509,
+            ],
+            KeyType::EcP224 | KeyType::EcP256 | KeyType::EcP384 | KeyType::EcP521 => {
+                vec![Self::Ecdsa]
+            }
+            KeyType::Curve25519 => vec![Self::EdDsa],
+        }
+    }
 
     #[allow(dead_code)]
     pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
@@ -141,29 +163,42 @@ impl Mechanism {
         }
     }
 
-    pub fn to_api_mech(&self) -> Option<KeyMechanism> {
-        match self {
-            Self::AesCbc(_) => Some(KeyMechanism::AesDecryptionCbc),
-            Self::RsaPkcs => Some(KeyMechanism::RsaDecryptionPkcs1),
-            Self::RsaPkcsOaep(digest) => match digest {
-                MechDigest::Md5 => Some(KeyMechanism::RsaDecryptionOaepMd5),
-                MechDigest::Sha1 => Some(KeyMechanism::RsaDecryptionOaepSha1),
-                MechDigest::Sha224 => Some(KeyMechanism::RsaDecryptionOaepSha224),
-                MechDigest::Sha256 => Some(KeyMechanism::RsaDecryptionOaepSha256),
-                MechDigest::Sha384 => Some(KeyMechanism::RsaDecryptionOaepSha384),
-                MechDigest::Sha512 => Some(KeyMechanism::RsaDecryptionOaepSha512),
+    pub fn to_api_mech(&self, mode: MechMode) -> Option<KeyMechanism> {
+        match mode {
+            MechMode::Sign => match self {
+                Self::AesCbc(_) => None,
+                Self::RsaPkcs => Some(KeyMechanism::RsaSignaturePkcs1),
+                Self::RsaPkcsPss(digest) => match digest {
+                    MechDigest::Md5 => Some(KeyMechanism::RsaSignaturePssMd5),
+                    MechDigest::Sha1 => Some(KeyMechanism::RsaSignaturePssSha1),
+                    MechDigest::Sha224 => Some(KeyMechanism::RsaSignaturePssSha224),
+                    MechDigest::Sha256 => Some(KeyMechanism::RsaSignaturePssSha256),
+                    MechDigest::Sha384 => Some(KeyMechanism::RsaSignaturePssSha384),
+                    MechDigest::Sha512 => Some(KeyMechanism::RsaSignaturePssSha512),
+                },
+                Self::RsaX509 => None,
+                Self::Ecdsa => Some(KeyMechanism::EcdsaSignature),
+                Self::EdDsa => Some(KeyMechanism::EdDsaSignature),
+                Self::RsaPkcsOaep(_) => None,
             },
-            Self::RsaPkcsPss(digest) => match digest {
-                MechDigest::Md5 => Some(KeyMechanism::RsaSignaturePssMd5),
-                MechDigest::Sha1 => Some(KeyMechanism::RsaSignaturePssSha1),
-                MechDigest::Sha224 => Some(KeyMechanism::RsaSignaturePssSha224),
-                MechDigest::Sha256 => Some(KeyMechanism::RsaSignaturePssSha256),
-                MechDigest::Sha384 => Some(KeyMechanism::RsaSignaturePssSha384),
-                MechDigest::Sha512 => Some(KeyMechanism::RsaSignaturePssSha512),
+            MechMode::Encrypt => match self {
+                Self::AesCbc(_) => Some(KeyMechanism::AesEncryptionCbc),
+                _ => None,
             },
-            Self::RsaX509 => Some(KeyMechanism::RsaDecryptionRaw),
-            Self::Ecdsa => Some(KeyMechanism::EcdsaSignature),
-            Self::EdDsa => Some(KeyMechanism::EdDsaSignature),
+            MechMode::Decrypt => match self {
+                Self::AesCbc(_) => Some(KeyMechanism::AesDecryptionCbc),
+                Self::RsaX509 => Some(KeyMechanism::RsaDecryptionRaw),
+                Self::RsaPkcs => Some(KeyMechanism::RsaDecryptionPkcs1),
+                Self::RsaPkcsOaep(digest) => match digest {
+                    MechDigest::Md5 => Some(KeyMechanism::RsaDecryptionOaepMd5),
+                    MechDigest::Sha1 => Some(KeyMechanism::RsaDecryptionOaepSha1),
+                    MechDigest::Sha224 => Some(KeyMechanism::RsaDecryptionOaepSha224),
+                    MechDigest::Sha256 => Some(KeyMechanism::RsaDecryptionOaepSha256),
+                    MechDigest::Sha384 => Some(KeyMechanism::RsaDecryptionOaepSha384),
+                    MechDigest::Sha512 => Some(KeyMechanism::RsaDecryptionOaepSha512),
+                },
+                _ => None,
+            },
         }
     }
 

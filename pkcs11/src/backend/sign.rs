@@ -1,4 +1,7 @@
-use super::{db::Object, mechanism::Mechanism};
+use super::{
+    db::Object,
+    mechanism::{MechMode, Mechanism},
+};
 use base64::{engine::general_purpose, Engine as _};
 use cryptoki_sys::{CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, CK_RV};
 use log::{debug, error, trace};
@@ -24,7 +27,7 @@ impl SignCtx {
             CKR_MECHANISM_INVALID
         })?;
 
-        let api_mech = match mechanism.to_api_mech() {
+        let api_mech = match mechanism.to_api_mech(MechMode::Sign) {
             Some(mech) => mech,
             None => {
                 debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);

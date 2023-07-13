@@ -22,3 +22,4 @@ openapi = { path = "../openapi" }
 reqwest = "0.9.24"
 base64 = "0.21.2"
 yasna = "0.5.2"
+openssl = "0.10.55"

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::iter::Iterator;
+
 pub enum Error {
     BufTooSmall,
     NullPtrDeref,
@@ -30,6 +31,14 @@ impl CkRawAttr {
                 self.len() as usize,
             ))
         }
+    }
+
+    pub fn read_value<T>(&self) -> Option<T> {
+        let val_ptr = unsafe { (*self.0).pValue };
+        if val_ptr.is_null() {
+            return None;
+        }
+        unsafe { Some(std::ptr::read(val_ptr as *const T)) }
     }
 
     pub fn len(&self) -> cryptoki_sys::CK_ULONG {

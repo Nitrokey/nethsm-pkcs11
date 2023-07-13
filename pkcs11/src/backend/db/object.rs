@@ -15,7 +15,8 @@ use log::{debug, trace};
 use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
-use yasna::models::ObjectIdentifier;
+
+use crate::backend::key::key_type_to_asn1;
 
 use super::attr::{self, CkRawAttrTemplate};
 
@@ -170,23 +171,6 @@ pub struct Object {
     pub mechanisms: Vec<KeyMechanism>,
 }
 
-const KEYTYPE_EC_P224: [u64; 5] = [1, 3, 132, 0, 33];
-const KEYTYPE_EC_P256: [u64; 7] = [1, 2, 840, 10045, 3, 1, 7];
-const KEYTYPE_EC_P384: [u64; 5] = [1, 3, 132, 0, 34];
-const KEYTYPE_EC_P521: [u64; 5] = [1, 3, 132, 0, 35];
-const KEYTYPE_CURVE25519: [u64; 4] = [1, 3, 101, 112];
-
-fn key_type_to_asn1(key_type: KeyType) -> Result<ObjectIdentifier, Error> {
-    Ok(ObjectIdentifier::from_slice(match key_type {
-        KeyType::EcP224 => &KEYTYPE_EC_P224,
-        KeyType::EcP256 => &KEYTYPE_EC_P256,
-        KeyType::EcP384 => &KEYTYPE_EC_P384,
-        KeyType::EcP521 => &KEYTYPE_EC_P521,
-        KeyType::Curve25519 => &KEYTYPE_CURVE25519,
-        _ => return Err(Error::KeyData("invalid_key_type".to_string())),
-    }))
-}
-
 #[derive(Debug, Clone)]
 pub struct KeyPair {
     pub public_key: Object,
@@ -271,7 +255,10 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         writer.write_bytes(&ec_point_bytes);
     });
 
-    let key_params = key_type_to_asn1(key_data.r#type)?;
+    let key_params = key_type_to_asn1(key_data.r#type).ok_or(Error::KeyData(format!(
+        "Unsupported key type: {:?}",
+        key_data.r#type
+    )))?;
 
     let ec_params = yasna::construct_der(|writer| {
         writer.write_oid(&key_params);

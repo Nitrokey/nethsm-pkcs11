@@ -29,17 +29,17 @@
 
 ## Token
 
-| Feature            | Status | Notes                                                                    |
-| ------------------ | ------ | ------------------------------------------------------------------------ |
-| C_GetSlotList      | ✔️      |                                                                          |
-| C_GetSlotInfo      | ✔️      |                                                                          |
-| C_GetTokenInfo     | ✔️      |                                                                          |
-| C_InitToken        | 🗓️      | Read passwords from stdin or use a separator ?                           |
-| C_GetMechanismList | ✔️      |                                                                          |
-| C_GetMechanismInfo | ✔️      |                                                                          |
-| C_Login            | ✔️      | The pin is used as the password                                          |
-| C_Logout           | ✔️      |                                                                          |
-| C_WaitForSlotEvent | ❌      | May be used to poll for the status of the server, requires a lot of work |
+| Feature            | Status | Notes                                                                                                                       |
+| ------------------ | ------ | --------------------------------------------------------------------------------------------------------------------------- |
+| C_GetSlotList      | ✔️      |                                                                                                                             |
+| C_GetSlotInfo      | ✔️      |                                                                                                                             |
+| C_GetTokenInfo     | ✔️      |                                                                                                                             |
+| C_InitToken        | 🗓️      | Read passwords from stdin or use a separator ?                                                                              |
+| C_GetMechanismList | ✔️      |                                                                                                                             |
+| C_GetMechanismInfo | ✔️      |                                                                                                                             |
+| C_Login            | ✔️      | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default) |
+| C_Logout           | ✔️      |                                                                                                                             |
+| C_WaitForSlotEvent | ❌      | May be used to poll for the status of the server, requires a lot of work                                                    |
 
 ## Decrypt
 
@@ -101,7 +101,7 @@ Verify is not supported by NetHSM
 | C_FindObjectsFinal  | ✔️      |                                      |
 | C_GetAttributeValue | ✔️      |                                      |
 | C_GetObjectSize     | ✔️      |                                      |
-| C_CreateObject      | 🗓️      | Needs admin                          |
+| C_CreateObject      | ⚠️      | Needs to be logged as admin (SO). Only private keys can be added.     |
 | C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED |
 | C_DestroyObject     | 🗓️      | Needs admin                          |
 | C_SetAttributeValue | ✔️      | Always returns CKR_ACTION_PROHIBITED |

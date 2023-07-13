@@ -11,7 +11,7 @@
 use reqwest::{self, header::HeaderValue};
 
 use super::{configuration, Error};
-use crate::apis::ResponseContent;
+use crate::{apis::ResponseContent, models::PrivateKey};
 
 /// struct for typed errors of method [`config_backup_passphrase_put`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1981,7 +1981,7 @@ pub fn keys_key_id_public_pem_get(
 pub fn keys_key_id_put(
     configuration: &configuration::Configuration,
     key_id: &str,
-    body: &str,
+    body: PrivateKey,
     mechanisms: Option<Vec<crate::models::KeyMechanism>>,
     tags: Option<Vec<String>>,
 ) -> Result<(), Error<KeysKeyIdPutError>> {
@@ -2220,7 +2220,7 @@ pub fn keys_key_id_sign_post(
 /// Import a private key into NetHSM and let NetHSM generate a KeyID. The public key will be automatically derived.
 pub fn keys_post(
     configuration: &configuration::Configuration,
-    body: &str,
+    body: PrivateKey,
     mechanisms: Option<Vec<crate::models::KeyMechanism>>,
     tags: Option<Vec<String>>,
 ) -> Result<String, Error<KeysPostError>> {
@@ -2291,9 +2291,7 @@ pub fn keys_post(
 
     let default = HeaderValue::from_static("unknown");
 
-    let location = response_headers
-        .get("location")
-        .unwrap_or(&default);
+    let location = response_headers.get("location").unwrap_or(&default);
 
     // get the id from the logation header value :
     // location: /api/v1/keys/<id>?mechanisms=ECDSA_Signature

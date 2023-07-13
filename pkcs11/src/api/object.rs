@@ -185,8 +185,43 @@ pub extern "C" fn C_CreateObject(
     ulCount: cryptoki_sys::CK_ULONG,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_CreateObject() called - NYI");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    trace!("C_CreateObject() called ");
+
+    if pTemplate.is_null() || phObject.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("function called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    let template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+
+    let objects = match session.create_object(template) {
+        Ok(object) => object,
+        Err(err) => {
+            error!("C_CreateObject() failed: {:?}", err);
+            return err;
+        }
+    };
+
+    if objects.is_empty() {
+        error!("C_CreateObject() failed: no object created");
+        return cryptoki_sys::CKR_GENERAL_ERROR;
+    }
+
+    unsafe {
+        std::ptr::write(phObject, objects[0].0);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_CopyObject(

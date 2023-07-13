@@ -1,6 +1,7 @@
 pub mod db;
 pub mod decrypt;
 pub mod encrypt;
+pub mod key;
 pub mod mechanism;
 pub mod object;
 pub mod session;
