@@ -1,9 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
-    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_SO, CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE,
-    CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID,
+    CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_SO, CKU_USER, CK_FLAGS,
+    CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
 use log::{error, info};
 use openapi::{
@@ -17,6 +17,7 @@ use super::{
     db::{self, attr::CkRawAttrTemplate, Db, Object, ObjectHandle},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
+    key::create_key_from_template,
     mechanism::Mechanism,
     object::EnumCtx,
     sign::SignCtx,
@@ -186,8 +187,11 @@ impl Session {
         if wanted_user != user {
             error!("Failed to login: invalid user type");
             self.api_config.basic_auth = None;
+            self.user = UserStatus::LoggedOut;
             return CKR_USER_TYPE_INVALID;
         }
+
+        self.user = user;
 
         CKR_OK
     }
@@ -492,6 +496,23 @@ impl Session {
         }
 
         Ok(result)
+    }
+
+    pub fn create_object(
+        &mut self,
+        template: CkRawAttrTemplate,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
+        if self.user != UserStatus::Administrator {
+            // The closest we have to say that the user is not admin
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
+
+        let id = create_key_from_template(template, &self.api_config).map_err(|err| {
+            error!("Failed to create key: {:?}", err);
+            CKR_DEVICE_ERROR
+        })?;
+
+        self.fetch_key(id)
     }
 }
 

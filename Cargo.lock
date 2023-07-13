@@ -837,6 +837,7 @@ dependencies = [
  "log",
  "merge",
  "openapi",
+ "openssl",
  "reqwest",
  "serde",
  "serde_json",

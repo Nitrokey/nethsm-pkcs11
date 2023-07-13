@@ -3,7 +3,10 @@ use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, C
 use log::{error, trace};
 use openapi::apis::default_api;
 
-use super::{db::Object, mechanism::Mechanism};
+use super::{
+    db::Object,
+    mechanism::{MechMode, Mechanism},
+};
 
 #[derive(Clone, Debug)]
 pub struct DecryptCtx {
@@ -19,7 +22,7 @@ impl DecryptCtx {
         key: &Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
-        let api_mech = match mechanism.to_api_mech() {
+        let api_mech = match mechanism.to_api_mech(MechMode::Decrypt) {
             Some(mech) => mech,
             None => {
                 error!(
