@@ -1,13 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RW_USER_FUNCTIONS,
-    CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_STATE,
-    CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
+    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_SO, CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE,
+    CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
-use log::error;
-use openapi::apis::default_api::{self};
-use reqwest::StatusCode;
+use log::{error, info};
+use openapi::{
+    apis::default_api::{self},
+    models::UserRole,
+};
 
 use crate::config::device::Slot;
 
@@ -76,12 +78,29 @@ impl SessionManager {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum UserStatus {
+    Operator,
+    Administrator,
+    LoggedOut,
+}
+
+impl UserStatus {
+    pub fn from_ck_user_type(user_type: CK_USER_TYPE) -> Self {
+        match user_type {
+            CKU_USER => Self::Operator,
+            CKU_SO => Self::Administrator,
+            _ => Self::LoggedOut,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
     pub api_config: openapi::apis::configuration::Configuration,
     pub flags: CK_FLAGS,
-    pub state: CK_STATE,
+    pub user: UserStatus,
     pub device_error: CK_RV,
     pub fetched_all_keys: bool,
     pub db: Db,
@@ -97,11 +116,13 @@ impl Session {
 
         let api_configuration = slot.api_config.clone();
 
+        let user = get_current_user(&api_configuration);
+
         Self {
             api_config: api_configuration,
             slot_id,
             flags,
-            state: CKS_RW_USER_FUNCTIONS,
+            user,
             fetched_all_keys: false,
             db: Db::new(),
             device_error: CKR_OK,
@@ -112,42 +133,63 @@ impl Session {
         }
     }
     pub fn get_ck_info(&self) -> cryptoki_sys::CK_SESSION_INFO {
+        let state = match self.user {
+            UserStatus::LoggedOut => CKS_RO_PUBLIC_SESSION,
+            UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
+            UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
+        };
+
         cryptoki_sys::CK_SESSION_INFO {
             slotID: self.slot_id,
-            state: self.state,
+            state,
             flags: self.flags,
             ulDeviceError: self.device_error,
         }
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> CK_RV {
-        if user_type != CKU_USER {
+        let mut username = self
+            .api_config
+            .basic_auth
+            .clone()
+            .map(|(username, _)| username);
+
+        // if we want to be admin but the previous username does not login as admin, we set the username to admin
+        if user_type == CKU_SO && (self.user != UserStatus::Administrator || username.is_none()) {
+            info!("Setting username to admin");
+
+            username = Some("admin".to_string());
+        }
+
+        let username = match username {
+            Some(username) => username,
+            None => {
+                error!("Failed to login: no username set");
+                return CKR_USER_TYPE_INVALID;
+            }
+        };
+
+        // we can unwrap here, because the auth should always be set
+        self.api_config.basic_auth = Some((username, Some(pin)));
+
+        // try an authenticated request to see if the pin is correct
+        let user = get_current_user(&self.api_config);
+
+        if user == UserStatus::LoggedOut {
+            error!("Failed to login: invalid username or pin");
+            self.api_config.basic_auth = None;
+            return CKR_PIN_INCORRECT;
+        }
+
+        let wanted_user = UserStatus::from_ck_user_type(user_type);
+
+        if wanted_user != user {
+            error!("Failed to login: invalid user type");
+            self.api_config.basic_auth = None;
             return CKR_USER_TYPE_INVALID;
         }
 
-        // we can unwrap here, because the auth should always be set
-        self.api_config.basic_auth = Some((
-            self.api_config.basic_auth.as_ref().unwrap().0.clone(),
-            Some(pin),
-        ));
-
-        // try an authenticated request to see if the pin is correct
-        match default_api::keys_get(&self.api_config, None) {
-            Ok(_) => CKR_OK,
-            Err(err) => match err {
-                openapi::apis::Error::ResponseError(api_response) => match api_response.status {
-                    StatusCode::UNAUTHORIZED => CKR_PIN_INCORRECT,
-                    _ => {
-                        error!("Failed to login: {:?}", api_response);
-                        CKR_DEVICE_ERROR
-                    }
-                },
-                _ => {
-                    error!("Failed to login: {:?}", err);
-                    CKR_DEVICE_ERROR
-                }
-            },
-        }
+        CKR_OK
     }
 
     pub fn logout(&mut self) -> CK_RV {
@@ -450,5 +492,30 @@ impl Session {
         }
 
         Ok(result)
+    }
+}
+
+pub fn get_current_user(api_config: &openapi::apis::configuration::Configuration) -> UserStatus {
+    let auth = match api_config.basic_auth.as_ref() {
+        Some(auth) => auth,
+        None => return UserStatus::LoggedOut,
+    };
+
+    if auth.1.is_none() {
+        return UserStatus::LoggedOut;
+    }
+
+    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()) {
+        Ok(user) => user,
+        Err(err) => {
+            error!("Failed to get user: {:?}", err);
+            return UserStatus::LoggedOut;
+        }
+    };
+
+    match user.role {
+        UserRole::Operator => UserStatus::Operator,
+        UserRole::Administrator => UserStatus::Administrator,
+        _ => UserStatus::LoggedOut,
     }
 }
