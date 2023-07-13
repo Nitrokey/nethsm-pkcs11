@@ -1,11 +1,12 @@
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR, CK_RV,
+    CKR_ARGUMENTS_BAD, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR,
+    CKR_MECHANISM_INVALID, CK_RV,
 };
-use log::{error, trace};
+use log::{debug, error, trace};
 use openapi::apis::{configuration, default_api};
 
-use super::mechanism::Mechanism;
+use super::{db::Object, mechanism::Mechanism};
 
 // we only handle AES-CBC for now that has a block size of 16
 pub const ENCRYPT_BLOCK_SIZE: usize = 16;
@@ -19,17 +20,38 @@ pub struct EncryptCtx {
 }
 
 impl EncryptCtx {
-    pub fn new(
+    pub fn init(
         mechanism: Mechanism,
-        key_id: String,
+        key: Object,
         api_config: openapi::apis::configuration::Configuration,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, CK_RV> {
+        let key_id = key.id;
+
+        let api_mech = match mechanism.to_api_mech() {
+            Some(mech) => mech,
+            None => {
+                debug!(
+                    "Tried to encrypt with an invalid mechanism: {:?}",
+                    mechanism
+                );
+                return Err(CKR_MECHANISM_INVALID);
+            }
+        };
+
+        if !key.mechanisms.contains(&api_mech) {
+            debug!(
+                "Tried to encrypt with an invalid mechanism: {:?}",
+                mechanism
+            );
+            return Err(CKR_MECHANISM_INVALID);
+        }
+
+        Ok(Self {
             mechanism,
             key_id,
             data: Vec::new(),
             api_config,
-        }
+        })
     }
 
     pub fn add_data(&mut self, data: &[u8]) {

@@ -67,7 +67,6 @@ pub extern "C" fn C_Sign(
     trace!("pulSignatureLen null {}", pulSignatureLen.is_null());
 
     if pData.is_null() || pulSignatureLen.is_null() {
-
         trace!("aborting sign due to null");
         session.sign_clear();
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
