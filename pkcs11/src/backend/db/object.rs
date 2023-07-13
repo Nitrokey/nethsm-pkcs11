@@ -365,7 +365,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         // kind: ObjectKind::Key,
         id: id.clone(),
         size: key_attrs.key_size,
-        mechanisms: key_data.mechanisms,
+        mechanisms: key_data.mechanisms.clone(),
     };
 
     if key_data.r#type == KeyType::Generic {
@@ -377,7 +377,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         // kind: ObjectKind::Key,
         id,
         size: key_attrs.key_size,
-        mechanisms: Vec::new(),
+        mechanisms: key_data.mechanisms,
     };
 
     public_key.attrs.insert(
@@ -409,7 +409,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         .attrs
         .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
 
-    Ok(vec![public_key, private_key])
+    Ok(vec![private_key, public_key])
 }
 
 impl Object {
