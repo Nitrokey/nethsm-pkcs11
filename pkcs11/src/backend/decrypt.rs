@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose, Engine};
-use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CK_RV, CKR_MECHANISM_INVALID};
+use cryptoki_sys::{CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, CK_RV};
 use log::{error, trace};
 use openapi::apis::default_api;
 
@@ -19,7 +19,6 @@ impl DecryptCtx {
         key: &Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
-
         let api_mech = match mechanism.to_api_mech() {
             Some(mech) => mech,
             None => {

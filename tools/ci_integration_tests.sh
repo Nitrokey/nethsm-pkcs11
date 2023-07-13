@@ -16,3 +16,4 @@ export P11NETHSM_CONFIG_FILE=./p11nethsm.conf
 ./tools/test_sign_sha1.sh
 ./tools/test_sign_sha256.sh
 
+./tools/general_test.sh
