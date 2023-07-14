@@ -519,6 +519,30 @@ impl Session {
 
         self.fetch_key(id)
     }
+
+    pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), CK_RV> {
+        if self.user != UserStatus::Administrator {
+            // The closest we have to say that the user is not admin
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
+
+        let key = self.db.object(ObjectHandle::from(handle)).ok_or_else(|| {
+            error!("Failed to delete object: invalid handle");
+            CKR_DEVICE_ERROR
+        })?;
+
+        default_api::keys_key_id_delete(&self.api_config, &key.id).map_err(|err| {
+            error!("Failed to delete key {}: {:?}", key.id, err);
+            CKR_DEVICE_ERROR
+        })?;
+
+        self.db.remove(ObjectHandle::from(handle)).ok_or_else(|| {
+            error!("Failed to delete object: invalid handle");
+            CKR_DEVICE_ERROR
+        })?;
+
+        Ok(())
+    }
 }
 
 pub fn get_current_user(api_config: &openapi::apis::configuration::Configuration) -> UserStatus {

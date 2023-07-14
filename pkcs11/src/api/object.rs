@@ -240,7 +240,21 @@ pub extern "C" fn C_DestroyObject(
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DestroyObject() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    let mut manager = lock_mutex!(SESSION_MANAGER);
+
+    let session = match manager.get_session_mut(hSession) {
+        Some(session) => session,
+        None => {
+            error!("function called with invalid session handle {}.", hSession);
+            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+        }
+    };
+
+    match session.delete_object(hObject) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(err) => err,
+    }
 }
 
 pub extern "C" fn C_SetAttributeValue(
