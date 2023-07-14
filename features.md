@@ -34,7 +34,7 @@
 | C_GetSlotList      | ✔️      |                                                                                                                             |
 | C_GetSlotInfo      | ✔️      |                                                                                                                             |
 | C_GetTokenInfo     | ✔️      |                                                                                                                             |
-| C_InitToken        | 🗓️      | Read passwords from stdin or use a separator ?                                                                              |
+| C_InitToken        | ❌      |                                                                                                                             |
 | C_GetMechanismList | ✔️      |                                                                                                                             |
 | C_GetMechanismInfo | ✔️      |                                                                                                                             |
 | C_Login            | ✔️      | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default) |
@@ -94,17 +94,17 @@ Verify is not supported by NetHSM
 
 ## Objects
 
-| Feature             | Status | Notes                                |
-| ------------------- | ------ | ------------------------------------ |
-| C_FindObjectsInit   | ⚠️      | Only lists the available keys        |
-| C_FindObjects       | ⚠️      | Only lists the available keys        |
-| C_FindObjectsFinal  | ✔️      |                                      |
-| C_GetAttributeValue | ✔️      |                                      |
-| C_GetObjectSize     | ✔️      |                                      |
-| C_CreateObject      | ⚠️      | Needs to be logged as admin (SO). Only private keys can be added.     |
-| C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED |
-| C_DestroyObject     | 🗓️      | Needs admin                          |
-| C_SetAttributeValue | ✔️      | Always returns CKR_ACTION_PROHIBITED |
+| Feature             | Status | Notes                                                               |
+| ------------------- | ------ | ------------------------------------------------------------------- |
+| C_FindObjectsInit   | ⚠️      | Only lists the available keys                                       |
+| C_FindObjects       | ⚠️      | Only lists the available keys                                       |
+| C_FindObjectsFinal  | ✔️      |                                                                     |
+| C_GetAttributeValue | ✔️      |                                                                     |
+| C_GetObjectSize     | ✔️      |                                                                     |
+| C_CreateObject      | ⚠️      | Needs to be logged as admin (SO). Only private keys can be added.   |
+| C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED                                |
+| C_DestroyObject     | ⚠️      | Needs to be logged as admin (SO). Only private keys can be deleted. |
+| C_SetAttributeValue | ✔️      | Always returns CKR_ACTION_PROHIBITED                                |
 
 ## Pin management
 

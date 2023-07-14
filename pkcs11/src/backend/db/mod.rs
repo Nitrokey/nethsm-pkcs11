@@ -45,4 +45,8 @@ impl Db {
     pub fn object(&self, handle: ObjectHandle) -> Option<&Object> {
         self.objects.get(&CK_OBJECT_HANDLE::from(handle))
     }
+
+    pub fn remove(&mut self, handle: ObjectHandle) -> Option<Object> {
+        self.objects.remove(&CK_OBJECT_HANDLE::from(handle))
+    }
 }
