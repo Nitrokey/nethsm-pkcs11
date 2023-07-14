@@ -5,7 +5,7 @@ set -e
 KEYID=Hello
 
 HEXID=$(echo -n ${KEYID}| xxd -ps)
-curl -k --fail-with-body -u admin:Administrator -v -X DELETE \
+curl -k -u admin:Administrator -v -X DELETE \
   https://localhost:8443/api/v1/keys/$KEYID
 
 rm -rf _test_ec_private.pem _test_ec_private.der _public.pem _ec_public.pem
