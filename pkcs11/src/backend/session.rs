@@ -1,9 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN, CKR_USER_TYPE_INVALID,
-    CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_SO, CKU_USER, CK_FLAGS,
-    CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN,
+    CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS,
+    CKU_SO, CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID,
+    CK_USER_TYPE,
 };
 use log::{error, info};
 use openapi::{
@@ -11,7 +12,7 @@ use openapi::{
     models::UserRole,
 };
 
-use crate::config::device::Slot;
+use crate::{backend::key::CreateKeyError, config::device::Slot};
 
 use super::{
     db::{self, attr::CkRawAttrTemplate, Db, Object, ObjectHandle},
@@ -509,6 +510,10 @@ impl Session {
 
         let id = create_key_from_template(template, &self.api_config).map_err(|err| {
             error!("Failed to create key: {:?}", err);
+            if err == CreateKeyError::ClassNotSupported {
+                return CKR_DEVICE_MEMORY;
+            }
+
             CKR_DEVICE_ERROR
         })?;
 
