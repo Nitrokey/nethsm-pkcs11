@@ -4,7 +4,7 @@ use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_PRIME_1,
     CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE, CKK_EC, CKK_RSA, CKO_CERTIFICATE,
-    CKO_PRIVATE_KEY, CKO_PUBLIC_KEY, CK_KEY_TYPE,
+    CKO_PRIVATE_KEY, CK_KEY_TYPE,
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -26,11 +26,22 @@ pub enum CreateKeyError {
     PostError(openapi::apis::Error<default_api::KeysPostError>),
 }
 
+impl PartialEq for CreateKeyError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::MissingAttribute, Self::MissingAttribute)
+                | (Self::InvalidAttribute, Self::InvalidAttribute)
+                | (Self::ClassNotSupported, Self::ClassNotSupported)
+                | (Self::PutError(_), Self::PutError(_))
+                | (Self::PostError(_), Self::PostError(_))
+        )
+    }
+}
+
 #[derive(Debug)]
 enum KeyClass {
-    Secret,
     Private,
-    Public,
     Certificate,
 }
 
@@ -44,7 +55,7 @@ pub fn create_key_from_template(
     let mut sign = true;
     let mut encrypt = true;
     let mut decrypt = true;
-    let mut key_class = KeyClass::Secret;
+    let mut key_class = KeyClass::Private;
     let mut ec_params = None;
     let mut value = None;
     let mut public_exponent = None;
@@ -56,9 +67,7 @@ pub fn create_key_from_template(
             CKA_CLASS => match attr.read_value() {
                 Some(val) => {
                     key_class = match val {
-                        cryptoki_sys::CKO_SECRET_KEY => KeyClass::Secret,
                         CKO_PRIVATE_KEY => KeyClass::Private,
-                        CKO_PUBLIC_KEY => KeyClass::Public,
                         CKO_CERTIFICATE => KeyClass::Certificate,
                         _ => return Err(CreateKeyError::ClassNotSupported),
                     }
