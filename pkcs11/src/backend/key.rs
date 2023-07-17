@@ -7,7 +7,7 @@ use cryptoki_sys::{
     CKO_PRIVATE_KEY, CK_KEY_TYPE,
 };
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, trace};
 use openapi::{
     apis::{
         configuration::Configuration,
@@ -133,6 +133,12 @@ pub fn create_key_from_template(
 
     let (r#type, key) = match key_type.ok_or(CreateKeyError::InvalidAttribute)? {
         CKK_RSA => {
+            trace!("Creating RSA key");
+
+            trace!("prime_p: {:?}", prime_p);
+            trace!("prime_q: {:?}", prime_q);
+            trace!("public_exponent: {:?}", public_exponent);
+
             let prime_p =
                 general_purpose::STANDARD.encode(prime_p.ok_or(CreateKeyError::MissingAttribute)?);
 
