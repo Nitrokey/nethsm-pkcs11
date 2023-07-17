@@ -2285,9 +2285,9 @@ pub fn keys_post(
     let local_var_req = local_var_req_builder.build()?;
     let mut local_var_resp = local_var_client.execute(local_var_req)?;
 
+    let response_headers = local_var_resp.headers().clone();
     let local_var_status = local_var_resp.status();
     let local_var_content = local_var_resp.text()?;
-    let response_headers = local_var_resp.headers().clone();
 
     let default = HeaderValue::from_static("unknown");
 

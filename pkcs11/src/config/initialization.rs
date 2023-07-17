@@ -20,7 +20,7 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
     for slot in config.slots.iter() {
         // configure the reqwest client
 
-        let reqwest_client = reqwest::Client::builder()
+        let reqwest_client = reqwest::blocking::Client::builder()
             .danger_accept_invalid_certs(slot.danger_insecure_cert)
             .build()
             .map_err(InitializationError::Reqwest)?;
