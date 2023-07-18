@@ -58,13 +58,25 @@ pub extern "C" fn C_SetPIN(
         return cryptoki_sys::CKR_PIN_INCORRECT;
     }
 
-    let user_id = match session.api_config.basic_auth.as_ref() {
+    let login_ctx = session.login_ctx.operator();
+    let api_config = match login_ctx.as_ref() {
+        Some(conf) => conf,
+        None => {
+            error!(
+                "C_SetPIN() called with session not connected as operator {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
+        }
+    };
+
+    let user_id = match api_config.basic_auth.as_ref() {
         Some(basic_auth) => basic_auth.0.clone(),
         None => return cryptoki_sys::CKR_GENERAL_ERROR,
     };
 
     match default_api::users_user_id_passphrase_post(
-        &session.api_config,
+        api_config,
         &user_id,
         openapi::models::UserPassphrasePostData {
             passphrase: new_pin.to_string(),

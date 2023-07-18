@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use super::config_file::UserConfig;
+
 #[derive(Debug, Clone)]
 pub struct Device {
     pub log_file: Option<String>,
@@ -11,6 +13,8 @@ pub struct Slot {
     pub label: String,
     pub description: Option<String>,
     pub api_config: openapi::apis::configuration::Configuration,
+    pub operator: Option<UserConfig>,
+    pub administator: Option<UserConfig>,
 }
 
 impl Slot {

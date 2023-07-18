@@ -114,8 +114,19 @@ pub extern "C" fn C_GenerateRandom(
         }
     };
 
+    let api_config = match session.login_ctx.operator() {
+        Some(conf) => conf,
+        None => {
+            error!(
+                "C_GenerateRandom() called with session not connected as operator {}.",
+                hSession
+            );
+            return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
+        }
+    };
+
     let data = match default_api::random_post(
-        &session.api_config,
+        &api_config,
         openapi::models::RandomRequestData {
             length: ulRandomLen as i32,
         },

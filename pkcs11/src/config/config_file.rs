@@ -68,11 +68,18 @@ pub struct SlotConfig {
     pub label: String,
     pub description: Option<String>,
     pub url: String,
-    pub user: String,
-    #[serde(deserialize_with = "deserialize_password", default)]
-    pub password: Option<String>,
     #[serde(default)]
     pub danger_insecure_cert: bool,
+    pub operator: Option<UserConfig>,
+    pub administrator: Option<UserConfig>,
+}
+
+// An user
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserConfig {
+    pub username: String,
+    #[serde(deserialize_with = "deserialize_password", default)]
+    pub password: Option<String>,
 }
 
 const PASSWORD_ENV_PREFIX: &str = "env:";
