@@ -72,6 +72,8 @@ pub struct SlotConfig {
     pub danger_insecure_cert: bool,
     pub operator: Option<UserConfig>,
     pub administrator: Option<UserConfig>,
+    pub certificate: Option<String>,
+    pub certificate_file: Option<String>,
 }
 
 // An user

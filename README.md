@@ -32,12 +32,28 @@ logfile: /tmp/p11nethsm.log
 slots:
   - label: LocalHSM                        # name you NetHSM however you want
     description: Local HSM (docker)        # optional description
-    url: "https://localhost:8443/api/v1"   # url to reach the server
+    url: "https://keyfender:8443/api/v1"   # url to reach the server
     operator:
       username: "operator"                       # user connecting to the NetHSM server
       password: "env:LOCALHSMPASS"    
     administrator:
       username: "admin"
+
+    # When the server has a self-signed certificate, you can allow it via two ways :
+
+    # File containing the certificate of the server
+    certificate_file: /etc/cert/localhsm.pem
+    # The string certificate of the server
+    certificate: |
+        -----BEGIN CERTIFICATE-----
+        MIIBHjCBxaADAgECAgkApoJ3bQqnwmcwCgYIKoZIzj0EAwIwFDESMBAGA1UEAwwJ
+        a2V5ZmVuZGVyMCAXDTcwMDEwMTAwMDAwMFoYDzk5OTkxMjMxMjM1OTU5WjAUMRIw
+        EAYDVQQDDAlrZXlmZW5kZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARzywjh
+        NQM4pBxNBIOrgWvKFcWle5SLGux1caV9rur/fnPptDnekjZ2fajJX2EEACjk9JKw
+        VykkfhbAdR46VGgFMAoGCCqGSM49BAMCA0gAMEUCIQDvm9J5y9S9POsfdlo5lKzg
+        VFYo7UBT3aTavB6b+hUUbQIgMzT1fBhbBFTgCx5LKQMp1V7SuyCby3oxL5RWYqhl
+        /R0=
+        -----END CERTIFICATE-----
 ```
 
 The operator and administrator users are both optional but the module won't start if no user is configured. This is so you can configure the module with only an administrator user, only an operator user or both at the same time.
