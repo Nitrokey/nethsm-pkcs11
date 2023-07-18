@@ -35,11 +35,11 @@ impl Db {
             .map(|(_, (handle, object))| (ObjectHandle::from(*handle), object))
     }
 
-    pub fn add_object(&mut self, object: Object) -> CK_OBJECT_HANDLE {
+    pub fn add_object(&mut self, object: Object) -> (CK_OBJECT_HANDLE, &Object) {
         let handle = self.next_handle;
         self.objects.insert(handle, object);
         self.next_handle += 1;
-        handle
+        (handle, self.objects.get(&handle).unwrap())
     }
 
     pub fn object(&self, handle: ObjectHandle) -> Option<&Object> {

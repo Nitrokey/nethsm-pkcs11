@@ -17,7 +17,7 @@ use super::{
     key::create_key_from_template,
     login::{LoginCtx, UserStatus},
     mechanism::Mechanism,
-    object::EnumCtx,
+    object::{EnumCtx, KeyRequirements},
     sign::SignCtx,
 };
 
@@ -389,24 +389,30 @@ impl Session {
 
     pub(super) fn find_key(
         &mut self,
-        key_id: Option<String>,
+        requirements: KeyRequirements,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
-        match key_id {
+        let mut result = match requirements.id {
             Some(key_id) => Ok(self
                 .fetch_key(key_id)?
                 .iter()
-                .map(|(handle, _)| *handle)
+                .map(|(handle, obj)| (*handle, obj.clone()))
                 .collect()),
             None => self.fetch_all_keys(),
+        }?;
+
+        if let Some(kind) = requirements.kind {
+            result.retain(|(_, obj)| obj.kind == kind);
         }
+
+        Ok(result.iter().map(|(handle, _)| *handle).collect())
     }
 
-    fn fetch_all_keys(&mut self) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
+    fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
         if self.fetched_all_keys {
             return Ok(self
                 .db
                 .enumerate()
-                .map(|(handle, _)| handle.into())
+                .map(|(handle, obj)| (handle.into(), obj.clone()))
                 .collect());
         }
 
@@ -427,8 +433,8 @@ impl Session {
 
         for key in keys {
             let objects = self.fetch_key(key.key)?;
-            for (handle, _) in objects {
-                handles.push(handle);
+            for (handle, object) in objects {
+                handles.push((handle, object));
             }
         }
         Ok(handles)
@@ -453,8 +459,8 @@ impl Session {
         let mut result = Vec::new();
 
         for object in objects {
-            let handle = self.db.add_object(object.clone());
-            result.push((handle, object));
+            let r = self.db.add_object(object.clone());
+            result.push((r.0, r.1.clone()));
         }
 
         Ok(result)
