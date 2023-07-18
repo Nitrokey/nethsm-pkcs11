@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use log::trace;
+use reqwest::Certificate;
+
 use super::device::{Device, Slot};
 
 const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
@@ -9,6 +12,7 @@ pub enum InitializationError {
     Config(crate::config::config_file::ConfigError),
     Reqwest(reqwest::Error),
     NoUser(String),
+    ReadFile(std::io::Error),
 }
 
 pub fn initialize_configuration() -> Result<Device, InitializationError> {
@@ -21,8 +25,27 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
     for slot in config.slots.iter() {
         // configure the reqwest client
 
-        let reqwest_client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(slot.danger_insecure_cert)
+        let mut reqwest_builder = reqwest::blocking::Client::builder()
+            .danger_accept_invalid_certs(slot.danger_insecure_cert);
+
+        if let Some(cert_str) = slot.certificate.as_ref() {
+            let cert = Certificate::from_pem(cert_str.trim().as_bytes())
+                .map_err(InitializationError::Reqwest)?;
+            reqwest_builder = reqwest_builder.add_root_certificate(cert);
+            trace!("Added certificate to slot {}", slot.label);
+        }
+        if let Some(file) = slot.certificate_file.as_ref() {
+            let cert = Certificate::from_pem(
+                std::fs::read(file)
+                    .map_err(InitializationError::ReadFile)?
+                    .as_slice(),
+            )
+            .map_err(InitializationError::Reqwest)?;
+            reqwest_builder = reqwest_builder.add_root_certificate(cert);
+            trace!("Added certificate to slot {}", slot.label);
+        }
+
+        let reqwest_client = reqwest_builder
             .build()
             .map_err(InitializationError::Reqwest)?;
 
