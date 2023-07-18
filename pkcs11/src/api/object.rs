@@ -61,6 +61,7 @@ pub extern "C" fn C_FindObjects(
         }
     };
 
+    trace!("C_FindObjects() ulMaxObjectCount: {}", ulMaxObjectCount);
     let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
         Ok(objects) => objects,
         Err(err) => {

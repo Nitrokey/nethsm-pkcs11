@@ -9,7 +9,8 @@ use cryptoki_sys::{
     CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS, CKA_MODULUS_BITS,
     CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
     CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
-    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
+    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
 use openapi::models::{KeyMechanism, KeyType, PublicKey};
@@ -154,18 +155,40 @@ impl PartialEq<Attr> for Attr {
     }
 }
 
-// #[derive(Clone, Debug)]
-// pub enum ObjectKind {
-//     Mechanism(Mechanism),
-//     Data,
-//     Key,
-//     Certificate,
-// }
+#[derive(Clone, Debug, PartialEq)]
+pub enum ObjectKind {
+    PrivateKey,
+    PublicKey,
+    SecretKey,
+    Other,
+}
+
+impl From<CK_OBJECT_CLASS> for ObjectKind {
+    fn from(src: CK_OBJECT_CLASS) -> Self {
+        match src {
+            cryptoki_sys::CKO_PRIVATE_KEY => ObjectKind::PrivateKey,
+            cryptoki_sys::CKO_PUBLIC_KEY => ObjectKind::PublicKey,
+            cryptoki_sys::CKO_SECRET_KEY => ObjectKind::SecretKey,
+            _ => ObjectKind::Other,
+        }
+    }
+}
+
+impl From<ObjectKind> for CK_OBJECT_CLASS {
+    fn from(src: ObjectKind) -> Self {
+        match src {
+            ObjectKind::PrivateKey => cryptoki_sys::CKO_PRIVATE_KEY,
+            ObjectKind::PublicKey => cryptoki_sys::CKO_PUBLIC_KEY,
+            ObjectKind::SecretKey => cryptoki_sys::CKO_SECRET_KEY,
+            ObjectKind::Other => cryptoki_sys::CKO_DATA,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
-    // kind: ObjectKind,
+    pub kind: ObjectKind,
     pub id: String,
     pub size: Option<usize>,
     pub mechanisms: Vec<KeyMechanism>,
@@ -349,22 +372,27 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
 
     let private_key = Object {
         attrs: attrs.clone(),
-        // kind: ObjectKind::Key,
+        kind: ObjectKind::PrivateKey,
         id: id.clone(),
         size: key_attrs.key_size,
         mechanisms: key_data.mechanisms.clone(),
     };
 
     if key_data.r#type == KeyType::Generic {
-        return Ok(vec![private_key]);
+        let secret = Object {
+            kind: ObjectKind::SecretKey,
+            ..private_key
+        };
+
+        return Ok(vec![secret]);
     }
 
     let mut public_key = Object {
         attrs: attrs.clone(),
-        // kind: ObjectKind::Key,
+        kind: ObjectKind::PublicKey,
         id,
         size: key_attrs.key_size,
-        mechanisms: key_data.mechanisms,
+        mechanisms: vec![],
     };
 
     public_key.attrs.insert(
@@ -396,7 +424,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         .attrs
         .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
 
-    Ok(vec![private_key, public_key])
+    Ok(vec![public_key, private_key])
 }
 
 impl Object {

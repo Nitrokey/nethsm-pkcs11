@@ -1,7 +1,13 @@
-use cryptoki_sys::{CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CK_RV, CK_SESSION_HANDLE};
+use cryptoki_sys::{
+    CKA_CLASS, CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CK_OBJECT_CLASS, CK_RV, CK_SESSION_HANDLE,
+};
+use log::debug;
 
 use super::{
-    db::attr::{CkRawAttr, CkRawAttrTemplate},
+    db::{
+        attr::{CkRawAttr, CkRawAttrTemplate},
+        object::ObjectKind,
+    },
     session::Session,
 };
 
@@ -12,22 +18,38 @@ pub struct EnumCtx {
     index: usize,
 }
 
-fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<Option<String>, CK_RV> {
+#[derive(Clone, Debug)]
+pub struct KeyRequirements {
+    pub kind: Option<ObjectKind>,
+    pub id: Option<String>,
+}
+
+fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, CK_RV> {
     match template {
         Some(template) => {
             let mut key_id = None;
+            let mut kind = None;
             for attr in template.iter() {
+                debug!("attr: {:?}", attr.type_());
+                debug!("attr: {:?}", attr.val_bytes());
+
+                if attr.type_() == CKA_CLASS {
+                    kind = attr.read_value::<CK_OBJECT_CLASS>().map(ObjectKind::from)
+                }
+
                 if attr.type_() == CKA_ID {
                     key_id = Some(parse_str_from_attr(&attr)?);
-                    break;
                 }
-                if attr.type_() == CKA_LABEL {
+                if attr.type_() == CKA_LABEL && key_id.is_none() {
                     key_id = Some(parse_str_from_attr(&attr)?);
                 }
             }
-            Ok(key_id)
+            Ok(KeyRequirements { kind, id: key_id })
         }
-        None => Ok(None),
+        None => Ok(KeyRequirements {
+            kind: None,
+            id: None,
+        }),
     }
 }
 
