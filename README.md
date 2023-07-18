@@ -33,14 +33,27 @@ slots:
   - label: LocalHSM                        # name you NetHSM however you want
     description: Local HSM (docker)        # optional description
     url: "https://localhost:8443/api/v1"   # url to reach the server
-    user: "operator"                       # user connecting to the NetHSM server
-
-    # The password can be provided by multiple means : 
-    # - in plain text in the configuration `password: "mypassword"`
-    # - in an environment variable read by the module with the `env:` prefix : `env:ENV_STORING_THE_PASSWORD`
-    # - via the login function of pkcs11, example for pcks11-tool : `pkcs11-tool --module libnethsm_pkcs11.so -O -p opPassphrase`
-    password: "env:LOCALHSMPASS"    
+    operator:
+      username: "operator"                       # user connecting to the NetHSM server
+      password: "env:LOCALHSMPASS"    
+    administrator:
+      username: "admin"
 ```
+
+The operator and administrator users are both optional but the module won't start if no user is configured. This is so you can configure the module with only an administrator user, only an operator user or both at the same time.
+
+When the two users are set the module will use the operator by default and only use the administrator user when the action needs it.
+
+The regular PKCS11 user is mapped to the NetHSM operator and the PKCS11 SO is mapped to the NetHSM administrator.
+
+The password can be provided by multiple means :
+
+- in plain text in the configuration `password: "mypassword"`
+- in an environment variable read by the module with the `env:` prefix : `env:ENV_STORING_THE_PASSWORD`
+- via the login function of pkcs11, example for pcks11-tool : `pkcs11-tool --module libnethsm_pkcs11.so -p opPassphrase`
+  To provide the the admin password you need to use `--so-pin` istead : `pkcs11-tool --module libnethsm_pkcs11.so --login --login-type so --so-pin Administrator`
+
+If the password of an user is not set in the configuration file a login will be required to provide the password (3rd method).
 
 A NetHSM that is not operational is considered as a slot wit the token not present.
 

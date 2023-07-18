@@ -1,16 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN,
-    CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS,
-    CKU_SO, CKU_USER, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID,
-    CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_USER_NOT_LOGGED_IN, CKS_RO_PUBLIC_SESSION,
+    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV,
+    CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
-use log::{error, info};
-use openapi::{
-    apis::default_api::{self},
-    models::UserRole,
-};
+use log::error;
+use openapi::apis::default_api::{self};
 
 use crate::{backend::key::CreateKeyError, config::device::Slot};
 
@@ -19,6 +15,7 @@ use super::{
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
     key::create_key_from_template,
+    login::{LoginCtx, UserStatus},
     mechanism::Mechanism,
     object::EnumCtx,
     sign::SignCtx,
@@ -80,29 +77,11 @@ impl SessionManager {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum UserStatus {
-    Operator,
-    Administrator,
-    LoggedOut,
-}
-
-impl UserStatus {
-    pub fn from_ck_user_type(user_type: CK_USER_TYPE) -> Self {
-        match user_type {
-            CKU_USER => Self::Operator,
-            CKU_SO => Self::Administrator,
-            _ => Self::LoggedOut,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
-    pub api_config: openapi::apis::configuration::Configuration,
+    pub login_ctx: LoginCtx,
     pub flags: CK_FLAGS,
-    pub user: UserStatus,
     pub device_error: CK_RV,
     pub fetched_all_keys: bool,
     pub db: Db,
@@ -116,15 +95,12 @@ impl Session {
     pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
         // cloning the api config should keep the connection pool as it's behind an Arc
 
-        let api_configuration = slot.api_config.clone();
-
-        let user = get_current_user(&api_configuration);
+        let api_config = slot.api_config.clone();
 
         Self {
-            api_config: api_configuration,
+            login_ctx: LoginCtx::new(slot.operator.clone(), slot.administator.clone(), api_config),
             slot_id,
             flags,
-            user,
             fetched_all_keys: false,
             db: Db::new(),
             device_error: CKR_OK,
@@ -135,7 +111,7 @@ impl Session {
         }
     }
     pub fn get_ck_info(&self) -> cryptoki_sys::CK_SESSION_INFO {
-        let state = match self.user {
+        let state = match self.login_ctx.user_status() {
             UserStatus::LoggedOut => CKS_RO_PUBLIC_SESSION,
             UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
             UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
@@ -150,55 +126,17 @@ impl Session {
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> CK_RV {
-        let mut username = self
-            .api_config
-            .basic_auth
-            .clone()
-            .map(|(username, _)| username);
-
-        // if we want to be admin but the previous username does not login as admin, we set the username to admin
-        if user_type == CKU_SO && (self.user != UserStatus::Administrator || username.is_none()) {
-            info!("Setting username to admin");
-
-            username = Some("admin".to_string());
-        }
-
-        let username = match username {
-            Some(username) => username,
-            None => {
-                error!("Failed to login: no username set");
-                return CKR_USER_TYPE_INVALID;
+        match self.login_ctx.login(user_type, pin) {
+            Ok(_) => CKR_OK,
+            Err(err) => {
+                error!("Failed to login: {:?}", err);
+                err.into()
             }
-        };
-
-        // we can unwrap here, because the auth should always be set
-        self.api_config.basic_auth = Some((username, Some(pin)));
-
-        // try an authenticated request to see if the pin is correct
-        let user = get_current_user(&self.api_config);
-
-        if user == UserStatus::LoggedOut {
-            error!("Failed to login: invalid username or pin");
-            self.api_config.basic_auth = None;
-            return CKR_PIN_INCORRECT;
         }
-
-        let wanted_user = UserStatus::from_ck_user_type(user_type);
-
-        if wanted_user != user {
-            error!("Failed to login: invalid user type");
-            self.api_config.basic_auth = None;
-            self.user = UserStatus::LoggedOut;
-            return CKR_USER_TYPE_INVALID;
-        }
-
-        self.user = user;
-
-        CKR_OK
     }
 
+    // ignore logout for now
     pub fn logout(&mut self) -> CK_RV {
-        self.api_config.basic_auth = None;
         CKR_OK
     }
 
@@ -246,9 +184,12 @@ impl Session {
                 return err;
             }
         };
+        let api_config = match self.login_ctx.operator() {
+            Some(conf) => conf,
+            None => return CKR_USER_NOT_LOGGED_IN,
+        };
 
-        self.sign_ctx = match SignCtx::init(mechanism.clone(), key.clone(), self.api_config.clone())
-        {
+        self.sign_ctx = match SignCtx::init(mechanism.clone(), key.clone(), api_config) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -312,7 +253,12 @@ impl Session {
             }
         };
 
-        self.encrypt_ctx = match EncryptCtx::init(mechanism.clone(), key, self.api_config.clone()) {
+        let api_config = match self.login_ctx.operator() {
+            Some(conf) => conf,
+            None => return CKR_USER_NOT_LOGGED_IN,
+        };
+
+        self.encrypt_ctx = match EncryptCtx::init(mechanism.clone(), key, api_config) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -381,7 +327,12 @@ impl Session {
             }
         };
 
-        self.decrypt_ctx = match DecryptCtx::init(mechanism.clone(), key, self.api_config.clone()) {
+        let api_config = match self.login_ctx.operator() {
+            Some(conf) => conf,
+            None => return CKR_USER_NOT_LOGGED_IN,
+        };
+
+        self.decrypt_ctx = match DecryptCtx::init(mechanism.clone(), key, api_config) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -462,7 +413,12 @@ impl Session {
         // clear the db to not have any double entries
         self.db.clear();
 
-        let keys = default_api::keys_get(&self.api_config, None).map_err(|err| {
+        let api_config = match self.login_ctx.operator_or_administrator() {
+            Some(conf) => conf,
+            None => return Err(CKR_USER_NOT_LOGGED_IN),
+        };
+
+        let keys = default_api::keys_get(&api_config, None).map_err(|err| {
             error!("Failed to fetch keys: {:?}", err);
             CKR_DEVICE_ERROR
         })?;
@@ -479,7 +435,12 @@ impl Session {
     }
 
     fn fetch_key(&mut self, key_id: String) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        let key_data = default_api::keys_key_id_get(&self.api_config, &key_id).map_err(|err| {
+        let api_config = self
+            .login_ctx
+            .operator_or_administrator()
+            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+
+        let key_data = default_api::keys_key_id_get(&api_config, &key_id).map_err(|err| {
             error!("Failed to fetch key {}: {:?}", key_id, err);
             CKR_DEVICE_ERROR
         })?;
@@ -503,12 +464,12 @@ impl Session {
         &mut self,
         template: CkRawAttrTemplate,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        if self.user != UserStatus::Administrator {
-            // The closest we have to say that the user is not admin
-            return Err(CKR_USER_NOT_LOGGED_IN);
-        }
+        let api_config = self
+            .login_ctx
+            .administrator()
+            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
-        let id = create_key_from_template(template, &self.api_config).map_err(|err| {
+        let id = create_key_from_template(template, &api_config).map_err(|err| {
             error!("Failed to create key: {:?}", err);
             if err == CreateKeyError::ClassNotSupported {
                 return CKR_DEVICE_MEMORY;
@@ -521,17 +482,17 @@ impl Session {
     }
 
     pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), CK_RV> {
-        if self.user != UserStatus::Administrator {
-            // The closest we have to say that the user is not admin
-            return Err(CKR_USER_NOT_LOGGED_IN);
-        }
+        let api_config = self
+            .login_ctx
+            .administrator()
+            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
         let key = self.db.object(ObjectHandle::from(handle)).ok_or_else(|| {
             error!("Failed to delete object: invalid handle");
             CKR_DEVICE_ERROR
         })?;
 
-        default_api::keys_key_id_delete(&self.api_config, &key.id).map_err(|err| {
+        default_api::keys_key_id_delete(&api_config, &key.id).map_err(|err| {
             error!("Failed to delete key {}: {:?}", key.id, err);
             CKR_DEVICE_ERROR
         })?;
@@ -542,30 +503,5 @@ impl Session {
         })?;
 
         Ok(())
-    }
-}
-
-pub fn get_current_user(api_config: &openapi::apis::configuration::Configuration) -> UserStatus {
-    let auth = match api_config.basic_auth.as_ref() {
-        Some(auth) => auth,
-        None => return UserStatus::LoggedOut,
-    };
-
-    if auth.1.is_none() {
-        return UserStatus::LoggedOut;
-    }
-
-    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()) {
-        Ok(user) => user,
-        Err(err) => {
-            error!("Failed to get user: {:?}", err);
-            return UserStatus::LoggedOut;
-        }
-    };
-
-    match user.role {
-        UserRole::Operator => UserStatus::Operator,
-        UserRole::Administrator => UserStatus::Administrator,
-        _ => UserStatus::LoggedOut,
     }
 }
