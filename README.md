@@ -18,7 +18,7 @@ By default the modules searches for configuration files in :
 
 If multiple files are present the slots of all the config files will be added.
 
-You can manually set the config file location (only this one will be read) wiht the env variable `P11NETHSM_CONFIG_FILE1` (eg. `P11NETHSM_CONFIG_FILE=./p11nethsm.conf`).
+You can manually set the config file location (only this one will be read) wiht the env variable `P11NETHSM_CONFIG_FILE` (eg. `P11NETHSM_CONFIG_FILE=./p11nethsm.conf`).
 
 ### Configuration format
 
@@ -67,11 +67,11 @@ The password can be provided by multiple means :
 - in plain text in the configuration `password: "mypassword"`
 - in an environment variable read by the module with the `env:` prefix : `env:ENV_STORING_THE_PASSWORD`
 - via the login function of pkcs11, example for pcks11-tool : `pkcs11-tool --module libnethsm_pkcs11.so -p opPassphrase`
-  To provide the the admin password you need to use `--so-pin` istead : `pkcs11-tool --module libnethsm_pkcs11.so --login --login-type so --so-pin Administrator`
+  To provide the the admin password you need to use `--so-pin` instead : `pkcs11-tool --module libnethsm_pkcs11.so --login --login-type so --so-pin Administrator`
 
 If the password of an user is not set in the configuration file a login will be required to provide the password (3rd method).
 
-A NetHSM that is not operational is considered as a slot wit the token not present.
+A NetHSM that is not operational is considered as a slot with the token not present.
 
 ## Building
 
@@ -101,3 +101,7 @@ RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 ```
 cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS=TEST pkcs11-tool --module target/debug/libnethsm_pkcs11.so -I 
 ```
+
+## Debug options
+
+Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
