@@ -84,8 +84,8 @@ Verify is not supported by NetHSM
 
 | Feature           | Status | Notes                                    |
 | ----------------- | ------ | ---------------------------------------- |
-| C_GenerateKey     | 🗓️      | Needs admin                              |
-| C_GenerateKeyPair | 🗓️      | Needs admin                              |
+| C_GenerateKey     | ✔️      | Needs admin                              |
+| C_GenerateKeyPair | ✔️      | Needs admin                              |
 | C_GenerateRandom  | ✔️      |                                          |
 | C_SeedRandom      | ⚠️      | Returns OK but the arguments are ignored |
 | C_WrapKey         | ❌      | Not supported by NetHSM                  |

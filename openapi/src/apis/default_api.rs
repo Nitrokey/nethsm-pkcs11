@@ -1449,7 +1449,7 @@ pub fn info_get(
 pub fn keys_generate_post(
     configuration: &configuration::Configuration,
     key_generate_request_data: crate::models::KeyGenerateRequestData,
-) -> Result<(), Error<KeysGeneratePostError>> {
+) -> Result<String, Error<KeysGeneratePostError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -1473,11 +1473,30 @@ pub fn keys_generate_post(
     let local_var_req = local_var_req_builder.build()?;
     let mut local_var_resp = local_var_client.execute(local_var_req)?;
 
+    let response_headers = local_var_resp.headers().clone();
+
     let local_var_status = local_var_resp.status();
     let local_var_content = local_var_resp.text()?;
 
+    let default = HeaderValue::from_static("unknown");
+
+    let location = response_headers.get("location").unwrap_or(&default);
+
+    // get the id from the logation header value :
+    // location: /api/v1/keys/<id>?mechanisms=ECDSA_Signature
+
+    let key_id = location
+        .to_str()
+        .unwrap_or("")
+        .split('/')
+        .last()
+        .unwrap_or("")
+        .split('?')
+        .next()
+        .unwrap_or("");
+
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-        Ok(())
+        Ok(key_id.to_string())
     } else {
         let local_var_entity: Option<KeysGeneratePostError> =
             serde_json::from_str(&local_var_content).ok();
@@ -1576,7 +1595,7 @@ pub fn keys_key_id_cert_delete(
     } else {
         let local_var_entity: Option<KeysKeyIdCertDeleteError> =
             serde_json::from_str(&local_var_content).ok();
-        let local_var_error = ResponseContent {
+        let local_var_error: ResponseContent<KeysKeyIdCertDeleteError> = ResponseContent {
             status: local_var_status,
             content: local_var_content,
             entity: local_var_entity,

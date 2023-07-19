@@ -2,9 +2,9 @@ use super::db::attr::CkRawAttrTemplate;
 use crate::backend::mechanism::Mechanism;
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
-    CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_PRIME_1,
-    CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE, CKK_EC, CKK_RSA, CKO_CERTIFICATE,
-    CKO_PRIVATE_KEY, CK_KEY_TYPE,
+    CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_MODULUS_BITS,
+    CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE, CKA_VALUE_LEN, CKK_EC,
+    CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY, CK_KEY_TYPE, CK_ULONG,
 };
 use lazy_static::lazy_static;
 use log::{debug, trace};
@@ -13,7 +13,7 @@ use openapi::{
         configuration::Configuration,
         default_api::{self, KeysKeyIdPutError},
     },
-    models::{KeyPrivateData, KeyType, PrivateKey},
+    models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
 use yasna::models::ObjectIdentifier;
 
@@ -24,6 +24,8 @@ pub enum CreateKeyError {
     ClassNotSupported,
     PutError(openapi::apis::Error<KeysKeyIdPutError>),
     PostError(openapi::apis::Error<default_api::KeysPostError>),
+    GenerateError(openapi::apis::Error<default_api::KeysGeneratePostError>),
+    StringParseError(std::string::FromUtf8Error),
 }
 
 impl PartialEq for CreateKeyError {
@@ -45,81 +47,103 @@ enum KeyClass {
     Certificate,
 }
 
-pub fn create_key_from_template(
-    template: CkRawAttrTemplate,
-    api_config: &Configuration,
-) -> Result<String, CreateKeyError> {
-    let mut id = None;
-    let mut key_type = None;
-    let mut mechanisms = Vec::new();
-    let mut sign = true;
-    let mut encrypt = true;
-    let mut decrypt = true;
-    let mut key_class = KeyClass::Private;
-    let mut ec_params = None;
-    let mut value = None;
-    let mut public_exponent = None;
-    let mut prime_p = None;
-    let mut prime_q = None;
+#[derive(Debug, Default)]
+struct ParsedAttributes {
+    pub id: Option<String>,
+    pub key_type: Option<CK_KEY_TYPE>,
+    pub sign: bool,
+    pub encrypt: bool,
+    pub decrypt: bool,
+    pub key_class: Option<KeyClass>,
+    pub ec_params: Option<Vec<u8>>,
+    pub value: Option<Vec<u8>>,
+    pub public_exponent: Option<Vec<u8>>,
+    pub prime_p: Option<Vec<u8>>,
+    pub prime_q: Option<Vec<u8>>,
+    pub value_len: Option<CK_ULONG>,
+    pub modulus_bits: Option<CK_ULONG>,
+}
+
+fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, CreateKeyError> {
+    let mut parsed = ParsedAttributes::default();
 
     for attr in template.iter() {
-        match attr.type_() {
+        let t = attr.type_();
+
+        debug!("attr: {:?}, value: {:?}", t, attr.val_bytes());
+
+        match t {
             CKA_CLASS => match attr.read_value() {
                 Some(val) => {
-                    key_class = match val {
-                        CKO_PRIVATE_KEY => KeyClass::Private,
-                        CKO_CERTIFICATE => KeyClass::Certificate,
-                        _ => return Err(CreateKeyError::ClassNotSupported),
+                    parsed.key_class = match val {
+                        CKO_PRIVATE_KEY => Some(KeyClass::Private),
+                        CKO_CERTIFICATE => Some(KeyClass::Certificate),
+                        _ => {
+                            debug!("Class not supported: {:?}", val);
+                            None
+                        }
                     }
                 }
                 None => return Err(CreateKeyError::InvalidAttribute),
             },
             CKA_ID => {
-                id = Some(String::from_utf8(attr.val_bytes().unwrap().to_vec()).unwrap());
+                parsed.id = attr
+                    .val_bytes()
+                    .map(|val| String::from_utf8(val.to_vec()))
+                    .transpose()
+                    .map_err(CreateKeyError::StringParseError)?;
             }
             CKA_KEY_TYPE => {
                 let ktype: CK_KEY_TYPE = match attr.read_value() {
                     Some(val) => val,
                     None => return Err(CreateKeyError::InvalidAttribute),
                 };
-                key_type = Some(ktype);
+                parsed.key_type = Some(ktype);
             }
             CKA_EC_PARAMS => {
-                ec_params = attr.val_bytes().map(|val| val.to_vec());
+                parsed.ec_params = attr.val_bytes().map(|val| val.to_vec());
             }
             CKA_VALUE => {
-                value = attr.val_bytes().map(|val| val.to_vec());
+                parsed.value = attr.val_bytes().map(|val| val.to_vec());
             }
 
             CKA_SIGN => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
-                        sign = true;
+                        parsed.sign = true;
                     }
                 }
             }
             CKA_ENCRYPT => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
-                        encrypt = true;
+                        parsed.encrypt = true;
                     }
                 }
             }
             CKA_DECRYPT => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
-                        decrypt = true;
+                        parsed.decrypt = true;
                     }
                 }
             }
             CKA_PUBLIC_EXPONENT => {
-                public_exponent = attr.val_bytes().map(|val| val.to_vec());
+                parsed.public_exponent = attr.val_bytes().map(|val| val.to_vec());
             }
             CKA_PRIME_1 => {
-                prime_p = attr.val_bytes().map(|val| val.to_vec());
+                parsed.prime_p = attr.val_bytes().map(|val| val.to_vec());
             }
             CKA_PRIME_2 => {
-                prime_q = attr.val_bytes().map(|val| val.to_vec());
+                parsed.prime_q = attr.val_bytes().map(|val| val.to_vec());
+            }
+            CKA_VALUE_LEN => {
+                parsed.value_len = attr.read_value();
+            }
+            CKA_MODULUS_BITS => {
+                parsed.modulus_bits = attr.read_value();
+
+                trace!("modulus_bits: {:?}", parsed.modulus_bits)
             }
 
             _ => {
@@ -128,25 +152,41 @@ pub fn create_key_from_template(
         }
     }
 
-    debug!("key_class: {:?}", key_class);
-    debug!("key_type: {:?}", key_type);
+    Ok(parsed)
+}
 
-    let (r#type, key) = match key_type.ok_or(CreateKeyError::InvalidAttribute)? {
+pub fn create_key_from_template(
+    template: CkRawAttrTemplate,
+    api_config: &Configuration,
+) -> Result<String, CreateKeyError> {
+    let parsed = parse_attributes(&template)?;
+
+    debug!("key_class: {:?}", parsed.key_class);
+    debug!("key_type: {:?}", parsed.key_type);
+
+    if parsed.key_class.is_none() {
+        return Err(CreateKeyError::ClassNotSupported);
+    }
+
+    let (r#type, key) = match parsed.key_type.ok_or(CreateKeyError::InvalidAttribute)? {
         CKK_RSA => {
             trace!("Creating RSA key");
 
-            trace!("prime_p: {:?}", prime_p);
-            trace!("prime_q: {:?}", prime_q);
-            trace!("public_exponent: {:?}", public_exponent);
+            trace!("prime_p: {:?}", parsed.prime_p);
+            trace!("prime_q: {:?}", parsed.prime_q);
+            trace!("public_exponent: {:?}", parsed.public_exponent);
 
-            let prime_p =
-                general_purpose::STANDARD.encode(prime_p.ok_or(CreateKeyError::MissingAttribute)?);
+            let prime_p = general_purpose::STANDARD
+                .encode(parsed.prime_p.ok_or(CreateKeyError::MissingAttribute)?);
 
-            let prime_q =
-                general_purpose::STANDARD.encode(prime_q.ok_or(CreateKeyError::MissingAttribute)?);
+            let prime_q = general_purpose::STANDARD
+                .encode(parsed.prime_q.ok_or(CreateKeyError::MissingAttribute)?);
 
-            let public_exponent = general_purpose::STANDARD
-                .encode(public_exponent.ok_or(CreateKeyError::MissingAttribute)?);
+            let public_exponent = general_purpose::STANDARD.encode(
+                parsed
+                    .public_exponent
+                    .ok_or(CreateKeyError::MissingAttribute)?,
+            );
 
             let key = Box::new(KeyPrivateData {
                 data: None,
@@ -158,14 +198,16 @@ pub fn create_key_from_template(
         }
         CKK_EC => {
             let b64_private = general_purpose::STANDARD.encode(
-                value
+                parsed
+                    .value
                     .as_ref()
                     .ok_or(CreateKeyError::MissingAttribute)?
                     .as_slice(),
             );
 
-            let ec_type = key_type_from_params(&ec_params.ok_or(CreateKeyError::MissingAttribute)?)
-                .ok_or(CreateKeyError::InvalidAttribute)?;
+            let ec_type =
+                key_type_from_params(&parsed.ec_params.ok_or(CreateKeyError::MissingAttribute)?)
+                    .ok_or(CreateKeyError::InvalidAttribute)?;
 
             let key = Box::new(KeyPrivateData {
                 data: Some(b64_private),
@@ -182,18 +224,20 @@ pub fn create_key_from_template(
 
     let mechs = Mechanism::from_key_type(r#type);
 
+    let mut mechanisms = vec![];
+
     for mech in mechs {
-        if sign {
+        if parsed.sign {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Sign) {
                 mechanisms.push(m);
             }
         }
-        if encrypt {
+        if parsed.encrypt {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Encrypt) {
                 mechanisms.push(m);
             }
         }
-        if decrypt {
+        if parsed.decrypt {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Decrypt) {
                 mechanisms.push(m);
             }
@@ -207,7 +251,7 @@ pub fn create_key_from_template(
         restrictions: None,
     };
 
-    let id = if let Some(key_id) = id {
+    let id = if let Some(key_id) = parsed.id {
         default_api::keys_key_id_put(api_config, &key_id, private_key, Some(mechanisms), None)
             .map_err(CreateKeyError::PutError)?;
         key_id
@@ -260,4 +304,42 @@ fn key_type_from_params(params: &[u8]) -> Option<KeyType> {
     } else {
         None
     }
+}
+
+pub fn generate_key_from_template(
+    template: &CkRawAttrTemplate,
+    public_template: Option<&CkRawAttrTemplate>,
+    mechanism: &Mechanism,
+    api_config: &Configuration,
+) -> Result<String, CreateKeyError> {
+    let parsed = parse_attributes(template)?;
+    let parsed_public = public_template.map(parse_attributes).transpose()?;
+
+    let api_mechs = mechanism.get_all_possible_api_mechs();
+
+    let length = parsed.value_len.or(parsed.modulus_bits).or(parsed_public
+        .as_ref()
+        .and_then(|p| p.value_len.or(p.modulus_bits)));
+
+    trace!("length: {:?}", length);
+
+    let mut key_type = mechanism.to_key_type();
+
+    if let Some(public) = parsed_public {
+        if let Some(ec_params) = public.ec_params {
+            key_type = key_type_from_params(&ec_params).ok_or(CreateKeyError::InvalidAttribute)?;
+        }
+    }
+
+    default_api::keys_generate_post(
+        api_config,
+        KeyGenerateRequestData {
+            mechanisms: api_mechs,
+            r#type: key_type,
+            restrictions: None,
+            id: parsed.id,
+            length: length.map(|len| len as i32),
+        },
+    )
+    .map_err(CreateKeyError::GenerateError)
 }

@@ -12,7 +12,7 @@ pub const LIB_MANUFACTURER: &str = "Nitrokey";
 pub const DEFAULT_FIRMWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 pub const DEFAULT_HARDWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 
-pub const MECHANISM_LIST: [Mechanism; 7] = [
+pub const MECHANISM_LIST: [Mechanism; 12] = [
     Mechanism::AesCbc(None),
     Mechanism::RsaX509,
     Mechanism::RsaPkcs,
@@ -20,4 +20,9 @@ pub const MECHANISM_LIST: [Mechanism; 7] = [
     Mechanism::RsaPkcsOaep(crate::backend::mechanism::MechDigest::Md5),
     Mechanism::EdDsa,
     Mechanism::Ecdsa,
+    Mechanism::GenerateAes,
+    Mechanism::GenerateRsa,
+    Mechanism::GenerateEc,
+    Mechanism::GenerateEd,
+    Mechanism::GenerateGeneric,
 ];
