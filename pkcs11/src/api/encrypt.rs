@@ -6,8 +6,7 @@ use crate::{
         encrypt::ENCRYPT_BLOCK_SIZE,
         mechanism::{CkRawMechanism, Mechanism},
     },
-    data::SESSION_MANAGER,
-    lock_mutex,
+    lock_mutex, lock_session,
 };
 
 pub extern "C" fn C_EncryptInit(
@@ -33,18 +32,7 @@ pub extern "C" fn C_EncryptInit(
         }
     };
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_EncryptInit() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     session.encrypt_init(&mech, hKey)
 }
@@ -58,18 +46,7 @@ pub extern "C" fn C_Encrypt(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Encrypt() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_Encrypt() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pData.is_null() || pulEncryptedDataLen.is_null() {
         session.encrypt_clear();
@@ -137,18 +114,7 @@ pub extern "C" fn C_EncryptUpdate(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptUpdate() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_EncryptUpdate() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pPart.is_null() || pulEncryptedPartLen.is_null() {
         session.encrypt_clear();
@@ -210,18 +176,7 @@ pub extern "C" fn C_EncryptFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptFinal() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_EncryptFinal() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pLastEncryptedPart.is_null() || pulLastEncryptedPartLen.is_null() {
         session.encrypt_clear();

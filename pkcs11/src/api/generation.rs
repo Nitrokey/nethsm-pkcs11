@@ -3,7 +3,7 @@ use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 use openapi::apis::default_api;
 
-use crate::{data::SESSION_MANAGER, lock_mutex};
+use crate::{lock_mutex, lock_session};
 
 pub extern "C" fn C_GenerateKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -101,18 +101,7 @@ pub extern "C" fn C_GenerateRandom(
 
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_GenerateRandom() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     let api_config = match session.login_ctx.operator() {
         Some(conf) => conf,

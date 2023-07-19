@@ -33,6 +33,20 @@ macro_rules! version_struct_from_str {
     }};
 }
 
+#[macro_export]
+macro_rules! lock_session {
+    ($hSession:expr, $session:ident) => {
+        let mut _manager_arc = lock_mutex!($crate::data::SESSION_MANAGER);
+        let $session = match _manager_arc.get_session_mut($hSession) {
+            Some(session) => session,
+            None => {
+                error!("function called with invalid session handle {}.", $hSession);
+                return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+            }
+        };
+    };
+}
+
 // Modified from the ACM project : https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/util/mod.rs
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0

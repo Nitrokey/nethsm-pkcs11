@@ -6,7 +6,7 @@ use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 use openapi::apis::default_api;
 
-use crate::{data::SESSION_MANAGER, lock_mutex};
+use crate::{lock_mutex, lock_session};
 
 pub extern "C" fn C_InitPIN(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -25,15 +25,7 @@ pub extern "C" fn C_SetPIN(
     ulNewLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetPIN() called ");
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("Function called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pOldPin.is_null() || pNewPin.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
