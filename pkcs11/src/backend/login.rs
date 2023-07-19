@@ -129,9 +129,9 @@ impl LoginCtx {
 
     // Get the user status
     pub fn user_status(&self) -> UserStatus {
-        if self.administator.is_some() {
+        if self.administrator().is_some() {
             UserStatus::Administrator
-        } else if self.operator.is_some() {
+        } else if self.operator().is_some() {
             UserStatus::Operator
         } else {
             UserStatus::LoggedOut

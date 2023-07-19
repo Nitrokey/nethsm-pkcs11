@@ -2,7 +2,7 @@ use cryptoki_sys::{
     CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKR_OK, CK_SLOT_ID, CK_SLOT_INFO,
     CK_TOKEN_INFO, CK_ULONG,
 };
-use log::{error, trace};
+use log::{debug, error, trace};
 use openapi::models::SystemState;
 
 use crate::{
@@ -150,6 +150,7 @@ pub extern "C" fn C_GetTokenInfo(
     // if the slot has no password, set the login required flag
     if !slot.is_connected() {
         flags |= cryptoki_sys::CKF_LOGIN_REQUIRED;
+        debug!("Login required");
     }
 
     let token_info = CK_TOKEN_INFO {

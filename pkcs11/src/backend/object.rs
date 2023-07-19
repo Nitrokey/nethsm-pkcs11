@@ -1,7 +1,7 @@
 use cryptoki_sys::{
     CKA_CLASS, CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CK_OBJECT_CLASS, CK_RV, CK_SESSION_HANDLE,
 };
-use log::debug;
+use log::{debug, trace};
 
 use super::{
     db::{
@@ -75,6 +75,8 @@ impl EnumCtx {
     pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CK_SESSION_HANDLE> {
         let mut result = Vec::new();
         for _ in 0..chunk_size {
+            trace!("index: {}", self.index);
+
             if let Some(handle) = self.handles.get(self.index) {
                 result.push(*handle);
                 self.index += 1;

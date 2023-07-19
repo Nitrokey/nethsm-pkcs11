@@ -22,6 +22,8 @@ impl SignCtx {
         key: Object,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Result<Self, CK_RV> {
+        trace!("key_type: {:?}", key.kind);
+
         let sign_name = mechanism.sign_name().ok_or_else(|| {
             debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
             CKR_MECHANISM_INVALID
@@ -35,8 +37,14 @@ impl SignCtx {
             }
         };
 
+        trace!("Signing with mechanism: {:?}", mechanism);
+        trace!("key mechanisms: {:?}", key.mechanisms);
+
         if !key.mechanisms.contains(&api_mech) {
-            debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
+            debug!(
+                "Tried to sign with an invalid mechanism for this key: {:?}",
+                mechanism
+            );
             return Err(CKR_MECHANISM_INVALID);
         }
 
