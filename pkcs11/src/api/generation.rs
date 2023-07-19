@@ -3,7 +3,13 @@ use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 use openapi::apis::default_api;
 
-use crate::{lock_mutex, lock_session};
+use crate::{
+    backend::{
+        db::attr::CkRawAttrTemplate,
+        mechanism::{CkRawMechanism, Mechanism},
+    },
+    lock_mutex, lock_session,
+};
 
 pub extern "C" fn C_GenerateKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -13,7 +19,50 @@ pub extern "C" fn C_GenerateKey(
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKey() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if pMechanism.is_null() || phKey.is_null() || pTemplate.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    lock_session!(hSession, session);
+
+    let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+
+    trace!("C_GenerateKey() mech: {:?}", mech.type_());
+    trace!("C_GenerateKey() mech param len: {:?}", mech.len());
+
+    let template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+
+    let mech = match Mechanism::from_ckraw_mech(&mech) {
+        Ok(mech) => mech,
+        Err(e) => {
+            error!("C_GenerateKey() failed to convert mechanism: {:?}", e);
+            return cryptoki_sys::CKR_MECHANISM_INVALID;
+        }
+    };
+
+    let key = match session.generate_key(&template, None, &mech) {
+        Ok(key) => key,
+        Err(e) => {
+            error!("C_GenerateKey() failed to generate key: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    if key.is_empty() {
+        error!(
+            "C_GenerateKey() failed to generate key,invalid length: {:?}",
+            key
+        );
+        return cryptoki_sys::CKR_FUNCTION_FAILED;
+    }
+
+    unsafe {
+        std::ptr::write(phKey, key[0].0);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_GenerateKeyPair(
@@ -27,7 +76,78 @@ pub extern "C" fn C_GenerateKeyPair(
     phPrivateKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKeyPair() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if pMechanism.is_null()
+        || phPublicKey.is_null()
+        || phPrivateKey.is_null()
+        || pPublicKeyTemplate.is_null()
+        || pPrivateKeyTemplate.is_null()
+    {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    lock_session!(hSession, session);
+
+    let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+
+    trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
+    trace!("C_GenerateKey() mech param len: {:?}", mech.len());
+
+    trace!("Private count: {:?}", ulPrivateKeyAttributeCount);
+    trace!("Public count: {:?}", ulPublicKeyAttributeCount);
+
+    let mech = match Mechanism::from_ckraw_mech(&mech) {
+        Ok(mech) => mech,
+        Err(e) => {
+            error!("C_GenerateKeyPair() failed to convert mechanism: {:?}", e);
+            return cryptoki_sys::CKR_MECHANISM_INVALID;
+        }
+    };
+
+    let public_template = unsafe {
+        CkRawAttrTemplate::from_raw_ptr_unchecked(
+            pPublicKeyTemplate,
+            ulPublicKeyAttributeCount as usize,
+        )
+    };
+
+    let private_template = unsafe {
+        CkRawAttrTemplate::from_raw_ptr_unchecked(
+            pPrivateKeyTemplate,
+            ulPrivateKeyAttributeCount as usize,
+        )
+    };
+
+    public_template.iter().for_each(|attr| {
+        trace!(
+            "Public template: {:?}, {:?}",
+            attr.type_(),
+            attr.val_bytes()
+        );
+    });
+
+    let keys = match session.generate_key(&private_template, Some(&public_template), &mech) {
+        Ok(keys) => keys,
+        Err(e) => {
+            error!("C_GenerateKeyPair() failed to generate key: {:?}", e);
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    };
+
+    if keys.len() < 2 {
+        error!(
+            "C_GenerateKeyPair() failed to generate key,invalid length: {:?}",
+            keys
+        );
+        return cryptoki_sys::CKR_FUNCTION_FAILED;
+    }
+
+    unsafe {
+        std::ptr::write(phPublicKey, keys[0].0);
+        std::ptr::write(phPrivateKey, keys[1].0);
+    }
+
+    cryptoki_sys::CKR_OK
 }
 
 pub extern "C" fn C_WrapKey(

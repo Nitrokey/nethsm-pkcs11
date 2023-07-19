@@ -20,5 +20,9 @@ export P11NETHSM_CONFIG_FILE=./p11nethsm.conf
 # doesn't work, pkcs11-tool can't read the key
 # ./tools/test_upload_rsa_key.sh
 ./tools/test_delete_key.sh
+./tools/test_generate_rsa_id.sh
+./tools/test_generate_ec_id.sh
+./tools/test_generate_generic_id.sh
+
 
 ./tools/general_test.sh

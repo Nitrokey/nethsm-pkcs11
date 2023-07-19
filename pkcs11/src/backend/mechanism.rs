@@ -2,7 +2,7 @@
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
 
-use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE};
+use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE, CK_ULONG};
 use log::trace;
 use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
 
@@ -13,6 +13,7 @@ pub enum CkRawError {
     NullPtrDeref,
 }
 
+#[derive(Debug)]
 pub struct CkRawMechanism {
     ptr: *mut cryptoki_sys::CK_MECHANISM,
 }
@@ -43,6 +44,9 @@ impl CkRawMechanism {
             return Err(CkRawError::MechParamTypeMismatch);
         }
         Ok(Some(std::ptr::read(param_ptr as *const T)))
+    }
+    pub fn len(&self) -> CK_ULONG {
+        unsafe { (*self.ptr).ulParameterLen }
     }
 }
 
@@ -99,6 +103,11 @@ pub enum Mechanism {
     RsaX509,
     EdDsa,
     Ecdsa,
+    GenerateGeneric,
+    GenerateAes,
+    GenerateRsa,
+    GenerateEc,
+    GenerateEd,
 }
 
 pub enum MechMode {
@@ -137,6 +146,19 @@ impl Mechanism {
         }
     }
 
+    pub fn to_key_type(&self) -> KeyType {
+        match self {
+            Self::AesCbc(_) | Self::GenerateAes | Self::GenerateGeneric => KeyType::Generic,
+            Self::RsaPkcs
+            | Self::RsaPkcsOaep(_)
+            | Self::RsaPkcsPss(_)
+            | Self::RsaX509
+            | Self::GenerateRsa => KeyType::Rsa,
+            Self::Ecdsa | Self::GenerateEc => KeyType::EcP256,
+            Self::EdDsa | Self::GenerateEd => KeyType::Curve25519,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
         match api_mech {
@@ -163,6 +185,38 @@ impl Mechanism {
         }
     }
 
+    pub fn get_all_possible_api_mechs(&self) -> Vec<KeyMechanism> {
+        match self {
+            Self::AesCbc(_) | Self::GenerateAes | Self::GenerateGeneric => vec![
+                KeyMechanism::AesDecryptionCbc,
+                KeyMechanism::AesEncryptionCbc,
+            ],
+            Self::RsaPkcs
+            | Self::RsaPkcsOaep(_)
+            | Self::RsaPkcsPss(_)
+            | Self::RsaX509
+            | Self::GenerateRsa => vec![
+                KeyMechanism::RsaDecryptionOaepMd5,
+                KeyMechanism::RsaDecryptionOaepSha1,
+                KeyMechanism::RsaDecryptionOaepSha224,
+                KeyMechanism::RsaDecryptionOaepSha256,
+                KeyMechanism::RsaDecryptionOaepSha384,
+                KeyMechanism::RsaDecryptionOaepSha512,
+                KeyMechanism::RsaSignaturePssMd5,
+                KeyMechanism::RsaSignaturePssSha1,
+                KeyMechanism::RsaSignaturePssSha224,
+                KeyMechanism::RsaSignaturePssSha256,
+                KeyMechanism::RsaSignaturePssSha384,
+                KeyMechanism::RsaSignaturePssSha512,
+                KeyMechanism::RsaDecryptionPkcs1,
+                KeyMechanism::RsaDecryptionRaw,
+                KeyMechanism::RsaSignaturePkcs1,
+            ],
+            Self::Ecdsa | Self::GenerateEc => vec![KeyMechanism::EcdsaSignature],
+            Self::EdDsa | Self::GenerateEd => vec![KeyMechanism::EdDsaSignature],
+        }
+    }
+
     pub fn to_api_mech(&self, mode: MechMode) -> Option<KeyMechanism> {
         match mode {
             MechMode::Sign => match self {
@@ -180,6 +234,7 @@ impl Mechanism {
                 Self::Ecdsa => Some(KeyMechanism::EcdsaSignature),
                 Self::EdDsa => Some(KeyMechanism::EdDsaSignature),
                 Self::RsaPkcsOaep(_) => None,
+                _ => None,
             },
             MechMode::Encrypt => match self {
                 Self::AesCbc(_) => Some(KeyMechanism::AesEncryptionCbc),
@@ -204,6 +259,11 @@ impl Mechanism {
 
     pub fn from_ckraw_mech(raw_mech: &CkRawMechanism) -> Result<Self, Error> {
         let mech = match raw_mech.type_() {
+            cryptoki_sys::CKM_AES_KEY_GEN => Self::GenerateAes,
+            cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN => Self::GenerateRsa,
+            cryptoki_sys::CKM_EC_KEY_PAIR_GEN => Self::GenerateEc,
+            cryptoki_sys::CKM_EC_EDWARDS_KEY_PAIR_GEN => Self::GenerateEd,
+            cryptoki_sys::CKM_GENERIC_SECRET_KEY_GEN => Self::GenerateGeneric,
             cryptoki_sys::CKM_AES_CBC => {
                 let params = unsafe { raw_mech.params::<[cryptoki_sys::CK_BYTE; 16]>() }
                     .map_err(Error::CkRaw)?;
@@ -255,19 +315,26 @@ impl Mechanism {
             Self::RsaX509 => cryptoki_sys::CKM_RSA_X_509,
             Self::Ecdsa => cryptoki_sys::CKM_ECDSA,
             Self::EdDsa => cryptoki_sys::CKM_EDDSA,
+
+            Self::GenerateAes => cryptoki_sys::CKM_AES_KEY_GEN,
+            Self::GenerateRsa => cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            Self::GenerateEc => cryptoki_sys::CKM_EC_KEY_PAIR_GEN,
+            Self::GenerateEd => cryptoki_sys::CKM_EC_EDWARDS_KEY_PAIR_GEN,
+            Self::GenerateGeneric => cryptoki_sys::CKM_GENERIC_SECRET_KEY_GEN,
         }
     }
 
     pub fn ck_info(&self) -> cryptoki_sys::CK_MECHANISM_INFO {
         let (min_bits, max_bits) = match self {
             // Self::Digest(_) => (0, 0),
-            Self::AesCbc(_) => (128, 256),
-            Self::RsaPkcs | Self::RsaPkcsPss(_) | Self::RsaX509 => {
+            Self::AesCbc(_) | Self::GenerateAes => (128, 256),
+            Self::RsaPkcs | Self::RsaPkcsPss(_) | Self::RsaX509 | Self::GenerateRsa => {
                 (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS)
             }
-            Self::Ecdsa => (Self::EC_MIN_KEY_BITS, Self::EC_MAX_KEY_BITS),
+            Self::Ecdsa | Self::GenerateEc => (Self::EC_MIN_KEY_BITS, Self::EC_MAX_KEY_BITS),
             Self::RsaPkcsOaep(_) => (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS),
-            Self::EdDsa => (Self::ED_MIN_KEY_BITS, Self::ED_MAX_KEY_BITS),
+            Self::EdDsa | Self::GenerateEd => (Self::ED_MIN_KEY_BITS, Self::ED_MAX_KEY_BITS),
+            Self::GenerateGeneric => (128, 256),
         };
         cryptoki_sys::CK_MECHANISM_INFO {
             ulMinKeySize: min_bits,
@@ -289,23 +356,39 @@ impl Mechanism {
         // tests out there seem to check for it
         cryptoki_sys::CKF_HW
             | match self {
-                Self::AesCbc(_) => cryptoki_sys::CKF_ENCRYPT | cryptoki_sys::CKF_DECRYPT,
+                Self::GenerateGeneric => {
+                    cryptoki_sys::CKF_GENERATE
+                        | cryptoki_sys::CKF_GENERATE_KEY_PAIR
+                        | cryptoki_sys::CKF_DERIVE
+                }
+                Self::AesCbc(_) | Self::GenerateAes => {
+                    cryptoki_sys::CKF_ENCRYPT
+                        | cryptoki_sys::CKF_DECRYPT
+                        | cryptoki_sys::CKF_GENERATE
+                }
                 // Self::Digest(_) => cryptoki_sys::CKF_DIGEST,
                 // Single-part CKM_RSA_PKCS also has encrypt/decrypt
-                Self::RsaPkcs => cryptoki_sys::CKF_SIGN | cryptoki_sys::CKF_DECRYPT,
+                Self::RsaPkcs | Self::GenerateRsa => {
+                    cryptoki_sys::CKF_SIGN
+                        | cryptoki_sys::CKF_DECRYPT
+                        | cryptoki_sys::CKF_GENERATE_KEY_PAIR
+                }
                 // Multi-part CKM_RSA_PKCS has sign only
                 Self::RsaPkcsPss(_) => cryptoki_sys::CKF_SIGN,
 
                 // "RAW" RSA has decrypt only
                 Self::RsaX509 => cryptoki_sys::CKF_DECRYPT,
-                Self::Ecdsa => {
+                Self::Ecdsa | Self::GenerateEc => {
                     cryptoki_sys::CKF_SIGN
                         | cryptoki_sys::CKF_EC_F_P
                         | cryptoki_sys::CKF_EC_NAMEDCURVE
                         | cryptoki_sys::CKF_EC_UNCOMPRESS
+                        | cryptoki_sys::CKF_GENERATE_KEY_PAIR
                 }
                 Self::RsaPkcsOaep(_) => cryptoki_sys::CKF_SIGN,
-                Self::EdDsa => cryptoki_sys::CKF_SIGN,
+                Self::EdDsa | Self::GenerateEd => {
+                    cryptoki_sys::CKF_SIGN | cryptoki_sys::CKF_GENERATE_KEY_PAIR
+                }
             }
     }
 

@@ -14,7 +14,7 @@ use super::{
     db::{self, attr::CkRawAttrTemplate, Db, Object, ObjectHandle},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
-    key::create_key_from_template,
+    key::{create_key_from_template, generate_key_from_template},
     login::{LoginCtx, UserStatus},
     mechanism::Mechanism,
     object::{EnumCtx, KeyRequirements},
@@ -509,5 +509,29 @@ impl Session {
         })?;
 
         Ok(())
+    }
+
+    pub fn generate_key(
+        &mut self,
+        template: &CkRawAttrTemplate,
+        public_template: Option<&CkRawAttrTemplate>,
+        mechanism: &Mechanism,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
+        let api_config = self
+            .login_ctx
+            .administrator()
+            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+
+        let id = generate_key_from_template(template, public_template, mechanism, &api_config)
+            .map_err(|err| {
+                error!("Failed to create key: {:?}", err);
+                if err == CreateKeyError::ClassNotSupported {
+                    return CKR_DEVICE_MEMORY;
+                }
+
+                CKR_DEVICE_ERROR
+            })?;
+
+        self.fetch_key(id)
     }
 }

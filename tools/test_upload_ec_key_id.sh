@@ -5,6 +5,7 @@ set -e
 KEYID=Hello
 
 HEXID=$(echo -n ${KEYID}| xxd -ps)
+
 curl -k -u admin:Administrator -v -X DELETE \
   https://localhost:8443/api/v1/keys/$KEYID
 
