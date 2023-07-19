@@ -1,7 +1,7 @@
 use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
-use crate::{backend::db::attr::CkRawAttrTemplate, data::SESSION_MANAGER, lock_mutex};
+use crate::{backend::db::attr::CkRawAttrTemplate, lock_mutex, lock_session};
 
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -14,18 +14,7 @@ pub extern "C" fn C_FindObjectsInit(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_FindObjectsInit() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     let template = if !pTemplate.is_null() {
         Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) })
@@ -48,18 +37,7 @@ pub extern "C" fn C_FindObjects(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_FindObjects() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     trace!("C_FindObjects() ulMaxObjectCount: {}", ulMaxObjectCount);
     let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
@@ -86,18 +64,7 @@ pub extern "C" fn C_FindObjectsFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsFinal() called");
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_FindObjects() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     session.enum_final();
 
@@ -115,18 +82,7 @@ pub extern "C" fn C_GetAttributeValue(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_GetAttributeValue() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     let object = match session.get_object(hObject) {
         Some(object) => object,
@@ -155,15 +111,7 @@ pub extern "C" fn C_GetObjectSize(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("function called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     let object = match session.get_object(hObject) {
         Some(object) => object,
@@ -192,15 +140,7 @@ pub extern "C" fn C_CreateObject(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("function called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
@@ -242,15 +182,7 @@ pub extern "C" fn C_DestroyObject(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DestroyObject() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("function called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     match session.delete_object(hObject) {
         Ok(_) => cryptoki_sys::CKR_OK,

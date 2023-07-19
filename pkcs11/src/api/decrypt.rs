@@ -3,8 +3,7 @@ use log::{error, trace};
 
 use crate::{
     backend::mechanism::{CkRawMechanism, Mechanism},
-    data::SESSION_MANAGER,
-    lock_mutex,
+    lock_mutex, lock_session,
 };
 
 pub extern "C" fn C_DecryptInit(
@@ -30,18 +29,7 @@ pub extern "C" fn C_DecryptInit(
         }
     };
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_DecryptInit() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     session.decrypt_init(&mech, hKey)
 }
@@ -55,18 +43,7 @@ pub extern "C" fn C_Decrypt(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Decrypt() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_Decrypt() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pulDataLen.is_null() || pEncryptedData.is_null() {
         session.decrypt_clear();
@@ -122,18 +99,8 @@ pub extern "C" fn C_DecryptUpdate(
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptUpdate() called");
-    let mut manager = lock_mutex!(SESSION_MANAGER);
 
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_DecryptFinal() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pulPartLen.is_null() || pEncryptedPart.is_null() {
         session.decrypt_clear();
@@ -159,18 +126,7 @@ pub extern "C" fn C_DecryptFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptFinal() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_DecryptFinal() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pulLastPartLen.is_null() {
         session.decrypt_clear();

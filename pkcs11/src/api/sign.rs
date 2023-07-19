@@ -3,8 +3,7 @@ use log::{error, trace};
 
 use crate::{
     backend::mechanism::{CkRawMechanism, Mechanism},
-    data::SESSION_MANAGER,
-    lock_mutex,
+    lock_mutex, lock_session,
 };
 
 pub extern "C" fn C_SignInit(
@@ -28,18 +27,7 @@ pub extern "C" fn C_SignInit(
         }
     };
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!(
-                "C_SignInit() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     session.sign_init(&mech, hKey)
 }
@@ -53,15 +41,7 @@ pub extern "C" fn C_Sign(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Sign() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("C_Sign() called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     trace!("pData null {}", pData.is_null());
     trace!("pulSignatureLen null {}", pulSignatureLen.is_null());
@@ -122,15 +102,7 @@ pub extern "C" fn C_SignUpdate(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignUpdate() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("C_Sign() called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pPart.is_null() {
         session.sign_clear();
@@ -155,15 +127,7 @@ pub extern "C" fn C_SignFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignFinal() called");
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = match manager.get_session_mut(hSession) {
-        Some(session) => session,
-        None => {
-            error!("C_Sign() called with invalid session handle {}.", hSession);
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
+    lock_session!(hSession, session);
 
     if pulSignatureLen.is_null() {
         session.sign_clear();
