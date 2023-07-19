@@ -4,7 +4,8 @@ use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_MODULUS_BITS,
     CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE, CKA_VALUE_LEN, CKK_EC,
-    CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY, CK_KEY_TYPE, CK_ULONG,
+    CKK_GENERIC_SECRET, CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY, CKO_PUBLIC_KEY, CKO_SECRET_KEY,
+    CK_KEY_TYPE, CK_ULONG,
 };
 use lazy_static::lazy_static;
 use log::{debug, trace};
@@ -44,7 +45,9 @@ impl PartialEq for CreateKeyError {
 #[derive(Debug)]
 enum KeyClass {
     Private,
+    Public,
     Certificate,
+    SecretKey,
 }
 
 #[derive(Debug, Default)]
@@ -78,6 +81,8 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                     parsed.key_class = match val {
                         CKO_PRIVATE_KEY => Some(KeyClass::Private),
                         CKO_CERTIFICATE => Some(KeyClass::Certificate),
+                        CKO_SECRET_KEY => Some(KeyClass::SecretKey),
+                        CKO_PUBLIC_KEY => Some(KeyClass::Public),
                         _ => {
                             debug!("Class not supported: {:?}", val);
                             None
@@ -217,6 +222,23 @@ pub fn create_key_from_template(
             });
 
             (ec_type, key)
+        }
+        CKK_GENERIC_SECRET => {
+            let b64_private = general_purpose::STANDARD.encode(
+                parsed
+                    .value
+                    .as_ref()
+                    .ok_or(CreateKeyError::MissingAttribute)?
+                    .as_slice(),
+            );
+
+            let key = Box::new(KeyPrivateData {
+                data: Some(b64_private),
+                prime_p: None,
+                prime_q: None,
+                public_exponent: None,
+            });
+            (KeyType::Generic, key)
         }
 
         _ => return Err(CreateKeyError::InvalidAttribute),
