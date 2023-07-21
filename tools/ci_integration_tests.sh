@@ -18,8 +18,9 @@ export P11NETHSM_CONFIG_FILE=./p11nethsm.conf
 ./tools/test_upload_ec_key.sh
 ./tools/test_upload_ec_key_id.sh
 ./tools/test_upload_aes_key.sh
-# doesn't work, pkcs11-tool can't read the key
+# doesn't work, pkcs11-tool can't read the key on 0.23 
 # ./tools/test_upload_rsa_key.sh
+# ./tools/test_upload_certificate.sh
 ./tools/test_delete_key.sh
 ./tools/test_generate_rsa_id.sh
 ./tools/test_generate_ec_id.sh
