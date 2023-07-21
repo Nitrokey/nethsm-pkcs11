@@ -4,12 +4,12 @@
 use base64::{engine::general_purpose, Engine as _};
 
 use cryptoki_sys::{
-    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CLASS, CKA_DECRYPT, CKA_DERIVE,
-    CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_KEY_GEN_MECHANISM,
-    CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS, CKA_MODULUS_BITS,
-    CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE, CKA_SIGN,
-    CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE_LEN, CKA_VERIFY, CKA_WRAP,
-    CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT,
+    CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID,
+    CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
+    CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
+    CKA_SIGN, CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY,
+    CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
@@ -17,7 +17,7 @@ use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 
-use crate::backend::key::key_type_to_asn1;
+use crate::backend::key::{key_type_to_asn1, CreateKeyError};
 
 use super::attr::{self, CkRawAttrTemplate};
 
@@ -160,16 +160,18 @@ pub enum ObjectKind {
     PrivateKey,
     PublicKey,
     SecretKey,
+    Certificate,
     Other,
 }
 
 impl From<CK_OBJECT_CLASS> for ObjectKind {
     fn from(src: CK_OBJECT_CLASS) -> Self {
         match src {
-            cryptoki_sys::CKO_PRIVATE_KEY => ObjectKind::PrivateKey,
-            cryptoki_sys::CKO_PUBLIC_KEY => ObjectKind::PublicKey,
-            cryptoki_sys::CKO_SECRET_KEY => ObjectKind::SecretKey,
-            _ => ObjectKind::Other,
+            cryptoki_sys::CKO_PRIVATE_KEY => Self::PrivateKey,
+            cryptoki_sys::CKO_PUBLIC_KEY => Self::PublicKey,
+            cryptoki_sys::CKO_SECRET_KEY => Self::SecretKey,
+            cryptoki_sys::CKO_CERTIFICATE => Self::Certificate,
+            _ => Self::Other,
         }
     }
 }
@@ -180,6 +182,7 @@ impl From<ObjectKind> for CK_OBJECT_CLASS {
             ObjectKind::PrivateKey => cryptoki_sys::CKO_PRIVATE_KEY,
             ObjectKind::PublicKey => cryptoki_sys::CKO_PUBLIC_KEY,
             ObjectKind::SecretKey => cryptoki_sys::CKO_SECRET_KEY,
+            ObjectKind::Certificate => cryptoki_sys::CKO_CERTIFICATE,
             ObjectKind::Other => cryptoki_sys::CKO_DATA,
         }
     }
@@ -338,7 +341,7 @@ fn configure_generic() -> Result<KeyData, Error> {
     })
 }
 
-pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Error> {
+pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error> {
     let mut attrs = HashMap::new();
     attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
     attrs.insert(
@@ -374,7 +377,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     let private_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::PrivateKey,
-        id: id.clone(),
+        id: id.to_string(),
         size: key_attrs.key_size,
         mechanisms: key_data.mechanisms.clone(),
     };
@@ -391,7 +394,7 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
     let mut public_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::PublicKey,
-        id,
+        id: id.to_string(),
         size: key_attrs.key_size,
         mechanisms: vec![],
     };
@@ -426,6 +429,54 @@ pub fn from_key_data(key_data: PublicKey, id: String) -> Result<Vec<Object>, Err
         .insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
 
     Ok(vec![public_key, private_key])
+}
+
+pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, CreateKeyError> {
+    let openssl_cert =
+        openssl::x509::X509::from_pem(cert.as_bytes()).map_err(CreateKeyError::OpenSSL)?;
+
+    let cert_der = openssl_cert
+        .to_der()
+        .map_err(CreateKeyError::OpenSSL)?
+        .to_vec();
+
+    let length = cert_der.len();
+
+    let mut attrs = HashMap::new();
+
+    attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
+    attrs.insert(
+        CKA_CLASS,
+        Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),
+    );
+    attrs.insert(CKA_LABEL, Attr::Bytes(key_id.as_bytes().to_vec()));
+    attrs.insert(
+        CKA_KEY_GEN_MECHANISM,
+        Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
+    );
+    attrs.insert(CKA_LOCAL, Attr::CK_TRUE);
+    attrs.insert(CKA_MODIFIABLE, Attr::CK_FALSE);
+    attrs.insert(CKA_TOKEN, Attr::CK_TRUE);
+    attrs.insert(CKA_ALWAYS_AUTHENTICATE, Attr::CK_FALSE);
+    attrs.insert(CKA_SENSITIVE, Attr::CK_FALSE);
+    attrs.insert(CKA_ALWAYS_SENSITIVE, Attr::CK_FALSE);
+    attrs.insert(CKA_EXTRACTABLE, Attr::CK_FALSE);
+    attrs.insert(CKA_NEVER_EXTRACTABLE, Attr::CK_TRUE);
+    attrs.insert(CKA_PRIVATE, Attr::CK_FALSE);
+    attrs.insert(
+        CKA_CERTIFICATE_TYPE,
+        Attr::from_ck_cert_type(cryptoki_sys::CKC_X_509),
+    );
+    attrs.insert(CKA_VALUE, Attr::Bytes(cert_der));
+    attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
+
+    Ok(Object {
+        attrs,
+        kind: ObjectKind::Certificate,
+        id: key_id.to_owned(),
+        size: Some(length),
+        mechanisms: vec![],
+    })
 }
 
 impl Object {

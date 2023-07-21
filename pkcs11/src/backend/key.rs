@@ -1,14 +1,13 @@
 use super::db::attr::CkRawAttrTemplate;
-use crate::backend::mechanism::Mechanism;
+use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
-    CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_MODULUS_BITS,
-    CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE, CKA_VALUE_LEN, CKK_EC,
-    CKK_GENERIC_SECRET, CKK_RSA, CKO_CERTIFICATE, CKO_PRIVATE_KEY, CKO_PUBLIC_KEY, CKO_SECRET_KEY,
-    CK_KEY_TYPE, CK_ULONG,
+    CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
+    CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
+    CKA_VALUE_LEN, CKK_EC, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
 };
 use lazy_static::lazy_static;
-use log::{debug, trace};
+use log::{debug, error, trace};
 use openapi::{
     apis::{
         configuration::Configuration,
@@ -23,10 +22,12 @@ pub enum CreateKeyError {
     MissingAttribute,
     InvalidAttribute,
     ClassNotSupported,
+    PutCertError(openapi::apis::Error<default_api::KeysKeyIdCertPutError>),
     PutError(openapi::apis::Error<KeysKeyIdPutError>),
     PostError(openapi::apis::Error<default_api::KeysPostError>),
     GenerateError(openapi::apis::Error<default_api::KeysGeneratePostError>),
     StringParseError(std::string::FromUtf8Error),
+    OpenSSL(openssl::error::ErrorStack),
 }
 
 impl PartialEq for CreateKeyError {
@@ -42,14 +43,6 @@ impl PartialEq for CreateKeyError {
     }
 }
 
-#[derive(Debug)]
-enum KeyClass {
-    Private,
-    Public,
-    Certificate,
-    SecretKey,
-}
-
 #[derive(Debug, Default)]
 struct ParsedAttributes {
     pub id: Option<String>,
@@ -57,7 +50,7 @@ struct ParsedAttributes {
     pub sign: bool,
     pub encrypt: bool,
     pub decrypt: bool,
-    pub key_class: Option<KeyClass>,
+    pub key_class: Option<ObjectKind>,
     pub ec_params: Option<Vec<u8>>,
     pub value: Option<Vec<u8>>,
     pub public_exponent: Option<Vec<u8>>,
@@ -76,17 +69,15 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
         debug!("attr: {:?}, value: {:?}", t, attr.val_bytes());
 
         match t {
-            CKA_CLASS => match attr.read_value() {
+            CKA_CLASS => match attr.read_value::<CK_OBJECT_CLASS>() {
                 Some(val) => {
-                    parsed.key_class = match val {
-                        CKO_PRIVATE_KEY => Some(KeyClass::Private),
-                        CKO_CERTIFICATE => Some(KeyClass::Certificate),
-                        CKO_SECRET_KEY => Some(KeyClass::SecretKey),
-                        CKO_PUBLIC_KEY => Some(KeyClass::Public),
-                        _ => {
+                    parsed.key_class = match ObjectKind::from(val) {
+                        ObjectKind::Other => {
                             debug!("Class not supported: {:?}", val);
                             None
                         }
+
+                        k => Some(k),
                     }
                 }
                 None => return Err(CreateKeyError::InvalidAttribute),
@@ -98,6 +89,18 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                     .transpose()
                     .map_err(CreateKeyError::StringParseError)?;
             }
+            CKA_LABEL => {
+                let label = attr
+                    .val_bytes()
+                    .map(|val| String::from_utf8(val.to_vec()))
+                    .transpose()
+                    .map_err(CreateKeyError::StringParseError)?;
+                trace!("label: {:?}", label);
+                if parsed.id.is_none() {
+                    parsed.id = label;
+                }
+            }
+
             CKA_KEY_TYPE => {
                 let ktype: CK_KEY_TYPE = match attr.read_value() {
                     Some(val) => val,
@@ -160,17 +163,56 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
     Ok(parsed)
 }
 
+fn upload_certificate(
+    parsed_template: &ParsedAttributes,
+    api_config: &Configuration,
+) -> Result<(String, ObjectKind), CreateKeyError> {
+    let cert = parsed_template
+        .value
+        .as_ref()
+        .ok_or(CreateKeyError::MissingAttribute)?;
+
+    let openssl_cert = openssl::x509::X509::from_der(cert).map_err(CreateKeyError::OpenSSL)?;
+
+    let id = match parsed_template.id {
+        Some(ref id) => id.clone(),
+        None => {
+            error!("A key ID is required");
+            return Err(CreateKeyError::MissingAttribute);
+        }
+    };
+
+    let cert_file = openssl_cert.to_pem().map_err(CreateKeyError::OpenSSL)?;
+
+    let body = String::from_utf8(cert_file).map_err(CreateKeyError::StringParseError)?;
+
+    default_api::keys_key_id_cert_put(api_config, &id, &body)
+        .map_err(CreateKeyError::PutCertError)?;
+
+    Ok((id, ObjectKind::Certificate))
+}
+
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     api_config: &Configuration,
-) -> Result<String, CreateKeyError> {
+) -> Result<(String, ObjectKind), CreateKeyError> {
     let parsed = parse_attributes(&template)?;
 
     debug!("key_class: {:?}", parsed.key_class);
     debug!("key_type: {:?}", parsed.key_type);
 
-    if parsed.key_class.is_none() {
+    let key_class = if let Some(ref key_class) = parsed.key_class {
+        let key_class = key_class.clone();
+        if key_class == ObjectKind::Other && key_class == ObjectKind::PublicKey {
+            return Err(CreateKeyError::ClassNotSupported);
+        }
+        key_class
+    } else {
         return Err(CreateKeyError::ClassNotSupported);
+    };
+
+    if key_class == ObjectKind::Certificate {
+        return upload_certificate(&parsed, api_config);
     }
 
     let (r#type, key) = match parsed.key_type.ok_or(CreateKeyError::InvalidAttribute)? {
@@ -282,7 +324,7 @@ pub fn create_key_from_template(
             .map_err(CreateKeyError::PostError)?
     };
 
-    Ok(id)
+    Ok((id, key_class))
 }
 
 lazy_static! {
@@ -336,6 +378,15 @@ pub fn generate_key_from_template(
 ) -> Result<String, CreateKeyError> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
+
+    // we can only generate private and secret keys
+    if let Some(key_class) = parsed.key_class {
+        if !matches!(key_class, ObjectKind::PrivateKey | ObjectKind::SecretKey) {
+            return Err(CreateKeyError::ClassNotSupported);
+        }
+    } else {
+        return Err(CreateKeyError::ClassNotSupported);
+    }
 
     let api_mechs = mechanism.get_all_possible_api_mechs();
 

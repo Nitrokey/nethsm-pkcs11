@@ -5,13 +5,13 @@ use cryptoki_sys::{
     CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV,
     CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
-use log::error;
+use log::{debug, error};
 use openapi::apis::default_api::{self};
 
 use crate::{backend::key::CreateKeyError, config::device::Slot};
 
 use super::{
-    db::{self, attr::CkRawAttrTemplate, Db, Object, ObjectHandle},
+    db::{self, attr::CkRawAttrTemplate, object::ObjectKind, Db, Object, ObjectHandle},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
     key::{create_key_from_template, generate_key_from_template},
@@ -392,11 +392,23 @@ impl Session {
         requirements: KeyRequirements,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, CK_RV> {
         let mut result = match requirements.id {
-            Some(key_id) => Ok(self
-                .fetch_key(key_id)?
-                .iter()
-                .map(|(handle, obj)| (*handle, obj.clone()))
-                .collect()),
+            Some(key_id) => {
+                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = self
+                    .fetch_key(&key_id)?
+                    .iter()
+                    .map(|(handle, obj)| (*handle, obj.clone()))
+                    .collect();
+
+                match self.fetch_certificate(&key_id) {
+                    Ok((handle, obj)) => results.push((handle, obj)),
+                    Err(err) => {
+                        debug!("Failed to fetch certificate: {:?}", err);
+                    }
+                }
+
+                Ok(results)
+            }
+
             None => self.fetch_all_keys(),
         }?;
 
@@ -432,7 +444,16 @@ impl Session {
         let mut handles = Vec::new();
 
         for key in keys {
-            let objects = self.fetch_key(key.key)?;
+            let mut objects = self.fetch_key(&key.key)?;
+
+            // try to fetch the certificate
+            match self.fetch_certificate(&key.key) {
+                Ok((handle, object)) => objects.push((handle, object)),
+                Err(err) => {
+                    debug!("Failed to fetch certificate: {:?}", err);
+                }
+            }
+
             for (handle, object) in objects {
                 handles.push((handle, object));
             }
@@ -440,18 +461,39 @@ impl Session {
         Ok(handles)
     }
 
-    fn fetch_key(&mut self, key_id: String) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
+    fn fetch_certificate(&mut self, key_id: &str) -> Result<(CK_OBJECT_HANDLE, Object), CK_RV> {
         let api_config = self
             .login_ctx
             .operator_or_administrator()
             .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
-        let key_data = default_api::keys_key_id_get(&api_config, &key_id).map_err(|err| {
+        let cert_data = default_api::keys_key_id_cert_get(&api_config, key_id).map_err(|err| {
+            debug!("Failed to fetch certificate {}: {:?}", key_id, err);
+            CKR_DEVICE_ERROR
+        })?;
+
+        let object = db::object::from_cert_data(cert_data, key_id).map_err(|err| {
+            debug!("Failed to convert certificate {}: {:?}", key_id, err);
+            CKR_DEVICE_ERROR
+        })?;
+
+        let r = self.db.add_object(object);
+
+        Ok((r.0, r.1.clone()))
+    }
+
+    fn fetch_key(&mut self, key_id: &str) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
+        let api_config = self
+            .login_ctx
+            .operator_or_administrator()
+            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+
+        let key_data = default_api::keys_key_id_get(&api_config, key_id).map_err(|err| {
             error!("Failed to fetch key {}: {:?}", key_id, err);
             CKR_DEVICE_ERROR
         })?;
 
-        let objects = db::object::from_key_data(key_data, key_id.clone()).map_err(|err| {
+        let objects = db::object::from_key_data(key_data, key_id).map_err(|err| {
             error!("Failed to convert key {}: {:?}", key_id, err);
             CKR_DEVICE_ERROR
         })?;
@@ -475,16 +517,20 @@ impl Session {
             .administrator()
             .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
-        let id = create_key_from_template(template, &api_config).map_err(|err| {
+        let key_info = create_key_from_template(template, &api_config).map_err(|err| {
             error!("Failed to create key: {:?}", err);
             if err == CreateKeyError::ClassNotSupported {
                 return CKR_DEVICE_MEMORY;
             }
-
             CKR_DEVICE_ERROR
         })?;
 
-        self.fetch_key(id)
+        match key_info.1 {
+            ObjectKind::Certificate => self
+                .fetch_certificate(&key_info.0)
+                .map(|(handle, obj)| vec![(handle, obj)]),
+            _ => self.fetch_key(&key_info.0),
+        }
     }
 
     pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), CK_RV> {
@@ -532,6 +578,6 @@ impl Session {
                 CKR_DEVICE_ERROR
             })?;
 
-        self.fetch_key(id)
+        self.fetch_key(&id)
     }
 }

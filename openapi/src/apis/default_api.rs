@@ -1632,6 +1632,11 @@ pub fn keys_key_id_cert_get(
         );
     };
 
+    local_var_req_builder = local_var_req_builder.header(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("application/x-pem-file"),
+    );
+
     let local_var_req = local_var_req_builder.build()?;
     let mut local_var_resp = local_var_client.execute(local_var_req)?;
 
@@ -1639,7 +1644,7 @@ pub fn keys_key_id_cert_get(
     let local_var_content = local_var_resp.text()?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-        serde_json::from_str(&local_var_content).map_err(Error::from)
+        Ok(local_var_content)
     } else {
         let local_var_entity: Option<KeysKeyIdCertGetError> =
             serde_json::from_str(&local_var_content).ok();
@@ -1680,7 +1685,12 @@ pub fn keys_key_id_cert_put(
             local_var_auth_conf.1.to_owned(),
         );
     };
-    local_var_req_builder = local_var_req_builder.json(&body);
+    local_var_req_builder = local_var_req_builder.body(body.to_owned());
+
+    local_var_req_builder = local_var_req_builder.header(
+        reqwest::header::CONTENT_TYPE,
+        reqwest::header::HeaderValue::from_static("application/x-pem-file"),
+    );
 
     let local_var_req = local_var_req_builder.build()?;
     let mut local_var_resp = local_var_client.execute(local_var_req)?;
