@@ -95,6 +95,12 @@ pub extern "C" fn C_GetAttributeValue(
         }
     };
 
+    trace!(
+        "C_GetAttributeValue() object id : {} {:?}",
+        object.id,
+        object.kind
+    );
+
     let mut template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
