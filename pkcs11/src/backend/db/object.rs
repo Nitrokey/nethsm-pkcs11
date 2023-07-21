@@ -5,12 +5,12 @@ use base64::{engine::general_purpose, Engine as _};
 
 use cryptoki_sys::{
     CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT,
-    CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID,
+    CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_ISSUER,
     CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
     CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
-    CKA_SIGN, CKA_SIGN_RECOVER, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY,
-    CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
-    CK_UNAVAILABLE_INFORMATION,
+    CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE, CKA_VALUE_LEN,
+    CKA_VERIFY, CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS,
+    CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
 use openapi::models::{KeyMechanism, KeyType, PublicKey};
@@ -469,6 +469,24 @@ pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, CreateKeyErr
     );
     attrs.insert(CKA_VALUE, Attr::Bytes(cert_der));
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
+    attrs.insert(
+        CKA_SUBJECT,
+        Attr::Bytes(
+            openssl_cert
+                .subject_name()
+                .to_der()
+                .map_err(CreateKeyError::OpenSSL)?,
+        ),
+    );
+    attrs.insert(
+        CKA_ISSUER,
+        Attr::Bytes(
+            openssl_cert
+                .issuer_name()
+                .to_der()
+                .map_err(CreateKeyError::OpenSSL)?,
+        ),
+    );
 
     Ok(Object {
         attrs,
