@@ -379,15 +379,6 @@ pub fn generate_key_from_template(
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 
-    // we can only generate private and secret keys
-    if let Some(key_class) = parsed.key_class {
-        if !matches!(key_class, ObjectKind::PrivateKey | ObjectKind::SecretKey) {
-            return Err(CreateKeyError::ClassNotSupported);
-        }
-    } else {
-        return Err(CreateKeyError::ClassNotSupported);
-    }
-
     let api_mechs = mechanism.get_all_possible_api_mechs();
 
     let length = parsed.value_len.or(parsed.modulus_bits).or(parsed_public
