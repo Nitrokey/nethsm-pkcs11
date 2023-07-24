@@ -54,10 +54,32 @@ pub fn read_configuration() -> Result<P11Config, ConfigError> {
     Ok(config)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl From<&LogLevel> for log::LevelFilter {
+    fn from(level: &LogLevel) -> Self {
+        match level {
+            LogLevel::Trace => log::LevelFilter::Trace,
+            LogLevel::Debug => log::LevelFilter::Debug,
+            LogLevel::Info => log::LevelFilter::Info,
+            LogLevel::Warn => log::LevelFilter::Warn,
+            LogLevel::Error => log::LevelFilter::Error,
+        }
+    }
+}
+
 // representation of the config file to parse
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Default)]
 pub struct P11Config {
     pub log_file: Option<String>,
+    pub log_level: Option<LogLevel>,
     #[merge(strategy = merge::vec::append)]
     pub slots: Vec<SlotConfig>,
 }

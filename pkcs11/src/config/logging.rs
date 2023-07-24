@@ -4,7 +4,11 @@ use super::config_file::P11Config;
 pub fn configure_logger(config: &P11Config) {
     let mut builder = env_logger::Builder::from_default_env();
 
-    builder.target(env_logger::Target::Stdout);
+    // set the log level
+
+    if let Some(level) = &config.log_level {
+        builder.filter_level(level.into());
+    }
 
     if let Some(path) = &config.log_file {
         // open the file for appending
@@ -15,8 +19,9 @@ pub fn configure_logger(config: &P11Config) {
                 .open(path)
                 .expect("could not open log file"),
         );
-
         builder.target(env_logger::Target::Pipe(file));
+    } else {
+        builder.target(env_logger::Target::Stdout);
     }
 
     builder.init()

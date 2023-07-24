@@ -25,8 +25,10 @@ You can manually set the config file location (only this one will be read) wiht 
 The configuration is yaml-formatted :
 
 ```yml
-# you can set the log file location here, if no value is set, the module will only output to stderr
-logfile: /tmp/p11nethsm.log
+# you can set the log file location here, if no value is set, the module will output to stderr, if a value is set it will output to the file
+log_file: /tmp/p11nethsm.log
+# optional log level
+log_level: Debug
 
 # each "slot" represents a NetHSM server
 slots:
