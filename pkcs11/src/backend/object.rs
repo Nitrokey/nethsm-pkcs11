@@ -38,7 +38,22 @@ fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, C
                 }
 
                 if attr.type_() == CKA_ID {
-                    key_id = Some(parse_str_from_attr(&attr)?);
+                    if let Some(bytes) = attr.val_bytes() {
+                        let str_result = String::from_utf8(bytes.to_vec());
+                        let mut output = None;
+                        if let Ok(str) = str_result {
+                            // check if the string contains only alphanumeric characters
+                            if str.chars().all(|c| c.is_alphanumeric()) {
+                                output = Some(str);
+                            }
+                        }
+
+                        if output.is_none() {
+                            // store as hex value string
+                            output = Some(hex::encode(bytes));
+                        }
+                        key_id = output;
+                    }
                 }
                 if attr.type_() == CKA_LABEL && key_id.is_none() {
                     key_id = Some(parse_str_from_attr(&attr)?);

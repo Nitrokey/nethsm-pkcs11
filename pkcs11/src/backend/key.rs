@@ -83,11 +83,22 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                 None => return Err(CreateKeyError::InvalidAttribute),
             },
             CKA_ID => {
-                parsed.id = attr
-                    .val_bytes()
-                    .map(|val| String::from_utf8(val.to_vec()))
-                    .transpose()
-                    .map_err(CreateKeyError::StringParseError)?;
+                if let Some(bytes) = attr.val_bytes() {
+                    let str_result = String::from_utf8(bytes.to_vec());
+                    let mut output = None;
+                    if let Ok(str) = str_result {
+                        // check if the string contains only alphanumeric characters
+                        if str.chars().all(|c| c.is_alphanumeric()) {
+                            output = Some(str);
+                        }
+                    }
+
+                    if output.is_none() {
+                        // store as hex value string
+                        output = Some(hex::encode(bytes));
+                    }
+                    parsed.id = output;
+                }
             }
             CKA_LABEL => {
                 let label = attr
