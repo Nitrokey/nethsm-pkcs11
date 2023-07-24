@@ -6,7 +6,10 @@ use cryptoki_sys::{
     CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
 use log::{debug, error};
-use openapi::apis::default_api::{self};
+use openapi::apis::{
+    self,
+    default_api::{self},
+};
 
 use crate::{backend::key::CreateKeyError, config::device::Slot};
 
@@ -493,10 +496,22 @@ impl Session {
             .operator_or_administrator()
             .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
-        let key_data = default_api::keys_key_id_get(&api_config, key_id).map_err(|err| {
-            error!("Failed to fetch key {}: {:?}", key_id, err);
-            CKR_DEVICE_ERROR
-        })?;
+        let key_data = match default_api::keys_key_id_get(&api_config, key_id) {
+            Ok(key_data) => key_data,
+            Err(err) => {
+                debug!("Failed to fetch key {}: {:?}", key_id, err);
+                if matches!(
+                    err,
+                    apis::Error::ResponseError(apis::ResponseContent {
+                        status: reqwest::StatusCode::NOT_FOUND,
+                        ..
+                    })
+                ) {
+                    return Ok(vec![]);
+                }
+                return Err(CKR_DEVICE_ERROR);
+            }
+        };
 
         let objects = db::object::from_key_data(key_data, key_id, raw_id).map_err(|err| {
             error!("Failed to convert key {}: {:?}", key_id, err);
@@ -549,10 +564,25 @@ impl Session {
             CKR_DEVICE_ERROR
         })?;
 
-        default_api::keys_key_id_delete(&api_config, &key.id).map_err(|err| {
-            error!("Failed to delete key {}: {:?}", key.id, err);
-            CKR_DEVICE_ERROR
-        })?;
+        debug!("Deleting key {} {:?}", key.id, key.kind);
+
+        match key.kind {
+            ObjectKind::Certificate => {
+                default_api::keys_key_id_cert_delete(&api_config, &key.id).map_err(|err| {
+                    error!("Failed to delete certificate {}: {:?}", key.id, err);
+                    CKR_DEVICE_ERROR
+                })?;
+            }
+            ObjectKind::SecretKey | ObjectKind::PrivateKey => {
+                default_api::keys_key_id_delete(&api_config, &key.id).map_err(|err| {
+                    error!("Failed to delete key {}: {:?}", key.id, err);
+                    CKR_DEVICE_ERROR
+                })?;
+            }
+            _ => {
+                // we don't support deleting other objects
+            }
+        }
 
         self.db.remove(ObjectHandle::from(handle)).ok_or_else(|| {
             error!("Failed to delete object: invalid handle");
