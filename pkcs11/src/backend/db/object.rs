@@ -353,7 +353,7 @@ pub fn from_key_data(
     } else {
         attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
     }
-    
+
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),

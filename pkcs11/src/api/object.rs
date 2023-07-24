@@ -186,7 +186,7 @@ pub extern "C" fn C_DestroyObject(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_DestroyObject() called");
+    trace!("C_DestroyObject() called : {}", hObject);
 
     lock_session!(hSession, session);
 
