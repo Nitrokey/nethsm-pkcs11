@@ -22,6 +22,7 @@ pub struct EnumCtx {
 pub struct KeyRequirements {
     pub kind: Option<ObjectKind>,
     pub id: Option<String>,
+    pub raw_id: Option<Vec<u8>>,
 }
 
 fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, CK_RV> {
@@ -29,6 +30,7 @@ fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, C
         Some(template) => {
             let mut key_id = None;
             let mut kind = None;
+            let mut raw_id = None;
             for attr in template.iter() {
                 debug!("attr: {:?}", attr.type_());
                 debug!("attr: {:?}", attr.val_bytes());
@@ -51,6 +53,7 @@ fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, C
                         if output.is_none() {
                             // store as hex value string
                             output = Some(hex::encode(bytes));
+                            raw_id = Some(bytes.to_vec());
                         }
                         key_id = output;
                     }
@@ -59,11 +62,16 @@ fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, C
                     key_id = Some(parse_str_from_attr(&attr)?);
                 }
             }
-            Ok(KeyRequirements { kind, id: key_id })
+            Ok(KeyRequirements {
+                kind,
+                id: key_id,
+                raw_id,
+            })
         }
         None => Ok(KeyRequirements {
             kind: None,
             id: None,
+            raw_id: None,
         }),
     }
 }
@@ -78,9 +86,9 @@ impl EnumCtx {
         session: &mut Session,
         template: Option<CkRawAttrTemplate>,
     ) -> Result<Self, CK_RV> {
-        let key_id = find_key_id(template)?;
+        let key_req = find_key_id(template)?;
 
-        let handles = session.find_key(key_id)?;
+        let handles = session.find_key(key_req)?;
         Ok(EnumCtx::new(handles))
     }
 

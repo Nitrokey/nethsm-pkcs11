@@ -394,7 +394,7 @@ impl Session {
         let mut result = match requirements.id {
             Some(key_id) => {
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = self
-                    .fetch_key(&key_id)?
+                    .fetch_key(&key_id, requirements.raw_id)?
                     .iter()
                     .map(|(handle, obj)| (*handle, obj.clone()))
                     .collect();
@@ -444,7 +444,7 @@ impl Session {
         let mut handles = Vec::new();
 
         for key in keys {
-            let mut objects = self.fetch_key(&key.key)?;
+            let mut objects = self.fetch_key(&key.key, None)?;
 
             // try to fetch the certificate
             match self.fetch_certificate(&key.key) {
@@ -482,7 +482,12 @@ impl Session {
         Ok((r.0, r.1.clone()))
     }
 
-    fn fetch_key(&mut self, key_id: &str) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
+    // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
+    fn fetch_key(
+        &mut self,
+        key_id: &str,
+        raw_id: Option<Vec<u8>>,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
         let api_config = self
             .login_ctx
             .operator_or_administrator()
@@ -493,7 +498,7 @@ impl Session {
             CKR_DEVICE_ERROR
         })?;
 
-        let objects = db::object::from_key_data(key_data, key_id).map_err(|err| {
+        let objects = db::object::from_key_data(key_data, key_id, raw_id).map_err(|err| {
             error!("Failed to convert key {}: {:?}", key_id, err);
             CKR_DEVICE_ERROR
         })?;
@@ -529,7 +534,7 @@ impl Session {
             ObjectKind::Certificate => self
                 .fetch_certificate(&key_info.0)
                 .map(|(handle, obj)| vec![(handle, obj)]),
-            _ => self.fetch_key(&key_info.0),
+            _ => self.fetch_key(&key_info.0, None),
         }
     }
 
@@ -568,7 +573,7 @@ impl Session {
             .administrator()
             .ok_or(CKR_USER_NOT_LOGGED_IN)?;
 
-        let id = generate_key_from_template(template, public_template, mechanism, &api_config)
+        let res = generate_key_from_template(template, public_template, mechanism, &api_config)
             .map_err(|err| {
                 error!("Failed to create key: {:?}", err);
                 if err == CreateKeyError::ClassNotSupported {
@@ -578,6 +583,6 @@ impl Session {
                 CKR_DEVICE_ERROR
             })?;
 
-        self.fetch_key(&id)
+        self.fetch_key(&res.0, res.1)
     }
 }
