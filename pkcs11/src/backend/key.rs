@@ -58,6 +58,7 @@ struct ParsedAttributes {
     pub prime_q: Option<Vec<u8>>,
     pub value_len: Option<CK_ULONG>,
     pub modulus_bits: Option<CK_ULONG>,
+    pub raw_id: Option<Vec<u8>>,
 }
 
 fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, CreateKeyError> {
@@ -96,6 +97,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                     if output.is_none() {
                         // store as hex value string
                         output = Some(hex::encode(bytes));
+                        parsed.raw_id = Some(bytes.to_vec());
                     }
                     parsed.id = output;
                 }
@@ -177,7 +179,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
     api_config: &Configuration,
-) -> Result<(String, ObjectKind), CreateKeyError> {
+) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
     let cert = parsed_template
         .value
         .as_ref()
@@ -200,13 +202,13 @@ fn upload_certificate(
     default_api::keys_key_id_cert_put(api_config, &id, &body)
         .map_err(CreateKeyError::PutCertError)?;
 
-    Ok((id, ObjectKind::Certificate))
+    Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
 }
 
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     api_config: &Configuration,
-) -> Result<(String, ObjectKind), CreateKeyError> {
+) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
     let parsed = parse_attributes(&template)?;
 
     debug!("key_class: {:?}", parsed.key_class);
@@ -335,7 +337,7 @@ pub fn create_key_from_template(
             .map_err(CreateKeyError::PostError)?
     };
 
-    Ok((id, key_class))
+    Ok((id, key_class, parsed.raw_id))
 }
 
 lazy_static! {
@@ -386,7 +388,7 @@ pub fn generate_key_from_template(
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
     api_config: &Configuration,
-) -> Result<String, CreateKeyError> {
+) -> Result<(String, Option<Vec<u8>>), CreateKeyError> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 
@@ -406,7 +408,7 @@ pub fn generate_key_from_template(
         }
     }
 
-    default_api::keys_generate_post(
+    let id = default_api::keys_generate_post(
         api_config,
         KeyGenerateRequestData {
             mechanisms: api_mechs,
@@ -416,5 +418,6 @@ pub fn generate_key_from_template(
             length: length.map(|len| len as i32),
         },
     )
-    .map_err(CreateKeyError::GenerateError)
+    .map_err(CreateKeyError::GenerateError)?;
+    Ok((id, parsed.raw_id))
 }

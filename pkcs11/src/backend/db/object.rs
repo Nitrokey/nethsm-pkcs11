@@ -341,9 +341,19 @@ fn configure_generic() -> Result<KeyData, Error> {
     })
 }
 
-pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error> {
+pub fn from_key_data(
+    key_data: PublicKey,
+    id: &str,
+    raw_id: Option<Vec<u8>>,
+) -> Result<Vec<Object>, Error> {
     let mut attrs = HashMap::new();
-    attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
+
+    if let Some(raw_id) = raw_id {
+        attrs.insert(CKA_ID, Attr::Bytes(raw_id));
+    } else {
+        attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
+    }
+    
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
