@@ -8,7 +8,7 @@ pub extern "C" fn C_FindObjectsInit(
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_FindObjectsInit() called");
+    trace!("C_FindObjectsInit() called with session {}", hSession);
 
     if ulCount > 0 && pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;

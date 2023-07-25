@@ -11,7 +11,11 @@ pub extern "C" fn C_OpenSession(
     _Notify: cryptoki_sys::CK_NOTIFY,
     phSession: cryptoki_sys::CK_SESSION_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_OpenSession() called");
+    trace!(
+        "C_OpenSession() called with slotID {}, flags {}",
+        slotID,
+        flags
+    );
 
     if phSession.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -33,6 +37,8 @@ pub extern "C" fn C_OpenSession(
     let mut manager = lock_mutex!(SESSION_MANAGER);
     let session = manager.create_session(slotID, slot, flags);
 
+    trace!("C_OpenSession() created session: {:?}", session);
+
     unsafe {
         *phSession = session;
     }
@@ -41,7 +47,7 @@ pub extern "C" fn C_OpenSession(
 }
 
 pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
-    trace!("C_CloseSession() called");
+    trace!("C_CloseSession() called with session handle {}.", hSession);
 
     let mut manager = lock_mutex!(SESSION_MANAGER);
     let result = manager.delete_session(hSession);
@@ -79,7 +85,10 @@ pub extern "C" fn C_GetSessionInfo(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pInfo: cryptoki_sys::CK_SESSION_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetSessionInfo() called");
+    trace!(
+        "C_GetSessionInfo() called with session handle {}.",
+        hSession
+    );
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -99,6 +108,8 @@ pub extern "C" fn C_GetSessionInfo(
             return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
         }
     };
+
+    trace!("C_GetSessionInfo() session info: {:?}", session_info);
 
     unsafe {
         std::ptr::write(pInfo, session_info);

@@ -1,11 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_USER_NOT_LOGGED_IN, CKS_RO_PUBLIC_SESSION,
-    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV,
-    CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_USER_NOT_LOGGED_IN, CK_FLAGS,
+    CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
-use log::{debug, error};
+use log::{debug, error, trace};
 use openapi::apis::{
     self,
     default_api::{self},
@@ -18,7 +17,7 @@ use super::{
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
     key::{create_key_from_template, generate_key_from_template},
-    login::{LoginCtx, UserStatus},
+    login::LoginCtx,
     mechanism::Mechanism,
     object::{EnumCtx, KeyRequirements},
     sign::SignCtx,
@@ -114,11 +113,7 @@ impl Session {
         }
     }
     pub fn get_ck_info(&self) -> cryptoki_sys::CK_SESSION_INFO {
-        let state = match self.login_ctx.user_status() {
-            UserStatus::LoggedOut => CKS_RO_PUBLIC_SESSION,
-            UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
-            UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
-        };
+        let state = self.login_ctx.ck_state();
 
         cryptoki_sys::CK_SESSION_INFO {
             slotID: self.slot_id,
@@ -173,6 +168,10 @@ impl Session {
         if self.sign_ctx.is_some() {
             return cryptoki_sys::CKR_OPERATION_ACTIVE;
         }
+
+        trace!("sign_init() called with key handle {}", key_handle);
+        trace!("sign_init() called with mechanism {:?}", mechanism);
+        trace!("sign_init() db size : {}", self.db.enumerate().count());
 
         // get key id from the handle
 
