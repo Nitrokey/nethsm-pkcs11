@@ -5,14 +5,18 @@
 - 🗓️ : Planned
 - ❌ : Not in the current scope of the project
 
+## Concurrency
+
+As of current version concurrency is not yet implemented.
+
 ## Base features
 
-| Feature           | Status |
-| ----------------- | ------ |
-| C_GetFunctionList | ✔️      |
-| C_Initialize      | ✔️      |
-| C_Finalize        | ✔️      |
-| C_GetInfo         | ✔️      |
+| Feature           | Status | Notes                         |
+| ----------------- | ------ | ----------------------------- |
+| C_GetFunctionList | ✔️      |                               |
+| C_Initialize      | ⚠️      | Concurrency not yet supported |
+| C_Finalize        | ✔️      |                               |
+| C_GetInfo         | ✔️      |                               |
 
 ## Session
 
