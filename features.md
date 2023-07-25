@@ -16,7 +16,7 @@ As of current version concurrency is not yet implemented.
 | C_GetFunctionList | ✔️      |                               |
 | C_Initialize      | ⚠️      | Concurrency not yet supported |
 | C_Finalize        | ✔️      |                               |
-| C_GetInfo         | ✔️      |                               |
+| C_GetInfo         | ✔️     |                               |
 
 ## Session
 
@@ -26,10 +26,10 @@ As of current version concurrency is not yet implemented.
 | C_CloseSession      | ✔️      |                                   |
 | C_CloseAllSessions  | ✔️      |                                   |
 | C_GetSessionInfo    | ✔️      |                                   |
-| C_GetOperationState | ❌      | May be implemented later          |
-| C_SetOperationState | ❌      | May be implemented later          |
+| C_GetOperationState | ❌     | May be implemented later          |
+| C_SetOperationState | ❌     | May be implemented later          |
 | C_GetFunctionStatus | ✔️      | Returns CKR_FUNCTION_NOT_PARALLEL |
-| C_CancelFunction    | ✔️      | Returns CKR_FUNCTION_NOT_PARALLEL |
+| C_CancelFunction    | ✔️     | Returns CKR_FUNCTION_NOT_PARALLEL |
 
 ## Token
 
@@ -38,12 +38,12 @@ As of current version concurrency is not yet implemented.
 | C_GetSlotList      | ✔️      |                                                                                                                             |
 | C_GetSlotInfo      | ✔️      |                                                                                                                             |
 | C_GetTokenInfo     | ✔️      |                                                                                                                             |
-| C_InitToken        | ❌      |                                                                                                                             |
+| C_InitToken        | ❌     |                                                                                                                             |
 | C_GetMechanismList | ✔️      |                                                                                                                             |
 | C_GetMechanismInfo | ✔️      |                                                                                                                             |
-| C_Login            | ✔️      | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default) |
+| C_Login            | ✔️     | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default) |
 | C_Logout           | ✔️      |                                                                                                                             |
-| C_WaitForSlotEvent | ❌      | May be used to poll for the status of the server, requires a lot of work                                                    |
+| C_WaitForSlotEvent | ❌     | May be used to poll for the status of the server, requires a lot of work                                                    |
 
 ## Decrypt
 
@@ -53,7 +53,7 @@ As of current version concurrency is not yet implemented.
 | C_Decrypt             | ✔️      |                                                                                                                  |
 | C_DecryptUpdate       | ✔️      | The length of the output buffer will always be 0, the decrypted data will be all sent in the C_DecryptFinal call |
 | C_DecryptFinal        | ✔️      |                                                                                                                  |
-| C_DecryptVerifyUpdate | ❌      | Verify is not supported by NetHSM                                                                                |
+| C_DecryptVerifyUpdate | ❌    | Verify is not supported by NetHSM                                                                                |
 
 ## Encrypt
 
@@ -69,12 +69,12 @@ As of current version concurrency is not yet implemented.
 | Feature             | Status | Notes                    |
 | ------------------- | ------ | ------------------------ |
 | C_SignInit          | ✔️      |                          |
-| C_Sign              | ✔️      |                          |
+| C_Sign              | ✔️     |                          |
 | C_SignUpdate        | ✔️      |                          |
 | C_SignFinal         | ✔️      |                          |
-| C_SignRecoverInit   | ❌      | May be implemented later |
-| C_SignRecover       | ❌      | May be implemented later |
-| C_SignEncryptUpdate | ❌      | Not supported by NetHSM  |
+| C_SignRecoverInit   | ❌     | May be implemented later |
+| C_SignRecover       | ❌     | May be implemented later |
+| C_SignEncryptUpdate | ❌     | Not supported by NetHSM  |
 
 ## Digest ❌
 
@@ -90,7 +90,7 @@ Verify is not supported by NetHSM
 | ----------------- | ------ | ---------------------------------------- |
 | C_GenerateKey     | ✔️      | Needs admin                              |
 | C_GenerateKeyPair | ✔️      | Needs admin                              |
-| C_GenerateRandom  | ✔️      |                                          |
+| C_GenerateRandom  | ✔️     |                                          |
 | C_SeedRandom      | ⚠️      | Returns OK but the arguments are ignored |
 | C_WrapKey         | ❌      | Not supported by NetHSM                  |
 | C_UnwrapKey       | ❌      | Not supported by NetHSM                  |
@@ -106,13 +106,13 @@ Verify is not supported by NetHSM
 | C_GetAttributeValue | ✔️      |                                                                     |
 | C_GetObjectSize     | ✔️      |                                                                     |
 | C_CreateObject      | ⚠️      | Needs to be logged as admin (SO). Only private keys can be added.   |
-| C_CopyObject        | ✔️      | Always returns CKR_ACTION_PROHIBITED                                |
+| C_CopyObject        | ⚠️      | Always returns CKR_ACTION_PROHIBITED                                |
 | C_DestroyObject     | ⚠️      | Needs to be logged as admin (SO). Only private keys can be deleted. |
-| C_SetAttributeValue | ✔️      | Always returns CKR_ACTION_PROHIBITED                                |
+| C_SetAttributeValue | ⚠️      | Always returns CKR_ACTION_PROHIBITED                                |
 
 ## Pin management
 
 | Feature   | Status | Notes                            |
 | --------- | ------ | -------------------------------- |
-| C_InitPIN | ❌      |                                  |
+| C_InitPIN | ❌     |                                  |
 | C_SetPIN  | ✔️      | Changes the password of the user |
