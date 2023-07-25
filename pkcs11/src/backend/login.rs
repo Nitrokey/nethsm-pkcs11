@@ -1,6 +1,7 @@
 use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKU_CONTEXT_SPECIFIC, CKU_SO,
-    CKU_USER, CK_RV, CK_USER_TYPE,
+    CKR_ARGUMENTS_BAD, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
+    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV,
+    CK_STATE, CK_USER_TYPE,
 };
 use log::error;
 use openapi::{
@@ -41,6 +42,7 @@ pub struct LoginCtx {
     operator: Option<UserConfig>,
     administator: Option<UserConfig>,
     api_config: openapi::apis::configuration::Configuration,
+    ck_state: CK_STATE,
 }
 
 impl LoginCtx {
@@ -49,10 +51,19 @@ impl LoginCtx {
         administator: Option<UserConfig>,
         api_config: openapi::apis::configuration::Configuration,
     ) -> Self {
+        let mut state = CKS_RO_PUBLIC_SESSION;
+
+        if get_user_api_config(&operator, &api_config).is_some() {
+            state = CKS_RW_USER_FUNCTIONS;
+        } else if get_user_api_config(&administator, &api_config).is_some() {
+            state = CKS_RW_SO_FUNCTIONS;
+        }
+
         Self {
             operator,
             administator,
             api_config,
+            ck_state: state,
         }
     }
 
@@ -85,6 +96,11 @@ impl LoginCtx {
         let config = expected.1.ok_or(LoginError::UserNotPresent)?;
 
         if get_current_user_status(&config) == expected.0 {
+            self.ck_state = match expected.0 {
+                UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
+                UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
+                UserStatus::LoggedOut => CKS_RO_PUBLIC_SESSION,
+            };
             Ok(())
         } else {
             error!("Failed to login as {:?} with pin", expected.0);
@@ -94,32 +110,12 @@ impl LoginCtx {
 
     // Get the configuration to connect as operator
     pub fn operator(&self) -> Option<Configuration> {
-        self.operator.as_ref().and_then(|user| {
-            let config = self.api_config.clone();
-            if user.password.is_none() {
-                None
-            } else {
-                Some(Configuration {
-                    basic_auth: Some((user.username.clone(), user.password.clone())),
-                    ..config
-                })
-            }
-        })
+        get_user_api_config(&self.operator, &self.api_config)
     }
 
     // Get the configuration to connect as administrator
     pub fn administrator(&self) -> Option<Configuration> {
-        self.administator.as_ref().and_then(|user| {
-            let config = self.api_config.clone();
-            if user.password.is_none() {
-                None
-            } else {
-                Some(Configuration {
-                    basic_auth: Some((user.username.clone(), user.password.clone())),
-                    ..config
-                })
-            }
-        })
+        get_user_api_config(&self.administator, &self.api_config)
     }
 
     // Get the configuration to connect whith when we don't care if it's operator or administrator
@@ -127,15 +123,9 @@ impl LoginCtx {
         self.operator().or_else(|| self.administrator())
     }
 
-    // Get the user status
-    pub fn user_status(&self) -> UserStatus {
-        if self.administrator().is_some() {
-            UserStatus::Administrator
-        } else if self.operator().is_some() {
-            UserStatus::Operator
-        } else {
-            UserStatus::LoggedOut
-        }
+    // Get the state for the session
+    pub fn ck_state(&self) -> CK_STATE {
+        self.ck_state
     }
 }
 
@@ -164,4 +154,22 @@ pub fn get_current_user_status(
         UserRole::Administrator => UserStatus::Administrator,
         _ => UserStatus::LoggedOut,
     }
+}
+
+// Check if the user is logged in and then return the configuration to connect as this user
+fn get_user_api_config(
+    user: &Option<UserConfig>,
+    api_config: &openapi::apis::configuration::Configuration,
+) -> Option<openapi::apis::configuration::Configuration> {
+    user.as_ref().and_then(|user| {
+        let config = api_config.clone();
+        if user.password.is_none() {
+            None
+        } else {
+            Some(Configuration {
+                basic_auth: Some((user.username.clone(), user.password.clone())),
+                ..config
+            })
+        }
+    })
 }

@@ -11,7 +11,11 @@ pub extern "C" fn C_SignInit(
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_SignInit() called with hKey {} and mech", hKey);
+    trace!(
+        "C_SignInit() called with hKey {} and session {}",
+        hKey,
+        hSession
+    );
     if pMechanism.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }

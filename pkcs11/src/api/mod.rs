@@ -47,8 +47,24 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         && !pInitArgs.is_null()
     {
         let args = pInitArgs as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
-        trace!("C_Initialize() called with args: {:?}", args);
         unsafe {
+            trace!(
+                "C_Initialize() called with arg createMutex : {:?}",
+                (*args).CreateMutex
+            );
+            trace!(
+                "C_Initialize() called with arg destroyMutex : {:?}",
+                (*args).DestroyMutex
+            );
+            trace!(
+                "C_Initialize() called with arg lockMutex : {:?}",
+                (*args).LockMutex
+            );
+            trace!(
+                "C_Initialize() called with arg unlockMutex : {:?}",
+                (*args).UnlockMutex
+            );
+            trace!("C_Initialize() called with arg flags : {:?}", (*args).flags);
             if !(*args).pReserved.is_null() {
                 return cryptoki_sys::CKR_ARGUMENTS_BAD;
             }
