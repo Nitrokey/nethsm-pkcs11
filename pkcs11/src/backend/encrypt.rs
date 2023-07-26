@@ -1,12 +1,18 @@
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
     CKR_ARGUMENTS_BAD, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR,
-    CKR_MECHANISM_INVALID, CK_RV,
+    CKR_MECHANISM_INVALID, CKR_USER_NOT_LOGGED_IN, CK_RV,
 };
 use log::{debug, error, trace};
-use openapi::apis::{configuration, default_api};
+use openapi::apis::default_api;
 
-use super::{db::Object, mechanism::Mechanism};
+use crate::backend::login::LoginCtxError;
+
+use super::{
+    db::Object,
+    login::{self, LoginCtx},
+    mechanism::Mechanism,
+};
 
 // we only handle AES-CBC for now that has a block size of 16
 pub const ENCRYPT_BLOCK_SIZE: usize = 16;
@@ -16,15 +22,18 @@ pub struct EncryptCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    api_config: openapi::apis::configuration::Configuration,
+    login_ctx: LoginCtx,
 }
 
 impl EncryptCtx {
-    pub fn init(
-        mechanism: Mechanism,
-        key: &Object,
-        api_config: openapi::apis::configuration::Configuration,
-    ) -> Result<Self, CK_RV> {
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, CK_RV> {
+        let login_ctx = login_ctx.clone();
+
+        if !login_ctx.can_run_mode(login::UserMode::Operator) {
+            debug!("No operator is logged in");
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
+
         let api_mech = match mechanism.to_api_mech(super::mechanism::MechMode::Encrypt) {
             Some(mech) => mech,
             None => {
@@ -48,7 +57,7 @@ impl EncryptCtx {
             mechanism,
             key_id: key.id.clone(),
             data: Vec::new(),
-            api_config,
+            login_ctx,
         })
     }
 
@@ -73,13 +82,18 @@ impl EncryptCtx {
         // drain the data to encrypt from the data vector
 
         let input_data = self.data.drain(..chunk_size).collect::<Vec<u8>>();
-        encrypt_data(&self.key_id, &self.api_config, &input_data, &self.mechanism)
-    }
-
-    pub fn encrypt_final(&self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
         encrypt_data(
             &self.key_id,
-            &self.api_config,
+            &mut self.login_ctx,
+            &input_data,
+            &self.mechanism,
+        )
+    }
+
+    pub fn encrypt_final(&mut self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
+        encrypt_data(
+            &self.key_id,
+            &mut self.login_ctx,
             self.data.as_slice(),
             &self.mechanism,
         )
@@ -88,7 +102,7 @@ impl EncryptCtx {
 
 fn encrypt_data(
     key_id: &str,
-    api_config: &configuration::Configuration,
+    login_ctx: &mut LoginCtx,
     data: &[u8],
     mechanism: &Mechanism,
 ) -> Result<Vec<u8>, CK_RV> {
@@ -102,27 +116,33 @@ fn encrypt_data(
         .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
     trace!("iv: {:?}", iv);
 
-    let output = default_api::keys_key_id_encrypt_post(
-        api_config,
-        key_id,
-        openapi::models::EncryptRequestData {
-            mode,
-            message: b64_message,
-            iv,
-        },
-    )
-    .map_err(|err| {
-        if let openapi::apis::Error::ResponseError(ref resp) = err {
-            if resp.status == reqwest::StatusCode::BAD_REQUEST {
-                if resp.content.contains("argument length") {
-                    return CKR_DATA_LEN_RANGE;
+    let output = login_ctx
+        .try_(
+            |api_config| {
+                default_api::keys_key_id_encrypt_post(
+                    api_config,
+                    key_id,
+                    openapi::models::EncryptRequestData {
+                        mode,
+                        message: b64_message,
+                        iv,
+                    },
+                )
+            },
+            login::UserMode::Operator,
+        )
+        .map_err(|err| {
+            if let LoginCtxError::Api(openapi::apis::Error::ResponseError(ref resp)) = err {
+                if resp.status == reqwest::StatusCode::BAD_REQUEST {
+                    if resp.content.contains("argument length") {
+                        return CKR_DATA_LEN_RANGE;
+                    }
+                    return CKR_DATA_INVALID;
                 }
-                return CKR_DATA_INVALID;
             }
-        }
-        error!("Failed to decrypt: {:?}", err);
-        CKR_DEVICE_ERROR
-    })?;
+            error!("Failed to decrypt: {:?}", err);
+            CKR_DEVICE_ERROR
+        })?;
 
     general_purpose::STANDARD
         .decode(output.encrypted)

@@ -1,15 +1,31 @@
 use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_PIN_INCORRECT, CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION,
-    CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV,
-    CK_STATE, CK_USER_TYPE,
+    CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN,
+    CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS,
+    CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV, CK_STATE, CK_USER_TYPE,
 };
-use log::error;
+use log::{debug, error, trace};
 use openapi::{
-    apis::{configuration::Configuration, default_api},
+    apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
 };
+use std::fmt::Debug;
 
 use crate::config::config_file::UserConfig;
+
+#[derive(Debug)]
+pub enum LoginCtxError<T> {
+    NoInstance,
+    Api(apis::Error<T>),
+}
+
+#[derive(Debug, Clone)]
+pub struct LoginCtx {
+    operator: Option<UserConfig>,
+    administrator: Option<UserConfig>,
+    instances: Vec<Configuration>,
+    index: usize,
+    ck_state: CK_STATE,
+}
 
 #[derive(Debug, Clone)]
 pub enum LoginError {
@@ -17,13 +33,6 @@ pub enum LoginError {
     UserNotPresent,
     BadArgument,
     IncorrectPin,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum UserStatus {
-    Operator,
-    Administrator,
-    LoggedOut,
 }
 
 impl From<LoginError> for CK_RV {
@@ -37,41 +46,46 @@ impl From<LoginError> for CK_RV {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct LoginCtx {
-    operator: Option<UserConfig>,
-    administator: Option<UserConfig>,
-    api_config: openapi::apis::configuration::Configuration,
-    ck_state: CK_STATE,
-}
-
 impl LoginCtx {
     pub fn new(
         operator: Option<UserConfig>,
-        administator: Option<UserConfig>,
-        api_config: openapi::apis::configuration::Configuration,
+        administrator: Option<UserConfig>,
+        instances: Vec<Configuration>,
     ) -> Self {
-        let mut state = CKS_RO_PUBLIC_SESSION;
+        trace!(
+            "Creating login context with administrator: {:?}",
+            administrator
+        );
 
-        if get_user_api_config(&operator, &api_config).is_some() {
-            state = CKS_RW_USER_FUNCTIONS;
-        } else if get_user_api_config(&administator, &api_config).is_some() {
-            state = CKS_RW_SO_FUNCTIONS;
+        let mut ck_state = CKS_RO_PUBLIC_SESSION;
+
+        let firt_instance = instances.first();
+        if let Some(instance) = firt_instance {
+            if get_user_api_config(&operator, instance).is_some() {
+                ck_state = CKS_RW_USER_FUNCTIONS;
+            } else if get_user_api_config(&administrator, instance).is_some() {
+                ck_state = CKS_RW_SO_FUNCTIONS
+            }
         }
 
         Self {
             operator,
-            administator,
-            api_config,
-            ck_state: state,
+            administrator,
+            instances,
+            index: 0,
+            ck_state,
         }
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
+        trace!("Login as {:?} with pin", user_type);
+
         let expected = match user_type {
             CKU_CONTEXT_SPECIFIC => return Err(LoginError::InvalidUser),
             CKU_SO => {
-                self.administator = match self.administator.as_ref() {
+                trace!("administrator: {:?}", self.administrator);
+
+                self.administrator = match self.administrator.as_ref() {
                     None => return Err(LoginError::UserNotPresent),
                     Some(user) => Some(UserConfig {
                         password: Some(pin),
@@ -93,6 +107,8 @@ impl LoginCtx {
             _ => return Err(LoginError::BadArgument),
         };
 
+        trace!("Config: {:?}", expected.1);
+
         let config = expected.1.ok_or(LoginError::UserNotPresent)?;
 
         if get_current_user_status(&config) == expected.0 {
@@ -108,25 +124,167 @@ impl LoginCtx {
         }
     }
 
-    // Get the configuration to connect as operator
-    pub fn operator(&self) -> Option<Configuration> {
-        get_user_api_config(&self.operator, &self.api_config)
+    fn next_instance(&mut self) -> Option<Configuration> {
+        self.index = (self.index + 1) % self.instances.len();
+        self.instances.get(self.index).cloned()
     }
 
-    // Get the configuration to connect as administrator
-    pub fn administrator(&self) -> Option<Configuration> {
-        get_user_api_config(&self.administator, &self.api_config)
+    fn operator(&mut self) -> Option<Configuration> {
+        self.next_instance()
+            .and_then(|instance| get_user_api_config(&self.operator, &instance))
     }
 
-    // Get the configuration to connect whith when we don't care if it's operator or administrator
-    pub fn operator_or_administrator(&self) -> Option<Configuration> {
+    fn administrator(&mut self) -> Option<Configuration> {
+        self.next_instance()
+            .and_then(|instance| get_user_api_config(&self.administrator, &instance))
+    }
+
+    fn operator_or_administrator(&mut self) -> Option<Configuration> {
         self.operator().or_else(|| self.administrator())
     }
 
-    // Get the state for the session
+    fn guest(&mut self) -> Option<Configuration> {
+        self.next_instance()
+    }
+
+    pub fn can_run_mode(&self, mode: UserMode) -> bool {
+        if self.instances.is_empty() {
+            debug!("No instance configured");
+            return false;
+        }
+
+        trace!("Checking if user can run mode: {:?}", mode);
+        trace!("Operator: {:?}", self.operator);
+
+        match mode {
+            UserMode::Operator => user_is_valid(&self.operator),
+            UserMode::Administrator => user_is_valid(&self.administrator),
+            UserMode::Guest => true,
+            UserMode::OperatorOrAdministrator => {
+                user_is_valid(&self.operator) || user_is_valid(&self.administrator)
+            }
+        }
+    }
+
+    pub fn logout(&mut self) {
+        self.ck_state = CKS_RO_PUBLIC_SESSION;
+    }
+
+    pub fn get_config_user_mode(&mut self, user_mode: &UserMode) -> Option<Configuration> {
+        match user_mode {
+            UserMode::Operator => self.operator(),
+            UserMode::Administrator => self.administrator(),
+            UserMode::Guest => self.guest(),
+            UserMode::OperatorOrAdministrator => self.operator_or_administrator(),
+        }
+    }
+
+    // Try to run the api call on each instance until one succeeds
+    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, LoginCtxError<T>>
+    where
+        F: FnOnce(&mut Configuration) -> Result<R, apis::Error<T>> + Clone,
+    {
+        // we loop for a maximum of instances.len() times
+        for _ in 0..self.instances.len() {
+            let conf = match self.get_config_user_mode(&user_mode) {
+                Some(conf) => conf,
+                None => continue,
+            };
+
+            let api_call_clone = api_call.clone();
+
+            match api_call_clone(&mut conf.clone()) {
+                Ok(result) => return Ok(result),
+
+                // If the server is in an unusable state, try the next one
+                Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::SERVICE_UNAVAILABLE,
+                    ..
+                }))
+                | Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::GATEWAY_TIMEOUT,
+                    ..
+                }))
+                | Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::BAD_GATEWAY,
+                    ..
+                }))
+                | Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::NOT_IMPLEMENTED,
+                    ..
+                }))
+                | Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                    ..
+                }))
+                | Err(apis::Error::ResponseError(ResponseContent {
+                    status: reqwest::StatusCode::PRECONDITION_FAILED,
+                    ..
+                })) => continue,
+
+                // Otherwise, return the error
+                Err(err) => return Err(LoginCtxError::Api(err)),
+            }
+        }
+        Err(LoginCtxError::NoInstance)
+    }
+
     pub fn ck_state(&self) -> CK_STATE {
         self.ck_state
     }
+    pub fn change_pin(&mut self, pin: String) -> CK_RV {
+        let options = match self.ck_state {
+            CKS_RW_SO_FUNCTIONS => {
+                let username = match self.administrator {
+                    Some(ref user) => user.username.clone(),
+                    None => return CKR_USER_NOT_LOGGED_IN,
+                };
+
+                (username, UserMode::Administrator)
+            }
+            CKS_RW_USER_FUNCTIONS => {
+                let username = match self.operator {
+                    Some(ref user) => user.username.clone(),
+                    None => return CKR_USER_NOT_LOGGED_IN,
+                };
+
+                (username, UserMode::Operator)
+            }
+            _ => return CKR_USER_NOT_LOGGED_IN,
+        };
+
+        match self.try_(
+            |config| {
+                default_api::users_user_id_passphrase_post(
+                    config,
+                    &options.0,
+                    openapi::models::UserPassphrasePostData { passphrase: pin },
+                )
+            },
+            options.1,
+        ) {
+            Ok(_) => CKR_OK,
+            Err(err) => {
+                error!("Failed to change pin: {:?}", err);
+                CKR_DEVICE_ERROR
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UserMode {
+    Operator,
+    Administrator,
+    Guest,
+    OperatorOrAdministrator,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UserStatus {
+    Operator,
+    Administrator,
+    LoggedOut,
 }
 
 pub fn get_current_user_status(
@@ -155,7 +313,6 @@ pub fn get_current_user_status(
         _ => UserStatus::LoggedOut,
     }
 }
-
 // Check if the user is logged in and then return the configuration to connect as this user
 fn get_user_api_config(
     user: &Option<UserConfig>,
@@ -172,4 +329,37 @@ fn get_user_api_config(
             })
         }
     })
+}
+
+fn user_is_valid(user: &Option<UserConfig>) -> bool {
+    user.as_ref()
+        .map(|user| {
+            !user.username.is_empty()
+                && user
+                    .password
+                    .as_ref()
+                    .map(|password| !password.is_empty())
+                    .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_user_is_valid() {
+        let user = UserConfig {
+            username: "test".to_string(),
+            password: Some("password".to_string()),
+        };
+        let empty_password_user = UserConfig {
+            username: "test".to_string(),
+            password: None,
+        };
+
+        assert!(user_is_valid(&Some(user)));
+        assert!(!user_is_valid(&None));
+        assert!(!user_is_valid(&Some(empty_password_user)));
+    }
 }

@@ -3,10 +3,10 @@ use cryptoki_sys::{
     CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{debug, error, trace};
-use openapi::models::SystemState;
+use openapi::{apis::default_api, models::SystemState};
 
 use crate::{
-    backend::slot::get_slot,
+    backend::{login::LoginCtx, slot::get_slot},
     data::DEVICE,
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     lock_mutex, lock_session, padded_str,
@@ -79,9 +79,16 @@ pub extern "C" fn C_GetSlotInfo(
 
     let mut flags = 0;
 
+    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
+
+    let result = login_ctx.try_(
+        |conf| default_api::info_get(conf),
+        crate::backend::login::UserMode::Guest,
+    );
+
     // fetch info from the device
 
-    let info = match openapi::apis::default_api::info_get(&slot.api_config) {
+    let info = match result {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting info: {:?}", e);
@@ -89,9 +96,14 @@ pub extern "C" fn C_GetSlotInfo(
         }
     };
 
+    let result = login_ctx.try_(
+        |conf| default_api::health_state_get(conf),
+        crate::backend::login::UserMode::Guest,
+    );
+
     // fetch the sysem state
 
-    let system_state = match openapi::apis::default_api::health_state_get(&slot.api_config) {
+    let system_state = match result {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting system state: {:?}", e);
@@ -135,9 +147,16 @@ pub extern "C" fn C_GetTokenInfo(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
+    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
+
+    let result = login_ctx.try_(
+        |conf| default_api::info_get(conf),
+        crate::backend::login::UserMode::Guest,
+    );
+
     // fetch info from the device
 
-    let info = match openapi::apis::default_api::info_get(&slot.api_config) {
+    let info = match result {
         Ok(info) => info,
         Err(e) => {
             error!("Error getting info: {:?}", e);

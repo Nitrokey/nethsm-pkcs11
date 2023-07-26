@@ -4,7 +4,6 @@
 
 use cryptoki_sys::CKR_OK;
 use log::{error, trace};
-use openapi::apis::default_api;
 
 use crate::{lock_mutex, lock_session};
 
@@ -50,34 +49,16 @@ pub extern "C" fn C_SetPIN(
         return cryptoki_sys::CKR_PIN_INCORRECT;
     }
 
-    let login_ctx = session.login_ctx.operator();
-    let api_config = match login_ctx.as_ref() {
-        Some(conf) => conf,
-        None => {
-            error!(
-                "C_SetPIN() called with session not connected as operator {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
-        }
-    };
-
-    let user_id = match api_config.basic_auth.as_ref() {
-        Some(basic_auth) => basic_auth.0.clone(),
-        None => return cryptoki_sys::CKR_GENERAL_ERROR,
-    };
-
-    match default_api::users_user_id_passphrase_post(
-        api_config,
-        &user_id,
-        openapi::models::UserPassphrasePostData {
-            passphrase: new_pin.to_string(),
-        },
-    ) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(err) => {
-            error!("Failed to set new pin: {:?}", err);
-            cryptoki_sys::CKR_GENERAL_ERROR
-        }
+    if !session
+        .login_ctx
+        .can_run_mode(crate::backend::login::UserMode::OperatorOrAdministrator)
+    {
+        error!(
+            "C_SetPIN() called with session not connected as operator {}.",
+            hSession
+        );
+        return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
+
+    session.login_ctx.change_pin(new_pin.to_string())
 }
