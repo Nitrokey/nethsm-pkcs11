@@ -10,7 +10,10 @@ use openapi::apis::{
     default_api::{self},
 };
 
-use crate::{backend::key::CreateKeyError, config::device::Slot};
+use crate::{
+    backend::{key::CreateKeyError, login::LoginCtxError},
+    config::device::Slot,
+};
 
 use super::{
     db::{self, attr::CkRawAttrTemplate, object::ObjectKind, Db, Object, ObjectHandle},
@@ -23,7 +26,7 @@ use super::{
     sign::SignCtx,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SessionManager {
     pub sessions: HashMap<CK_SESSION_HANDLE, Session>,
     pub next_session_handle: CK_SESSION_HANDLE,
@@ -79,7 +82,7 @@ impl SessionManager {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Session {
     pub slot_id: CK_SLOT_ID,
     pub login_ctx: LoginCtx,
@@ -95,12 +98,16 @@ pub struct Session {
 
 impl Session {
     pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
-        // cloning the api config should keep the connection pool as it's behind an Arc
+        trace!("slot: {:?}", slot);
 
-        let api_config = slot.api_config.clone();
+        let login_ctx = LoginCtx::new(
+            slot.operator.clone(),
+            slot.administrator.clone(),
+            slot.instances.clone(),
+        );
 
         Self {
-            login_ctx: LoginCtx::new(slot.operator.clone(), slot.administator.clone(), api_config),
+            login_ctx,
             slot_id,
             flags,
             fetched_all_keys: false,
@@ -135,6 +142,7 @@ impl Session {
 
     // ignore logout for now
     pub fn logout(&mut self) -> CK_RV {
+        self.login_ctx.logout();
         CKR_OK
     }
 
@@ -186,12 +194,8 @@ impl Session {
                 return err;
             }
         };
-        let api_config = match self.login_ctx.operator() {
-            Some(conf) => conf,
-            None => return CKR_USER_NOT_LOGGED_IN,
-        };
 
-        self.sign_ctx = match SignCtx::init(mechanism.clone(), key.clone(), api_config) {
+        self.sign_ctx = match SignCtx::init(mechanism.clone(), key.clone(), &self.login_ctx) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -221,7 +225,7 @@ impl Session {
     pub fn sign_final(&mut self) -> Result<Vec<u8>, CK_RV> {
         let sign_ctx = self
             .sign_ctx
-            .as_ref()
+            .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
 
         sign_ctx.sign_final()
@@ -255,12 +259,7 @@ impl Session {
             }
         };
 
-        let api_config = match self.login_ctx.operator() {
-            Some(conf) => conf,
-            None => return CKR_USER_NOT_LOGGED_IN,
-        };
-
-        self.encrypt_ctx = match EncryptCtx::init(mechanism.clone(), key, api_config) {
+        self.encrypt_ctx = match EncryptCtx::init(mechanism.clone(), key, &self.login_ctx) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -295,7 +294,7 @@ impl Session {
     pub fn encrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
         let encrypt_ctx = self
             .encrypt_ctx
-            .as_ref()
+            .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
 
         encrypt_ctx.encrypt_final()
@@ -329,12 +328,7 @@ impl Session {
             }
         };
 
-        let api_config = match self.login_ctx.operator() {
-            Some(conf) => conf,
-            None => return CKR_USER_NOT_LOGGED_IN,
-        };
-
-        self.decrypt_ctx = match DecryptCtx::init(mechanism.clone(), key, api_config) {
+        self.decrypt_ctx = match DecryptCtx::init(mechanism.clone(), key, &self.login_ctx) {
             Ok(ctx) => Some(ctx),
             Err(err) => return err,
         };
@@ -370,7 +364,7 @@ impl Session {
     pub fn decrypt_final(&mut self) -> Result<Vec<u8>, CK_RV> {
         let decrypt_ctx = self
             .decrypt_ctx
-            .as_ref()
+            .as_mut()
             .ok_or(cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED)?;
 
         decrypt_ctx.decrypt_final()
@@ -433,15 +427,23 @@ impl Session {
         // clear the db to not have any double entries
         self.db.clear();
 
-        let api_config = match self.login_ctx.operator_or_administrator() {
-            Some(conf) => conf,
-            None => return Err(CKR_USER_NOT_LOGGED_IN),
-        };
+        if !self
+            .login_ctx
+            .can_run_mode(super::login::UserMode::OperatorOrAdministrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
-        let keys = default_api::keys_get(&api_config, None).map_err(|err| {
-            error!("Failed to fetch keys: {:?}", err);
-            CKR_DEVICE_ERROR
-        })?;
+        let keys = self
+            .login_ctx
+            .try_(
+                |api_config| default_api::keys_get(api_config, None),
+                super::login::UserMode::OperatorOrAdministrator,
+            )
+            .map_err(|err| {
+                error!("Failed to fetch keys: {:?}", err);
+                CKR_DEVICE_ERROR
+            })?;
 
         let mut handles = Vec::new();
 
@@ -464,15 +466,23 @@ impl Session {
     }
 
     fn fetch_certificate(&mut self, key_id: &str) -> Result<(CK_OBJECT_HANDLE, Object), CK_RV> {
-        let api_config = self
+        if !self
             .login_ctx
-            .operator_or_administrator()
-            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+            .can_run_mode(super::login::UserMode::OperatorOrAdministrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
-        let cert_data = default_api::keys_key_id_cert_get(&api_config, key_id).map_err(|err| {
-            debug!("Failed to fetch certificate {}: {:?}", key_id, err);
-            CKR_DEVICE_ERROR
-        })?;
+        let cert_data = self
+            .login_ctx
+            .try_(
+                |api_config| default_api::keys_key_id_cert_get(api_config, key_id),
+                super::login::UserMode::OperatorOrAdministrator,
+            )
+            .map_err(|err| {
+                debug!("Failed to fetch certificate {}: {:?}", key_id, err);
+                CKR_DEVICE_ERROR
+            })?;
 
         let object = db::object::from_cert_data(cert_data, key_id).map_err(|err| {
             debug!("Failed to convert certificate {}: {:?}", key_id, err);
@@ -490,21 +500,26 @@ impl Session {
         key_id: &str,
         raw_id: Option<Vec<u8>>,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        let api_config = self
+        if !self
             .login_ctx
-            .operator_or_administrator()
-            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+            .can_run_mode(super::login::UserMode::OperatorOrAdministrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
-        let key_data = match default_api::keys_key_id_get(&api_config, key_id) {
+        let key_data = match self.login_ctx.try_(
+            |api_config| default_api::keys_key_id_get(api_config, key_id),
+            super::login::UserMode::OperatorOrAdministrator,
+        ) {
             Ok(key_data) => key_data,
             Err(err) => {
                 debug!("Failed to fetch key {}: {:?}", key_id, err);
                 if matches!(
                     err,
-                    apis::Error::ResponseError(apis::ResponseContent {
+                    LoginCtxError::Api(apis::Error::ResponseError(apis::ResponseContent {
                         status: reqwest::StatusCode::NOT_FOUND,
                         ..
-                    })
+                    }))
                 ) {
                     return Ok(vec![]);
                 }
@@ -531,12 +546,14 @@ impl Session {
         &mut self,
         template: CkRawAttrTemplate,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        let api_config = self
+        if !self
             .login_ctx
-            .administrator()
-            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+            .can_run_mode(super::login::UserMode::Administrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
-        let key_info = create_key_from_template(template, &api_config).map_err(|err| {
+        let key_info = create_key_from_template(template, &mut self.login_ctx).map_err(|err| {
             error!("Failed to create key: {:?}", err);
             if err == CreateKeyError::ClassNotSupported {
                 return CKR_DEVICE_MEMORY;
@@ -553,10 +570,12 @@ impl Session {
     }
 
     pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), CK_RV> {
-        let api_config = self
+        if !self
             .login_ctx
-            .administrator()
-            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+            .can_run_mode(super::login::UserMode::Administrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
         let key = self.db.object(ObjectHandle::from(handle)).ok_or_else(|| {
             error!("Failed to delete object: invalid handle");
@@ -567,16 +586,26 @@ impl Session {
 
         match key.kind {
             ObjectKind::Certificate => {
-                default_api::keys_key_id_cert_delete(&api_config, &key.id).map_err(|err| {
-                    error!("Failed to delete certificate {}: {:?}", key.id, err);
-                    CKR_DEVICE_ERROR
-                })?;
+                self.login_ctx
+                    .try_(
+                        |api_config| default_api::keys_key_id_cert_delete(api_config, &key.id),
+                        crate::backend::login::UserMode::Administrator,
+                    )
+                    .map_err(|err| {
+                        error!("Failed to delete certificate {}: {:?}", key.id, err);
+                        CKR_DEVICE_ERROR
+                    })?;
             }
             ObjectKind::SecretKey | ObjectKind::PrivateKey => {
-                default_api::keys_key_id_delete(&api_config, &key.id).map_err(|err| {
-                    error!("Failed to delete key {}: {:?}", key.id, err);
-                    CKR_DEVICE_ERROR
-                })?;
+                self.login_ctx
+                    .try_(
+                        |api_config| default_api::keys_key_id_delete(api_config, &key.id),
+                        crate::backend::login::UserMode::Administrator,
+                    )
+                    .map_err(|err| {
+                        error!("Failed to delete key {}: {:?}", key.id, err);
+                        CKR_DEVICE_ERROR
+                    })?;
             }
             _ => {
                 // we don't support deleting other objects
@@ -597,13 +626,16 @@ impl Session {
         public_template: Option<&CkRawAttrTemplate>,
         mechanism: &Mechanism,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        let api_config = self
+        if !self
             .login_ctx
-            .administrator()
-            .ok_or(CKR_USER_NOT_LOGGED_IN)?;
+            .can_run_mode(super::login::UserMode::Administrator)
+        {
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
-        let res = generate_key_from_template(template, public_template, mechanism, &api_config)
-            .map_err(|err| {
+        let res =
+            generate_key_from_template(template, public_template, mechanism, &mut self.login_ctx)
+                .map_err(|err| {
                 error!("Failed to create key: {:?}", err);
                 if err == CreateKeyError::ClassNotSupported {
                     return CKR_DEVICE_MEMORY;

@@ -1,4 +1,7 @@
-use super::db::attr::CkRawAttrTemplate;
+use super::{
+    db::attr::CkRawAttrTemplate,
+    login::{self, LoginCtx, LoginCtxError},
+};
 use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
@@ -9,10 +12,7 @@ use cryptoki_sys::{
 use lazy_static::lazy_static;
 use log::{debug, error, trace};
 use openapi::{
-    apis::{
-        configuration::Configuration,
-        default_api::{self, KeysKeyIdPutError},
-    },
+    apis::default_api,
     models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
 use yasna::models::ObjectIdentifier;
@@ -22,10 +22,10 @@ pub enum CreateKeyError {
     MissingAttribute,
     InvalidAttribute,
     ClassNotSupported,
-    PutCertError(openapi::apis::Error<default_api::KeysKeyIdCertPutError>),
-    PutError(openapi::apis::Error<KeysKeyIdPutError>),
-    PostError(openapi::apis::Error<default_api::KeysPostError>),
-    GenerateError(openapi::apis::Error<default_api::KeysGeneratePostError>),
+    PutCertError(LoginCtxError<default_api::KeysKeyIdCertPutError>),
+    PutError(LoginCtxError<default_api::KeysKeyIdPutError>),
+    PostError(LoginCtxError<default_api::KeysPostError>),
+    GenerateError(LoginCtxError<default_api::KeysGeneratePostError>),
     StringParseError(std::string::FromUtf8Error),
     OpenSSL(openssl::error::ErrorStack),
 }
@@ -178,7 +178,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
 
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
-    api_config: &Configuration,
+    login_ctx: &mut LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
     let cert = parsed_template
         .value
@@ -199,7 +199,11 @@ fn upload_certificate(
 
     let body = String::from_utf8(cert_file).map_err(CreateKeyError::StringParseError)?;
 
-    default_api::keys_key_id_cert_put(api_config, &id, &body)
+    login_ctx
+        .try_(
+            |api_config| default_api::keys_key_id_cert_put(api_config, &id, &body),
+            login::UserMode::Administrator,
+        )
         .map_err(CreateKeyError::PutCertError)?;
 
     Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
@@ -207,7 +211,7 @@ fn upload_certificate(
 
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
-    api_config: &Configuration,
+    login_ctx: &mut LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
     let parsed = parse_attributes(&template)?;
 
@@ -225,7 +229,7 @@ pub fn create_key_from_template(
     };
 
     if key_class == ObjectKind::Certificate {
-        return upload_certificate(&parsed, api_config);
+        return upload_certificate(&parsed, login_ctx);
     }
 
     let (r#type, key) = match parsed.key_type.ok_or(CreateKeyError::InvalidAttribute)? {
@@ -329,11 +333,29 @@ pub fn create_key_from_template(
     };
 
     let id = if let Some(key_id) = parsed.id {
-        default_api::keys_key_id_put(api_config, &key_id, private_key, Some(mechanisms), None)
+        login_ctx
+            .try_(
+                |api_config| {
+                    default_api::keys_key_id_put(
+                        api_config,
+                        &key_id,
+                        private_key,
+                        Some(mechanisms),
+                        None,
+                    )
+                },
+                login::UserMode::Administrator,
+            )
             .map_err(CreateKeyError::PutError)?;
         key_id
     } else {
-        default_api::keys_post(api_config, private_key, Some(mechanisms), None)
+        login_ctx
+            .try_(
+                |api_config| {
+                    default_api::keys_post(api_config, private_key, Some(mechanisms), None)
+                },
+                login::UserMode::Administrator,
+            )
             .map_err(CreateKeyError::PostError)?
     };
 
@@ -387,7 +409,7 @@ pub fn generate_key_from_template(
     template: &CkRawAttrTemplate,
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
-    api_config: &Configuration,
+    login_ctx: &mut LoginCtx,
 ) -> Result<(String, Option<Vec<u8>>), CreateKeyError> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
@@ -408,16 +430,22 @@ pub fn generate_key_from_template(
         }
     }
 
-    let id = default_api::keys_generate_post(
-        api_config,
-        KeyGenerateRequestData {
-            mechanisms: api_mechs,
-            r#type: key_type,
-            restrictions: None,
-            id: parsed.id,
-            length: length.map(|len| len as i32),
-        },
-    )
-    .map_err(CreateKeyError::GenerateError)?;
+    let id = login_ctx
+        .try_(
+            |api_config| {
+                default_api::keys_generate_post(
+                    api_config,
+                    KeyGenerateRequestData {
+                        mechanisms: api_mechs,
+                        r#type: key_type,
+                        restrictions: None,
+                        id: parsed.id,
+                        length: length.map(|len| len as i32),
+                    },
+                )
+            },
+            login::UserMode::Administrator,
+        )
+        .map_err(CreateKeyError::GenerateError)?;
     Ok((id, parsed.raw_id))
 }

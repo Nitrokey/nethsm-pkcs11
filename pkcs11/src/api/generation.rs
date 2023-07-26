@@ -223,22 +223,27 @@ pub extern "C" fn C_GenerateRandom(
     }
     lock_session!(hSession, session);
 
-    let api_config = match session.login_ctx.operator() {
-        Some(conf) => conf,
-        None => {
-            error!(
-                "C_GenerateRandom() called with session not connected as operator {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
-        }
-    };
+    if !session
+        .login_ctx
+        .can_run_mode(crate::backend::login::UserMode::Operator)
+    {
+        error!(
+            "C_GenerateRandom() called with session not connected as operator {}.",
+            hSession
+        );
+        return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
+    }
 
-    let data = match default_api::random_post(
-        &api_config,
-        openapi::models::RandomRequestData {
-            length: ulRandomLen as i32,
+    let data = match session.login_ctx.try_(
+        |api_config| {
+            default_api::random_post(
+                api_config,
+                openapi::models::RandomRequestData {
+                    length: ulRandomLen as i32,
+                },
+            )
         },
+        crate::backend::login::UserMode::Operator,
     ) {
         Ok(data) => data,
         Err(e) => {

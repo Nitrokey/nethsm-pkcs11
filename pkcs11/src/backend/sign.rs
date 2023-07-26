@@ -1,9 +1,10 @@
 use super::{
     db::Object,
+    login::{self, LoginCtx},
     mechanism::{MechMode, Mechanism},
 };
 use base64::{engine::general_purpose, Engine as _};
-use cryptoki_sys::{CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, CK_RV};
+use cryptoki_sys::{CKR_DEVICE_ERROR, CKR_MECHANISM_INVALID, CKR_USER_NOT_LOGGED_IN, CK_RV};
 use log::{debug, error, trace};
 use openapi::{apis::default_api, models::SignMode};
 
@@ -13,16 +14,19 @@ pub struct SignCtx {
     pub sign_name: SignMode,
     pub key: Object,
     pub data: Vec<u8>,
-    pub api_config: openapi::apis::configuration::Configuration,
+    pub login_ctx: LoginCtx,
 }
 
 impl SignCtx {
-    pub fn init(
-        mechanism: Mechanism,
-        key: Object,
-        api_config: openapi::apis::configuration::Configuration,
-    ) -> Result<Self, CK_RV> {
+    pub fn init(mechanism: Mechanism, key: Object, login_ctx: &LoginCtx) -> Result<Self, CK_RV> {
+        let login_ctx = login_ctx.clone();
+
         trace!("key_type: {:?}", key.kind);
+
+        if !login_ctx.can_run_mode(login::UserMode::Operator) {
+            debug!("No operator is logged in");
+            return Err(CKR_USER_NOT_LOGGED_IN);
+        }
 
         let sign_name = mechanism.sign_name().ok_or_else(|| {
             debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
@@ -53,31 +57,38 @@ impl SignCtx {
             key,
             sign_name,
             data: Vec::new(),
-            api_config,
+            login_ctx,
         })
     }
     pub fn update(&mut self, data: &[u8]) {
         self.data.extend_from_slice(data);
     }
 
-    pub fn sign_final(&self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
+    pub fn sign_final(&mut self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
         let b64_message = general_purpose::STANDARD.encode(self.data.as_slice());
 
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
 
-        let signature = default_api::keys_key_id_sign_post(
-            &self.api_config,
-            &self.key.id,
-            openapi::models::SignRequestData {
-                mode,
-                message: b64_message,
-            },
-        )
-        .map_err(|err| {
-            error!("Failed to sign: {:?}", err);
-            CKR_DEVICE_ERROR
-        })?;
+        let signature = self
+            .login_ctx
+            .try_(
+                |conf| {
+                    default_api::keys_key_id_sign_post(
+                        conf,
+                        &self.key.id.clone(),
+                        openapi::models::SignRequestData {
+                            mode,
+                            message: b64_message,
+                        },
+                    )
+                },
+                login::UserMode::Operator,
+            )
+            .map_err(|err| {
+                error!("Failed to sign: {:?}", err);
+                CKR_DEVICE_ERROR
+            })?;
 
         general_purpose::STANDARD
             .decode(signature.signature)

@@ -84,18 +84,22 @@ pub struct P11Config {
     pub slots: Vec<SlotConfig>,
 }
 
-// A slot/server
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SlotConfig {
-    pub label: String,
-    pub description: Option<String>,
+pub struct InstanceConfig {
     pub url: String,
     #[serde(default)]
     pub danger_insecure_cert: bool,
-    pub operator: Option<UserConfig>,
-    pub administrator: Option<UserConfig>,
     pub certificate: Option<String>,
     pub certificate_file: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlotConfig {
+    pub label: String,
+    pub operator: Option<UserConfig>,
+    pub administrator: Option<UserConfig>,
+    pub description: Option<String>,
+    pub instances: Vec<InstanceConfig>,
 }
 
 // An user

@@ -20,8 +20,6 @@ pub fn configure_logger(config: &P11Config) {
                 .expect("could not open log file"),
         );
         builder.target(env_logger::Target::Pipe(file));
-    } else {
-        builder.target(env_logger::Target::Stdout);
     }
 
     builder.init()
