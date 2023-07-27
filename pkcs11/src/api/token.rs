@@ -2,14 +2,17 @@ use cryptoki_sys::{
     CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKR_OK, CK_SLOT_ID, CK_SLOT_INFO,
     CK_TOKEN_INFO, CK_ULONG,
 };
-use log::{debug, error, trace};
+use log::{debug, error, trace, warn};
 use openapi::{apis::default_api, models::SystemState};
 
 use crate::{
-    backend::{login::LoginCtx, slot::get_slot},
+    backend::{
+        login::{LoginCtx, UserMode},
+        slot::get_slot,
+    },
     data::DEVICE,
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    lock_mutex, lock_session, padded_str,
+    lock_mutex, lock_session, padded_str, version_struct_from_str,
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -147,7 +150,7 @@ pub extern "C" fn C_GetTokenInfo(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
+    let mut login_ctx = LoginCtx::new(None, slot.administrator.clone(), slot.instances.clone());
 
     let result = login_ctx.try_(
         |conf| default_api::info_get(conf),
@@ -164,6 +167,29 @@ pub extern "C" fn C_GetTokenInfo(
         }
     };
 
+    let mut serial_number = "unknown".to_string();
+    let mut hardware_version = DEFAULT_HARDWARE_VERSION;
+    let mut firmware_version = DEFAULT_FIRMWARE_VERSION;
+
+    // Try to fech system info
+
+    if login_ctx.can_run_mode(crate::backend::login::UserMode::Administrator) {
+        match login_ctx.try_(
+            |conf| default_api::system_info_get(conf),
+            UserMode::Administrator,
+        ) {
+            Err(e) => {
+                warn!("Error getting system info: {:?}", e);
+            }
+            Ok(system_info) => {
+                serial_number = system_info.device_id;
+                hardware_version = version_struct_from_str!(system_info.hardware_version);
+                // The PKCS11 firmware version actually corresponds to the NetHSM software version
+                firmware_version = version_struct_from_str!(system_info.software_version);
+            }
+        }
+    }
+
     let mut flags = CKF_TOKEN_INITIALIZED | CKF_USER_PIN_INITIALIZED | CKF_RNG;
 
     // if the slot has no password, set the login required flag
@@ -176,10 +202,10 @@ pub extern "C" fn C_GetTokenInfo(
         label: padded_str!(slot.label, 32),
         manufacturerID: padded_str!(info.vendor, 32),
         model: padded_str!(info.product, 16),
-        serialNumber: padded_str!("unknown", 16),
+        serialNumber: padded_str!(serial_number, 16),
         flags,
-        hardwareVersion: DEFAULT_HARDWARE_VERSION,
-        firmwareVersion: DEFAULT_FIRMWARE_VERSION,
+        hardwareVersion: hardware_version,
+        firmwareVersion: firmware_version,
         ..Default::default()
     };
 
@@ -299,14 +325,20 @@ pub extern "C" fn C_Login(
 
     lock_session!(hSession, session);
 
-    session.login(userType, pin.to_string())
+    match session.login(userType, pin.to_string()) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(e) => e.into(),
+    }
 }
 pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_Logout() called");
 
     lock_session!(hSession, session);
 
-    session.logout()
+    match session.logout() {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(e) => e.into(),
+    }
 }
 
 pub extern "C" fn C_WaitForSlotEvent(

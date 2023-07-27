@@ -26,14 +26,17 @@ pub extern "C" fn C_SignInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_SignInit() failed to convert mechanism: {:?}", e);
+            error!("C_SignInit() failed to convert mechanism: {}", e);
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
 
     lock_session!(hSession, session);
 
-    session.sign_init(&mech, hKey)
+    match session.sign_init(&mech, hKey) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(e) => e.into(),
+    }
 }
 
 pub extern "C" fn C_Sign(
@@ -78,7 +81,7 @@ pub extern "C" fn C_Sign(
 
     let signature = match session.sign(data) {
         Ok(signature) => signature,
-        Err(err) => return err,
+        Err(err) => return err.into(),
     };
     unsafe {
         std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
@@ -119,7 +122,7 @@ pub extern "C" fn C_SignUpdate(
         Ok(_) => cryptoki_sys::CKR_OK,
         Err(err) => {
             session.sign_clear();
-            err
+            err.into()
         }
     }
 }
@@ -159,7 +162,7 @@ pub extern "C" fn C_SignFinal(
         Ok(signature) => signature,
         Err(err) => {
             session.sign_clear();
-            return err;
+            return err.into();
         }
     };
 

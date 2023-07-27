@@ -53,7 +53,18 @@ impl CkRawMechanism {
 #[derive(Debug)]
 pub enum Error {
     CkRaw(CkRawError),
-    UnknownMech,
+    UnknownMech(CK_MECHANISM_TYPE),
+    UnknownDigest(CK_MECHANISM_TYPE),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self {
+            Error::CkRaw(e) => write!(f, "CkRaw error: {:?}", e),
+            Error::UnknownMech(t) => write!(f, "Unknown mechanism {}", t),
+            Error::UnknownDigest(t) => write!(f, "Unknown digest {}", t),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -110,6 +121,7 @@ pub enum Mechanism {
     GenerateEd,
 }
 
+#[derive(Clone, Debug)]
 pub enum MechMode {
     Sign,
     Encrypt,
@@ -282,7 +294,8 @@ impl Mechanism {
 
                 trace!("params.hashAlg: {:?}", hash_alg);
                 Self::RsaPkcsPss(
-                    MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
+                    MechDigest::from_ck_mech(params.hashAlg)
+                        .ok_or(Error::UnknownDigest(hash_alg))?,
                 )
             }
             cryptoki_sys::CKM_RSA_PKCS_OAEP => {
@@ -291,14 +304,15 @@ impl Mechanism {
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
 
                 Self::RsaPkcsOaep(
-                    MechDigest::from_ck_mech(params.hashAlg).ok_or(Error::UnknownMech)?,
+                    MechDigest::from_ck_mech(params.hashAlg)
+                        .ok_or(Error::UnknownDigest(params.hashAlg))?,
                 )
             }
 
             cryptoki_sys::CKM_RSA_X_509 => Self::RsaX509,
             cryptoki_sys::CKM_ECDSA => Self::Ecdsa,
             cryptoki_sys::CKM_EDDSA => Self::EdDsa,
-            _ => return Err(Error::UnknownMech),
+            _ => return Err(Error::UnknownMech(raw_mech.type_())),
         };
 
         Ok(mech)

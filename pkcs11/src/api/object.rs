@@ -22,7 +22,10 @@ pub extern "C" fn C_FindObjectsInit(
         None
     };
     trace!("C_FindObjectsInit() template: {:?}", template);
-    session.enum_init(template)
+    match session.enum_init(template) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(err) => err.into(),
+    }
 }
 
 pub extern "C" fn C_FindObjects(
@@ -43,8 +46,7 @@ pub extern "C" fn C_FindObjects(
     let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
         Ok(objects) => objects,
         Err(err) => {
-            error!("C_FindObjects() failed: {:?}", err);
-            return err;
+            return err.into();
         }
     };
     trace!("C_FindObjects() objects: {:?}", objects);
@@ -154,8 +156,7 @@ pub extern "C" fn C_CreateObject(
     let objects = match session.create_object(template) {
         Ok(object) => object,
         Err(err) => {
-            error!("C_CreateObject() failed: {:?}", err);
-            return err;
+            return err.into();
         }
     };
 
@@ -192,7 +193,7 @@ pub extern "C" fn C_DestroyObject(
 
     match session.delete_object(hObject) {
         Ok(_) => cryptoki_sys::CKR_OK,
-        Err(err) => err,
+        Err(err) => err.into(),
     }
 }
 

@@ -1,6 +1,4 @@
-use cryptoki_sys::{
-    CKA_CLASS, CKA_ID, CKA_LABEL, CKR_ARGUMENTS_BAD, CK_OBJECT_CLASS, CK_RV, CK_SESSION_HANDLE,
-};
+use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
 use log::{debug, trace};
 
 use super::{
@@ -9,6 +7,7 @@ use super::{
         object::ObjectKind,
     },
     session::Session,
+    Error,
 };
 
 // context to find objects
@@ -25,7 +24,7 @@ pub struct KeyRequirements {
     pub raw_id: Option<Vec<u8>>,
 }
 
-fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, CK_RV> {
+fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
     match template {
         Some(template) => {
             let mut key_id = None;
@@ -76,16 +75,18 @@ fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, C
     }
 }
 
-fn parse_str_from_attr(attr: &CkRawAttr) -> Result<String, CK_RV> {
-    let bytes = attr.val_bytes().ok_or(CKR_ARGUMENTS_BAD)?;
-    String::from_utf8(bytes.to_vec()).map_err(|_| CKR_ARGUMENTS_BAD)
+fn parse_str_from_attr(attr: &CkRawAttr) -> Result<String, Error> {
+    let bytes = attr
+        .val_bytes()
+        .ok_or(Error::InvalidAttribute(attr.type_()))?;
+    Ok(String::from_utf8(bytes.to_vec())?)
 }
 
 impl EnumCtx {
     pub fn enum_init(
         session: &mut Session,
         template: Option<CkRawAttrTemplate>,
-    ) -> Result<Self, CK_RV> {
+    ) -> Result<Self, Error> {
         let key_req = find_key_id(template)?;
 
         let handles = session.find_key(key_req)?;

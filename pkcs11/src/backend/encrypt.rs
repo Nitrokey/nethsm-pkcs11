@@ -1,12 +1,12 @@
 use base64::{engine::general_purpose, Engine};
-use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR,
-    CKR_MECHANISM_INVALID, CKR_USER_NOT_LOGGED_IN, CK_RV,
-};
-use log::{debug, error, trace};
+
+use log::{debug, trace};
 use openapi::apis::default_api;
 
-use crate::backend::login::LoginCtxError;
+use crate::backend::mechanism::MechMode;
+use crate::backend::ApiError;
+
+use super::Error;
 
 use super::{
     db::Object,
@@ -26,22 +26,22 @@ pub struct EncryptCtx {
 }
 
 impl EncryptCtx {
-    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, CK_RV> {
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
         let login_ctx = login_ctx.clone();
 
         if !login_ctx.can_run_mode(login::UserMode::Operator) {
             debug!("No operator is logged in");
-            return Err(CKR_USER_NOT_LOGGED_IN);
+            return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
 
-        let api_mech = match mechanism.to_api_mech(super::mechanism::MechMode::Encrypt) {
+        let api_mech = match mechanism.to_api_mech(MechMode::Encrypt) {
             Some(mech) => mech,
             None => {
                 debug!(
                     "Tried to encrypt with an invalid mechanism: {:?}",
                     mechanism
                 );
-                return Err(CKR_MECHANISM_INVALID);
+                return Err(Error::InvalidMechanismMode(MechMode::Encrypt, mechanism));
             }
         };
 
@@ -50,7 +50,10 @@ impl EncryptCtx {
                 "Tried to encrypt with an invalid mechanism: {:?}",
                 mechanism
             );
-            return Err(CKR_MECHANISM_INVALID);
+            return Err(Error::InvalidMechanism(
+                (key.id.clone(), key.kind),
+                mechanism,
+            ));
         }
 
         Ok(Self {
@@ -71,7 +74,7 @@ impl EncryptCtx {
         full_blocks * ENCRYPT_BLOCK_SIZE
     }
 
-    pub fn encrypt_available_data(&mut self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
+    pub fn encrypt_available_data(&mut self) -> Result<Vec<u8>, Error> {
         let chunk_size = self.get_biggest_chunk_len();
 
         // if there is no data to encrypt, return an empty vector
@@ -90,7 +93,7 @@ impl EncryptCtx {
         )
     }
 
-    pub fn encrypt_final(&mut self) -> Result<Vec<u8>, cryptoki_sys::CK_RV> {
+    pub fn encrypt_final(&mut self) -> Result<Vec<u8>, Error> {
         encrypt_data(
             &self.key_id,
             &mut self.login_ctx,
@@ -105,10 +108,13 @@ fn encrypt_data(
     login_ctx: &mut LoginCtx,
     data: &[u8],
     mechanism: &Mechanism,
-) -> Result<Vec<u8>, CK_RV> {
+) -> Result<Vec<u8>, Error> {
     let b64_message = general_purpose::STANDARD.encode(data);
 
-    let mode = mechanism.encrypt_name().ok_or(CKR_ARGUMENTS_BAD)?;
+    let mode = mechanism.encrypt_name().ok_or(Error::InvalidMechanismMode(
+        MechMode::Encrypt,
+        mechanism.clone(),
+    ))?;
     trace!("Signing with mode: {:?}", mode);
 
     let iv = mechanism
@@ -132,22 +138,16 @@ fn encrypt_data(
             login::UserMode::Operator,
         )
         .map_err(|err| {
-            if let LoginCtxError::Api(openapi::apis::Error::ResponseError(ref resp)) = err {
+            if let Error::Api(ApiError::ResponseError(ref resp)) = err {
                 if resp.status == reqwest::StatusCode::BAD_REQUEST {
                     if resp.content.contains("argument length") {
-                        return CKR_DATA_LEN_RANGE;
+                        return Error::InvalidDataLength;
                     }
-                    return CKR_DATA_INVALID;
+                    return Error::InvalidData;
                 }
             }
-            error!("Failed to decrypt: {:?}", err);
-            CKR_DEVICE_ERROR
+            err
         })?;
 
-    general_purpose::STANDARD
-        .decode(output.encrypted)
-        .map_err(|err: base64::DecodeError| {
-            error!("Failed to decode signature: {:?}", err);
-            CKR_DEVICE_ERROR
-        })
+    Ok(general_purpose::STANDARD.decode(output.encrypted)?)
 }

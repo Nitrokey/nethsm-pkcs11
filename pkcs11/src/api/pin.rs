@@ -2,7 +2,6 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 
 use crate::{lock_mutex, lock_session};
@@ -45,8 +44,8 @@ pub extern "C" fn C_SetPIN(
         Err(_) => return cryptoki_sys::CKR_ARGUMENTS_BAD,
     };
 
-    if CKR_OK != session.login(cryptoki_sys::CKU_USER, old_pin.to_string()) {
-        return cryptoki_sys::CKR_PIN_INCORRECT;
+    if let Err(err) = session.login(cryptoki_sys::CKU_USER, old_pin.to_string()) {
+        return err.into();
     }
 
     if !session
