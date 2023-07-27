@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use log::trace;
 use reqwest::Certificate;
@@ -85,5 +85,6 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         instances,
         administrator: slot.administrator.clone(),
         operator: slot.operator.clone(),
+        db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
     })
 }

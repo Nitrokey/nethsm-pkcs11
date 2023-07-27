@@ -1,6 +1,8 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use openapi::apis::configuration::Configuration;
+
+use crate::backend::db::Db;
 
 use super::config_file::UserConfig;
 
@@ -22,6 +24,7 @@ pub struct Slot {
     pub instances: Vec<Configuration>,
     pub operator: Option<UserConfig>,
     pub administrator: Option<UserConfig>,
+    pub db: Arc<Mutex<Db>>,
 }
 
 impl Slot {
