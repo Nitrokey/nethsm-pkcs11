@@ -27,14 +27,17 @@ pub extern "C" fn C_EncryptInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_EncryptInit() failed to convert mechanism: {:?}", e);
+            error!("C_EncryptInit() failed to convert mechanism: {}", e);
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
 
     lock_session!(hSession, session);
 
-    session.encrypt_init(&mech, hKey)
+    match session.encrypt_init(&mech, hKey) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(e) => e.into(),
+    }
 }
 
 pub extern "C" fn C_Encrypt(
@@ -78,7 +81,7 @@ pub extern "C" fn C_Encrypt(
         Ok(data) => data,
         Err(e) => {
             session.encrypt_clear();
-            return e;
+            return e.into();
         }
     };
 
@@ -146,7 +149,7 @@ pub extern "C" fn C_EncryptUpdate(
         Ok(data) => data,
         Err(e) => {
             session.encrypt_clear();
-            return e;
+            return e.into();
         }
     };
 
@@ -202,7 +205,7 @@ pub extern "C" fn C_EncryptFinal(
         Ok(data) => data,
         Err(e) => {
             session.encrypt_clear();
-            return e;
+            return e.into();
         }
     };
 

@@ -1,3 +1,21 @@
+use std::sync::PoisonError;
+
+use cryptoki_sys::{
+    CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID,
+    CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT,
+    CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
+};
+use log::error;
+use openapi::apis;
+use reqwest::StatusCode;
+
+use self::{
+    db::object::ObjectKind,
+    login::{LoginError, UserMode},
+    mechanism::{MechMode, Mechanism},
+};
+
 pub mod db;
 pub mod decrypt;
 pub mod encrypt;
@@ -8,3 +26,176 @@ pub mod object;
 pub mod session;
 pub mod sign;
 pub mod slot;
+
+#[derive(Debug, Clone)]
+pub struct ResponseContent {
+    pub status: reqwest::StatusCode,
+    pub content: String,
+}
+
+#[derive(Debug)]
+pub enum ApiError {
+    Reqwest(reqwest::Error),
+    Serde(serde_json::Error),
+    Io(std::io::Error),
+    ResponseError(ResponseContent),
+}
+
+impl<T> From<apis::Error<T>> for ApiError {
+    fn from(err: apis::Error<T>) -> Self {
+        match err {
+            apis::Error::Reqwest(e) => ApiError::Reqwest(e),
+            apis::Error::Serde(e) => ApiError::Serde(e),
+            apis::Error::Io(e) => ApiError::Io(e),
+            apis::Error::ResponseError(resp) => ApiError::ResponseError(ResponseContent {
+                status: resp.status,
+                content: resp.content,
+            }),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    NotLoggedIn(UserMode),
+    InvalidObjectHandle(CK_OBJECT_HANDLE),
+    InvalidMechanism((String, ObjectKind), Mechanism),
+    InvalidAttribute(CK_ATTRIBUTE_TYPE),
+    MissingAttribute(CK_ATTRIBUTE_TYPE),
+    ObjectClassNotSupported,
+    OpenSSL(openssl::error::ErrorStack),
+    InvalidMechanismMode(MechMode, Mechanism),
+    Api(ApiError),
+    NoInstance,
+    DecodeError(base64::DecodeError),
+    StringParse(std::string::FromUtf8Error),
+    Login(LoginError),
+    OperationNotInitialized,
+    OperationActive,
+    // a field recieved from the API is not valid
+    KeyField(String),
+    DbLock,
+    InvalidDataLength,
+    InvalidData,
+}
+
+impl<T> From<PoisonError<T>> for Error {
+    fn from(_: PoisonError<T>) -> Self {
+        Error::DbLock
+    }
+}
+
+impl<T> From<apis::Error<T>> for Error {
+    fn from(err: apis::Error<T>) -> Self {
+        Error::Api(err.into())
+    }
+}
+
+impl From<base64::DecodeError> for Error {
+    fn from(err: base64::DecodeError) -> Self {
+        Error::DecodeError(err)
+    }
+}
+
+impl From<openssl::error::ErrorStack> for Error {
+    fn from(err: openssl::error::ErrorStack) -> Self {
+        Error::OpenSSL(err)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        Error::StringParse(err)
+    }
+}
+
+impl From<Error> for CK_RV {
+    fn from(err: Error) -> Self {
+        // diplay the error when converting to CK_RV
+        error!("{}", err);
+        match err {
+            Error::InvalidData => CKR_DATA_INVALID,
+            Error::InvalidDataLength => CKR_DATA_LEN_RANGE,
+            Error::InvalidObjectHandle(_) => CKR_KEY_HANDLE_INVALID,
+            Error::OperationNotInitialized => CKR_OPERATION_NOT_INITIALIZED,
+            Error::DbLock => CKR_DEVICE_ERROR,
+            Error::KeyField(_) => CKR_DEVICE_ERROR,
+            Error::OperationActive => CKR_OPERATION_ACTIVE,
+            Error::Login(e) => e.into(),
+            Error::InvalidAttribute(_) => CKR_ATTRIBUTE_VALUE_INVALID,
+            Error::ObjectClassNotSupported => CKR_DEVICE_MEMORY,
+            Error::MissingAttribute(_) => CKR_ARGUMENTS_BAD,
+            Error::OpenSSL(_) => CKR_DEVICE_ERROR,
+            Error::NotLoggedIn(_) => CKR_USER_NOT_LOGGED_IN,
+            Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
+            Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
+            Error::NoInstance => CKR_DEVICE_ERROR,
+            Error::DecodeError(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
+            Error::Api(err) => match err {
+                ApiError::Reqwest(_) => CKR_DEVICE_ERROR,
+                ApiError::Io(_) => CKR_DEVICE_ERROR,
+                ApiError::Serde(_) => CKR_DEVICE_ERROR,
+                ApiError::ResponseError(resp) => match resp.status {
+                    StatusCode::NOT_FOUND => CKR_KEY_HANDLE_INVALID,
+                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => CKR_USER_NOT_LOGGED_IN,
+                    StatusCode::PRECONDITION_FAILED => CKR_TOKEN_NOT_PRESENT,
+                    _ => CKR_DEVICE_ERROR,
+                },
+            },
+        }
+    }
+}
+
+// display error
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let msg = match self {
+            Error::InvalidData => "Invalid input data".to_string(),
+            Error::InvalidDataLength => "Invalid input data length".to_string(),
+            Error::InvalidObjectHandle(handle) => {
+                format!("Object handle does not exist: {}", handle)
+            }
+            Error::OperationNotInitialized => "Operation not initialized".to_string(),
+            Error::DbLock => "Internal mutex lock error".to_string(),
+            Error::KeyField(field) => {
+                format!("Key field {} received from the NetHSM is not valid", field)
+            }
+            Error::OperationActive => "An operation is already active for this session".to_string(),
+            Error::Login(err) => err.to_string(),
+            Error::NotLoggedIn(mode) => format!(
+                "The module needs to be logged in as {:?}, check the configuration",
+                mode
+            ),
+            Error::InvalidMechanism(obj, mech) => {
+                format!(
+                    "The mechanism {:?} not supported for {:?} {}",
+                    mech, obj.1, obj.0
+                )
+            }
+            Error::InvalidAttribute(attr) => format!("Invalid attribute: {:?}", attr),
+            Error::MissingAttribute(attr) => format!("Missing attribute: {:?}", attr),
+            Error::ObjectClassNotSupported => "Object class not supported".to_string(),
+            Error::OpenSSL(err) => format!("OpenSSL error: {:?}", err),
+            Error::InvalidMechanismMode(mode, mechanism) => {
+                format!("Unable to use mechanim {:?} for {:?}", mechanism, mode)
+            }
+            Error::Api(err) => match err {
+                ApiError::Reqwest(err) => format!("Reqwest error: {:?}", err),
+                ApiError::Serde(err) => format!("Serde error: {:?}", err),
+                ApiError::Io(err) => format!("IO error: {:?}", err),
+                ApiError::ResponseError(resp) => match resp.status {
+                    StatusCode::NOT_FOUND => "Key not found".to_string(),
+                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => "Not logged in".to_string(),
+                    StatusCode::PRECONDITION_FAILED => {
+                        "The NetHSM is not set up properly".to_string()
+                    }
+                    _ => format!("Api error: {:?}", resp),
+                },
+            },
+            Error::NoInstance => "No instance".to_string(),
+            Error::DecodeError(err) => format!("Base64 Decode error: {:?}", err),
+            Error::StringParse(err) => format!("String parse error: {:?}", err),
+        };
+        write!(f, "{}", msg)
+    }
+}

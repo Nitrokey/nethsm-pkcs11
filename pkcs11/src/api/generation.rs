@@ -37,7 +37,7 @@ pub extern "C" fn C_GenerateKey(
     let mech = match Mechanism::from_ckraw_mech(&mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_GenerateKey() failed to convert mechanism: {:?}", e);
+            error!("C_GenerateKey() failed to convert mechanism: {}", e);
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
@@ -99,7 +99,7 @@ pub extern "C" fn C_GenerateKeyPair(
     let mech = match Mechanism::from_ckraw_mech(&mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_GenerateKeyPair() failed to convert mechanism: {:?}", e);
+            error!("C_GenerateKeyPair() failed to convert mechanism: {}", e);
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };

@@ -17,7 +17,7 @@ use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 
-use crate::backend::key::{key_type_to_asn1, CreateKeyError};
+use crate::backend::{key::key_type_to_asn1, Error};
 
 use super::attr::{self, CkRawAttrTemplate};
 
@@ -155,7 +155,7 @@ impl PartialEq<Attr> for Attr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ObjectKind {
     PrivateKey,
     PublicKey,
@@ -203,12 +203,6 @@ pub struct KeyPair {
     pub private_key: Object,
 }
 
-#[derive(Debug)]
-pub enum Error {
-    KeyData(String),
-    Decode(base64::DecodeError),
-}
-
 struct KeyData {
     key_type: CK_KEY_TYPE,
     key_size: Option<usize>,
@@ -219,22 +213,18 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     let key_data = key_data
         .key
         .as_ref()
-        .ok_or(Error::KeyData("key".to_string()))?;
+        .ok_or(Error::KeyField("key".to_string()))?;
 
     let modulus = key_data
         .modulus
         .as_ref()
-        .ok_or(Error::KeyData("modulus".to_string()))?;
+        .ok_or(Error::KeyField("modulus".to_string()))?;
     let public_exponent = key_data
         .public_exponent
         .as_ref()
-        .ok_or(Error::KeyData("public_exponent".to_string()))?;
-    let modulus = general_purpose::STANDARD
-        .decode(modulus.as_bytes())
-        .map_err(Error::Decode)?;
-    let public_exponent = general_purpose::STANDARD
-        .decode(public_exponent.as_bytes())
-        .map_err(Error::Decode)?;
+        .ok_or(Error::KeyField("public_exponent".to_string()))?;
+    let modulus = general_purpose::STANDARD.decode(modulus.as_bytes())?;
+    let public_exponent = general_purpose::STANDARD.decode(public_exponent.as_bytes())?;
 
     let mut attrs = HashMap::new();
 
@@ -264,16 +254,14 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let ec_points = key_data
         .key
         .as_ref()
-        .ok_or(Error::KeyData("key".to_string()))?
+        .ok_or(Error::KeyField("key".to_string()))?
         .data
         .as_ref()
-        .ok_or(Error::KeyData("data".to_string()))?;
+        .ok_or(Error::KeyField("data".to_string()))?;
 
     trace!("EC key data: {:?}", ec_points);
 
-    let ec_point_bytes = general_purpose::STANDARD
-        .decode(ec_points.as_bytes())
-        .map_err(Error::Decode)?;
+    let ec_point_bytes = general_purpose::STANDARD.decode(ec_points.as_bytes())?;
 
     trace!("EC key data bytes: {:?}", ec_point_bytes);
 
@@ -281,7 +269,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         writer.write_bytes(&ec_point_bytes);
     });
 
-    let key_params = key_type_to_asn1(key_data.r#type).ok_or(Error::KeyData(format!(
+    let key_params = key_type_to_asn1(key_data.r#type).ok_or(Error::KeyField(format!(
         "Unsupported key type: {:?}",
         key_data.r#type
     )))?;
@@ -441,14 +429,10 @@ pub fn from_key_data(
     Ok(vec![public_key, private_key])
 }
 
-pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, CreateKeyError> {
-    let openssl_cert =
-        openssl::x509::X509::from_pem(cert.as_bytes()).map_err(CreateKeyError::OpenSSL)?;
+pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, Error> {
+    let openssl_cert = openssl::x509::X509::from_pem(cert.as_bytes())?;
 
-    let cert_der = openssl_cert
-        .to_der()
-        .map_err(CreateKeyError::OpenSSL)?
-        .to_vec();
+    let cert_der = openssl_cert.to_der()?.to_vec();
 
     let length = cert_der.len();
 
@@ -481,21 +465,11 @@ pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, CreateKeyErr
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
     attrs.insert(
         CKA_SUBJECT,
-        Attr::Bytes(
-            openssl_cert
-                .subject_name()
-                .to_der()
-                .map_err(CreateKeyError::OpenSSL)?,
-        ),
+        Attr::Bytes(openssl_cert.subject_name().to_der()?),
     );
     attrs.insert(
         CKA_ISSUER,
-        Attr::Bytes(
-            openssl_cert
-                .issuer_name()
-                .to_der()
-                .map_err(CreateKeyError::OpenSSL)?,
-        ),
+        Attr::Bytes(openssl_cert.issuer_name().to_der()?),
     );
 
     Ok(Object {

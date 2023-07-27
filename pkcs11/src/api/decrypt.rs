@@ -24,14 +24,17 @@ pub extern "C" fn C_DecryptInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_DecryptInit() failed to convert mechanism: {:?}", e);
+            error!("C_DecryptInit() failed to convert mechanism: {}", e);
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
 
     lock_session!(hSession, session);
 
-    session.decrypt_init(&mech, hKey)
+    match session.decrypt_init(&mech, hKey) {
+        Ok(_) => cryptoki_sys::CKR_OK,
+        Err(e) => e.into(),
+    }
 }
 
 pub extern "C" fn C_Decrypt(
@@ -70,7 +73,7 @@ pub extern "C" fn C_Decrypt(
 
     let decrypted_data = match session.decrypt(data) {
         Ok(data) => data,
-        Err(e) => return e,
+        Err(e) => return e.into(),
     };
 
     unsafe {
@@ -115,7 +118,7 @@ pub extern "C" fn C_DecryptUpdate(
     }
     match session.decrypt_update(data) {
         Ok(()) => cryptoki_sys::CKR_OK,
-        Err(e) => e,
+        Err(e) => e.into(),
     }
 }
 
@@ -137,7 +140,7 @@ pub extern "C" fn C_DecryptFinal(
 
     let theoretical_size = match session.decrypt_theoretical_final_size() {
         Ok(size) => size,
-        Err(e) => return e,
+        Err(e) => return e.into(),
     };
 
     unsafe {
@@ -154,7 +157,7 @@ pub extern "C" fn C_DecryptFinal(
 
     let decrypted_data = match session.decrypt_final() {
         Ok(data) => data,
-        Err(e) => return e,
+        Err(e) => return e.into(),
     };
 
     unsafe {

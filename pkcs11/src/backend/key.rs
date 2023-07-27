@@ -1,6 +1,7 @@
 use super::{
     db::attr::CkRawAttrTemplate,
-    login::{self, LoginCtx, LoginCtxError},
+    login::{self, LoginCtx},
+    Error,
 };
 use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
 use base64::{engine::general_purpose, Engine};
@@ -16,32 +17,6 @@ use openapi::{
     models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
 use yasna::models::ObjectIdentifier;
-
-#[derive(Debug)]
-pub enum CreateKeyError {
-    MissingAttribute,
-    InvalidAttribute,
-    ClassNotSupported,
-    PutCertError(LoginCtxError<default_api::KeysKeyIdCertPutError>),
-    PutError(LoginCtxError<default_api::KeysKeyIdPutError>),
-    PostError(LoginCtxError<default_api::KeysPostError>),
-    GenerateError(LoginCtxError<default_api::KeysGeneratePostError>),
-    StringParseError(std::string::FromUtf8Error),
-    OpenSSL(openssl::error::ErrorStack),
-}
-
-impl PartialEq for CreateKeyError {
-    fn eq(&self, other: &Self) -> bool {
-        matches!(
-            (self, other),
-            (Self::MissingAttribute, Self::MissingAttribute)
-                | (Self::InvalidAttribute, Self::InvalidAttribute)
-                | (Self::ClassNotSupported, Self::ClassNotSupported)
-                | (Self::PutError(_), Self::PutError(_))
-                | (Self::PostError(_), Self::PostError(_))
-        )
-    }
-}
 
 #[derive(Debug, Default)]
 struct ParsedAttributes {
@@ -61,7 +36,7 @@ struct ParsedAttributes {
     pub raw_id: Option<Vec<u8>>,
 }
 
-fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, CreateKeyError> {
+fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Error> {
     let mut parsed = ParsedAttributes::default();
 
     for attr in template.iter() {
@@ -81,7 +56,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                         k => Some(k),
                     }
                 }
-                None => return Err(CreateKeyError::InvalidAttribute),
+                None => return Err(Error::InvalidAttribute(CKA_CLASS)),
             },
             CKA_ID => {
                 if let Some(bytes) = attr.val_bytes() {
@@ -107,7 +82,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
                     .val_bytes()
                     .map(|val| String::from_utf8(val.to_vec()))
                     .transpose()
-                    .map_err(CreateKeyError::StringParseError)?;
+                    .map_err(Error::StringParse)?;
                 trace!("label: {:?}", label);
                 if parsed.id.is_none() {
                     parsed.id = label;
@@ -117,7 +92,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
             CKA_KEY_TYPE => {
                 let ktype: CK_KEY_TYPE = match attr.read_value() {
                     Some(val) => val,
-                    None => return Err(CreateKeyError::InvalidAttribute),
+                    None => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
                 };
                 parsed.key_type = Some(ktype);
             }
@@ -179,32 +154,30 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Cr
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
     login_ctx: &mut LoginCtx,
-) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
+) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let cert = parsed_template
         .value
         .as_ref()
-        .ok_or(CreateKeyError::MissingAttribute)?;
+        .ok_or(Error::MissingAttribute(CKA_VALUE))?;
 
-    let openssl_cert = openssl::x509::X509::from_der(cert).map_err(CreateKeyError::OpenSSL)?;
+    let openssl_cert = openssl::x509::X509::from_der(cert)?;
 
     let id = match parsed_template.id {
         Some(ref id) => id.clone(),
         None => {
             error!("A key ID is required");
-            return Err(CreateKeyError::MissingAttribute);
+            return Err(Error::MissingAttribute(CKA_ID));
         }
     };
 
-    let cert_file = openssl_cert.to_pem().map_err(CreateKeyError::OpenSSL)?;
+    let cert_file = openssl_cert.to_pem()?;
 
-    let body = String::from_utf8(cert_file).map_err(CreateKeyError::StringParseError)?;
+    let body = String::from_utf8(cert_file)?;
 
-    login_ctx
-        .try_(
-            |api_config| default_api::keys_key_id_cert_put(api_config, &id, &body),
-            login::UserMode::Administrator,
-        )
-        .map_err(CreateKeyError::PutCertError)?;
+    login_ctx.try_(
+        |api_config| default_api::keys_key_id_cert_put(api_config, &id, &body),
+        login::UserMode::Administrator,
+    )?;
 
     Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
 }
@@ -212,27 +185,30 @@ fn upload_certificate(
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     login_ctx: &mut LoginCtx,
-) -> Result<(String, ObjectKind, Option<Vec<u8>>), CreateKeyError> {
+) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let parsed = parse_attributes(&template)?;
 
     debug!("key_class: {:?}", parsed.key_class);
     debug!("key_type: {:?}", parsed.key_type);
 
     let key_class = if let Some(ref key_class) = parsed.key_class {
-        let key_class = key_class.clone();
+        let key_class = *key_class;
         if key_class == ObjectKind::Other && key_class == ObjectKind::PublicKey {
-            return Err(CreateKeyError::ClassNotSupported);
+            return Err(Error::ObjectClassNotSupported);
         }
         key_class
     } else {
-        return Err(CreateKeyError::ClassNotSupported);
+        return Err(Error::ObjectClassNotSupported);
     };
 
     if key_class == ObjectKind::Certificate {
         return upload_certificate(&parsed, login_ctx);
     }
 
-    let (r#type, key) = match parsed.key_type.ok_or(CreateKeyError::InvalidAttribute)? {
+    let (r#type, key) = match parsed
+        .key_type
+        .ok_or(Error::InvalidAttribute(CKA_KEY_TYPE))?
+    {
         CKK_RSA => {
             trace!("Creating RSA key");
 
@@ -241,15 +217,15 @@ pub fn create_key_from_template(
             trace!("public_exponent: {:?}", parsed.public_exponent);
 
             let prime_p = general_purpose::STANDARD
-                .encode(parsed.prime_p.ok_or(CreateKeyError::MissingAttribute)?);
+                .encode(parsed.prime_p.ok_or(Error::MissingAttribute(CKA_PRIME_1))?);
 
             let prime_q = general_purpose::STANDARD
-                .encode(parsed.prime_q.ok_or(CreateKeyError::MissingAttribute)?);
+                .encode(parsed.prime_q.ok_or(Error::MissingAttribute(CKA_PRIME_2))?);
 
             let public_exponent = general_purpose::STANDARD.encode(
                 parsed
                     .public_exponent
-                    .ok_or(CreateKeyError::MissingAttribute)?,
+                    .ok_or(Error::MissingAttribute(CKA_PUBLIC_EXPONENT))?,
             );
 
             let key = Box::new(KeyPrivateData {
@@ -265,13 +241,16 @@ pub fn create_key_from_template(
                 parsed
                     .value
                     .as_ref()
-                    .ok_or(CreateKeyError::MissingAttribute)?
+                    .ok_or(Error::MissingAttribute(CKA_VALUE))?
                     .as_slice(),
             );
 
-            let ec_type =
-                key_type_from_params(&parsed.ec_params.ok_or(CreateKeyError::MissingAttribute)?)
-                    .ok_or(CreateKeyError::InvalidAttribute)?;
+            let ec_type = key_type_from_params(
+                &parsed
+                    .ec_params
+                    .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?,
+            )
+            .ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
 
             let key = Box::new(KeyPrivateData {
                 data: Some(b64_private),
@@ -287,7 +266,7 @@ pub fn create_key_from_template(
                 parsed
                     .value
                     .as_ref()
-                    .ok_or(CreateKeyError::MissingAttribute)?
+                    .ok_or(Error::MissingAttribute(CKA_VALUE))?
                     .as_slice(),
             );
 
@@ -300,7 +279,7 @@ pub fn create_key_from_template(
             (KeyType::Generic, key)
         }
 
-        _ => return Err(CreateKeyError::InvalidAttribute),
+        _ => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
     };
 
     let mechs = Mechanism::from_key_type(r#type);
@@ -333,30 +312,24 @@ pub fn create_key_from_template(
     };
 
     let id = if let Some(key_id) = parsed.id {
-        login_ctx
-            .try_(
-                |api_config| {
-                    default_api::keys_key_id_put(
-                        api_config,
-                        &key_id,
-                        private_key,
-                        Some(mechanisms),
-                        None,
-                    )
-                },
-                login::UserMode::Administrator,
-            )
-            .map_err(CreateKeyError::PutError)?;
+        login_ctx.try_(
+            |api_config| {
+                default_api::keys_key_id_put(
+                    api_config,
+                    &key_id,
+                    private_key,
+                    Some(mechanisms),
+                    None,
+                )
+            },
+            login::UserMode::Administrator,
+        )?;
         key_id
     } else {
-        login_ctx
-            .try_(
-                |api_config| {
-                    default_api::keys_post(api_config, private_key, Some(mechanisms), None)
-                },
-                login::UserMode::Administrator,
-            )
-            .map_err(CreateKeyError::PostError)?
+        login_ctx.try_(
+            |api_config| default_api::keys_post(api_config, private_key, Some(mechanisms), None),
+            login::UserMode::Administrator,
+        )?
     };
 
     Ok((id, key_class, parsed.raw_id))
@@ -410,7 +383,7 @@ pub fn generate_key_from_template(
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
     login_ctx: &mut LoginCtx,
-) -> Result<(String, Option<Vec<u8>>), CreateKeyError> {
+) -> Result<(String, Option<Vec<u8>>), Error> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 
@@ -426,26 +399,25 @@ pub fn generate_key_from_template(
 
     if let Some(public) = parsed_public {
         if let Some(ec_params) = public.ec_params {
-            key_type = key_type_from_params(&ec_params).ok_or(CreateKeyError::InvalidAttribute)?;
+            key_type =
+                key_type_from_params(&ec_params).ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
         }
     }
 
-    let id = login_ctx
-        .try_(
-            |api_config| {
-                default_api::keys_generate_post(
-                    api_config,
-                    KeyGenerateRequestData {
-                        mechanisms: api_mechs,
-                        r#type: key_type,
-                        restrictions: None,
-                        id: parsed.id,
-                        length: length.map(|len| len as i32),
-                    },
-                )
-            },
-            login::UserMode::Administrator,
-        )
-        .map_err(CreateKeyError::GenerateError)?;
+    let id = login_ctx.try_(
+        |api_config| {
+            default_api::keys_generate_post(
+                api_config,
+                KeyGenerateRequestData {
+                    mechanisms: api_mechs,
+                    r#type: key_type,
+                    restrictions: None,
+                    id: parsed.id,
+                    length: length.map(|len| len as i32),
+                },
+            )
+        },
+        login::UserMode::Administrator,
+    )?;
     Ok((id, parsed.raw_id))
 }

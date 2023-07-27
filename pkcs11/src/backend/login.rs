@@ -12,11 +12,7 @@ use std::fmt::Debug;
 
 use crate::config::config_file::UserConfig;
 
-#[derive(Debug)]
-pub enum LoginCtxError<T> {
-    NoInstance,
-    Api(apis::Error<T>),
-}
+use super::Error;
 
 #[derive(Debug, Clone)]
 pub struct LoginCtx {
@@ -42,6 +38,23 @@ impl From<LoginError> for CK_RV {
             LoginError::UserNotPresent => CKR_USER_TYPE_INVALID,
             LoginError::BadArgument => CKR_ARGUMENTS_BAD,
             LoginError::IncorrectPin => CKR_PIN_INCORRECT,
+        }
+    }
+}
+
+impl From<LoginError> for Error {
+    fn from(val: LoginError) -> Self {
+        Error::Login(val)
+    }
+}
+
+impl std::fmt::Display for LoginError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoginError::InvalidUser => write!(f, "User type not supported"),
+            LoginError::UserNotPresent => write!(f, "Username not cofigured for this user"),
+            LoginError::BadArgument => write!(f, "Bad argument"),
+            LoginError::IncorrectPin => write!(f, "Incorrect pin"),
         }
     }
 }
@@ -180,7 +193,7 @@ impl LoginCtx {
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, LoginCtxError<T>>
+    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
     where
         F: FnOnce(&mut Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
@@ -223,10 +236,10 @@ impl LoginCtx {
                 })) => continue,
 
                 // Otherwise, return the error
-                Err(err) => return Err(LoginCtxError::Api(err)),
+                Err(err) => return Err(err.into()),
             }
         }
-        Err(LoginCtxError::NoInstance)
+        Err(Error::NoInstance)
     }
 
     pub fn ck_state(&self) -> CK_STATE {
