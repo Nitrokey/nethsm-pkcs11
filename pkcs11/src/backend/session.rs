@@ -1,8 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use cryptoki_sys::{
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_OK, CKR_USER_NOT_LOGGED_IN, CK_FLAGS,
-    CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_KEY_HANDLE_INVALID, CKR_OK, CKR_USER_NOT_LOGGED_IN,
+    CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SLOT_ID, CK_USER_TYPE,
 };
 use log::{debug, error, trace};
 use openapi::apis::{
@@ -16,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    db::{self, attr::CkRawAttrTemplate, object::ObjectKind, Db, Object, ObjectHandle},
+    db::{self, attr::CkRawAttrTemplate, object::ObjectKind, Db, Object},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
     key::{create_key_from_template, generate_key_from_template},
@@ -88,8 +91,7 @@ pub struct Session {
     pub login_ctx: LoginCtx,
     pub flags: CK_FLAGS,
     pub device_error: CK_RV,
-    pub fetched_all_keys: bool,
-    pub db: Db,
+    pub db: Arc<Mutex<Db>>,
     pub sign_ctx: Option<SignCtx>,
     pub encrypt_ctx: Option<EncryptCtx>,
     pub decrypt_ctx: Option<DecryptCtx>,
@@ -98,8 +100,6 @@ pub struct Session {
 
 impl Session {
     pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
-        trace!("slot: {:?}", slot);
-
         let login_ctx = LoginCtx::new(
             slot.operator.clone(),
             slot.administrator.clone(),
@@ -110,8 +110,7 @@ impl Session {
             login_ctx,
             slot_id,
             flags,
-            fetched_all_keys: false,
-            db: Db::new(),
+            db: slot.db.clone(),
             device_error: CKR_OK,
             sign_ctx: None,
             encrypt_ctx: None,
@@ -179,19 +178,23 @@ impl Session {
 
         trace!("sign_init() called with key handle {}", key_handle);
         trace!("sign_init() called with mechanism {:?}", mechanism);
-        trace!("sign_init() db size : {}", self.db.enumerate().count());
+
+        let db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return CKR_DEVICE_ERROR;
+            }
+        };
 
         // get key id from the handle
 
-        let key = match self
-            .db
-            .object(ObjectHandle::from(key_handle))
-            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
-        {
-            Ok(object) => object,
-            Err(err) => {
-                error!("Failed to get key: {:?}", err);
-                return err;
+        let key = match db.object(key_handle) {
+            Some(object) => object,
+
+            None => {
+                error!("Failed to get key: invalid handle");
+                return CKR_KEY_HANDLE_INVALID;
             }
         };
 
@@ -245,17 +248,22 @@ impl Session {
             return cryptoki_sys::CKR_OPERATION_ACTIVE;
         }
 
+        let db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return CKR_DEVICE_ERROR;
+            }
+        };
+
         // get key id from the handle
 
-        let key = match self
-            .db
-            .object(ObjectHandle::from(key_handle))
-            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
-        {
-            Ok(object) => object,
-            Err(err) => {
-                error!("Failed to get key: {:?}", err);
-                return err;
+        let key = match db.object(key_handle) {
+            Some(object) => object,
+
+            None => {
+                error!("Failed to get key: invalid handle");
+                return CKR_KEY_HANDLE_INVALID;
             }
         };
 
@@ -314,17 +322,22 @@ impl Session {
             return cryptoki_sys::CKR_OPERATION_ACTIVE;
         }
 
+        let db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return CKR_DEVICE_ERROR;
+            }
+        };
+
         // get key id from the handle
 
-        let key = match self
-            .db
-            .object(ObjectHandle::from(key_handle))
-            .ok_or(cryptoki_sys::CKR_KEY_HANDLE_INVALID)
-        {
-            Ok(object) => object,
-            Err(err) => {
-                error!("Failed to get key: {:?}", err);
-                return err;
+        let key = match db.object(key_handle) {
+            Some(object) => object,
+
+            None => {
+                error!("Failed to get key: invalid handle");
+                return CKR_KEY_HANDLE_INVALID;
             }
         };
 
@@ -379,8 +392,16 @@ impl Session {
         self.decrypt_ctx = None;
     }
 
-    pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {
-        self.db.object(ObjectHandle::from(handle))
+    pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
+        let db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return None;
+            }
+        };
+
+        db.object(handle).cloned()
     }
 
     pub(super) fn find_key(
@@ -416,16 +437,25 @@ impl Session {
     }
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, CK_RV> {
-        if self.fetched_all_keys {
-            return Ok(self
-                .db
-                .enumerate()
-                .map(|(handle, obj)| (handle.into(), obj.clone()))
-                .collect());
-        }
+        {
+            let mut db = match self.db.lock() {
+                Ok(db) => db,
+                Err(err) => {
+                    error!("Failed to lock db: {:?}", err);
+                    return Err(CKR_DEVICE_ERROR);
+                }
+            };
 
-        // clear the db to not have any double entries
-        self.db.clear();
+            if db.fetched_all_keys() {
+                return Ok(db
+                    .enumerate()
+                    .map(|(handle, obj)| (handle, obj.clone()))
+                    .collect());
+            }
+
+            // clear the db to not have any double entries
+            db.clear();
+        }
 
         if !self
             .login_ctx
@@ -462,6 +492,15 @@ impl Session {
                 handles.push((handle, object));
             }
         }
+        let mut db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return Err(CKR_DEVICE_ERROR);
+            }
+        };
+        db.set_fetched_all_keys(true);
+
         Ok(handles)
     }
 
@@ -489,9 +528,16 @@ impl Session {
             CKR_DEVICE_ERROR
         })?;
 
-        let r = self.db.add_object(object);
+        let r = self
+            .db
+            .lock()
+            .map_err(|err| {
+                error!("Failed to lock db: {:?}", err);
+                CKR_DEVICE_ERROR
+            })?
+            .add_object(object);
 
-        Ok((r.0, r.1.clone()))
+        Ok(r)
     }
 
     // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
@@ -534,8 +580,16 @@ impl Session {
 
         let mut result = Vec::new();
 
+        let mut db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return Err(CKR_DEVICE_ERROR);
+            }
+        };
+
         for object in objects {
-            let r = self.db.add_object(object.clone());
+            let r = db.add_object(object.clone());
             result.push((r.0, r.1.clone()));
         }
 
@@ -577,7 +631,15 @@ impl Session {
             return Err(CKR_USER_NOT_LOGGED_IN);
         }
 
-        let key = self.db.object(ObjectHandle::from(handle)).ok_or_else(|| {
+        let mut db = match self.db.lock() {
+            Ok(db) => db,
+            Err(err) => {
+                error!("Failed to lock db: {:?}", err);
+                return Err(CKR_DEVICE_ERROR);
+            }
+        };
+
+        let key = db.object(handle).ok_or_else(|| {
             error!("Failed to delete object: invalid handle");
             CKR_DEVICE_ERROR
         })?;
@@ -612,7 +674,7 @@ impl Session {
             }
         }
 
-        self.db.remove(ObjectHandle::from(handle)).ok_or_else(|| {
+        db.remove(handle).ok_or_else(|| {
             error!("Failed to delete object: invalid handle");
             CKR_DEVICE_ERROR
         })?;
