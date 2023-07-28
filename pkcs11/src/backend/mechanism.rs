@@ -388,8 +388,8 @@ impl Mechanism {
                         | cryptoki_sys::CKF_GENERATE_KEY_PAIR
                         // | cryptoki_sys::CKF_ENCRYPT
                 }
-                // Multi-part CKM_RSA_PKCS has sign only
-                Self::RsaPkcsPss(_) => cryptoki_sys::CKF_SIGN, // | cryptoki_sys::CKF_VERIFY,
+                // Multi-part CKM_RSA_PKCS has sign only, but we add verify so we don't break compatibility
+                Self::RsaPkcsPss(_) => cryptoki_sys::CKF_SIGN | cryptoki_sys::CKF_VERIFY,
 
                 // "RAW" RSA has decrypt only
                 Self::RsaX509 => cryptoki_sys::CKF_DECRYPT,
@@ -400,7 +400,7 @@ impl Mechanism {
                         | cryptoki_sys::CKF_EC_UNCOMPRESS
                         | cryptoki_sys::CKF_GENERATE_KEY_PAIR
                 }
-                Self::RsaPkcsOaep(_) => cryptoki_sys::CKF_DECRYPT, // | cryptoki_sys::CKF_ENCRYPT,
+                Self::RsaPkcsOaep(_) => cryptoki_sys::CKF_DECRYPT | cryptoki_sys::CKF_ENCRYPT,
                 Self::EdDsa | Self::GenerateEd => {
                     cryptoki_sys::CKF_SIGN | cryptoki_sys::CKF_GENERATE_KEY_PAIR
                 }
