@@ -204,5 +204,35 @@ pub extern "C" fn C_SetAttributeValue(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetAttributeValue() called");
-    cryptoki_sys::CKR_ACTION_PROHIBITED
+
+    if pTemplate.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    lock_session!(hSession, session);
+
+    let object = match session.get_object(hObject) {
+        Some(object) => object,
+        None => {
+            error!(
+                "C_SetAttributeValue() called with invalid object handle {}.",
+                hObject
+            );
+            return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
+        }
+    };
+
+    let template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+
+    // list the template attributes
+    for attr in template.iter() {
+        trace!(
+            "C_SetAttributeValue() attr {}: {:?}",
+            attr.type_(),
+            attr.val_bytes()
+        );
+    }
+
+    cryptoki_sys::CKR_OK
 }
