@@ -222,6 +222,13 @@ pub extern "C" fn C_SetAttributeValue(
         }
     };
 
+    trace!(
+        "C_SetAttributeValue() handle {} object id : {} {:?}",
+        hObject,
+        object.id,
+        object.kind
+    );
+
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
