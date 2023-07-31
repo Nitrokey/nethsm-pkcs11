@@ -24,11 +24,7 @@ The dynamic library will be in `target/release/libnethsm_pkcs11.so`.
 
 ### Alpine
 
-<<<<<<< HEAD
-You need to install musl-dev, openssl-dev:
-=======
-You need to install musl-dev, openssl-dev, gcc, perl, make :
->>>>>>> 273b161 (fix: ci build on windows and alpine)
+You need to install musl-dev, openssl-dev, gcc, perl, make:
 
 ```
 apk add musl-dev openssl-dev gcc
@@ -50,3 +46,8 @@ cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
+
+## OpenSSL
+
+For ease of use we are statically linking to OpenSSL (via the `openssl` and `openssl-src` crate).
+OpenSSL's license is available here : [https://www.openssl.org/source/apache-license-2.0.txt](https://www.openssl.org/source/apache-license-2.0.txt)
