@@ -74,6 +74,7 @@ impl LoginCtx {
 
         let firt_instance = instances.first();
         if let Some(instance) = firt_instance {
+            // CKS_RW_USER_FUNCTIONS has the priority, OpenDNSSEC checks for it
             if get_user_api_config(&operator, instance).is_some() {
                 ck_state = CKS_RW_USER_FUNCTIONS;
             } else if get_user_api_config(&administrator, instance).is_some() {

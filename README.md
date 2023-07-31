@@ -14,7 +14,7 @@ Follow the [documentation](https://docs.nitrokey.com/nethsm/pkcs11-setup.html) f
 
 ## Building
 
-OpenSSL and a working Rust toolchain are required.
+Openssl, make, perl, gcc and a working Rust toolchain are required.
 
 ```
 cargo build --release
@@ -24,10 +24,14 @@ The dynamic library will be in `target/release/libnethsm_pkcs11.so`.
 
 ### Alpine
 
+<<<<<<< HEAD
 You need to install musl-dev, openssl-dev:
+=======
+You need to install musl-dev, openssl-dev, gcc, perl, make :
+>>>>>>> 273b161 (fix: ci build on windows and alpine)
 
 ```
-apk add musl-dev openssl-dev
+apk add musl-dev openssl-dev gcc
 ```
 
 To build on Alpine you will need to add the C argument `target-feature=-crt-static`:

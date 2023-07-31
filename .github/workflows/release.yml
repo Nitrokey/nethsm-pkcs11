@@ -82,11 +82,11 @@ jobs:
               apt-get install -y curl build-essential pkg-config libssl-dev
               ;;
             alpine*)
-              apk add openssl-dev musl-dev gcc pkgconfig
+              apk add openssl-dev musl-dev gcc pkgconfig make curl perl
               echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
               ;;
             fedora*)
-              dnf install -y curl gcc openssl-devel pkg-config
+              dnf install -y curl gcc openssl-devel pkg-config make perl
               ;;
           esac
 
