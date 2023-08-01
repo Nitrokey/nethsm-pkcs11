@@ -235,17 +235,37 @@ pub extern "C" fn C_GenerateRandom(
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
 
-    let data = match get_tokio_rt().block_on(session.login_ctx.try_(
-        |api_config| {
+    let a = |api_config: openapi::apis::configuration::Configuration| {
+        // let api_config = api_config;
+        async {
+            let api_config = api_config;
             default_api::random_post(
-                api_config,
+                &api_config,
                 openapi::models::RandomRequestData {
                     length: ulRandomLen as i32,
                 },
             )
-        },
-        crate::backend::login::UserMode::Operator,
-    )) {
+            .await
+        }
+    };
+
+    let data = match get_tokio_rt().block_on(async {
+        session
+            .login_ctx
+            .try_(
+                |api_config| async move {
+                    default_api::random_post(
+                        &api_config,
+                        openapi::models::RandomRequestData {
+                            length: ulRandomLen as i32,
+                        },
+                    )
+                    .await
+                },
+                crate::backend::login::UserMode::Operator,
+            )
+            .await
+    }) {
         Ok(data) => data,
         Err(e) => {
             error!("C_GenerateRandom() failed to generate random data: {:?}", e);

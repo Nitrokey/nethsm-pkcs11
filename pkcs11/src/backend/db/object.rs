@@ -429,7 +429,11 @@ pub fn from_key_data(
     Ok(vec![public_key, private_key])
 }
 
-pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, Error> {
+pub fn from_cert_data(
+    cert: String,
+    key_id: &str,
+    raw_id: Option<Vec<u8>>,
+) -> Result<Object, Error> {
     let openssl_cert = openssl::x509::X509::from_pem(cert.as_bytes())?;
 
     let cert_der = openssl_cert.to_der()?.to_vec();
@@ -437,8 +441,11 @@ pub fn from_cert_data(cert: String, key_id: &str) -> Result<Object, Error> {
     let length = cert_der.len();
 
     let mut attrs = HashMap::new();
-
-    attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
+    if let Some(raw_id) = raw_id {
+        attrs.insert(CKA_ID, Attr::Bytes(raw_id));
+    } else {
+        attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
+    }
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),

@@ -27,11 +27,8 @@ pub struct EncryptCtx {
 }
 
 impl EncryptCtx {
-    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
-        let login_ctx = login_ctx.clone();
-
-        if !login_ctx.can_run_mode(login::UserMode::Operator) {
-            debug!("No operator is logged in");
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: LoginCtx) -> Result<Self, Error> {
+        if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
             return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
 
@@ -88,16 +85,16 @@ impl EncryptCtx {
         let input_data = self.data.drain(..chunk_size).collect::<Vec<u8>>();
         encrypt_data(
             &self.key_id,
-            &mut self.login_ctx,
+            self.login_ctx.clone(),
             &input_data,
             &self.mechanism,
         )
     }
 
-    pub fn encrypt_final(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn encrypt_final(&self) -> Result<Vec<u8>, Error> {
         encrypt_data(
             &self.key_id,
-            &mut self.login_ctx,
+            self.login_ctx.clone(),
             self.data.as_slice(),
             &self.mechanism,
         )
@@ -106,7 +103,7 @@ impl EncryptCtx {
 
 fn encrypt_data(
     key_id: &str,
-    login_ctx: &mut LoginCtx,
+    mut login_ctx: LoginCtx,
     data: &[u8],
     mechanism: &Mechanism,
 ) -> Result<Vec<u8>, Error> {
@@ -124,20 +121,25 @@ fn encrypt_data(
     trace!("iv: {:?}", iv);
 
     let output = get_tokio_rt()
-        .block_on(login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_encrypt_post(
-                    api_config,
-                    key_id,
-                    openapi::models::EncryptRequestData {
-                        mode,
-                        message: b64_message,
-                        iv,
+        .block_on(async {
+            login_ctx
+                .try_(
+                    |api_config| async move {
+                        default_api::keys_key_id_encrypt_post(
+                            &api_config,
+                            key_id,
+                            openapi::models::EncryptRequestData {
+                                mode,
+                                message: b64_message,
+                                iv,
+                            },
+                        )
+                        .await
                     },
+                    login::UserMode::Operator,
                 )
-            },
-            login::UserMode::Operator,
-        ))
+                .await
+        })
         .map_err(|err| {
             if let Error::Api(ApiError::ResponseError(ref resp)) = err {
                 if resp.status == reqwest::StatusCode::BAD_REQUEST {

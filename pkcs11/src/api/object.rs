@@ -1,7 +1,7 @@
 use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
-use crate::{backend::db::attr::CkRawAttrTemplate, lock_mutex, lock_session};
+use crate::{backend::db::attr::CkRawAttrTemplate, lock_mutex, lock_session, utils::get_tokio_rt};
 
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -153,7 +153,7 @@ pub extern "C" fn C_CreateObject(
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
-    let objects = match session.create_object(template) {
+    let objects = match get_tokio_rt().block_on(session.create_object(template)) {
         Ok(object) => object,
         Err(err) => {
             return err.into();

@@ -91,7 +91,7 @@ impl LoginCtx {
         }
     }
 
-    pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
+    pub async fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
         trace!("Login as {:?} with pin", user_type);
 
         let expected = match user_type {
@@ -125,7 +125,7 @@ impl LoginCtx {
 
         let config = expected.1.ok_or(LoginError::UserNotPresent)?;
 
-        if get_current_user_status(&config) == expected.0 {
+        if get_current_user_status(&config).await == expected.0 {
             self.ck_state = match expected.0 {
                 UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
                 UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
@@ -194,9 +194,13 @@ impl LoginCtx {
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub async fn try_<F, T, R, Fut>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
+    pub async fn try_<'a, F, T, R, Fut>(
+        &mut self,
+        api_call: F,
+        user_mode: UserMode,
+    ) -> Result<R, Error>
     where
-        F: FnOnce(&mut Configuration) -> Fut + Clone,
+        F: FnOnce(Configuration) -> Fut + Clone,
         Fut: Future<Output = Result<R, apis::Error<T>>>,
     {
         // we loop for a maximum of instances.len() times
@@ -207,7 +211,7 @@ impl LoginCtx {
             };
 
             let api_call_clone = api_call.clone();
-            match api_call_clone(&mut conf.clone()).await {
+            match api_call_clone(conf).await {
                 Ok(result) => return Ok(result),
 
                 // If the server is in an unusable state, try the next one
@@ -268,12 +272,13 @@ impl LoginCtx {
         };
 
         match get_tokio_rt().block_on(self.try_(
-            |config| {
+            |config| async move {
                 default_api::users_user_id_passphrase_post(
-                    config,
+                    &config,
                     &options.0,
                     openapi::models::UserPassphrasePostData { passphrase: pin },
                 )
+                .await
             },
             options.1,
         )) {
@@ -301,7 +306,7 @@ pub enum UserStatus {
     LoggedOut,
 }
 
-pub fn get_current_user_status(
+pub async fn get_current_user_status(
     api_config: &openapi::apis::configuration::Configuration,
 ) -> UserStatus {
     let auth = match api_config.basic_auth.as_ref() {
@@ -313,12 +318,7 @@ pub fn get_current_user_status(
         return UserStatus::LoggedOut;
     }
 
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-
-    let user = match rt.block_on(default_api::users_user_id_get(api_config, auth.0.as_str())) {
+    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()).await {
         Ok(user) => user,
         Err(err) => {
             error!("Failed to get user: {:?}", err);

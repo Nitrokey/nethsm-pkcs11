@@ -1,6 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use openapi::apis::configuration::Configuration;
+use tokio::sync::Mutex;
 
 use crate::backend::db::Db;
 
