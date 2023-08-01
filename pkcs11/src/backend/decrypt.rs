@@ -3,6 +3,8 @@ use base64::{engine::general_purpose, Engine};
 use log::trace;
 use openapi::apis::default_api;
 
+use crate::utils::get_tokio_rt;
+
 use super::{
     db::Object,
     login::{self, LoginCtx},
@@ -69,7 +71,7 @@ impl DecryptCtx {
             .iv()
             .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
 
-        let output = self.login_ctx.try_(
+        let output = get_tokio_rt().block_on(self.login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_decrypt_post(
                     api_config,
@@ -82,7 +84,7 @@ impl DecryptCtx {
                 )
             },
             login::UserMode::Operator,
-        )?;
+        ))?;
 
         Ok(general_purpose::STANDARD.decode(output.decrypted)?)
     }

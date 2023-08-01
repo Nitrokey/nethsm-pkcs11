@@ -1,3 +1,5 @@
+use crate::utils::get_tokio_rt;
+
 use super::{
     db::Object,
     login::{self, LoginCtx},
@@ -70,7 +72,7 @@ impl SignCtx {
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
 
-        let signature = self.login_ctx.try_(
+        let signature = get_tokio_rt().block_on(self.login_ctx.try_(
             |conf| {
                 default_api::keys_key_id_sign_post(
                     conf,
@@ -82,7 +84,7 @@ impl SignCtx {
                 )
             },
             login::UserMode::Operator,
-        )?;
+        ))?;
 
         Ok(general_purpose::STANDARD.decode(signature.signature)?)
     }

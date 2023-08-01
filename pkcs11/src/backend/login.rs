@@ -8,9 +8,9 @@ use openapi::{
     apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
 };
-use std::fmt::Debug;
+use std::{fmt::Debug, future::Future};
 
-use crate::config::config_file::UserConfig;
+use crate::{config::config_file::UserConfig, utils::get_tokio_rt};
 
 use super::Error;
 
@@ -194,9 +194,10 @@ impl LoginCtx {
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
+    pub async fn try_<F, T, R, Fut>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
     where
-        F: FnOnce(&mut Configuration) -> Result<R, apis::Error<T>> + Clone,
+        F: FnOnce(&mut Configuration) -> Fut + Clone,
+        Fut: Future<Output = Result<R, apis::Error<T>>>,
     {
         // we loop for a maximum of instances.len() times
         for _ in 0..self.instances.len() {
@@ -206,8 +207,7 @@ impl LoginCtx {
             };
 
             let api_call_clone = api_call.clone();
-
-            match api_call_clone(&mut conf.clone()) {
+            match api_call_clone(&mut conf.clone()).await {
                 Ok(result) => return Ok(result),
 
                 // If the server is in an unusable state, try the next one
@@ -267,7 +267,7 @@ impl LoginCtx {
             _ => return CKR_USER_NOT_LOGGED_IN,
         };
 
-        match self.try_(
+        match get_tokio_rt().block_on(self.try_(
             |config| {
                 default_api::users_user_id_passphrase_post(
                     config,
@@ -276,7 +276,7 @@ impl LoginCtx {
                 )
             },
             options.1,
-        ) {
+        )) {
             Ok(_) => CKR_OK,
             Err(err) => {
                 error!("Failed to change pin: {:?}", err);
@@ -313,7 +313,12 @@ pub fn get_current_user_status(
         return UserStatus::LoggedOut;
     }
 
-    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    let user = match rt.block_on(default_api::users_user_id_get(api_config, auth.0.as_str())) {
         Ok(user) => user,
         Err(err) => {
             error!("Failed to get user: {:?}", err);

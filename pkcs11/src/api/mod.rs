@@ -48,7 +48,11 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     {
         let args = pInitArgs as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
         unsafe {
-            if !(*args).pReserved.is_null() {
+            let args = std::ptr::read(args);
+
+            trace!("C_Initialize() called with args: {:?}", args.CreateMutex);
+
+            if !(args).pReserved.is_null() {
                 return cryptoki_sys::CKR_ARGUMENTS_BAD;
             }
         }

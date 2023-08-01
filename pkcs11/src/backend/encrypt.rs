@@ -5,6 +5,7 @@ use openapi::apis::default_api;
 
 use crate::backend::mechanism::MechMode;
 use crate::backend::ApiError;
+use crate::utils::get_tokio_rt;
 
 use super::Error;
 
@@ -122,8 +123,8 @@ fn encrypt_data(
         .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
     trace!("iv: {:?}", iv);
 
-    let output = login_ctx
-        .try_(
+    let output = get_tokio_rt()
+        .block_on(login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_encrypt_post(
                     api_config,
@@ -136,7 +137,7 @@ fn encrypt_data(
                 )
             },
             login::UserMode::Operator,
-        )
+        ))
         .map_err(|err| {
             if let Error::Api(ApiError::ResponseError(ref resp)) = err {
                 if resp.status == reqwest::StatusCode::BAD_REQUEST {

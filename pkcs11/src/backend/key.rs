@@ -3,7 +3,10 @@ use super::{
     login::{self, LoginCtx},
     Error,
 };
-use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
+use crate::{
+    backend::{db::object::ObjectKind, mechanism::Mechanism},
+    utils::get_tokio_rt,
+};
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
@@ -174,10 +177,10 @@ fn upload_certificate(
 
     let body = String::from_utf8(cert_file)?;
 
-    login_ctx.try_(
+    get_tokio_rt().block_on(login_ctx.try_(
         |api_config| default_api::keys_key_id_cert_put(api_config, &id, &body),
         login::UserMode::Administrator,
-    )?;
+    ))?;
 
     Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
 }
@@ -311,26 +314,34 @@ pub fn create_key_from_template(
         restrictions: None,
     };
 
-    let id = if let Some(key_id) = parsed.id {
-        login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_put(
-                    api_config,
-                    &key_id,
-                    private_key,
-                    Some(mechanisms),
-                    None,
+    let id = get_tokio_rt().block_on(async {
+        if let Some(key_id) = parsed.id {
+            login_ctx
+                .try_(
+                    |api_config| {
+                        default_api::keys_key_id_put(
+                            api_config,
+                            &key_id,
+                            private_key,
+                            Some(mechanisms),
+                            None,
+                        )
+                    },
+                    login::UserMode::Administrator,
                 )
-            },
-            login::UserMode::Administrator,
-        )?;
-        key_id
-    } else {
-        login_ctx.try_(
-            |api_config| default_api::keys_post(api_config, private_key, Some(mechanisms), None),
-            login::UserMode::Administrator,
-        )?
-    };
+                .await?;
+            key_id
+        } else {
+            login_ctx
+                .try_(
+                    |api_config| {
+                        default_api::keys_post(api_config, private_key, Some(mechanisms), None)
+                    },
+                    login::UserMode::Administrator,
+                )
+                .await?
+        }
+    });
 
     Ok((id, key_class, parsed.raw_id))
 }
@@ -404,7 +415,7 @@ pub fn generate_key_from_template(
         }
     }
 
-    let id = login_ctx.try_(
+    let id = get_tokio_rt().block_on(login_ctx.try_(
         |api_config| {
             default_api::keys_generate_post(
                 api_config,
@@ -418,6 +429,6 @@ pub fn generate_key_from_template(
             )
         },
         login::UserMode::Administrator,
-    )?;
+    ))?;
     Ok((id, parsed.raw_id))
 }
