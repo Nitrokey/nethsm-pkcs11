@@ -13,6 +13,7 @@ use openapi::apis::default_api::{self};
 use crate::{
     backend::{self, login::UserMode, ApiError, Error},
     config::device::Slot,
+    utils::get_tokio_rt,
 };
 
 use super::{
@@ -432,10 +433,10 @@ impl Session {
             ));
         }
 
-        let keys = self.login_ctx.try_(
+        let keys = get_tokio_rt().block_on(self.login_ctx.try_(
             |api_config| default_api::keys_get(api_config, None),
             super::login::UserMode::OperatorOrAdministrator,
-        )?;
+        ))?;
 
         let mut handles = Vec::new();
 
@@ -470,10 +471,10 @@ impl Session {
             ));
         }
 
-        let cert_data = self.login_ctx.try_(
+        let cert_data = get_tokio_rt().block_on(self.login_ctx.try_(
             |api_config| default_api::keys_key_id_cert_get(api_config, key_id),
             super::login::UserMode::OperatorOrAdministrator,
-        )?;
+        ))?;
 
         let object = db::object::from_cert_data(cert_data, key_id)?;
 
@@ -497,10 +498,10 @@ impl Session {
             ));
         }
 
-        let key_data = match self.login_ctx.try_(
+        let key_data = match get_tokio_rt().block_on(self.login_ctx.try_(
             |api_config| default_api::keys_key_id_get(api_config, key_id),
             super::login::UserMode::OperatorOrAdministrator,
-        ) {
+        )) {
             Ok(key_data) => key_data,
             Err(err) => {
                 debug!("Failed to fetch key {}: {:?}", key_id, err);
@@ -566,14 +567,16 @@ impl Session {
         debug!("Deleting key {} {:?}", key.id, key.kind);
 
         match key.kind {
-            ObjectKind::Certificate => self.login_ctx.try_(
+            ObjectKind::Certificate => get_tokio_rt().block_on(self.login_ctx.try_(
                 |api_config| default_api::keys_key_id_cert_delete(api_config, &key.id),
                 crate::backend::login::UserMode::Administrator,
-            )?,
-            ObjectKind::SecretKey | ObjectKind::PrivateKey => self.login_ctx.try_(
-                |api_config| default_api::keys_key_id_delete(api_config, &key.id),
-                crate::backend::login::UserMode::Administrator,
-            )?,
+            ))?,
+            ObjectKind::SecretKey | ObjectKind::PrivateKey => {
+                get_tokio_rt().block_on(self.login_ctx.try_(
+                    |api_config| default_api::keys_key_id_delete(api_config, &key.id),
+                    crate::backend::login::UserMode::Administrator,
+                ))?
+            }
             _ => {
                 // we don't support deleting other objects
             }

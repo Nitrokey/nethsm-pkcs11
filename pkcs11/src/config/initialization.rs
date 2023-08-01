@@ -45,7 +45,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         .ok_or(InitializationError::NoUser(slot.label.clone()))?;
 
     for instance in slot.instances.iter() {
-        let mut reqwest_builder = reqwest::blocking::Client::builder()
+        let mut reqwest_builder = reqwest::Client::builder()
             .danger_accept_invalid_certs(instance.danger_insecure_cert);
 
         if let Some(cert_str) = instance.certificate.as_ref() {

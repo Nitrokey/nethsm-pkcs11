@@ -12,7 +12,9 @@ use crate::{
     },
     data::DEVICE,
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    lock_mutex, lock_session, padded_str, version_struct_from_str,
+    lock_mutex, lock_session, padded_str,
+    utils::get_tokio_rt,
+    version_struct_from_str,
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -84,10 +86,10 @@ pub extern "C" fn C_GetSlotInfo(
 
     let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
 
-    let result = login_ctx.try_(
+    let result = get_tokio_rt().block_on(login_ctx.try_(
         |conf| default_api::info_get(conf),
         crate::backend::login::UserMode::Guest,
-    );
+    ));
 
     // fetch info from the device
 
@@ -99,10 +101,10 @@ pub extern "C" fn C_GetSlotInfo(
         }
     };
 
-    let result = login_ctx.try_(
+    let result = get_tokio_rt().block_on(login_ctx.try_(
         |conf| default_api::health_state_get(conf),
         crate::backend::login::UserMode::Guest,
-    );
+    ));
 
     // fetch the sysem state
 
@@ -152,10 +154,10 @@ pub extern "C" fn C_GetTokenInfo(
 
     let mut login_ctx = LoginCtx::new(None, slot.administrator.clone(), slot.instances.clone());
 
-    let result = login_ctx.try_(
+    let result = get_tokio_rt().block_on(login_ctx.try_(
         |conf| default_api::info_get(conf),
         crate::backend::login::UserMode::Guest,
-    );
+    ));
 
     // fetch info from the device
 
@@ -174,10 +176,10 @@ pub extern "C" fn C_GetTokenInfo(
     // Try to fech system info
 
     if login_ctx.can_run_mode(crate::backend::login::UserMode::Administrator) {
-        match login_ctx.try_(
+        match get_tokio_rt().block_on(login_ctx.try_(
             |conf| default_api::system_info_get(conf),
             UserMode::Administrator,
-        ) {
+        )) {
             Err(e) => {
                 warn!("Error getting system info: {:?}", e);
             }

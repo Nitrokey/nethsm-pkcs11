@@ -11,7 +11,7 @@
 use reqwest::{self, header::HeaderValue};
 
 use super::{configuration, Error};
-use crate::{apis::ResponseContent, models::PrivateKey};
+use crate::apis::ResponseContent;
 
 /// struct for typed errors of method [`config_backup_passphrase_put`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -621,7 +621,7 @@ pub enum UsersUserIdTagsTagPutError {
 }
 
 /// Update the backup passphrase.
-pub fn config_backup_passphrase_put(
+pub async fn config_backup_passphrase_put(
     configuration: &configuration::Configuration,
     backup_passphrase_config: crate::models::BackupPassphraseConfig,
 ) -> Result<(), Error<ConfigBackupPassphrasePutError>> {
@@ -649,10 +649,10 @@ pub fn config_backup_passphrase_put(
     local_var_req_builder = local_var_req_builder.json(&backup_passphrase_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -669,7 +669,7 @@ pub fn config_backup_passphrase_put(
 }
 
 /// Get logging configuration. Protocol is always syslog over UDP. Configurable are IP adress and port, log level.
-pub fn config_logging_get(
+pub async fn config_logging_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::LoggingConfig, Error<ConfigLoggingGetError>> {
     let local_var_configuration = configuration;
@@ -692,10 +692,10 @@ pub fn config_logging_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -712,7 +712,7 @@ pub fn config_logging_get(
 }
 
 /// Configure log level and destination.
-pub fn config_logging_put(
+pub async fn config_logging_put(
     configuration: &configuration::Configuration,
     logging_config: crate::models::LoggingConfig,
 ) -> Result<(), Error<ConfigLoggingPutError>> {
@@ -737,10 +737,10 @@ pub fn config_logging_put(
     local_var_req_builder = local_var_req_builder.json(&logging_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -757,7 +757,7 @@ pub fn config_logging_put(
 }
 
 /// Get network configuration. IP address, netmask, router.
-pub fn config_network_get(
+pub async fn config_network_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::NetworkConfig, Error<ConfigNetworkGetError>> {
     let local_var_configuration = configuration;
@@ -780,10 +780,10 @@ pub fn config_network_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -800,7 +800,7 @@ pub fn config_network_get(
 }
 
 /// Configure network.
-pub fn config_network_put(
+pub async fn config_network_put(
     configuration: &configuration::Configuration,
     network_config: crate::models::NetworkConfig,
 ) -> Result<(), Error<ConfigNetworkPutError>> {
@@ -825,10 +825,10 @@ pub fn config_network_put(
     local_var_req_builder = local_var_req_builder.json(&network_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -845,7 +845,7 @@ pub fn config_network_put(
 }
 
 /// Get system time.
-pub fn config_time_get(
+pub async fn config_time_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::TimeConfig, Error<ConfigTimeGetError>> {
     let local_var_configuration = configuration;
@@ -868,10 +868,10 @@ pub fn config_time_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -888,7 +888,7 @@ pub fn config_time_get(
 }
 
 /// Configure system time.
-pub fn config_time_put(
+pub async fn config_time_put(
     configuration: &configuration::Configuration,
     time_config: crate::models::TimeConfig,
 ) -> Result<(), Error<ConfigTimePutError>> {
@@ -913,10 +913,10 @@ pub fn config_time_put(
     local_var_req_builder = local_var_req_builder.json(&time_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -933,7 +933,7 @@ pub fn config_time_put(
 }
 
 /// Get certificate for NetHSMs https API.
-pub fn config_tls_cert_pem_get(
+pub async fn config_tls_cert_pem_get(
     configuration: &configuration::Configuration,
 ) -> Result<String, Error<ConfigTlsCertPemGetError>> {
     let local_var_configuration = configuration;
@@ -956,10 +956,10 @@ pub fn config_tls_cert_pem_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -976,7 +976,7 @@ pub fn config_tls_cert_pem_get(
 }
 
 /// Set certificate for NetHSMs https API e.g. to replace self-signed intital certificate.
-pub fn config_tls_cert_pem_put(
+pub async fn config_tls_cert_pem_put(
     configuration: &configuration::Configuration,
     body: &str,
 ) -> Result<(), Error<ConfigTlsCertPemPutError>> {
@@ -1001,10 +1001,10 @@ pub fn config_tls_cert_pem_put(
     local_var_req_builder = local_var_req_builder.json(&body);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1021,7 +1021,7 @@ pub fn config_tls_cert_pem_put(
 }
 
 /// Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.
-pub fn config_tls_csr_pem_post(
+pub async fn config_tls_csr_pem_post(
     configuration: &configuration::Configuration,
     distinguished_name: crate::models::DistinguishedName,
 ) -> Result<String, Error<ConfigTlsCsrPemPostError>> {
@@ -1046,10 +1046,10 @@ pub fn config_tls_csr_pem_post(
     local_var_req_builder = local_var_req_builder.json(&distinguished_name);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1066,7 +1066,7 @@ pub fn config_tls_csr_pem_post(
 }
 
 /// Generate a new pair of public and private key for NetHSM's https API.
-pub fn config_tls_generate_post(
+pub async fn config_tls_generate_post(
     configuration: &configuration::Configuration,
     tls_key_generate_request_data: crate::models::TlsKeyGenerateRequestData,
 ) -> Result<(), Error<ConfigTlsGeneratePostError>> {
@@ -1091,10 +1091,10 @@ pub fn config_tls_generate_post(
     local_var_req_builder = local_var_req_builder.json(&tls_key_generate_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1111,7 +1111,7 @@ pub fn config_tls_generate_post(
 }
 
 /// Get public key for NetHSMs https API.
-pub fn config_tls_public_pem_get(
+pub async fn config_tls_public_pem_get(
     configuration: &configuration::Configuration,
 ) -> Result<String, Error<ConfigTlsPublicPemGetError>> {
     let local_var_configuration = configuration;
@@ -1137,10 +1137,10 @@ pub fn config_tls_public_pem_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1157,7 +1157,7 @@ pub fn config_tls_public_pem_get(
 }
 
 /// Read unattended boot configuration: is it on or off?
-pub fn config_unattended_boot_get(
+pub async fn config_unattended_boot_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::UnattendedBootConfig, Error<ConfigUnattendedBootGetError>> {
     let local_var_configuration = configuration;
@@ -1183,10 +1183,10 @@ pub fn config_unattended_boot_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1203,7 +1203,7 @@ pub fn config_unattended_boot_get(
 }
 
 /// Configure unattended boot: switch it on or off (flip the switch).
-pub fn config_unattended_boot_put(
+pub async fn config_unattended_boot_put(
     configuration: &configuration::Configuration,
     unattended_boot_config: crate::models::UnattendedBootConfig,
 ) -> Result<(), Error<ConfigUnattendedBootPutError>> {
@@ -1231,10 +1231,10 @@ pub fn config_unattended_boot_put(
     local_var_req_builder = local_var_req_builder.json(&unattended_boot_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1251,7 +1251,7 @@ pub fn config_unattended_boot_put(
 }
 
 /// Update the unlock passphrase.
-pub fn config_unlock_passphrase_put(
+pub async fn config_unlock_passphrase_put(
     configuration: &configuration::Configuration,
     unlock_passphrase_config: crate::models::UnlockPassphraseConfig,
 ) -> Result<(), Error<ConfigUnlockPassphrasePutError>> {
@@ -1279,10 +1279,10 @@ pub fn config_unlock_passphrase_put(
     local_var_req_builder = local_var_req_builder.json(&unlock_passphrase_config);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1299,7 +1299,7 @@ pub fn config_unlock_passphrase_put(
 }
 
 /// Retrieve wether NetHSM is alive (powered up). This corresponds to the state *Locked* or *Unprovisioned*.
-pub fn health_alive_get(
+pub async fn health_alive_get(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<HealthAliveGetError>> {
     let local_var_configuration = configuration;
@@ -1316,10 +1316,10 @@ pub fn health_alive_get(
     }
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1336,7 +1336,7 @@ pub fn health_alive_get(
 }
 
 /// Retrieve wether NetHSM is alive and ready to take traffic. This corresponds to the state *Operational*.
-pub fn health_ready_get(
+pub async fn health_ready_get(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<HealthReadyGetError>> {
     let local_var_configuration = configuration;
@@ -1353,10 +1353,10 @@ pub fn health_ready_get(
     }
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1373,7 +1373,7 @@ pub fn health_ready_get(
 }
 
 /// Retrieve the state of NetHSM.
-pub fn health_state_get(
+pub async fn health_state_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::HealthStateData, Error<HealthStateGetError>> {
     let local_var_configuration = configuration;
@@ -1390,10 +1390,10 @@ pub fn health_state_get(
     }
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1410,7 +1410,7 @@ pub fn health_state_get(
 }
 
 /// Information about the vendor and product.
-pub fn info_get(
+pub async fn info_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::InfoData, Error<InfoGetError>> {
     let local_var_configuration = configuration;
@@ -1427,10 +1427,10 @@ pub fn info_get(
     }
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1446,7 +1446,7 @@ pub fn info_get(
 }
 
 /// Generate a pair of public and private key and store it in NetHSM. KeyID is optional as a parameter and will be generated by NetHSM if not present.
-pub fn keys_generate_post(
+pub async fn keys_generate_post(
     configuration: &configuration::Configuration,
     key_generate_request_data: crate::models::KeyGenerateRequestData,
 ) -> Result<String, Error<KeysGeneratePostError>> {
@@ -1471,12 +1471,12 @@ pub fn keys_generate_post(
     local_var_req_builder = local_var_req_builder.json(&key_generate_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let response_headers = local_var_resp.headers().clone();
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     let default = HeaderValue::from_static("unknown");
 
@@ -1510,7 +1510,7 @@ pub fn keys_generate_post(
 }
 
 /// Get a list of the identifiers of all keys that are currently stored in NetHSM. Separate requests need to be made to request the individual key data.
-pub fn keys_get(
+pub async fn keys_get(
     configuration: &configuration::Configuration,
     filter: Option<&str>,
 ) -> Result<Vec<crate::models::KeyItem>, Error<KeysGetError>> {
@@ -1538,10 +1538,10 @@ pub fn keys_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1557,7 +1557,7 @@ pub fn keys_get(
 }
 
 /// Delete the certificate.
-pub fn keys_key_id_cert_delete(
+pub async fn keys_key_id_cert_delete(
     configuration: &configuration::Configuration,
     key_id: &str,
 ) -> Result<(), Error<KeysKeyIdCertDeleteError>> {
@@ -1585,17 +1585,17 @@ pub fn keys_key_id_cert_delete(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
     } else {
         let local_var_entity: Option<KeysKeyIdCertDeleteError> =
             serde_json::from_str(&local_var_content).ok();
-        let local_var_error: ResponseContent<KeysKeyIdCertDeleteError> = ResponseContent {
+        let local_var_error = ResponseContent {
             status: local_var_status,
             content: local_var_content,
             entity: local_var_entity,
@@ -1605,7 +1605,7 @@ pub fn keys_key_id_cert_delete(
 }
 
 /// Retrieve stored certificate. The content-type header will display the media type of the stored data.
-pub fn keys_key_id_cert_get(
+pub async fn keys_key_id_cert_get(
     configuration: &configuration::Configuration,
     key_id: &str,
 ) -> Result<String, Error<KeysKeyIdCertGetError>> {
@@ -1621,6 +1621,13 @@ pub fn keys_key_id_cert_get(
     let mut local_var_req_builder =
         local_var_client.request(reqwest::Method::GET, local_var_uri_str.as_str());
 
+    // Ask for a pem file
+
+    local_var_req_builder = local_var_req_builder.header(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("application/x-pem-file"),
+    );
+
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
         local_var_req_builder =
             local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
@@ -1632,16 +1639,11 @@ pub fn keys_key_id_cert_get(
         );
     };
 
-    local_var_req_builder = local_var_req_builder.header(
-        reqwest::header::ACCEPT,
-        reqwest::header::HeaderValue::from_static("application/x-pem-file"),
-    );
-
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(local_var_content)
@@ -1658,7 +1660,7 @@ pub fn keys_key_id_cert_get(
 }
 
 /// Store a certificate. Maximum size 1MB. The content-type header provides the media type. Only application/json, application/x-pem-file, application/x-x509-ca-cert, application/octet-stream, text/plain and application/pgp-keys is allowed.
-pub fn keys_key_id_cert_put(
+pub async fn keys_key_id_cert_put(
     configuration: &configuration::Configuration,
     key_id: &str,
     body: &str,
@@ -1685,6 +1687,9 @@ pub fn keys_key_id_cert_put(
             local_var_auth_conf.1.to_owned(),
         );
     };
+
+    // set the cert file as the body
+
     local_var_req_builder = local_var_req_builder.body(body.to_owned());
 
     local_var_req_builder = local_var_req_builder.header(
@@ -1693,10 +1698,10 @@ pub fn keys_key_id_cert_put(
     );
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1713,7 +1718,7 @@ pub fn keys_key_id_cert_put(
 }
 
 /// Retrieve a certificate signing request in PEM format.
-pub fn keys_key_id_csr_pem_post(
+pub async fn keys_key_id_csr_pem_post(
     configuration: &configuration::Configuration,
     key_id: &str,
     distinguished_name: crate::models::DistinguishedName,
@@ -1743,10 +1748,10 @@ pub fn keys_key_id_csr_pem_post(
     local_var_req_builder = local_var_req_builder.json(&distinguished_name);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1763,7 +1768,7 @@ pub fn keys_key_id_csr_pem_post(
 }
 
 /// Decrypt an encrypted message with the secret key.
-pub fn keys_key_id_decrypt_post(
+pub async fn keys_key_id_decrypt_post(
     configuration: &configuration::Configuration,
     key_id: &str,
     decrypt_request_data: crate::models::DecryptRequestData,
@@ -1793,10 +1798,10 @@ pub fn keys_key_id_decrypt_post(
     local_var_req_builder = local_var_req_builder.json(&decrypt_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1813,7 +1818,7 @@ pub fn keys_key_id_decrypt_post(
 }
 
 /// Delete a pair of public and private key.
-pub fn keys_key_id_delete(
+pub async fn keys_key_id_delete(
     configuration: &configuration::Configuration,
     key_id: &str,
 ) -> Result<(), Error<KeysKeyIdDeleteError>> {
@@ -1841,10 +1846,10 @@ pub fn keys_key_id_delete(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -1861,7 +1866,7 @@ pub fn keys_key_id_delete(
 }
 
 /// Encrypt a message with the secret key.
-pub fn keys_key_id_encrypt_post(
+pub async fn keys_key_id_encrypt_post(
     configuration: &configuration::Configuration,
     key_id: &str,
     encrypt_request_data: crate::models::EncryptRequestData,
@@ -1891,10 +1896,10 @@ pub fn keys_key_id_encrypt_post(
     local_var_req_builder = local_var_req_builder.json(&encrypt_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1911,7 +1916,7 @@ pub fn keys_key_id_encrypt_post(
 }
 
 /// Retrieve the public key.
-pub fn keys_key_id_get(
+pub async fn keys_key_id_get(
     configuration: &configuration::Configuration,
     key_id: &str,
 ) -> Result<crate::models::PublicKey, Error<KeysKeyIdGetError>> {
@@ -1939,10 +1944,10 @@ pub fn keys_key_id_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -1959,7 +1964,7 @@ pub fn keys_key_id_get(
 }
 
 /// Retrieve public key in PEM format.
-pub fn keys_key_id_public_pem_get(
+pub async fn keys_key_id_public_pem_get(
     configuration: &configuration::Configuration,
     key_id: &str,
 ) -> Result<String, Error<KeysKeyIdPublicPemGetError>> {
@@ -1987,10 +1992,10 @@ pub fn keys_key_id_public_pem_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2007,10 +2012,10 @@ pub fn keys_key_id_public_pem_get(
 }
 
 /// Import a private key into NetHSM and store it under the *KeyID* path. The public key will be automatically derived.
-pub fn keys_key_id_put(
+pub async fn keys_key_id_put(
     configuration: &configuration::Configuration,
     key_id: &str,
-    body: PrivateKey,
+    body: crate::models::PrivateKey,
     mechanisms: Option<Vec<crate::models::KeyMechanism>>,
     tags: Option<Vec<String>>,
 ) -> Result<(), Error<KeysKeyIdPutError>> {
@@ -2077,10 +2082,10 @@ pub fn keys_key_id_put(
     local_var_req_builder = local_var_req_builder.json(&body);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2097,7 +2102,7 @@ pub fn keys_key_id_put(
 }
 
 /// Delete a tag from the authorized set
-pub fn keys_key_id_restrictions_tags_tag_delete(
+pub async fn keys_key_id_restrictions_tags_tag_delete(
     configuration: &configuration::Configuration,
     tag: &str,
     key_id: &str,
@@ -2127,10 +2132,10 @@ pub fn keys_key_id_restrictions_tags_tag_delete(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2147,7 +2152,7 @@ pub fn keys_key_id_restrictions_tags_tag_delete(
 }
 
 /// Add a tag to the authorized set
-pub fn keys_key_id_restrictions_tags_tag_put(
+pub async fn keys_key_id_restrictions_tags_tag_put(
     configuration: &configuration::Configuration,
     tag: &str,
     key_id: &str,
@@ -2177,10 +2182,10 @@ pub fn keys_key_id_restrictions_tags_tag_put(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2197,7 +2202,7 @@ pub fn keys_key_id_restrictions_tags_tag_put(
 }
 
 /// Sign a message with the secret key.
-pub fn keys_key_id_sign_post(
+pub async fn keys_key_id_sign_post(
     configuration: &configuration::Configuration,
     key_id: &str,
     sign_request_data: crate::models::SignRequestData,
@@ -2227,10 +2232,10 @@ pub fn keys_key_id_sign_post(
     local_var_req_builder = local_var_req_builder.json(&sign_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2247,9 +2252,9 @@ pub fn keys_key_id_sign_post(
 }
 
 /// Import a private key into NetHSM and let NetHSM generate a KeyID. The public key will be automatically derived.
-pub fn keys_post(
+pub async fn keys_post(
     configuration: &configuration::Configuration,
-    body: PrivateKey,
+    body: crate::models::PrivateKey,
     mechanisms: Option<Vec<crate::models::KeyMechanism>>,
     tags: Option<Vec<String>>,
 ) -> Result<String, Error<KeysPostError>> {
@@ -2312,11 +2317,12 @@ pub fn keys_post(
     local_var_req_builder = local_var_req_builder.json(&body);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let response_headers = local_var_resp.headers().clone();
+
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     let default = HeaderValue::from_static("unknown");
 
@@ -2349,7 +2355,9 @@ pub fn keys_post(
 }
 
 /// Brings an *Operational* NetHSM into *Locked* state.
-pub fn lock_post(configuration: &configuration::Configuration) -> Result<(), Error<LockPostError>> {
+pub async fn lock_post(
+    configuration: &configuration::Configuration,
+) -> Result<(), Error<LockPostError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -2370,10 +2378,10 @@ pub fn lock_post(configuration: &configuration::Configuration) -> Result<(), Err
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2389,7 +2397,7 @@ pub fn lock_post(configuration: &configuration::Configuration) -> Result<(), Err
 }
 
 /// Get metrics. Precondition: NetHSM is *Operational* and a **R-Metrics** can be authenticated.
-pub fn metrics_get(
+pub async fn metrics_get(
     configuration: &configuration::Configuration,
 ) -> Result<serde_json::Value, Error<MetricsGetError>> {
     let local_var_configuration = configuration;
@@ -2412,10 +2420,10 @@ pub fn metrics_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2432,7 +2440,7 @@ pub fn metrics_get(
 }
 
 /// Initial provisioning, only available in *Unprovisioned* state.
-pub fn provision_post(
+pub async fn provision_post(
     configuration: &configuration::Configuration,
     provision_request_data: crate::models::ProvisionRequestData,
 ) -> Result<(), Error<ProvisionPostError>> {
@@ -2451,10 +2459,10 @@ pub fn provision_post(
     local_var_req_builder = local_var_req_builder.json(&provision_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2471,7 +2479,7 @@ pub fn provision_post(
 }
 
 /// Retrieve cryptographically strong random bytes from NetHSM. Precondition: NetHSM is *Operational* and a **R-Operator** can be authenticated.
-pub fn random_post(
+pub async fn random_post(
     configuration: &configuration::Configuration,
     random_request_data: crate::models::RandomRequestData,
 ) -> Result<crate::models::RandomData, Error<RandomPostError>> {
@@ -2496,10 +2504,10 @@ pub fn random_post(
     local_var_req_builder = local_var_req_builder.json(&random_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2516,7 +2524,7 @@ pub fn random_post(
 }
 
 /// Back up the key store to a backup file.
-pub fn system_backup_post(
+pub async fn system_backup_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemBackupPostError>> {
     let local_var_configuration = configuration;
@@ -2539,10 +2547,10 @@ pub fn system_backup_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2559,7 +2567,7 @@ pub fn system_backup_post(
 }
 
 /// Cancel update of NetHSM software.
-pub fn system_cancel_update_post(
+pub async fn system_cancel_update_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemCancelUpdatePostError>> {
     let local_var_configuration = configuration;
@@ -2582,10 +2590,10 @@ pub fn system_cancel_update_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2602,7 +2610,7 @@ pub fn system_cancel_update_post(
 }
 
 /// Commit update of NetHSM software.
-pub fn system_commit_update_post(
+pub async fn system_commit_update_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemCommitUpdatePostError>> {
     let local_var_configuration = configuration;
@@ -2625,10 +2633,10 @@ pub fn system_commit_update_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2645,7 +2653,7 @@ pub fn system_commit_update_post(
 }
 
 /// Reset NetHSM to factory settings.
-pub fn system_factory_reset_post(
+pub async fn system_factory_reset_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemFactoryResetPostError>> {
     let local_var_configuration = configuration;
@@ -2668,10 +2676,10 @@ pub fn system_factory_reset_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2688,7 +2696,7 @@ pub fn system_factory_reset_post(
 }
 
 /// Get detailed system information, including firmware, system, and hardware version.
-pub fn system_info_get(
+pub async fn system_info_get(
     configuration: &configuration::Configuration,
 ) -> Result<crate::models::SystemInfo, Error<SystemInfoGetError>> {
     let local_var_configuration = configuration;
@@ -2711,10 +2719,10 @@ pub fn system_info_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2731,7 +2739,7 @@ pub fn system_info_get(
 }
 
 /// Reboot NetHSM.
-pub fn system_reboot_post(
+pub async fn system_reboot_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemRebootPostError>> {
     let local_var_configuration = configuration;
@@ -2754,10 +2762,10 @@ pub fn system_reboot_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2774,7 +2782,7 @@ pub fn system_reboot_post(
 }
 
 /// Restore the key store and user store from a backup file. If NetHSM is *Unprovisioned*, then the configuration is restored.
-pub fn system_restore_post(
+pub async fn system_restore_post(
     configuration: &configuration::Configuration,
     backup_passphrase: &str,
     body: &str,
@@ -2801,10 +2809,10 @@ pub fn system_restore_post(
     local_var_req_builder = local_var_req_builder.json(&body);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2821,7 +2829,7 @@ pub fn system_restore_post(
 }
 
 /// Shut down NetHSM.
-pub fn system_shutdown_post(
+pub async fn system_shutdown_post(
     configuration: &configuration::Configuration,
 ) -> Result<(), Error<SystemShutdownPostError>> {
     let local_var_configuration = configuration;
@@ -2844,10 +2852,10 @@ pub fn system_shutdown_post(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2864,7 +2872,7 @@ pub fn system_shutdown_post(
 }
 
 /// Update NetHSM software.
-pub fn system_update_post(
+pub async fn system_update_post(
     configuration: &configuration::Configuration,
     body: &str,
 ) -> Result<crate::models::SystemUpdateData, Error<SystemUpdatePostError>> {
@@ -2889,10 +2897,10 @@ pub fn system_update_post(
     local_var_req_builder = local_var_req_builder.json(&body);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2909,7 +2917,7 @@ pub fn system_update_post(
 }
 
 /// Brings a *Locked* NetHSM into *Operational* state.
-pub fn unlock_post(
+pub async fn unlock_post(
     configuration: &configuration::Configuration,
     unlock_request_data: crate::models::UnlockRequestData,
 ) -> Result<(), Error<UnlockPostError>> {
@@ -2928,10 +2936,10 @@ pub fn unlock_post(
     local_var_req_builder = local_var_req_builder.json(&unlock_request_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -2948,7 +2956,7 @@ pub fn unlock_post(
 }
 
 /// Get a list of all user ids that have accounts on NetHSM.
-pub fn users_get(
+pub async fn users_get(
     configuration: &configuration::Configuration,
 ) -> Result<Vec<crate::models::UserItem>, Error<UsersGetError>> {
     let local_var_configuration = configuration;
@@ -2971,10 +2979,10 @@ pub fn users_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -2990,7 +2998,7 @@ pub fn users_get(
 }
 
 /// Create a new user on NetHSM. The user-ID is generated by NetHSM.
-pub fn users_post(
+pub async fn users_post(
     configuration: &configuration::Configuration,
     user_post_data: crate::models::UserPostData,
 ) -> Result<(), Error<UsersPostError>> {
@@ -3015,10 +3023,10 @@ pub fn users_post(
     local_var_req_builder = local_var_req_builder.json(&user_post_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -3035,7 +3043,7 @@ pub fn users_post(
 }
 
 /// Delete a user from keyfender.
-pub fn users_user_id_delete(
+pub async fn users_user_id_delete(
     configuration: &configuration::Configuration,
     user_id: &str,
 ) -> Result<(), Error<UsersUserIdDeleteError>> {
@@ -3063,10 +3071,10 @@ pub fn users_user_id_delete(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -3083,7 +3091,7 @@ pub fn users_user_id_delete(
 }
 
 /// Get user info: name and role.
-pub fn users_user_id_get(
+pub async fn users_user_id_get(
     configuration: &configuration::Configuration,
     user_id: &str,
 ) -> Result<crate::models::UserData, Error<UsersUserIdGetError>> {
@@ -3111,10 +3119,10 @@ pub fn users_user_id_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -3131,7 +3139,7 @@ pub fn users_user_id_get(
 }
 
 /// Update the passphrase.
-pub fn users_user_id_passphrase_post(
+pub async fn users_user_id_passphrase_post(
     configuration: &configuration::Configuration,
     user_id: &str,
     user_passphrase_post_data: crate::models::UserPassphrasePostData,
@@ -3161,10 +3169,10 @@ pub fn users_user_id_passphrase_post(
     local_var_req_builder = local_var_req_builder.json(&user_passphrase_post_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -3181,7 +3189,7 @@ pub fn users_user_id_passphrase_post(
 }
 
 /// Create a user on keyfender.
-pub fn users_user_id_put(
+pub async fn users_user_id_put(
     configuration: &configuration::Configuration,
     user_id: &str,
     user_post_data: crate::models::UserPostData,
@@ -3211,10 +3219,10 @@ pub fn users_user_id_put(
     local_var_req_builder = local_var_req_builder.json(&user_post_data);
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -3231,7 +3239,7 @@ pub fn users_user_id_put(
 }
 
 /// Get the list of tags set to an Operator user.
-pub fn users_user_id_tags_get(
+pub async fn users_user_id_tags_get(
     configuration: &configuration::Configuration,
     user_id: &str,
 ) -> Result<Vec<String>, Error<UsersUserIdTagsGetError>> {
@@ -3259,10 +3267,10 @@ pub fn users_user_id_tags_get(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         serde_json::from_str(&local_var_content).map_err(Error::from)
@@ -3279,7 +3287,7 @@ pub fn users_user_id_tags_get(
 }
 
 /// Delete a tag from the Operator user
-pub fn users_user_id_tags_tag_delete(
+pub async fn users_user_id_tags_tag_delete(
     configuration: &configuration::Configuration,
     user_id: &str,
     tag: &str,
@@ -3309,10 +3317,10 @@ pub fn users_user_id_tags_tag_delete(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())
@@ -3329,7 +3337,7 @@ pub fn users_user_id_tags_tag_delete(
 }
 
 /// Add a tag to the Operator user.
-pub fn users_user_id_tags_tag_put(
+pub async fn users_user_id_tags_tag_put(
     configuration: &configuration::Configuration,
     user_id: &str,
     tag: &str,
@@ -3359,10 +3367,10 @@ pub fn users_user_id_tags_tag_put(
     };
 
     let local_var_req = local_var_req_builder.build()?;
-    let mut local_var_resp = local_var_client.execute(local_var_req)?;
+    let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
-    let local_var_content = local_var_resp.text()?;
+    let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
         Ok(())

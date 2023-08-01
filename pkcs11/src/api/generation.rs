@@ -9,6 +9,7 @@ use crate::{
         mechanism::{CkRawMechanism, Mechanism},
     },
     lock_mutex, lock_session,
+    utils::get_tokio_rt,
 };
 
 pub extern "C" fn C_GenerateKey(
@@ -234,7 +235,7 @@ pub extern "C" fn C_GenerateRandom(
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
 
-    let data = match session.login_ctx.try_(
+    let data = match get_tokio_rt().block_on(session.login_ctx.try_(
         |api_config| {
             default_api::random_post(
                 api_config,
@@ -244,7 +245,7 @@ pub extern "C" fn C_GenerateRandom(
             )
         },
         crate::backend::login::UserMode::Operator,
-    ) {
+    )) {
         Ok(data) => data,
         Err(e) => {
             error!("C_GenerateRandom() failed to generate random data: {:?}", e);

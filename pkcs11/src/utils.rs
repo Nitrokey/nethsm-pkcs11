@@ -1,3 +1,11 @@
+
+pub fn get_tokio_rt() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+}
+
 // lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
 #[macro_export]
 macro_rules! lock_mutex {
