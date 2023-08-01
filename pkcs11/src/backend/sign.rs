@@ -21,12 +21,10 @@ pub struct SignCtx {
 }
 
 impl SignCtx {
-    pub fn init(mechanism: Mechanism, key: Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
-        let login_ctx = login_ctx.clone();
-
+    pub fn init(mechanism: Mechanism, key: Object, login_ctx: LoginCtx) -> Result<Self, Error> {
         trace!("key_type: {:?}", key.kind);
 
-        if !login_ctx.can_run_mode(login::UserMode::Operator) {
+        if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
             return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
 
@@ -72,19 +70,23 @@ impl SignCtx {
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
 
-        let signature = get_tokio_rt().block_on(self.login_ctx.try_(
-            |conf| {
-                default_api::keys_key_id_sign_post(
-                    conf,
-                    &self.key.id.clone(),
-                    openapi::models::SignRequestData {
-                        mode,
-                        message: b64_message,
+        let signature = get_tokio_rt().block_on(async {
+            self.login_ctx
+                .try_(
+                    |conf| {
+                        default_api::keys_key_id_sign_post(
+                            conf,
+                            self.key.id.clone(),
+                            openapi::models::SignRequestData {
+                                mode,
+                                message: b64_message,
+                            },
+                        )
                     },
+                    login::UserMode::Operator,
                 )
-            },
-            login::UserMode::Operator,
-        ))?;
+                .await
+        })?;
 
         Ok(general_purpose::STANDARD.decode(signature.signature)?)
     }

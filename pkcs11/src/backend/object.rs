@@ -89,7 +89,12 @@ impl EnumCtx {
     ) -> Result<Self, Error> {
         let key_req = find_key_id(template)?;
 
-        let handles = session.find_key(key_req)?;
+        let handles = tokio::runtime::Builder::new_current_thread()
+            .worker_threads(4)
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(session.find_key(key_req))?;
         Ok(EnumCtx::new(handles))
     }
 

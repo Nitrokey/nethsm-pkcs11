@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use log::trace;
 use reqwest::Certificate;
@@ -46,7 +46,8 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
 
     for instance in slot.instances.iter() {
         let mut reqwest_builder = reqwest::Client::builder()
-            .danger_accept_invalid_certs(instance.danger_insecure_cert);
+            .danger_accept_invalid_certs(instance.danger_insecure_cert)
+            .pool_max_idle_per_host(20);
 
         if let Some(cert_str) = instance.certificate.as_ref() {
             let cert = Certificate::from_pem(cert_str.trim().as_bytes())
@@ -85,6 +86,6 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         instances,
         administrator: slot.administrator.clone(),
         operator: slot.operator.clone(),
-        db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
+        db: Arc::new(tokio::sync::Mutex::new(crate::backend::db::Db::new())),
     })
 }

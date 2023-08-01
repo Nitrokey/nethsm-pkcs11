@@ -87,7 +87,7 @@ pub extern "C" fn C_GetSlotInfo(
     let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
 
     let result = get_tokio_rt().block_on(login_ctx.try_(
-        |conf| default_api::info_get(conf),
+        |conf| async move { default_api::info_get(&conf).await },
         crate::backend::login::UserMode::Guest,
     ));
 
@@ -102,7 +102,7 @@ pub extern "C" fn C_GetSlotInfo(
     };
 
     let result = get_tokio_rt().block_on(login_ctx.try_(
-        |conf| default_api::health_state_get(conf),
+        |conf| async move { default_api::health_state_get(&conf).await },
         crate::backend::login::UserMode::Guest,
     ));
 
@@ -155,7 +155,7 @@ pub extern "C" fn C_GetTokenInfo(
     let mut login_ctx = LoginCtx::new(None, slot.administrator.clone(), slot.instances.clone());
 
     let result = get_tokio_rt().block_on(login_ctx.try_(
-        |conf| default_api::info_get(conf),
+        |conf| async move { default_api::info_get(&conf).await },
         crate::backend::login::UserMode::Guest,
     ));
 
@@ -177,7 +177,7 @@ pub extern "C" fn C_GetTokenInfo(
 
     if login_ctx.can_run_mode(crate::backend::login::UserMode::Administrator) {
         match get_tokio_rt().block_on(login_ctx.try_(
-            |conf| default_api::system_info_get(conf),
+            |conf| async move { default_api::system_info_get(&conf).await },
             UserMode::Administrator,
         )) {
             Err(e) => {

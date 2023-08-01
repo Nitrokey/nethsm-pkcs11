@@ -21,10 +21,8 @@ pub struct DecryptCtx {
 }
 
 impl DecryptCtx {
-    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
-        let login_ctx = login_ctx.clone();
-
-        if !login_ctx.can_run_mode(login::UserMode::Operator) {
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: LoginCtx) -> Result<Self, Error> {
+        if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
             return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
 
@@ -71,20 +69,27 @@ impl DecryptCtx {
             .iv()
             .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
 
-        let output = get_tokio_rt().block_on(self.login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_decrypt_post(
-                    api_config,
-                    &self.key_id,
-                    openapi::models::DecryptRequestData {
-                        mode,
-                        encrypted: b64_message,
-                        iv,
+        let key_id = self.key_id.as_str();
+
+        let output = get_tokio_rt().block_on(async {
+            self.login_ctx
+                .try_(
+                    |api_config| async move {
+                        default_api::keys_key_id_decrypt_post(
+                            &api_config,
+                            key_id,
+                            openapi::models::DecryptRequestData {
+                                mode,
+                                encrypted: b64_message,
+                                iv,
+                            },
+                        )
+                        .await
                     },
+                    login::UserMode::Operator,
                 )
-            },
-            login::UserMode::Operator,
-        ))?;
+                .await
+        })?;
 
         Ok(general_purpose::STANDARD.decode(output.decrypted)?)
     }
