@@ -64,24 +64,27 @@ impl SignCtx {
         self.data.extend_from_slice(data);
     }
 
-    pub fn sign_final(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn sign_final(&self) -> Result<Vec<u8>, Error> {
         let b64_message = general_purpose::STANDARD.encode(self.data.as_slice());
 
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
 
+        let mut login_ctx = self.login_ctx.clone();
+
         let signature = get_tokio_rt().block_on(async {
-            self.login_ctx
+            login_ctx
                 .try_(
-                    |conf| {
+                    |conf| async move {
                         default_api::keys_key_id_sign_post(
-                            conf,
-                            self.key.id.clone(),
+                            &conf,
+                            &self.key.id.clone(),
                             openapi::models::SignRequestData {
                                 mode,
                                 message: b64_message,
                             },
                         )
+                        .await
                     },
                     login::UserMode::Operator,
                 )
