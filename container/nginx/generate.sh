@@ -13,7 +13,7 @@ curl -k -i -w '\n' -u admin:Administrator -X PUT \
   -H 'Content-Type: application/x-pem-file' \
   --data-binary '@_privatekey.pem'
 
-curl -k -i -w '\n' -u admin:Administrator -X PUT \                                                                                                    84.186.205.133  
+curl -k -i -w '\n' -u admin:Administrator -X PUT \
   'https://localhost:8443/api/v1/keys/webserver/cert' \
   -H 'Content-Type: application/x-pem-file' \
   --data-binary '@_certificate.pem'
