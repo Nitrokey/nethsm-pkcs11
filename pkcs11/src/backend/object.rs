@@ -24,7 +24,7 @@ pub struct KeyRequirements {
     pub raw_id: Option<Vec<u8>>,
 }
 
-fn find_key_id(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
+fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
     match template {
         Some(template) => {
             let mut key_id = None;
@@ -87,7 +87,7 @@ impl EnumCtx {
         session: &mut Session,
         template: Option<CkRawAttrTemplate>,
     ) -> Result<Self, Error> {
-        let key_req = find_key_id(template)?;
+        let key_req = parse_key_requirements(template)?;
 
         let handles = tokio::runtime::Builder::new_current_thread()
             .worker_threads(4)

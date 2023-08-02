@@ -2203,8 +2203,8 @@ pub async fn keys_key_id_restrictions_tags_tag_put(
 
 /// Sign a message with the secret key.
 pub async fn keys_key_id_sign_post(
-    configuration: configuration::Configuration,
-    key_id: String,
+    configuration: &configuration::Configuration,
+    key_id: &str,
     sign_request_data: crate::models::SignRequestData,
 ) -> Result<crate::models::SignData, Error<KeysKeyIdSignPostError>> {
     let local_var_configuration = configuration;

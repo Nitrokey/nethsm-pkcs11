@@ -418,7 +418,7 @@ impl Session {
                 Ok(results)
             }
 
-            None => self.fetch_all_keys().await,
+            None => self.fetch_all_keys(requirements.kind).await,
         }?;
 
         if let Some(kind) = requirements.kind {
@@ -428,7 +428,10 @@ impl Session {
         Ok(result.iter().map(|(handle, _)| *handle).collect())
     }
 
-    async fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    async fn fetch_all_keys(
+        &mut self,
+        kind: Option<ObjectKind>,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         {
             let mut db = self.db.lock().await;
 
@@ -467,33 +470,53 @@ impl Session {
         // limit to 15 concurrent requests
         let semaphore: Arc<tokio::sync::Semaphore> = Arc::new(tokio::sync::Semaphore::new(15));
 
-        for key in keys {
-            let key_id = key.key.clone();
-            let cert_id = key.key.clone();
+        // If we want everything or only the keys
+        if matches!(
+            kind,
+            None | Some(ObjectKind::Other)
+                | Some(ObjectKind::PrivateKey)
+                | Some(ObjectKind::PublicKey)
+                | Some(ObjectKind::SecretKey)
+        ) {
+            for key in &keys {
+                let key_id = key.key.clone();
 
-            let login_ctx = self.login_ctx.clone();
-            let db = self.db.clone();
-            let semaphore_clone = semaphore.clone();
+                let login_ctx = self.login_ctx.clone();
+                let db = self.db.clone();
+                let semaphore_permit = semaphore.clone().acquire_owned().await.unwrap();
 
-            set.spawn(async move {
-                let _permit = semaphore_clone.acquire().await.unwrap();
-                fetch_key(&key_id, None, login_ctx, db).await
-            });
+                set.spawn(async move {
+                    let res = fetch_key(&key_id, None, login_ctx, db).await;
 
-            let login_ctx = self.login_ctx.clone();
-            let db = self.db.clone();
-            let semaphore_clone = semaphore.clone();
+                    drop(semaphore_permit);
 
-            set.spawn(async move {
-                let _permit = semaphore_clone.acquire().await.unwrap();
-                match fetch_certificate(&cert_id, None, login_ctx, db).await {
-                    Ok(vec) => Ok(vec),
-                    Err(err) => {
-                        debug!("Failed to fetch certificate: {:?}", err);
-                        Ok(Vec::new())
-                    }
-                }
-            });
+                    res
+                });
+            }
+        }
+
+        // If we want everything or only the certificates
+        if matches!(kind, None | Some(ObjectKind::Certificate)) {
+            for key in keys {
+                let cert_id = key.key.clone();
+                let login_ctx = self.login_ctx.clone();
+                let db = self.db.clone();
+
+                let semaphore_permit = semaphore.clone().acquire_owned().await.unwrap();
+
+                set.spawn(async move {
+                    let res = match fetch_certificate(&cert_id, None, login_ctx, db).await {
+                        Ok(vec) => Ok(vec),
+                        Err(err) => {
+                            debug!("Failed to fetch certificate: {:?}", err);
+                            Ok(Vec::new())
+                        }
+                    };
+                    drop(semaphore_permit);
+
+                    res
+                });
+            }
         }
 
         while let Some(res) = set.join_next().await {
