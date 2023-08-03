@@ -252,20 +252,22 @@ pub async fn create_key_from_template(
             (KeyType::Rsa, key)
         }
         CKK_EC => {
-            let b64_private = general_purpose::STANDARD.encode(
-                parsed
-                    .value
-                    .as_ref()
-                    .ok_or(Error::MissingAttribute(CKA_VALUE))?
-                    .as_slice(),
-            );
-
             let ec_type = key_type_from_params(
                 &parsed
                     .ec_params
                     .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?,
             )
             .ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
+
+            let size = key_size(&ec_type).ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
+            let mut value = parsed.value.ok_or(Error::MissingAttribute(CKA_VALUE))?;
+
+            // add padding
+            while value.len() < size {
+                value.insert(0, 0);
+            }
+
+            let b64_private = general_purpose::STANDARD.encode(value.as_slice());
 
             let key = Box::new(KeyPrivateData {
                 data: Some(b64_private),
@@ -383,6 +385,19 @@ pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
         KeyType::Curve25519 => (*KEYTYPE_CURVE25519).clone(),
         _ => return None,
     })
+}
+
+const fn key_size(t: &KeyType) -> Option<usize> {
+    let size = match t {
+        KeyType::EcP224 => 224,
+        KeyType::EcP256 => 256,
+        KeyType::EcP384 => 384,
+        KeyType::EcP521 => 521,
+        KeyType::Curve25519 => 255,
+        _ => return None,
+    };
+
+    Some(size / 8)
 }
 
 fn key_type_from_params(params: &[u8]) -> Option<KeyType> {
