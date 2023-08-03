@@ -410,7 +410,8 @@ pub fn generate_key_from_template(
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
     mut login_ctx: LoginCtx,
-) -> Result<(String, Option<Vec<u8>>), Error> {
+    db: Arc<Mutex<db::Db>>,
+) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 
@@ -431,8 +432,8 @@ pub fn generate_key_from_template(
         }
     }
 
-    let id = get_tokio_rt().block_on(async {
-        login_ctx
+    get_tokio_rt().block_on(async {
+        let id = login_ctx
             .try_(
                 |api_config| async move {
                     default_api::keys_generate_post(
@@ -449,9 +450,10 @@ pub fn generate_key_from_template(
                 },
                 login::UserMode::Administrator,
             )
-            .await
-    })?;
-    Ok((id, parsed.raw_id))
+            .await?;
+
+        fetch_key(&id, parsed.raw_id, login_ctx, db.clone()).await
+    })
 }
 
 // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string

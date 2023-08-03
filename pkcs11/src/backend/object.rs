@@ -1,6 +1,8 @@
 use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
 use log::{debug, trace};
 
+use crate::utils::get_tokio_rt;
+
 use super::{
     db::{
         attr::{CkRawAttr, CkRawAttrTemplate},
@@ -89,12 +91,7 @@ impl EnumCtx {
     ) -> Result<Self, Error> {
         let key_req = parse_key_requirements(template)?;
 
-        let handles = tokio::runtime::Builder::new_current_thread()
-            .worker_threads(4)
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(session.find_key(key_req))?;
+        let handles = get_tokio_rt().block_on(session.find_key(key_req))?;
         Ok(EnumCtx::new(handles))
     }
 

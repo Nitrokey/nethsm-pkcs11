@@ -7,14 +7,16 @@
     {
       "name": "Debug",
       "type": "gdb",
+      "gdbpath": "/usr/bin/rust-gdb",
       "request": "launch",
       "target": "/usr/bin/pkcs11-tool",
       "arguments": "--module target/debug/libnethsm_pkcs11.so -O",
       "env": {
-        "P11NETHSM_CONFIG_FILE": "./p11nethsm.conf"
+        "P11NETHSM_CONFIG_FILE": "./p11nethsm.conf",
+        "RUST_LOG": "trace"
       },
       "cwd": "${workspaceRoot}",
-      "valuesFormatting": "parseText"
+      "valuesFormatting": "prettyPrinters"
     }
   ]
 }
