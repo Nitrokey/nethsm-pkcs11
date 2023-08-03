@@ -167,8 +167,7 @@ impl LoginCtx {
             return false;
         }
 
-        trace!("Checking if user can run mode: {:?}", mode);
-        trace!("Operator: {:?}", self.operator);
+        // trace!("Checking if user can run mode: {:?}", mode);
 
         match mode {
             UserMode::Operator => user_is_valid(&self.operator),
