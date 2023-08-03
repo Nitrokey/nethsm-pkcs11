@@ -390,28 +390,42 @@ impl Session {
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
         let mut result = match requirements.id {
             Some(key_id) => {
-                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = fetch_key(
-                    &key_id,
-                    requirements.raw_id.clone(),
-                    self.login_ctx.clone(),
-                    self.db.clone(),
-                )
-                .await?
-                .iter()
-                .map(|(handle, obj)| (*handle, obj.clone()))
-                .collect();
+                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = vec![];
 
-                match fetch_certificate(
-                    &key_id,
-                    requirements.raw_id,
-                    self.login_ctx.clone(),
-                    self.db.clone(),
-                )
-                .await
+                if matches!(
+                    requirements.kind,
+                    None | Some(ObjectKind::Other)
+                        | Some(ObjectKind::PrivateKey)
+                        | Some(ObjectKind::PublicKey)
+                        | Some(ObjectKind::SecretKey)
+                ) {
+                    results = fetch_key(
+                        &key_id,
+                        requirements.raw_id.clone(),
+                        self.login_ctx.clone(),
+                        self.db.clone(),
+                    )
+                    .await?
+                    .iter()
+                    .map(|(handle, obj)| (*handle, obj.clone()))
+                    .collect();
+                }
+
+                if (requirements.kind.is_none() && !results.is_empty())
+                    || matches!(requirements.kind, Some(ObjectKind::Certificate))
                 {
-                    Ok(ref mut vec) => results.append(vec),
-                    Err(err) => {
-                        debug!("Failed to fetch certificate: {:?}", err);
+                    match fetch_certificate(
+                        &key_id,
+                        requirements.raw_id,
+                        self.login_ctx.clone(),
+                        self.db.clone(),
+                    )
+                    .await
+                    {
+                        Ok(ref mut vec) => results.append(vec),
+                        Err(err) => {
+                            debug!("Failed to fetch certificate: {:?}", err);
+                        }
                     }
                 }
 
@@ -616,27 +630,16 @@ impl Session {
         public_template: Option<&CkRawAttrTemplate>,
         mechanism: &Mechanism,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
-        if !get_tokio_rt().block_on(async { self.login_ctx.can_run_mode(UserMode::Administrator) })
-        {
+        if !self.login_ctx.can_run_mode(UserMode::Administrator) {
             return Err(Error::NotLoggedIn(UserMode::Administrator));
         }
 
-        let res = generate_key_from_template(
+        generate_key_from_template(
             template,
             public_template,
             mechanism,
             self.login_ctx.clone(),
-        )
-        .map_err(|err| {
-            error!("Failed to create key: {:?}", err);
-            err
-        })?;
-
-        get_tokio_rt().block_on(fetch_key(
-            &res.0,
-            res.1,
-            self.login_ctx.clone(),
             self.db.clone(),
-        ))
+        )
     }
 }
