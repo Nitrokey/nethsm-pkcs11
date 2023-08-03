@@ -73,7 +73,10 @@ pub extern "C" fn C_Decrypt(
 
     let decrypted_data = match session.decrypt(data) {
         Ok(data) => data,
-        Err(e) => return e.into(),
+        Err(e) => {
+            session.decrypt_clear();
+            return e.into();
+        }
     };
 
     unsafe {
@@ -118,7 +121,10 @@ pub extern "C" fn C_DecryptUpdate(
     }
     match session.decrypt_update(data) {
         Ok(()) => cryptoki_sys::CKR_OK,
-        Err(e) => e.into(),
+        Err(e) => {
+            session.decrypt_clear();
+            e.into()
+        }
     }
 }
 
@@ -140,7 +146,10 @@ pub extern "C" fn C_DecryptFinal(
 
     let theoretical_size = match session.decrypt_theoretical_final_size() {
         Ok(size) => size,
-        Err(e) => return e.into(),
+        Err(e) => {
+            session.decrypt_clear();
+            return e.into();
+        }
     };
 
     unsafe {
@@ -157,7 +166,10 @@ pub extern "C" fn C_DecryptFinal(
 
     let decrypted_data = match session.decrypt_final() {
         Ok(data) => data,
-        Err(e) => return e.into(),
+        Err(e) => {
+            session.decrypt_clear();
+            return e.into();
+        }
     };
 
     unsafe {
