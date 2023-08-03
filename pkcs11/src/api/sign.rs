@@ -81,7 +81,10 @@ pub extern "C" fn C_Sign(
 
     let signature = match session.sign(data) {
         Ok(signature) => signature,
-        Err(err) => return err.into(),
+        Err(err) => {
+            session.sign_clear();
+            return err.into();
+        }
     };
     unsafe {
         std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
