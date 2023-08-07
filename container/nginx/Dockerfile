@@ -6,7 +6,7 @@ ADD .git/ /tmp/repo
 
 RUN git clone -s /tmp/repo build
 
-RUN cd build && git checkout async && cargo build --release
+RUN cd build && cargo build --release
 
 FROM nginx:stable
 
