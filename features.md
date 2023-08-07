@@ -14,7 +14,7 @@ As of current version concurrency is not yet implemented.
 | Feature           | Status             | Notes                         |
 | ----------------- | ------------------ | ----------------------------- |
 | C_GetFunctionList | :heavy_check_mark: |                               |
-| C_Initialize      | :warning:          | Concurrency not yet supported |
+| C_Initialize      | :warning:          | Custom mutexes are not supported |
 | C_Finalize        | :heavy_check_mark: |                               |
 | C_GetInfo         | :heavy_check_mark: |                               |
 
@@ -26,8 +26,8 @@ As of current version concurrency is not yet implemented.
 | C_CloseSession      | :heavy_check_mark: |                                   |
 | C_CloseAllSessions  | :heavy_check_mark: |                                   |
 | C_GetSessionInfo    | :heavy_check_mark: |                                   |
-| C_GetOperationState | :x:                | May be implemented later          |
-| C_SetOperationState | :x:                | May be implemented later          |
+| C_GetOperationState | :x:                | No demand                         |
+| C_SetOperationState | :x:                | No demand                         |
 | C_GetFunctionStatus | :heavy_check_mark: | Returns CKR_FUNCTION_NOT_PARALLEL |
 | C_CancelFunction    | :heavy_check_mark: | Returns CKR_FUNCTION_NOT_PARALLEL |
 
