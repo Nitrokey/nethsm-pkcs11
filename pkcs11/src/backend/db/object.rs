@@ -4,13 +4,14 @@
 use base64::{engine::general_purpose, Engine as _};
 
 use cryptoki_sys::{
-    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT,
-    CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_ISSUER,
-    CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
-    CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
-    CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_UNWRAP, CKA_VALUE, CKA_VALUE_LEN,
-    CKA_VERIFY, CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS,
-    CK_ULONG, CK_UNAVAILABLE_INFORMATION,
+    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_CATEGORY, CKA_CERTIFICATE_TYPE,
+    CKA_CLASS, CKA_DECRYPT, CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE,
+    CKA_ID, CKA_ISSUER, CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE,
+    CKA_MODULUS, CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT,
+    CKA_SENSITIVE, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
+    CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
+    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
 use openapi::models::{KeyMechanism, KeyType, PublicKey};
@@ -309,6 +310,10 @@ fn configure_generic() -> Result<KeyData, Error> {
     let mut attrs = HashMap::new();
 
     attrs.insert(
+        CKA_CLASS,
+        Attr::from_ck_object_class(cryptoki_sys::CKO_SECRET_KEY),
+    );
+    attrs.insert(
         CKA_KEY_TYPE,
         Attr::from_ck_key_type(cryptoki_sys::CKK_GENERIC_SECRET),
     );
@@ -360,6 +365,10 @@ pub fn from_key_data(
     attrs.insert(CKA_EXTRACTABLE, Attr::CK_FALSE);
     attrs.insert(CKA_NEVER_EXTRACTABLE, Attr::CK_TRUE);
     attrs.insert(CKA_PRIVATE, Attr::CK_TRUE);
+    attrs.insert(CKA_VERIFY_RECOVER, Attr::CK_FALSE);
+    attrs.insert(CKA_VALUE, Attr::Bytes(vec![]));
+    attrs.insert(CKA_TRUSTED, Attr::CK_FALSE);
+    attrs.insert(CKA_WRAP, Attr::CK_FALSE);
 
     let key_attrs = match key_data.r#type {
         KeyType::Rsa => configure_rsa(&key_data)?,
@@ -478,6 +487,9 @@ pub fn from_cert_data(
         CKA_ISSUER,
         Attr::Bytes(openssl_cert.issuer_name().to_der()?),
     );
+    attrs.insert(CKA_TRUSTED, Attr::CK_TRUE);
+    attrs.insert(CKA_CERTIFICATE_TYPE, Attr::from_ck_cert_type(CKC_X_509));
+    attrs.insert(CKA_CERTIFICATE_CATEGORY, Attr::from_ck_cert_category(0));
 
     Ok(Object {
         attrs,
