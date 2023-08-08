@@ -390,45 +390,57 @@ impl Session {
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
         let mut result = match requirements.id {
             Some(key_id) => {
-                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = vec![];
+                // try to search in the db first
+                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
+                    let db = self.db.lock().await;
+                    db.enumerate()
+                        .filter(|(_, obj)| {
+                            obj.id == key_id
+                                && requirements.kind.map(|k| k == obj.kind).unwrap_or(true)
+                        })
+                        .map(|(handle, obj)| (handle, obj.clone()))
+                        .collect()
+                };
 
-                if matches!(
-                    requirements.kind,
-                    None | Some(ObjectKind::Other)
-                        | Some(ObjectKind::PrivateKey)
-                        | Some(ObjectKind::PublicKey)
-                        | Some(ObjectKind::SecretKey)
-                ) {
-                    results = fetch_key(
-                        &key_id,
-                        requirements.raw_id.clone(),
-                        self.login_ctx.clone(),
-                        self.db.clone(),
-                    )
-                    .await?
-                    .iter()
-                    .map(|(handle, obj)| (*handle, obj.clone()))
-                    .collect();
-                }
+                // then try to fetch from the server
+                if results.is_empty() {
+                    if matches!(
+                        requirements.kind,
+                        None | Some(ObjectKind::Other)
+                            | Some(ObjectKind::PrivateKey)
+                            | Some(ObjectKind::PublicKey)
+                            | Some(ObjectKind::SecretKey)
+                    ) {
+                        results = fetch_key(
+                            &key_id,
+                            requirements.raw_id.clone(),
+                            self.login_ctx.clone(),
+                            self.db.clone(),
+                        )
+                        .await?
+                        .iter()
+                        .map(|(handle, obj)| (*handle, obj.clone()))
+                        .collect();
+                    }
 
-                if (requirements.kind.is_none() && !results.is_empty())
-                    || matches!(requirements.kind, Some(ObjectKind::Certificate))
-                {
-                    match fetch_certificate(
-                        &key_id,
-                        requirements.raw_id,
-                        self.login_ctx.clone(),
-                        self.db.clone(),
-                    )
-                    .await
+                    if (requirements.kind.is_none() && !results.is_empty())
+                        || matches!(requirements.kind, Some(ObjectKind::Certificate))
                     {
-                        Ok(ref mut vec) => results.append(vec),
-                        Err(err) => {
-                            debug!("Failed to fetch certificate: {:?}", err);
+                        match fetch_certificate(
+                            &key_id,
+                            requirements.raw_id,
+                            self.login_ctx.clone(),
+                            self.db.clone(),
+                        )
+                        .await
+                        {
+                            Ok(ref mut vec) => results.append(vec),
+                            Err(err) => {
+                                debug!("Failed to fetch certificate: {:?}", err);
+                            }
                         }
                     }
                 }
-
                 Ok(results)
             }
 
@@ -447,7 +459,7 @@ impl Session {
         kind: Option<ObjectKind>,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         {
-            let mut db = self.db.lock().await;
+            let db = self.db.lock().await;
 
             if db.fetched_all_keys() {
                 return Ok(db
@@ -455,9 +467,6 @@ impl Session {
                     .map(|(handle, obj)| (handle, obj.clone()))
                     .collect());
             }
-
-            // clear the db to not have any double entries
-            db.clear();
         }
 
         if !self
