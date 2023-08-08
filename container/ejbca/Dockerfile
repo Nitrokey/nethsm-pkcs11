@@ -2,9 +2,7 @@ FROM rust:1.70-buster AS builder
 
 WORKDIR /rust
 
-ADD .git/ /tmp/repo
-
-RUN git clone -s /tmp/repo build
+ADD . build
 
 RUN cd build && cargo build --release
 
