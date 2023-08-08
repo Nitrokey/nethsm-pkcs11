@@ -158,7 +158,7 @@ fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Er
     Ok(parsed)
 }
 
-fn upload_certificate(
+async fn upload_certificate(
     parsed_template: &ParsedAttributes,
     mut login_ctx: LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
@@ -183,16 +183,14 @@ fn upload_certificate(
 
     let key_id = id.as_str();
 
-    get_tokio_rt().block_on(async {
-        login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::keys_key_id_cert_put(&api_config, key_id, &body).await
-                },
-                login::UserMode::Administrator,
-            )
-            .await
-    })?;
+    login_ctx
+        .try_(
+            |api_config| async move {
+                default_api::keys_key_id_cert_put(&api_config, key_id, &body).await
+            },
+            login::UserMode::Administrator,
+        )
+        .await?;
 
     Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
 }
@@ -217,7 +215,7 @@ pub async fn create_key_from_template(
     };
 
     if key_class == ObjectKind::Certificate {
-        return upload_certificate(&parsed, login_ctx);
+        return upload_certificate(&parsed, login_ctx).await;
     }
 
     let (r#type, key) = match parsed
