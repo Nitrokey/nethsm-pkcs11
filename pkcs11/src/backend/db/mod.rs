@@ -45,6 +45,7 @@ impl Db {
         }
     }
 
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.set_fetched_all_keys(false);
         self.objects.clear();
