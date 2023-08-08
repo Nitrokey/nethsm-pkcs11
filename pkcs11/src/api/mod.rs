@@ -47,14 +47,22 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         && !pInitArgs.is_null()
     {
         let args = pInitArgs as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
-        unsafe {
-            let args = std::ptr::read(args);
+        let args = unsafe { std::ptr::read(args) };
 
-            trace!("C_Initialize() called with args: {:?}", args.CreateMutex);
+        // for cryptoki 2.40 this should always be null
+        if !(args).pReserved.is_null() {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
 
-            if !(args).pReserved.is_null() {
-                return cryptoki_sys::CKR_ARGUMENTS_BAD;
-            }
+        // currently we don't support custom locking
+        // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that
+        if args.flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && args.CreateMutex.is_some() {
+            return cryptoki_sys::CKR_CANT_LOCK;
+        }
+
+        // currently we are using tokio that needs to create threads, so if the programs forbids us to create threads we return an error
+        if args.flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
+            return cryptoki_sys::CKR_NEED_TO_CREATE_THREADS;
         }
     }
 
