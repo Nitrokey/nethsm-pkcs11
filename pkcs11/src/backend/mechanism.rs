@@ -67,7 +67,7 @@ impl std::fmt::Display for Error {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MechDigest {
     Md5,
     Sha1,
@@ -104,7 +104,7 @@ impl MechDigest {
 
 pub type InitializationVector = Option<[u8; 16]>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Mechanism {
     // Digest(MechDigest),
     AesCbc(InitializationVector),
@@ -449,6 +449,7 @@ impl Mechanism {
         }
     }
 
+    // get the theoretical size of the signed data in Bytes
     pub fn get_theoretical_signed_size(&self, key_size: Option<usize>) -> usize {
         match self {
             Self::RsaPkcs => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),

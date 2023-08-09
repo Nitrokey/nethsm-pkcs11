@@ -385,7 +385,7 @@ pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
     })
 }
 
-const fn key_size(t: &KeyType) -> Option<usize> {
+pub const fn key_size(t: &KeyType) -> Option<usize> {
     let size = match t {
         KeyType::EcP224 => 224,
         KeyType::EcP256 => 256,
