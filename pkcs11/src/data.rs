@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, collections::HashMap};
 
 use crate::{
     api,
@@ -22,6 +22,7 @@ lazy_static! {
         }
     };
     pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
+    pub static ref ALISASES : Arc<Mutex<HashMap<String, String>>> =  Arc::new(Mutex::new(HashMap::new()));
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

@@ -1,7 +1,10 @@
-use cryptoki_sys::CK_ULONG;
+use cryptoki_sys::{CKA_ID, CK_ULONG};
 use log::{error, trace};
 
-use crate::{backend::db::attr::CkRawAttrTemplate, lock_mutex, lock_session, utils::get_tokio_rt};
+use crate::{
+    backend::db::attr::CkRawAttrTemplate, data::ALISASES, lock_mutex, lock_session,
+    utils::get_tokio_rt,
+};
 
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -232,6 +235,8 @@ pub extern "C" fn C_SetAttributeValue(
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
+    let mut new_id = None;
+
     // list the template attributes
     for attr in template.iter() {
         trace!(
@@ -239,6 +244,32 @@ pub extern "C" fn C_SetAttributeValue(
             attr.type_(),
             attr.val_bytes()
         );
+
+        if attr.type_() == CKA_ID {
+            if let Some(bytes) = attr.val_bytes() {
+                let str_result = String::from_utf8(bytes.to_vec());
+                let mut output = None;
+                if let Ok(str) = str_result {
+                    // check if the string contains only alphanumeric characters
+                    if str.chars().all(|c| c.is_alphanumeric()) {
+                        output = Some(str);
+                    }
+                }
+
+                if output.is_none() {
+                    // store as hex value string
+                    output = Some(hex::encode(bytes));
+                }
+                new_id = output;
+            }
+        }
+    }
+
+    trace!("C_SetAttributeValue() new id: {:?}", new_id);
+    if let Some(new_id) = new_id {
+        let mut alisases = ALISASES.lock().unwrap();
+        alisases.insert(new_id, object.id);
+        trace!("C_SetAttributeValue() alisases: {:?}", alisases);
     }
 
     cryptoki_sys::CKR_OK

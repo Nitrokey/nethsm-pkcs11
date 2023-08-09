@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{
     backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError},
+    data::ALISASES,
     utils::get_tokio_rt,
 };
 use base64::{engine::general_purpose, Engine};
@@ -169,7 +170,7 @@ async fn upload_certificate(
 
     let openssl_cert = openssl::x509::X509::from_der(cert)?;
 
-    let id = match parsed_template.id {
+    let mut id = match parsed_template.id {
         Some(ref id) => id.clone(),
         None => {
             error!("A key ID is required");
@@ -177,11 +178,17 @@ async fn upload_certificate(
         }
     };
 
+    if let Some(alias) = ALISASES.lock().unwrap().get(&id) {
+        id = alias.clone();
+    }
+
     let cert_file = openssl_cert.to_pem()?;
 
     let body = String::from_utf8(cert_file)?;
 
     let key_id = id.as_str();
+
+    trace!("key_id: {:?}", key_id);
 
     login_ctx
         .try_(
