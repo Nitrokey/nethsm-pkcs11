@@ -91,7 +91,35 @@ impl SignCtx {
                 .await
         })?;
 
-        Ok(general_purpose::STANDARD.decode(signature.signature)?)
+        let mut output = general_purpose::STANDARD.decode(signature.signature)?;
+
+        // ECDSA signatures returned by the API are DER encoded, we need to remove the DER encoding
+        if self.mechanism == Mechanism::Ecdsa {
+            let sign = openssl::ecdsa::EcdsaSig::from_der(&output)?;
+
+            let size = self.mechanism.get_theoretical_signed_size(self.key.size);
+
+            let mut o = Vec::new();
+
+            let r = sign.r().to_vec();
+            let s = sign.s().to_vec();
+
+            if r.len() > size || s.len() > size {
+                return Err(Error::InvalidData);
+            }
+
+            // copy with padding
+
+            o.extend_from_slice(&vec![0; size - r.len()]);
+            o.extend_from_slice(&r);
+
+            o.extend_from_slice(&vec![0; size - s.len()]);
+            o.extend_from_slice(&s);
+
+            output = o;
+        }
+
+        Ok(output)
     }
 
     pub fn get_theoretical_size(&self) -> usize {

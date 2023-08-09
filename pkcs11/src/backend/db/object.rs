@@ -18,7 +18,10 @@ use openapi::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 
-use crate::backend::{key::key_type_to_asn1, Error};
+use crate::backend::{
+    key::{key_size, key_type_to_asn1},
+    Error,
+};
 
 use super::attr::{self, CkRawAttrTemplate};
 
@@ -260,9 +263,16 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         .as_ref()
         .ok_or(Error::KeyField("data".to_string()))?;
 
+    let size = key_size(&key_data.r#type).ok_or(Error::KeyField("type".to_string()))?;
+
     trace!("EC key data: {:?}", ec_points);
 
-    let ec_point_bytes = general_purpose::STANDARD.decode(ec_points.as_bytes())?;
+    let mut ec_point_bytes = general_purpose::STANDARD.decode(ec_points.as_bytes())?;
+
+    // add padding
+    while ec_point_bytes.len() < size / 8 {
+        ec_point_bytes.insert(0, 0);
+    }
 
     trace!("EC key data bytes: {:?}", ec_point_bytes);
 
@@ -285,8 +295,6 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     };
 
     let mut attrs = HashMap::new();
-
-    let size = ec_point_bytes.len();
 
     attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
     attrs.insert(CKA_DERIVE, Attr::CK_TRUE);
