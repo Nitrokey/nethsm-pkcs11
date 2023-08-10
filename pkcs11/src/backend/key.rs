@@ -385,6 +385,7 @@ pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
     })
 }
 
+// returns the key size in bytes
 pub const fn key_size(t: &KeyType) -> Option<usize> {
     let size = match t {
         KeyType::EcP224 => 224,

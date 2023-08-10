@@ -65,7 +65,18 @@ impl SignCtx {
     }
 
     pub fn sign_final(&self) -> Result<Vec<u8>, Error> {
-        let b64_message = general_purpose::STANDARD.encode(self.data.as_slice());
+        // with ecdsa we need to send the correct size, so we truncate/pad the data to the correct size
+        let data = if self.mechanism == Mechanism::Ecdsa {
+            let size = self.mechanism.get_input_size(self.key.size);
+            let mut out = vec![0; size];
+            let len = self.data.len().min(size);
+            out[(size - len)..size].copy_from_slice(&self.data[..len]);
+            out
+        } else {
+            self.data.clone()
+        };
+
+        let b64_message = general_purpose::STANDARD.encode(data.as_slice());
 
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
@@ -97,7 +108,7 @@ impl SignCtx {
         if self.mechanism == Mechanism::Ecdsa {
             let sign = openssl::ecdsa::EcdsaSig::from_der(&output)?;
 
-            let size = self.mechanism.get_theoretical_signed_size(self.key.size);
+            let size = self.mechanism.get_key_size(self.key.size);
 
             let mut o = Vec::new();
 
@@ -123,6 +134,6 @@ impl SignCtx {
     }
 
     pub fn get_theoretical_size(&self) -> usize {
-        self.mechanism.get_theoretical_signed_size(self.key.size)
+        self.mechanism.get_signature_size(self.key.size)
     }
 }
