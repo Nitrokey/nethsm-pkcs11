@@ -197,7 +197,7 @@ pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     pub kind: ObjectKind,
     pub id: String,
-    pub size: Option<usize>,
+    pub size: Option<usize>, // the size of the object in bytes
     pub mechanisms: Vec<KeyMechanism>,
 }
 
@@ -267,10 +267,12 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
 
     trace!("EC key data: {:?}", ec_points);
 
-    let mut ec_point_bytes = general_purpose::STANDARD.decode(ec_points.as_bytes())?;
+    let mut ec_point_bytes = general_purpose::STANDARD.decode(ec_points)?;
+
+    trace!("EC key data bytes length : {}", ec_point_bytes.len());
 
     // add padding
-    while ec_point_bytes.len() < size / 8 {
+    while ec_point_bytes.len() < size {
         ec_point_bytes.insert(0, 0);
     }
 
@@ -279,6 +281,8 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let encoded_points = yasna::construct_der(|writer| {
         writer.write_bytes(&ec_point_bytes);
     });
+
+    trace!("EC key data encoded len : {}", encoded_points.len());
 
     let key_params = key_type_to_asn1(key_data.r#type).ok_or(Error::KeyField(format!(
         "Unsupported key type: {:?}",
