@@ -194,7 +194,12 @@ async fn upload_certificate(
     login_ctx
         .try_(
             |api_config| async move {
-                default_api::keys_key_id_cert_put(&api_config, key_id, &body).await
+                default_api::keys_key_id_cert_put(
+                    &api_config,
+                    key_id,
+                    default_api::KeysKeyIdCertPutBody::ApplicationXPemFile(body),
+                )
+                .await
             },
             login::UserMode::Administrator,
         )
@@ -342,7 +347,7 @@ pub async fn create_key_from_template(
                     default_api::keys_key_id_put(
                         &api_config,
                         key_id,
-                        private_key,
+                        default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
                         Some(mechanisms),
                         None,
                     )
@@ -357,14 +362,28 @@ pub async fn create_key_from_template(
             Ok(id)
         }
     } else {
-        login_ctx
+        let resp = login_ctx
             .try_(
                 |api_config| async move {
-                    default_api::keys_post(&api_config, private_key, Some(mechanisms), None).await
+                    default_api::keys_post(
+                        &api_config,
+                        default_api::KeysPostBody::ApplicationJson(private_key),
+                        Some(mechanisms),
+                        None,
+                    )
+                    .await
                 },
                 login::UserMode::Administrator,
             )
-            .await
+            .await;
+
+        match resp {
+            Ok(resp) => {
+                let id = extract_key_id_location_header(resp.headers)?;
+                Ok(id)
+            }
+            Err(err) => Err(err),
+        }
     }?;
 
     Ok((id, key_class, parsed.raw_id))
@@ -474,6 +493,8 @@ pub fn generate_key_from_template(
             )
             .await?;
 
+        let id = extract_key_id_location_header(id.headers)?;
+
         fetch_key(&id, parsed.raw_id, login_ctx, db.clone()).await
     })
 }
@@ -498,7 +519,7 @@ pub async fn fetch_key(
         )
         .await
     {
-        Ok(key_data) => key_data,
+        Ok(key_data) => key_data.entity,
         Err(err) => {
             debug!("Failed to fetch key {}: {:?}", key_id, err);
             if matches!(
@@ -540,19 +561,41 @@ pub async fn fetch_certificate(
         ));
     }
 
-    let cert_data =
-        login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::keys_key_id_cert_get(&api_config, key_id).await
-                },
-                super::login::UserMode::OperatorOrAdministrator,
-            )
-            .await?;
+    let cert_data = login_ctx
+        .try_(
+            |api_config| async move {
+                default_api::keys_key_id_cert_get(
+                    &api_config,
+                    key_id,
+                    default_api::KeysKeyIdCertGetAccept::ApplicationXPemFile,
+                )
+                .await
+            },
+            super::login::UserMode::OperatorOrAdministrator,
+        )
+        .await?;
 
-    let object = db::object::from_cert_data(cert_data, key_id, raw_id)?;
+    let object = db::object::from_cert_data(cert_data.entity, key_id, raw_id)?;
 
     let r = db.lock().await.add_object(object);
 
     Ok(vec![r])
+}
+
+// get the id from the logation header value :
+// location: /api/v1/keys/<id>?mechanisms=ECDSA_Signature
+fn extract_key_id_location_header(headers: reqwest::header::HeaderMap) -> Result<String, Error> {
+    let location_header = headers
+        .get(reqwest::header::LOCATION)
+        .ok_or(Error::InvalidData)?;
+    let location_header = location_header.to_str().map_err(|_| Error::InvalidData)?;
+    let key_id = location_header
+        .split('/')
+        .last()
+        .ok_or(Error::InvalidData)?
+        .split('?')
+        .next()
+        .ok_or(Error::InvalidData)?
+        .to_string();
+    Ok(key_id)
 }

@@ -318,7 +318,7 @@ pub async fn get_current_user_status(
     }
 
     let user = match default_api::users_user_id_get(api_config, auth.0.as_str()).await {
-        Ok(user) => user,
+        Ok(user) => user.entity,
         Err(err) => {
             error!("Failed to get user: {:?}", err);
             return UserStatus::LoggedOut;

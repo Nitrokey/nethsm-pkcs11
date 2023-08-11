@@ -116,13 +116,13 @@ pub extern "C" fn C_GetSlotInfo(
         }
     };
 
-    if system_state.state == SystemState::Operational {
+    if system_state.entity.state == SystemState::Operational {
         flags |= cryptoki_sys::CKF_TOKEN_PRESENT;
     }
 
     let info: CK_SLOT_INFO = CK_SLOT_INFO {
-        slotDescription: padded_str!(info.product, 64),
-        manufacturerID: padded_str!(info.vendor, 32),
+        slotDescription: padded_str!(info.entity.product, 64),
+        manufacturerID: padded_str!(info.entity.vendor, 32),
         flags,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
         firmwareVersion: DEFAULT_FIRMWARE_VERSION,
@@ -184,10 +184,10 @@ pub extern "C" fn C_GetTokenInfo(
                 warn!("Error getting system info: {:?}", e);
             }
             Ok(system_info) => {
-                serial_number = system_info.device_id;
-                hardware_version = version_struct_from_str!(system_info.hardware_version);
+                serial_number = system_info.entity.device_id;
+                hardware_version = version_struct_from_str!(system_info.entity.hardware_version);
                 // The PKCS11 firmware version actually corresponds to the NetHSM software version
-                firmware_version = version_struct_from_str!(system_info.software_version);
+                firmware_version = version_struct_from_str!(system_info.entity.software_version);
             }
         }
     }
@@ -202,8 +202,8 @@ pub extern "C" fn C_GetTokenInfo(
 
     let token_info = CK_TOKEN_INFO {
         label: padded_str!(slot.label, 32),
-        manufacturerID: padded_str!(info.vendor, 32),
-        model: padded_str!(info.product, 16),
+        manufacturerID: padded_str!(info.entity.vendor, 32),
+        model: padded_str!(info.entity.product, 16),
         serialNumber: padded_str!(serial_number, 16),
         flags,
         hardwareVersion: hardware_version,

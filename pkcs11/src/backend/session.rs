@@ -484,7 +484,8 @@ impl Session {
                 |api_config| async move { default_api::keys_get(&api_config, None).await },
                 super::login::UserMode::OperatorOrAdministrator,
             )
-            .await?;
+            .await?
+            .entity;
 
         let mut set: JoinSet<Result<Vec<(u64, Object)>, Error>> = JoinSet::new();
 
@@ -596,26 +597,30 @@ impl Session {
         debug!("Deleting key {} {:?}", key.id, key.kind);
 
         match key.kind {
-            ObjectKind::Certificate => get_tokio_rt().block_on(async {
-                self.login_ctx
-                    .try_(
-                        |api_config| async move {
-                            default_api::keys_key_id_cert_delete(&api_config, &key.id).await
-                        },
-                        crate::backend::login::UserMode::Administrator,
-                    )
-                    .await
-            })?,
-            ObjectKind::SecretKey | ObjectKind::PrivateKey => get_tokio_rt().block_on(async {
-                self.login_ctx
-                    .try_(
-                        |api_config| async move {
-                            default_api::keys_key_id_delete(&api_config, &key.id).await
-                        },
-                        crate::backend::login::UserMode::Administrator,
-                    )
-                    .await
-            })?,
+            ObjectKind::Certificate => {
+                get_tokio_rt().block_on(async {
+                    self.login_ctx
+                        .try_(
+                            |api_config| async move {
+                                default_api::keys_key_id_cert_delete(&api_config, &key.id).await
+                            },
+                            crate::backend::login::UserMode::Administrator,
+                        )
+                        .await
+                })?;
+            }
+            ObjectKind::SecretKey | ObjectKind::PrivateKey => {
+                get_tokio_rt().block_on(async {
+                    self.login_ctx
+                        .try_(
+                            |api_config| async move {
+                                default_api::keys_key_id_delete(&api_config, &key.id).await
+                            },
+                            crate::backend::login::UserMode::Administrator,
+                        )
+                        .await
+                })?;
+            }
             _ => {
                 // we don't support deleting other objects
             }
