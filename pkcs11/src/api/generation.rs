@@ -275,7 +275,7 @@ pub extern "C" fn C_GenerateRandom(
 
     // parse base64 string to bytes
 
-    let raw_data = match general_purpose::STANDARD.decode(data.random) {
+    let raw_data = match general_purpose::STANDARD.decode(data.entity.random) {
         Ok(raw_data) => raw_data,
         Err(e) => {
             error!("C_GenerateRandom() failed to decode random data: {:?}", e);

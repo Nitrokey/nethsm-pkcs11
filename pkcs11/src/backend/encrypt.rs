@@ -152,5 +152,5 @@ fn encrypt_data(
             err
         })?;
 
-    Ok(general_purpose::STANDARD.decode(output.encrypted)?)
+    Ok(general_purpose::STANDARD.decode(output.entity.encrypted)?)
 }

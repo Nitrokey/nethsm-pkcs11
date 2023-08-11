@@ -720,7 +720,7 @@ Name | Type | Description  | Required | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/pgp-keys
+- **Accept**: application/x-pem-file, application/x-x509-ca-cert, application/pgp-keys
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -941,10 +941,10 @@ Name | Type | Description  | Required | Notes
 
 ## keys_key_id_put
 
-> keys_key_id_put(key_id, body, mechanisms, tags)
+> keys_key_id_put(key_id, private_key, mechanisms, tags)
 
 
-Import a private key into NetHSM and store it under the *KeyID* path. The public key will be automatically derived. 
+Import a private key into NetHSM and store it under the *KeyID* path. The public key will be automatically derived. The parameters of the key can be passed as a PEM file or a JSON object. 
 
 ### Parameters
 
@@ -952,7 +952,7 @@ Import a private key into NetHSM and store it under the *KeyID* path. The public
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **key_id** | **String** |  | [required] |
-**body** | **String** | For request body with content type `application/json`: * *RSA* includes `primeP`, `primeQ`, and `publicExponent` properties.   The remaining properties `privateExponent`, `modulus`, ..) are computed. * *EC_P224*, *EC_P256*, *EC_P384*, *EC_P521* uses the `data` property.   Keys are the raw (big endian) scalar. * *Curve25519* uses the `data` property.   Keys are the raw (little endian) key.  | [required] |
+**private_key** | [**PrivateKey**](PrivateKey.md) | For request body with content type `application/json`: * *RSA* includes `primeP`, `primeQ`, and `publicExponent` properties.   The remaining properties `privateExponent`, `modulus`, ..) are computed. * *EC_P224*, *EC_P256*, *EC_P384*, *EC_P521* uses the `data` property.   Keys are the raw (big endian) scalar. * *Curve25519* uses the `data` property.   Keys are the raw (little endian) key.  | [required] |
 **mechanisms** | Option<[**Vec<crate::models::KeyMechanism>**](crate::models::KeyMechanism.md)> |  |  |
 **tags** | Option<[**Vec<String>**](String.md)> |  |  |
 
@@ -966,7 +966,7 @@ Name | Type | Description  | Required | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: application/x-pem-file, application/json
+- **Content-Type**: application/json, application/x-pem-file
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1067,17 +1067,17 @@ Name | Type | Description  | Required | Notes
 
 ## keys_post
 
-> keys_post(body, mechanisms, tags)
+> keys_post(private_key, mechanisms, tags)
 
 
-Import a private key into NetHSM and let NetHSM generate a KeyID. The public key will be automatically derived. 
+Import a private key into NetHSM and let NetHSM generate a KeyID. The public key will be automatically derived. The parameters of the key can be passed as a PEM file or a JSON object. 
 
 ### Parameters
 
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**body** | **String** |  | [required] |
+**private_key** | [**PrivateKey**](PrivateKey.md) |  | [required] |
 **mechanisms** | Option<[**Vec<crate::models::KeyMechanism>**](crate::models::KeyMechanism.md)> |  |  |
 **tags** | Option<[**Vec<String>**](String.md)> |  |  |
 
@@ -1091,7 +1091,7 @@ Name | Type | Description  | Required | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: application/x-pem-file, application/json
+- **Content-Type**: application/json, application/x-pem-file
 - **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

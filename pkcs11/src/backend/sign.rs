@@ -102,7 +102,7 @@ impl SignCtx {
                 .await
         })?;
 
-        let mut output = general_purpose::STANDARD.decode(signature.signature)?;
+        let mut output = general_purpose::STANDARD.decode(signature.entity.signature)?;
 
         // ECDSA signatures returned by the API are DER encoded, we need to remove the DER encoding
         if self.mechanism == Mechanism::Ecdsa {

@@ -91,6 +91,6 @@ impl DecryptCtx {
                 .await
         })?;
 
-        Ok(general_purpose::STANDARD.decode(output.decrypted)?)
+        Ok(general_purpose::STANDARD.decode(output.entity.decrypted)?)
     }
 }
