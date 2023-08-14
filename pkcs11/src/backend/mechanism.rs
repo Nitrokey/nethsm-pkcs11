@@ -4,7 +4,7 @@
 
 use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE, CK_ULONG};
 use log::trace;
-use openapi::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
+use nethsm_sdk_rs::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 #[derive(Debug)]

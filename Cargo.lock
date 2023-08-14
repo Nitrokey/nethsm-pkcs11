@@ -583,6 +583,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nethsm-sdk-rs"
+version = "0.1.0"
+source = "git+https://github.com/Nitrokey/nethsm-sdk-rs?tag=0.1.0#442db17b08fa811f8f8e96711b468f568d99165f"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "nethsm_pkcs11"
 version = "0.1.0"
 dependencies = [
@@ -594,7 +607,7 @@ dependencies = [
  "libc",
  "log",
  "merge",
- "openapi",
+ "nethsm-sdk-rs",
  "openssl",
  "reqwest",
  "serde",
@@ -637,18 +650,6 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
-
-[[package]]
-name = "openapi"
-version = "1.0.0"
-dependencies = [
- "reqwest",
- "serde",
- "serde_derive",
- "serde_json",
- "url",
- "uuid",
-]
 
 [[package]]
 name = "openssl"
@@ -1226,9 +1227,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
+checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
 dependencies = [
  "serde",
 ]

@@ -3,7 +3,7 @@ use cryptoki_sys::{
     CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{debug, error, trace, warn};
-use openapi::{apis::default_api, models::SystemState};
+use nethsm_sdk_rs::{apis::default_api, models::SystemState};
 
 use crate::{
     backend::{

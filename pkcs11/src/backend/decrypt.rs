@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine};
 
 use log::trace;
-use openapi::apis::default_api;
+use nethsm_sdk_rs::apis::default_api;
 
 use crate::utils::get_tokio_rt;
 
@@ -78,7 +78,7 @@ impl DecryptCtx {
                         default_api::keys_key_id_decrypt_post(
                             &api_config,
                             key_id,
-                            openapi::models::DecryptRequestData {
+                            nethsm_sdk_rs::models::DecryptRequestData {
                                 mode,
                                 encrypted: b64_message,
                                 iv,

@@ -7,7 +7,7 @@ use cryptoki_sys::{
     CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
 };
 use log::error;
-use openapi::apis;
+use nethsm_sdk_rs::apis;
 use reqwest::StatusCode;
 
 use self::{

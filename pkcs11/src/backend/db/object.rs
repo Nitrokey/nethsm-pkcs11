@@ -14,7 +14,7 @@ use cryptoki_sys::{
     CK_UNAVAILABLE_INFORMATION,
 };
 use log::{debug, trace};
-use openapi::models::{KeyMechanism, KeyType, PublicKey};
+use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
 

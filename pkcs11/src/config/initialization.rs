@@ -71,7 +71,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             .build()
             .map_err(InitializationError::Reqwest)?;
 
-        let api_config = openapi::apis::configuration::Configuration {
+        let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
             client: reqwest_client,
             base_path: instance.url.clone(),
             basic_auth: Some((default_user.username.clone(), default_user.password.clone())),

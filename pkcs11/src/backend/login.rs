@@ -4,7 +4,7 @@ use cryptoki_sys::{
     CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV, CK_STATE, CK_USER_TYPE,
 };
 use log::{debug, error, trace};
-use openapi::{
+use nethsm_sdk_rs::{
     apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
 };
@@ -275,7 +275,7 @@ impl LoginCtx {
                 default_api::users_user_id_passphrase_post(
                     &config,
                     &options.0,
-                    openapi::models::UserPassphrasePostData { passphrase: pin },
+                    nethsm_sdk_rs::models::UserPassphrasePostData { passphrase: pin },
                 )
                 .await
             },
@@ -306,7 +306,7 @@ pub enum UserStatus {
 }
 
 pub async fn get_current_user_status(
-    api_config: &openapi::apis::configuration::Configuration,
+    api_config: &nethsm_sdk_rs::apis::configuration::Configuration,
 ) -> UserStatus {
     let auth = match api_config.basic_auth.as_ref() {
         Some(auth) => auth,
@@ -334,8 +334,8 @@ pub async fn get_current_user_status(
 // Check if the user is logged in and then return the configuration to connect as this user
 fn get_user_api_config(
     user: &Option<UserConfig>,
-    api_config: &openapi::apis::configuration::Configuration,
-) -> Option<openapi::apis::configuration::Configuration> {
+    api_config: &nethsm_sdk_rs::apis::configuration::Configuration,
+) -> Option<nethsm_sdk_rs::apis::configuration::Configuration> {
     user.as_ref().and_then(|user| {
         let config = api_config.clone();
         if user.password.is_none() {

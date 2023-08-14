@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine};
 
 use log::{debug, trace};
-use openapi::apis::default_api;
+use nethsm_sdk_rs::apis::default_api;
 
 use crate::backend::mechanism::MechMode;
 use crate::backend::ApiError;
@@ -128,7 +128,7 @@ fn encrypt_data(
                         default_api::keys_key_id_encrypt_post(
                             &api_config,
                             key_id,
-                            openapi::models::EncryptRequestData {
+                            nethsm_sdk_rs::models::EncryptRequestData {
                                 mode,
                                 message: b64_message,
                                 iv,

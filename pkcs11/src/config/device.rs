@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use openapi::apis::configuration::Configuration;
+use nethsm_sdk_rs::apis::configuration::Configuration;
 use tokio::sync::Mutex;
 
 use crate::backend::db::Db;
@@ -17,7 +17,7 @@ pub struct Device {
 
 #[derive(Debug, Clone)]
 pub struct ClusterInstance {
-    pub api_config: openapi::apis::configuration::Configuration,
+    pub api_config: nethsm_sdk_rs::apis::configuration::Configuration,
 }
 
 #[derive(Debug, Clone)]

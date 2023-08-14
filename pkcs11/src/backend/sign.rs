@@ -9,7 +9,7 @@ use super::{
 use base64::{engine::general_purpose, Engine as _};
 
 use log::{debug, trace};
-use openapi::{apis::default_api, models::SignMode};
+use nethsm_sdk_rs::{apis::default_api, models::SignMode};
 
 #[derive(Clone, Debug)]
 pub struct SignCtx {
@@ -90,7 +90,7 @@ impl SignCtx {
                         default_api::keys_key_id_sign_post(
                             &conf,
                             &self.key.id.clone(),
-                            openapi::models::SignRequestData {
+                            nethsm_sdk_rs::models::SignRequestData {
                                 mode,
                                 message: b64_message,
                             },

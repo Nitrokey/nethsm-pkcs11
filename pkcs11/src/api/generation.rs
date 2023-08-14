@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::CKR_OK;
 use log::{error, trace};
-use openapi::apis::default_api;
+use nethsm_sdk_rs::apis::default_api;
 
 use crate::{
     backend::{
@@ -235,13 +235,13 @@ pub extern "C" fn C_GenerateRandom(
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
 
-    let a = |api_config: openapi::apis::configuration::Configuration| {
+    let a = |api_config: nethsm_sdk_rs::apis::configuration::Configuration| {
         // let api_config = api_config;
         async {
             let api_config = api_config;
             default_api::random_post(
                 &api_config,
-                openapi::models::RandomRequestData {
+                nethsm_sdk_rs::models::RandomRequestData {
                     length: ulRandomLen as i32,
                 },
             )
@@ -256,7 +256,7 @@ pub extern "C" fn C_GenerateRandom(
                 |api_config| async move {
                     default_api::random_post(
                         &api_config,
-                        openapi::models::RandomRequestData {
+                        nethsm_sdk_rs::models::RandomRequestData {
                             length: ulRandomLen as i32,
                         },
                     )
