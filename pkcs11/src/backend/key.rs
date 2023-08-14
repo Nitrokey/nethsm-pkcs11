@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{
     backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError},
+    data::{DEVICE, KEY_ALIASES},
     utils::get_tokio_rt,
 };
 use base64::{engine::general_purpose, Engine};
@@ -26,7 +27,7 @@ use tokio::sync::Mutex;
 use yasna::models::ObjectIdentifier;
 
 #[derive(Debug, Default)]
-struct ParsedAttributes {
+pub struct ParsedAttributes {
     pub id: Option<String>,
     pub key_type: Option<CK_KEY_TYPE>,
     pub sign: bool,
@@ -43,7 +44,7 @@ struct ParsedAttributes {
     pub raw_id: Option<Vec<u8>>,
 }
 
-fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Error> {
+pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Error> {
     let mut parsed = ParsedAttributes::default();
 
     for attr in template.iter() {
@@ -169,13 +170,20 @@ async fn upload_certificate(
 
     let openssl_cert = openssl::x509::X509::from_der(cert)?;
 
-    let id = match parsed_template.id {
+    let mut id = match parsed_template.id {
         Some(ref id) => id.clone(),
         None => {
             error!("A key ID is required");
             return Err(Error::MissingAttribute(CKA_ID));
         }
     };
+
+    // Check if an alias is defined for this key
+    if DEVICE.enable_set_attribute_value {
+        if let Some(real_name) = KEY_ALIASES.lock()?.get(&id).cloned() {
+            id = real_name;
+        }
+    }
 
     let cert_file = openssl_cert.to_pem()?;
 
