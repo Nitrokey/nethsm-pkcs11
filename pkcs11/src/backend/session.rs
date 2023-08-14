@@ -5,7 +5,7 @@ use cryptoki_sys::{
     CK_USER_TYPE,
 };
 use log::{debug, error, trace};
-use openapi::apis::default_api;
+use nethsm_sdk_rs::apis::default_api;
 use tokio::{sync::Mutex, task::JoinSet};
 
 use crate::{

@@ -19,7 +19,7 @@ use cryptoki_sys::{
 };
 use lazy_static::lazy_static;
 use log::{debug, error, trace};
-use openapi::{
+use nethsm_sdk_rs::{
     apis::default_api,
     models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
