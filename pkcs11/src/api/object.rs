@@ -249,7 +249,7 @@ pub extern "C" fn C_SetAttributeValue(
         }
     } else {
         if parsed.id.is_some() {
-            error!("The application tried to change the CKA_ID attribute of a key, if you are using the Sun PKCS11 provider for Java KeyStore (or EJBCA), you can set enable_set_attribute_value option to true in the configuration file.")
+            error!("The application tried to change the CKA_ID attribute of a key. If you are using the Sun PKCS11 provider for Java KeyStore (or EJBCA), you can set enable_set_attribute_value option to true in the configuration file. See our documentation to understand its implications.")
         }
 
         cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
