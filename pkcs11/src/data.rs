@@ -22,6 +22,11 @@ lazy_static! {
         }
     };
     pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
+
+    // Aliases for the keys, used when enable_set_attribute_value is set.
+    // As we are using lazy_static, this field will be initialized the first time it's used.
+    // The key of the map is the name the application tries to use, the value is the name given by the NetHSM.
+    pub static ref KEY_ALIASES : Arc<Mutex<std::collections::HashMap<String, String>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

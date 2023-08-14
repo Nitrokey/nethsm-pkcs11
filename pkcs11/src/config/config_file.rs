@@ -78,6 +78,9 @@ impl From<&LogLevel> for log::LevelFilter {
 // representation of the config file to parse
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Default)]
 pub struct P11Config {
+    #[merge(strategy = merge::bool::overwrite_false)]
+    #[serde(default)]
+    pub enable_set_attribute_value: bool,
     pub log_file: Option<String>,
     pub log_level: Option<LogLevel>,
     #[merge(strategy = merge::vec::append)]

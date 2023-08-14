@@ -7,10 +7,12 @@ use crate::backend::db::Db;
 
 use super::config_file::UserConfig;
 
+// stores the global configuration of the module
 #[derive(Debug, Clone)]
 pub struct Device {
     pub log_file: Option<String>,
     pub slots: Vec<Arc<Slot>>,
+    pub enable_set_attribute_value: bool,
 }
 
 #[derive(Debug, Clone)]

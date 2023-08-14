@@ -32,6 +32,7 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
     Ok(Device {
         slots,
         log_file: config.log_file,
+        enable_set_attribute_value: config.enable_set_attribute_value,
     })
 }
 

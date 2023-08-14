@@ -1,7 +1,12 @@
 use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
-use crate::{backend::db::attr::CkRawAttrTemplate, lock_mutex, lock_session, utils::get_tokio_rt};
+use crate::{
+    backend::{db::attr::CkRawAttrTemplate, key},
+    data::{DEVICE, KEY_ALIASES},
+    lock_mutex, lock_session,
+    utils::get_tokio_rt,
+};
 
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
@@ -204,5 +209,49 @@ pub extern "C" fn C_SetAttributeValue(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetAttributeValue() called");
-    cryptoki_sys::CKR_ACTION_PROHIBITED
+
+    if pTemplate.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+    let parsed = match key::parse_attributes(&template) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            return err.into();
+        }
+    };
+
+    // if the hack is enabled, we update the key alias map
+    if DEVICE.enable_set_attribute_value {
+        lock_session!(hSession, session);
+
+        let object = match session.get_object(hObject) {
+            Some(object) => object,
+            None => {
+                error!(
+                    "C_SetAttributeValue() called with invalid object handle {}.",
+                    hObject
+                );
+                return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
+            }
+        };
+
+        if let Some(new_name) = parsed.id {
+            KEY_ALIASES.lock().unwrap().insert(new_name, object.id);
+            cryptoki_sys::CKR_OK
+        } else {
+            error!("C_SetAttributeValue() is supported only on CKA_ID");
+
+            // We only support changing the ID
+            cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
+        }
+    } else {
+        if parsed.id.is_some() {
+            error!("The application tried to change the CKA_ID attribute of a key, if you are using the Sun PKCS11 provider for Java KeyStore (or EJBCA), you can set enable_set_attribute_value option to true in the configuration file.")
+        }
+
+        cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
+    }
 }
