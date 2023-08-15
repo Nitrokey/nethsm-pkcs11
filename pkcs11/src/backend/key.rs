@@ -14,8 +14,8 @@ use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
     CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
-    CKA_VALUE_LEN, CKK_EC, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE, CK_OBJECT_CLASS,
-    CK_OBJECT_HANDLE, CK_ULONG,
+    CKA_VALUE_LEN, CKK_EC, CKK_EC_EDWARDS, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE,
+    CK_OBJECT_CLASS, CK_OBJECT_HANDLE, CK_ULONG,
 };
 use lazy_static::lazy_static;
 use log::{debug, error, trace};
@@ -262,7 +262,7 @@ pub async fn create_key_from_template(
             });
             (KeyType::Rsa, key)
         }
-        CKK_EC => {
+        CKK_EC | CKK_EC_EDWARDS => {
             let ec_type = key_type_from_params(
                 &parsed
                     .ec_params
