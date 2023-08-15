@@ -38,13 +38,12 @@ IV=$(openssl rand -hex 16)
 
 echo -n "NetHSM rulez!  NetHSM rulez!    "  > _input
 
-pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --encrypt \
-  --mechanism AES-CBC --id $HEXID \
-  --output-file _data.crypt --iv $IV --input-file _input
 
-# decrypt with openssl 
+openssl aes-256-cbc -nopad -in _input -out _data.crypt -K $(cat _aes.key | xxd -c 256 -p) -iv $IV
 
-openssl aes-256-cbc -nopad -d -in _data.crypt -out _data.decrypt -K $(cat _aes.key | xxd -c 256 -p) -iv $IV
+pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --decrypt \
+  --mechanism AES-CBC --input-file _data.crypt --id $HEXID \
+  --iv $IV --output-file _data.decrypt
 
 diff _input _data.decrypt
   
