@@ -15,5 +15,4 @@ echo 'NetHSM rulez!' > _data
 pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v  \
   --sign --mechanism EDDSA --output-file _data.sig --id $HEXID --input-file _data
 
-#echo 'NetHSM rulez!' | openssl dgst -sha256 -binary | openssl pkeyutl -verify -pubin -inkey _public.pem -sigfile _data.sig
 openssl pkeyutl -verify -sigfile _data.sig -inkey _public.pem -keyform PEM -pubin -rawin -in _data

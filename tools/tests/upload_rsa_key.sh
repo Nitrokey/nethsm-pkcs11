@@ -1,5 +1,8 @@
 #!/bin/sh -x
 
+# disabled, not working with current version of pkcs11-tool
+exit 0
+
 set -e 
 
 rm -rf _rsa_private.pem _rsa_private.der _public.pem _data.sig
