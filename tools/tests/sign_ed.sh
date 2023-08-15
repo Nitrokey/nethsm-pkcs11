@@ -7,7 +7,7 @@ HEXID=$(echo -n ${KEYID} | xxd -ps)
 
 rm -rf _data.sig _public.pem
 
-curl -k -s -u operator:opPassphrase -X GET \
+curl -k -s --fail-with-body -u operator:opPassphrase -X GET \
   https://localhost:8443/api/v1/keys/$KEYID/public.pem -o _public.pem
 
 echo 'NetHSM rulez!' > _data

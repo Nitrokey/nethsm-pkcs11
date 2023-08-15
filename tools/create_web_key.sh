@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl -k -i -w '\n' -u admin:Administrator -X PUT \
+curl -k -i --fail-with-body -w '\n' -u admin:Administrator -X PUT \
   https://localhost:8443/api/v1/keys/webserver \
   -H "content-type: application/json" \
   -d '{
