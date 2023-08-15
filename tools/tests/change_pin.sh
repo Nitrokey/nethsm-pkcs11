@@ -17,6 +17,8 @@ curl -k -i --fail-with-body -w '\n' -u admin:Administrator \
 sed -e 's/"operator"/"testuser"/g' -e 's/opPassphrase/testPassphrase/g' \
   < p11nethsm.conf > _testuser.conf
 
+# change the pin
+
 P11NETHSM_CONFIG_FILE=_testuser.conf pkcs11-tool --module target/debug/libnethsm_pkcs11.so -c -p testPassphrase --new-pin testPassphrase2
 
 # try to use the new pin
