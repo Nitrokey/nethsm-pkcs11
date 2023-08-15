@@ -19,4 +19,5 @@ pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --decrypt \
   --mechanism RSA-PKCS-OAEP --input-file _data.crypt --id $HEXID \
   --hash-algorithm SHA256 --output-file _data.decrypt
 
+# the input should be the same as the output
 diff _input _data.decrypt

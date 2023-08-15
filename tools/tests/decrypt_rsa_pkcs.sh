@@ -17,4 +17,5 @@ openssl rsautl -encrypt -inkey _public.pem -pubin \
 pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v --decrypt \
   --mechanism RSA-PKCS --input-file _data.crypt --id $HEXID --output-file _data.decrypt
 
+# the input should be the same as the output
 diff _input _data.decrypt
