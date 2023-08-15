@@ -5,4 +5,4 @@ curl -k --fail-with-body -i -w '\n' -u admin:Administrator -X POST \
   -H "content-type: application/json" \
   -d '{ "mechanisms": [ 
 "ECDSA_Signature"
-],  "type": "EC_P256", "id": "eckey" }'
+],  "type": "EC_P521", "id": "eckey521" }'
