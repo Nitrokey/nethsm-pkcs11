@@ -1,5 +1,8 @@
 #!/bin/sh -x
 
+# disabled, not working with current version of pkcs11-tool
+exit 0
+
 set -e 
 
 rm -rf _cert.key _cert.pem
