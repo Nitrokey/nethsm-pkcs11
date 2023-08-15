@@ -8,7 +8,7 @@ HEXID=$(echo -n ${KEYID}| xxd -ps)
 
 rm -rf _data.sig _public.pem
 
-curl -s -u operator:opPassphrase -k -X GET \
+curl -s --fail-with-body -u operator:opPassphrase -k -X GET \
   https://localhost:8443/api/v1/keys/$KEYID/public.pem -o _public.pem
 
 echo 'NetHSM rulez!' | openssl dgst -sha256 -binary | P11NETHSM_CONFIG_FILE=./p11nethsm.conf pkcs11-tool \
