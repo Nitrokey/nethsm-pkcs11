@@ -2,9 +2,9 @@ use std::sync::PoisonError;
 
 use cryptoki_sys::{
     CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE,
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID,
-    CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT,
-    CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_ENCRYPTED_DATA_LEN_RANGE, CKR_KEY_HANDLE_INVALID,
+    CKR_MECHANISM_INVALID, CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED,
+    CKR_TOKEN_NOT_PRESENT, CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
 };
 use log::error;
 use nethsm_sdk_rs::apis;
@@ -77,6 +77,7 @@ pub enum Error {
     DbLock,
     InvalidDataLength,
     InvalidData,
+    InvalidEncryptedDataLength,
 }
 
 impl<T> From<PoisonError<T>> for Error {
@@ -114,6 +115,7 @@ impl From<Error> for CK_RV {
         // diplay the error when converting to CK_RV
         error!("{}", err);
         match err {
+            Error::InvalidEncryptedDataLength => CKR_ENCRYPTED_DATA_LEN_RANGE,
             Error::InvalidData => CKR_DATA_INVALID,
             Error::InvalidDataLength => CKR_DATA_LEN_RANGE,
             Error::InvalidObjectHandle(_) => CKR_KEY_HANDLE_INVALID,
@@ -150,6 +152,7 @@ impl From<Error> for CK_RV {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
+            Error::InvalidEncryptedDataLength => "Invalid encrypted data length".to_string(),
             Error::InvalidData => "Invalid input data".to_string(),
             Error::InvalidDataLength => "Invalid input data length".to_string(),
             Error::InvalidObjectHandle(handle) => {

@@ -53,6 +53,10 @@ impl DecryptCtx {
     }
 
     pub fn decrypt_final(&mut self) -> Result<Vec<u8>, Error> {
+        if self.data.is_empty() {
+            return Err(Error::InvalidEncryptedDataLength);
+        }
+
         let b64_message = general_purpose::STANDARD.encode(self.data.as_slice());
 
         let mode = self
