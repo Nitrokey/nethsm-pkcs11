@@ -217,3 +217,38 @@ pub extern "C" fn C_SignEncryptUpdate(
     trace!("C_SignEncryptUpdate() called");
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sign_recover_init() {
+        let rv = C_SignRecoverInit(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_sign_recover() {
+        let rv = C_SignRecover(
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_sign_encrypt_update() {
+        let rv = C_SignEncryptUpdate(
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}

@@ -200,3 +200,22 @@ pub extern "C" fn C_DecryptVerifyUpdate(
     trace!("C_DecryptVerifyUpdate() called");
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // unsupported function
+    #[test]
+    fn test_decrypt_verify_update() {
+        let rv = C_DecryptVerifyUpdate(
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}
