@@ -5,10 +5,10 @@
 
 pub mod attr;
 pub mod object;
+use cryptoki_sys::CK_OBJECT_HANDLE;
 use std::{collections::HashMap, time::SystemTime};
 
-use cryptoki_sys::CK_OBJECT_HANDLE;
-pub use object::{Object, ObjectHandle};
+pub use object::Object;
 
 #[derive(Debug)]
 pub struct Db {
