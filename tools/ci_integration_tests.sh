@@ -2,6 +2,9 @@
 
 set -e
 
+mkdir -p profile
+export LLVM_PROFILE_FILE="profile/default_%m_%p.profraw"
+
 echo "Starting tests"
 
 export P11NETHSM_CONFIG_FILE=./p11nethsm.conf
