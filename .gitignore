@@ -15,3 +15,7 @@ _*
 # Added by cargo
 
 /target
+profile
+*.profraw
+coverage
+coverage.txt

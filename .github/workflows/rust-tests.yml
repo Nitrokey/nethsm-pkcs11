@@ -10,7 +10,7 @@ on:
       - main
 
 jobs:
-  build:
+  check-formatting-linting:
     permissions:
       contents: read
       checks: write
@@ -34,13 +34,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
 
-      # - name: Run Clippy on the pkcs11 crate
-      #   run: cargo clippy --all-targets --all-features -p nethsm_pkcs11 -- -D warnings --no-deps
-
-      - name: Run tests
-        run: cargo test
-
-  integration-tests:
+  tests:
     runs-on: ubuntu-latest
     container: debian:12
     env:
@@ -62,12 +56,28 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt, clippy, llvm-tools-preview
 
-      - name: Build in debug mode
-        run: cargo build
+      - name: install demangler 
+        run: cargo install rustfilt cargo-binutils
+
+      - name: Build with profiling
+        run: ./tools/build_profiling.sh
 
       - name: repalce localhost with nethsm
         run: sed -i 's/localhost/nethsm/g' ./tools/*.sh ./tools/tests/*.sh ./p11nethsm.conf
-
+        
       - name: Run integration tests
         run: ./tools/ci_setup.sh && ./tools/ci_integration_tests.sh
+        
+      - name: cargo test
+        run: ./tools/test_profiling.sh
+      
+      - name: get coverage
+        run: ./tools/get_coverage.sh
+      
+      - name: upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.txt
+          verbose: true
