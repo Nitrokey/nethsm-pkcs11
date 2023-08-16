@@ -32,32 +32,6 @@ use super::attr::{self, CkRawAttrTemplate};
 /// based on this class a well defined set of valid attributes.
 /// Since there is no R/W session support these objects are created
 /// from the user provisioned database.
-#[derive(Clone, Copy, Debug, Hash)]
-pub struct ObjectHandle(cryptoki_sys::CK_OBJECT_HANDLE);
-
-impl From<cryptoki_sys::CK_OBJECT_HANDLE> for ObjectHandle {
-    fn from(src: cryptoki_sys::CK_OBJECT_HANDLE) -> Self {
-        Self(src)
-    }
-}
-
-impl From<usize> for ObjectHandle {
-    fn from(src: usize) -> Self {
-        Self(src as CK_ULONG)
-    }
-}
-
-impl From<ObjectHandle> for CK_ULONG {
-    fn from(src: ObjectHandle) -> Self {
-        src.0
-    }
-}
-
-impl From<ObjectHandle> for usize {
-    fn from(src: ObjectHandle) -> Self {
-        src.0 as usize
-    }
-}
 
 #[derive(Debug, Clone)]
 pub enum Attr {
