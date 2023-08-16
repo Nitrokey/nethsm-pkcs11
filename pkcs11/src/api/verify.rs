@@ -9,11 +9,6 @@ pub extern "C" fn C_VerifyInit(
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyInit() called");
-    if pMechanism.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -25,10 +20,6 @@ pub extern "C" fn C_Verify(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Verify() called");
-    if pData.is_null() || pSignature.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -38,10 +29,6 @@ pub extern "C" fn C_VerifyUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyUpdate() called");
-    if pPart.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -51,11 +38,6 @@ pub extern "C" fn C_VerifyFinal(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyFinal() called");
-
-    if pSignature.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -89,14 +71,6 @@ mod tests {
     #[test]
     fn test_verify_init() {
         let rv = C_VerifyInit(0, std::ptr::null_mut(), 0);
-        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
-
-        let mut mech = cryptoki_sys::CK_MECHANISM {
-            mechanism: 0,
-            pParameter: std::ptr::null_mut(),
-            ulParameterLen: 0,
-        };
-        let rv = C_VerifyInit(0, &mut mech, 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 

@@ -98,6 +98,9 @@ mod tests {
     use super::*;
     #[test]
     fn test_digest_init() {
+        let rv = C_DigestInit(0, std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
             pParameter: std::ptr::null_mut(),
@@ -110,6 +113,15 @@ mod tests {
 
     #[test]
     fn test_digest() {
+        let rv = C_Digest(
+            0,
+            std::ptr::null_mut(),
+            0 as CK_ULONG,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+
         let mut digest_len: CK_ULONG = 0;
         let mut digest: Vec<u8> = Vec::new();
         let mut data: Vec<u8> = Vec::new();
@@ -126,6 +138,9 @@ mod tests {
 
     #[test]
     fn test_digest_update() {
+        let rv = C_DigestUpdate(0, std::ptr::null_mut(), 0 as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+
         let mut data: Vec<u8> = Vec::new();
 
         let rv = C_DigestUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
@@ -134,6 +149,9 @@ mod tests {
 
     #[test]
     fn test_digest_final() {
+        let rv = C_DigestFinal(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+
         let mut digest_len: CK_ULONG = 0;
         let mut digest: Vec<u8> = Vec::new();
 

@@ -231,3 +231,26 @@ pub extern "C" fn C_EncryptFinal(
 
     cryptoki_sys::CKR_OK
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encrypt_init_null_mechanism() {
+        let rv = C_EncryptInit(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_encrypt_init_invalid_mechanism() {
+        let mut mechanism = cryptoki_sys::CK_MECHANISM {
+            mechanism: 15000,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_EncryptInit(0, &mut mechanism, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+}
