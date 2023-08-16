@@ -25,16 +25,10 @@ pub extern "C" fn C_GenerateKey(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    lock_session!(hSession, session);
-
     let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
 
     trace!("C_GenerateKey() mech: {:?}", mech.type_());
     trace!("C_GenerateKey() mech param len: {:?}", mech.len());
-
-    let template =
-        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
-
     let mech = match Mechanism::from_ckraw_mech(&mech) {
         Ok(mech) => mech,
         Err(e) => {
@@ -42,6 +36,11 @@ pub extern "C" fn C_GenerateKey(
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
+
+    lock_session!(hSession, session);
+
+    let template =
+        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
     let key = match session.generate_key(&template, None, &mech) {
         Ok(key) => key,
@@ -87,8 +86,6 @@ pub extern "C" fn C_GenerateKeyPair(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    lock_session!(hSession, session);
-
     let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
 
     trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
@@ -104,6 +101,8 @@ pub extern "C" fn C_GenerateKeyPair(
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
+
+    lock_session!(hSession, session);
 
     let public_template = unsafe {
         CkRawAttrTemplate::from_raw_ptr_unchecked(
@@ -293,6 +292,284 @@ pub extern "C" fn C_GenerateRandom(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_generate_key_null_mech() {
+        let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut phKey = 0;
+
+        let rv = C_GenerateKey(
+            0,
+            std::ptr::null_mut(),
+            template.as_mut_ptr(),
+            0,
+            &mut phKey,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_null_template() {
+        let mut phKey = 0;
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_GenerateKey(0, &mut mech, std::ptr::null_mut(), 0, &mut phKey);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_null_phkey() {
+        let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_GenerateKey(0, &mut mech, template.as_mut_ptr(), 0, std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_unknown_mech() {
+        let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut phKey = 0;
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 15000,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_GenerateKey(0, &mut mech, template.as_mut_ptr(), 0, &mut phKey);
+        assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+
+    #[test]
+    fn test_generate_key_pair_null_mech() {
+        let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut phPublicKey = 0;
+        let mut phPrivateKey = 0;
+
+        let rv = C_GenerateKeyPair(
+            0,
+            std::ptr::null_mut(),
+            template.as_mut_ptr(),
+            0,
+            template.as_mut_ptr(),
+            0,
+            &mut phPublicKey,
+            &mut phPrivateKey,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_pair_null_public_template() {
+        let mut phPublicKey = 0;
+        let mut phPrivateKey = 0;
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let mut private_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let rv = C_GenerateKeyPair(
+            0,
+            &mut mech,
+            std::ptr::null_mut(),
+            0,
+            private_template.as_mut_ptr(),
+            0,
+            &mut phPublicKey,
+            &mut phPrivateKey,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_pair_null_private_template() {
+        let mut phPublicKey = 0;
+        let mut phPrivateKey = 0;
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let rv = C_GenerateKeyPair(
+            0,
+            &mut mech,
+            public_template.as_mut_ptr(),
+            0,
+            std::ptr::null_mut(),
+            0,
+            &mut phPublicKey,
+            &mut phPrivateKey,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_pair_null_ph_public_key() {
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut private_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let rv = C_GenerateKeyPair(
+            0,
+            &mut mech,
+            public_template.as_mut_ptr(),
+            0,
+            private_template.as_mut_ptr(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_pair_null_ph_private_key() {
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let mut private_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+
+        let rv = C_GenerateKeyPair(
+            0,
+            &mut mech,
+            public_template.as_mut_ptr(),
+            0,
+            private_template.as_mut_ptr(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_key_pair_unknown_mech() {
+        let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+        let mut private_template = vec![cryptoki_sys::CK_ATTRIBUTE {
+            type_: 0,
+            pValue: std::ptr::null_mut(),
+            ulValueLen: 0,
+        }];
+        let mut phPublicKey = 0;
+        let mut phPrivateKey = 0;
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 15000,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_GenerateKeyPair(
+            0,
+            &mut mech,
+            public_template.as_mut_ptr(),
+            0,
+            private_template.as_mut_ptr(),
+            0,
+            &mut phPublicKey,
+            &mut phPrivateKey,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+
+    #[test]
+    fn test_generate_random_null_data() {
+        let rv = C_GenerateRandom(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_random_invalid_length() {
+        let mut random_data = vec![0; 1500];
+
+        let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 1500);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_generate_random_zero_length() {
+        let mut random_data = vec![0; 1500];
+
+        let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+    }
 
     #[test]
     fn test_wrap_key() {

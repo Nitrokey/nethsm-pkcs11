@@ -205,6 +205,24 @@ pub extern "C" fn C_DecryptVerifyUpdate(
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_decrypt_init_null_mech() {
+        let rv = C_DecryptInit(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_init_unknown_mech() {
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 15000, // doesn't exist
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_DecryptInit(0, &mut mech, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+
     // unsupported function
     #[test]
     fn test_decrypt_verify_update() {
