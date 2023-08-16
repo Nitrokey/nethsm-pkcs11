@@ -3,7 +3,10 @@
 set -e
 
 mkdir -p profile
-export LLVM_PROFILE_FILE="profile/default_%m_%p.profraw"
+
+export LLVM_PROFILE_FILE="${PWD}/profile/%p-%m.profraw"
+
+echo $LLVM_PROFILE_FILE
 
 echo "Starting tests"
 

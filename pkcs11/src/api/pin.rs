@@ -60,3 +60,15 @@ pub extern "C" fn C_SetPIN(
     }
     session.login_ctx.change_pin(new_pin.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_init_pin() {
+        let rv = C_InitPIN(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}

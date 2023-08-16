@@ -78,3 +78,74 @@ pub extern "C" fn C_VerifyRecover(
     trace!("C_VerifyRecover() called");
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
+
+// just test that the functions return CKR_FUNCTION_NOT_SUPPORTED
+#[cfg(test)]
+mod tests {
+    use cryptoki_sys::CK_ULONG;
+
+    use super::*;
+
+    #[test]
+    fn test_verify_init() {
+        let rv = C_VerifyInit(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 0,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+        let rv = C_VerifyInit(0, &mut mech, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_verify() {
+        let mut data = [0u8; 1];
+        let mut sig = [0u8; 1];
+        let rv = C_Verify(
+            0,
+            data.as_mut_ptr(),
+            data.len() as CK_ULONG,
+            sig.as_mut_ptr(),
+            sig.len() as CK_ULONG,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_verify_update() {
+        let mut data = [0u8; 1];
+        let rv = C_VerifyUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_verify_final() {
+        let mut sig = [0u8; 1];
+        let rv = C_VerifyFinal(0, sig.as_mut_ptr(), sig.len() as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_verify_recover_init() {
+        let rv = C_VerifyRecoverInit(0, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_verify_recover() {
+        let mut sig = [0u8; 1];
+        let mut data = [0u8; 1];
+        let mut data_len = 0;
+        let rv = C_VerifyRecover(
+            0,
+            sig.as_mut_ptr(),
+            sig.len() as CK_ULONG,
+            data.as_mut_ptr(),
+            &mut data_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}

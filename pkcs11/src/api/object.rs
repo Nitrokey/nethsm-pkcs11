@@ -255,3 +255,14 @@ pub extern "C" fn C_SetAttributeValue(
         cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_copy_object() {
+        let rv = C_CopyObject(0, 0, std::ptr::null_mut(), 0, std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ACTION_PROHIBITED);
+    }
+}

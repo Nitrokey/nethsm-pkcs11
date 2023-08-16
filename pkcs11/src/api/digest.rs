@@ -90,3 +90,92 @@ pub extern "C" fn C_DecryptDigestUpdate(
     trace!("C_DecryptDigestUpdate() called ");
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
+
+#[cfg(test)]
+mod tests {
+    use cryptoki_sys::CK_ULONG;
+
+    use super::*;
+    #[test]
+    fn test_digest_init() {
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 0,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_DigestInit(0, &mut mech);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_digest() {
+        let mut digest_len: CK_ULONG = 0;
+        let mut digest: Vec<u8> = Vec::new();
+        let mut data: Vec<u8> = Vec::new();
+
+        let rv = C_Digest(
+            0,
+            data.as_mut_ptr(),
+            data.len() as CK_ULONG,
+            digest.as_mut_ptr(),
+            &mut digest_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_digest_update() {
+        let mut data: Vec<u8> = Vec::new();
+
+        let rv = C_DigestUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_digest_final() {
+        let mut digest_len: CK_ULONG = 0;
+        let mut digest: Vec<u8> = Vec::new();
+
+        let rv = C_DigestFinal(0, digest.as_mut_ptr(), &mut digest_len);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_digest_key() {
+        let rv = C_DigestKey(0, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_digest_encrypt_update() {
+        let mut encrypted_part_len: CK_ULONG = 0;
+        let mut encrypted_part: Vec<u8> = Vec::new();
+        let mut part: Vec<u8> = Vec::new();
+
+        let rv = C_DigestEncryptUpdate(
+            0,
+            part.as_mut_ptr(),
+            part.len() as CK_ULONG,
+            encrypted_part.as_mut_ptr(),
+            &mut encrypted_part_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_decrypt_digest_update() {
+        let mut encrypted_part_len: CK_ULONG = 0;
+        let mut encrypted_part: Vec<u8> = Vec::new();
+        let mut part: Vec<u8> = Vec::new();
+
+        let rv = C_DecryptDigestUpdate(
+            0,
+            encrypted_part.as_mut_ptr(),
+            encrypted_part.len() as CK_ULONG,
+            part.as_mut_ptr(),
+            &mut encrypted_part_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}

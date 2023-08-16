@@ -13,7 +13,6 @@ pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
 };
 
 lazy_static! {
-    #[derive(Debug)]
     pub static ref DEVICE: Device = match config::initialization::initialize_configuration() {
         Ok(config) => config,
         Err(e) => {

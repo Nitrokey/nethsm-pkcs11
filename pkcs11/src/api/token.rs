@@ -351,3 +351,20 @@ pub extern "C" fn C_WaitForSlotEvent(
     trace!("C_WaitForSlotEvent() called");
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_init_token() {
+        let result = C_InitToken(0, std::ptr::null_mut(), 0, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_wait_for_slot_event() {
+        let result = C_WaitForSlotEvent(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+}

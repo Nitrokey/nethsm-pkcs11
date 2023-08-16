@@ -151,3 +151,32 @@ pub extern "C" fn C_CancelFunction(
     trace!("C_CancelFunction() called");
     cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_operation_state() {
+        let rv = C_GetOperationState(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_set_operation_state() {
+        let rv = C_SetOperationState(0, std::ptr::null_mut(), 0, 0, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_get_function_status() {
+        let rv = C_GetFunctionStatus(0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL);
+    }
+
+    #[test]
+    fn test_cancel_function() {
+        let rv = C_CancelFunction(0);
+        assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL);
+    }
+}
