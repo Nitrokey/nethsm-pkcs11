@@ -6,7 +6,7 @@ See the [list of supported features](./features.md) for more details.
 
 ## Download
 
-Download the latest binary corresponding to your system from the [release page](https://github.com/Nitrokey/nethsm-pkcs11/releases).
+Download the latest binary from the [release page](https://github.com/Nitrokey/nethsm-pkcs11/releases).
 
 ## Documentation
 
@@ -22,7 +22,7 @@ cargo build --release
 
 The dynamic library will be in `target/release/libnethsm_pkcs11.so`.
 
-### Alpine
+### Alpine Linux
 
 You need to install musl-dev, openssl-dev, gcc, perl, make:
 
@@ -30,7 +30,7 @@ You need to install musl-dev, openssl-dev, gcc, perl, make:
 apk add musl-dev openssl-dev gcc
 ```
 
-To build on Alpine you will need to add the C argument `target-feature=-crt-static`:
+To build on Alpine Linux you will need to add the C argument `target-feature=-crt-static`:
 
 ```
 RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
@@ -49,5 +49,4 @@ Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to 
 
 ## OpenSSL
 
-For ease of use we are statically linking to OpenSSL (via the `openssl` and `openssl-src` crate).
-OpenSSL's license is available here : [https://www.openssl.org/source/apache-license-2.0.txt](https://www.openssl.org/source/apache-license-2.0.txt)
+For ease of use we are statically linking to OpenSSL (via the `openssl` and `openssl-src` crate) ([Apache license](https://www.openssl.org/source/apache-license-2.0.txt)).
