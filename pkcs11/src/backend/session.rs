@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use cryptoki_sys::{
     CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
-    CK_USER_TYPE,
+    CK_ULONG, CK_USER_TYPE,
 };
 use log::{debug, error, trace};
 use nethsm_sdk_rs::apis::default_api;
@@ -487,7 +487,7 @@ impl Session {
             .await?
             .entity;
 
-        let mut set: JoinSet<Result<Vec<(u64, Object)>, Error>> = JoinSet::new();
+        let mut set: JoinSet<Result<Vec<(CK_ULONG, Object)>, Error>> = JoinSet::new();
 
         let mut handles = Vec::new();
 
