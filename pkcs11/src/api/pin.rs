@@ -64,11 +64,121 @@ pub extern "C" fn C_SetPIN(
 #[cfg(test)]
 mod tests {
 
+    use cryptoki_sys::CK_ULONG;
+
+    use crate::data::SESSION_MANAGER;
+
     use super::*;
 
     #[test]
     fn test_init_pin() {
         let rv = C_InitPIN(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_set_pin_null_old_pin() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let newPin = "12345678";
+        let rv = C_SetPIN(
+            session_handle,
+            std::ptr::null_mut(),
+            0,
+            newPin.as_ptr() as *mut u8,
+            newPin.len() as CK_ULONG,
+        );
+
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_set_pin_null_new_pin() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let oldPin = "12345678";
+        let rv = C_SetPIN(
+            session_handle,
+            oldPin.as_ptr() as *mut u8,
+            oldPin.len() as CK_ULONG,
+            std::ptr::null_mut(),
+            0,
+        );
+
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_set_pin_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let oldPin = "12345678";
+        let newPin = "12345678";
+
+        let rv = C_SetPIN(
+            0,
+            oldPin.as_ptr() as *mut u8,
+            oldPin.len() as CK_ULONG,
+            newPin.as_ptr() as *mut u8,
+            newPin.len() as CK_ULONG,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_set_pin_no_utf8_old_pin() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        // random bytes
+        let oldPin = [
+            0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
+        ];
+        let newPin = "12345678";
+
+        let rv = C_SetPIN(
+            session_handle,
+            oldPin.as_ptr() as *mut u8,
+            oldPin.len() as CK_ULONG,
+            newPin.as_ptr() as *mut u8,
+            newPin.len() as CK_ULONG,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_set_pin_no_utf8_new_pin() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let oldPin = "12345678";
+        // random bytes
+        let newPin = [
+            0xC0, 0xC1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
+        ];
+
+        let rv = C_SetPIN(
+            session_handle,
+            oldPin.as_ptr() as *mut u8,
+            oldPin.len() as CK_ULONG,
+            newPin.as_ptr() as *mut u8,
+            newPin.len() as CK_ULONG,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_set_pin_no_user() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let oldPin = "12345678";
+        let newPin = "12345678";
+
+        let rv = C_SetPIN(
+            session_handle,
+            oldPin.as_ptr() as *mut u8,
+            oldPin.len() as CK_ULONG,
+            newPin.as_ptr() as *mut u8,
+            newPin.len() as CK_ULONG,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_USER_TYPE_INVALID);
     }
 }

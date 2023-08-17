@@ -154,7 +154,77 @@ pub extern "C" fn C_CancelFunction(
 
 #[cfg(test)]
 mod tests {
+    use crate::backend::slot::set_test_config_env;
+
     use super::*;
+
+    #[test]
+    fn test_open_session_null_session() {
+        let rv = C_OpenSession(
+            0,
+            cryptoki_sys::CKF_SERIAL_SESSION | cryptoki_sys::CKF_RW_SESSION,
+            std::ptr::null_mut(),
+            None,
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_open_session_parallel() {
+        let mut session = 0;
+        let rv = C_OpenSession(0, 0, std::ptr::null_mut(), None, &mut session);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_PARALLEL_NOT_SUPPORTED);
+    }
+
+    #[test]
+    fn test_delete_session_invalid() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let rv = C_CloseSession(0);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_close_all_sessions_invalid_slot() {
+        set_test_config_env();
+
+        let rv = C_CloseAllSessions(99);
+        assert_eq!(rv, cryptoki_sys::CKR_SLOT_ID_INVALID);
+    }
+
+    #[test]
+    fn test_close_all_sessions() {
+        set_test_config_env();
+        let slot = get_slot(0).unwrap();
+
+        let handle = SESSION_MANAGER.lock().unwrap().create_session(0, slot, 0);
+
+        let rv = C_CloseAllSessions(0);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        assert!(SESSION_MANAGER
+            .lock()
+            .unwrap()
+            .get_session(handle)
+            .is_none());
+    }
+
+    #[test]
+    fn test_get_session_info_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut info = cryptoki_sys::CK_SESSION_INFO::default();
+        let rv = C_GetSessionInfo(0, &mut info);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_get_session_info_null_info() {
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let rv = C_GetSessionInfo(session_handle, std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
 
     #[test]
     fn test_get_operation_state() {

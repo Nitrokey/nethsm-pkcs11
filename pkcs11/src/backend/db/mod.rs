@@ -30,8 +30,8 @@ impl Db {
         self.last_fetchall_timestamp
             .map(|last| {
                 last.elapsed()
-                    // cache for 5 minutes
-                    .map(|elapsed| elapsed.as_secs() < 300)
+                    // cache for 1 hour
+                    .map(|elapsed| elapsed.as_secs() < 3600)
                     .unwrap_or(false)
             })
             .unwrap_or(false)

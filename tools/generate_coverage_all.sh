@@ -8,4 +8,5 @@
 SYSROOT=$(rustc --print sysroot)
 
 cov=$(find $SYSROOT -name "llvm-cov")
-$cov show ${objects} -Xdemangler=rustfilt target/debug/libnethsm_pkcs11.so -instr-profile=profile/libnethsm.profdata  --ignore-filename-regex='/.cargo' --ignore-filename-regex='rustc/'  --format=lcov 
+objects=$(cat _test_objects)
+$cov report ${objects} -Xdemangler=rustfilt target/debug/libnethsm_pkcs11.so -instr-profile=profile/libnethsm.profdata  --ignore-filename-regex='/.cargo' --ignore-filename-regex='rustc/'

@@ -96,3 +96,28 @@ pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     }
     cryptoki_sys::CKR_OK
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_function_list() {
+        let mut fn_list: *mut cryptoki_sys::CK_FUNCTION_LIST = std::ptr::null_mut();
+        let rv = C_GetFunctionList(&mut fn_list);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        assert!(!fn_list.is_null());
+    }
+
+    #[test]
+    fn test_get_function_list_null_ptr() {
+        let rv = C_GetFunctionList(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_get_info_null_ptr() {
+        let rv = C_GetInfo(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+}
