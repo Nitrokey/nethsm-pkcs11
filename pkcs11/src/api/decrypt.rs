@@ -203,7 +203,13 @@ pub extern "C" fn C_DecryptVerifyUpdate(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+    use crate::data::SESSION_MANAGER;
+
+    fn setup_session() -> cryptoki_sys::CK_SESSION_HANDLE {
+        SESSION_MANAGER.lock().unwrap().setup_dummy_session()
+    }
 
     #[test]
     fn test_decrypt_init_null_mech() {
@@ -222,6 +228,191 @@ mod tests {
         let rv = C_DecryptInit(0, &mut mech, 0);
         assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
     }
+
+    #[test]
+    fn test_decrypt_init_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut mech = cryptoki_sys::CK_MECHANISM {
+            mechanism: 0,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_DecryptInit(0, &mut mech, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_decrypt_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let rv = C_Decrypt(
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_decrypt_null_data_len() {
+        let mut pEncryptedData = [0u8; 32];
+
+        let session_handle = setup_session();
+
+        let rv = C_Decrypt(
+            session_handle,
+            pEncryptedData.as_mut_ptr(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_null_encrypted_data() {
+        let mut pulDataLen = 0;
+
+        let session_handle = setup_session();
+
+        let rv = C_Decrypt(
+            session_handle,
+            std::ptr::null_mut(),
+            32,
+            std::ptr::null_mut(),
+            &mut pulDataLen,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_null_data() {
+        let mut pulDataLen = 0;
+
+        let session_handle = setup_session();
+
+        let mut pEncryptedData = [0u8; 32];
+
+        let rv = C_Decrypt(
+            session_handle,
+            pEncryptedData.as_mut_ptr(),
+            32,
+            std::ptr::null_mut(),
+            &mut pulDataLen,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+    }
+
+    #[test]
+    fn test_decrypt_update_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let rv = C_DecryptUpdate(
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_decrypt_update_null_encrypted_part() {
+        let session_handle = setup_session();
+
+        let mut pulPartLen = 0;
+        let mut pPart = [0u8; 32];
+
+        let rv = C_DecryptUpdate(
+            session_handle,
+            std::ptr::null_mut(),
+            0,
+            pPart.as_mut_ptr(),
+            &mut pulPartLen,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_update_null_part_len() {
+        let session_handle = setup_session();
+
+        let mut pEncryptedPart = [0u8; 32];
+        let mut pPart = [0u8; 32];
+
+        let rv = C_DecryptUpdate(
+            session_handle,
+            pEncryptedPart.as_mut_ptr(),
+            0,
+            pPart.as_mut_ptr(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_update_operation_not_initialized() {
+        let session_handle = setup_session();
+
+        let mut pEncryptedPart = [0u8; 32];
+        let mut pPart = [0u8; 32];
+        let mut pulPartLen = 0;
+
+        let rv = C_DecryptUpdate(
+            session_handle,
+            pEncryptedPart.as_mut_ptr(),
+            0,
+            pPart.as_mut_ptr(),
+            &mut pulPartLen,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
+    }
+
+    #[test]
+    fn test_decrypt_final_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut pulLastPartLen = 0;
+
+        let rv = C_DecryptFinal(0, std::ptr::null_mut(), &mut pulLastPartLen);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_decrypt_final_null_last_part_len() {
+        let session_handle = setup_session();
+
+        let mut lastPart = [0u8; 32];
+
+        let rv = C_DecryptFinal(session_handle, lastPart.as_mut_ptr(), std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_decrypt_final_operation_not_initialized() {
+        let session_handle = setup_session();
+
+        let mut lastPart = [0u8; 32];
+        let mut pulLastPartLen = 0;
+
+        let rv = C_DecryptFinal(session_handle, lastPart.as_mut_ptr(), &mut pulLastPartLen);
+        assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
+    }
+
+    // #[test]
+    // fn test_decrypt_final_null_last_part() {
+    //     let session_handle = setup_session();
+
+    //     let mut pulLastPartLen = 0;
+
+    //     let rv = C_DecryptFinal(session_handle, std::ptr::null_mut(), &mut pulLastPartLen);
+    //     assert_eq!(rv, cryptoki_sys::CKR_OK);
+    // }
 
     // unsupported function
     #[test]

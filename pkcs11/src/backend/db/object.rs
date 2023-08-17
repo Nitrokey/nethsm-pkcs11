@@ -142,6 +142,12 @@ pub enum ObjectKind {
     Other,
 }
 
+impl Default for ObjectKind {
+    fn default() -> Self {
+        Self::Other
+    }
+}
+
 impl From<CK_OBJECT_CLASS> for ObjectKind {
     fn from(src: CK_OBJECT_CLASS) -> Self {
         match src {
@@ -154,19 +160,7 @@ impl From<CK_OBJECT_CLASS> for ObjectKind {
     }
 }
 
-impl From<ObjectKind> for CK_OBJECT_CLASS {
-    fn from(src: ObjectKind) -> Self {
-        match src {
-            ObjectKind::PrivateKey => cryptoki_sys::CKO_PRIVATE_KEY,
-            ObjectKind::PublicKey => cryptoki_sys::CKO_PUBLIC_KEY,
-            ObjectKind::SecretKey => cryptoki_sys::CKO_SECRET_KEY,
-            ObjectKind::Certificate => cryptoki_sys::CKO_CERTIFICATE,
-            ObjectKind::Other => cryptoki_sys::CKO_DATA,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     pub kind: ObjectKind,

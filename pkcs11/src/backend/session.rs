@@ -79,6 +79,30 @@ impl SessionManager {
             self.sessions.remove(handle);
         }
     }
+
+    // test only function to setup a session how we want it
+    #[allow(dead_code)]
+    #[cfg(test)]
+    pub fn set_session(&mut self, handle: CK_SESSION_HANDLE, session: Session) {
+        self.sessions.insert(handle, session);
+    }
+
+    // test only function to setup a blank session
+    #[cfg(test)]
+    pub fn setup_dummy_session(&mut self) -> cryptoki_sys::CK_SESSION_HANDLE {
+        self.create_session(
+            0,
+            Arc::new(Slot {
+                administrator: None,
+                db: Arc::new(Mutex::new(Db::new())),
+                description: None,
+                instances: vec![],
+                label: "test".to_string(),
+                operator: None,
+            }),
+            0,
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -190,13 +214,13 @@ impl Session {
         Ok(())
     }
 
-    pub fn sign_theoretical_size(&self) -> usize {
+    pub fn sign_theoretical_size(&self) -> Result<usize, Error> {
         let sign_ctx = self
             .sign_ctx
             .as_ref()
-            .expect("sign context should be initialized");
+            .ok_or(Error::OperationNotInitialized)?;
 
-        sign_ctx.get_theoretical_size()
+        Ok(sign_ctx.get_theoretical_size())
     }
 
     pub fn sign_update(&mut self, data: &[u8]) -> Result<(), Error> {
@@ -281,6 +305,15 @@ impl Session {
     pub fn encrypt_update(&mut self, data: &[u8]) -> Result<Vec<u8>, Error> {
         self.encrypt_add_data(data)?;
         self.encrypt_available_data()
+    }
+
+    pub fn encrypt_get_theoretical_final_size(&self) -> Result<usize, Error> {
+        let encrypt_ctx = self
+            .encrypt_ctx
+            .as_ref()
+            .ok_or(Error::OperationNotInitialized)?;
+
+        Ok(encrypt_ctx.get_biggest_chunk_len())
     }
 
     pub fn encrypt_final(&mut self) -> Result<Vec<u8>, Error> {

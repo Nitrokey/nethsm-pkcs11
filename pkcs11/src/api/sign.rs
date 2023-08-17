@@ -63,7 +63,14 @@ pub extern "C" fn C_Sign(
 
     let buffer_size = unsafe { *pulSignatureLen } as usize;
 
-    let theoretical_size = session.sign_theoretical_size();
+    let theoretical_size = match session.sign_theoretical_size() {
+        Ok(size) => size,
+        Err(err) => {
+            session.sign_clear();
+            return err.into();
+        }
+    };
+
     unsafe {
         std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
     }
@@ -146,7 +153,13 @@ pub extern "C" fn C_SignFinal(
 
     let buffer_size = unsafe { *pulSignatureLen } as usize;
 
-    let theoretical_size = session.sign_theoretical_size();
+    let theoretical_size = match session.sign_theoretical_size() {
+        Ok(size) => size,
+        Err(err) => {
+            session.sign_clear();
+            return err.into();
+        }
+    };
 
     unsafe {
         std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
@@ -220,7 +233,192 @@ pub extern "C" fn C_SignEncryptUpdate(
 
 #[cfg(test)]
 mod tests {
+    use crate::data::SESSION_MANAGER;
+
     use super::*;
+
+    #[test]
+    fn test_sign_init_null_mechanism() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let rv = C_SignInit(session, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_sign_init_invalid_mechanism() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut mechanism = cryptoki_sys::CK_MECHANISM {
+            mechanism: 15000,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_SignInit(session, &mut mechanism, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+
+    #[test]
+    fn test_sign_init_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut mechanism = cryptoki_sys::CK_MECHANISM {
+            mechanism: 0,
+            pParameter: std::ptr::null_mut(),
+            ulParameterLen: 0,
+        };
+
+        let rv = C_SignInit(0, &mut mechanism, 0);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_sign_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut data = [0u8; 32];
+        let mut signature = [0u8; 32];
+        let mut signature_len = 32;
+
+        let rv = C_Sign(
+            0,
+            data.as_mut_ptr(),
+            data.len() as CK_ULONG,
+            signature.as_mut_ptr(),
+            &mut signature_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_sign_null_data() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut signature = [0u8; 32];
+        let mut signature_len = 32;
+
+        let rv = C_Sign(
+            session,
+            std::ptr::null_mut(),
+            0,
+            signature.as_mut_ptr(),
+            &mut signature_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_sign_null_signature_len() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut data = [0u8; 32];
+        let mut signature = [0u8; 32];
+
+        let rv = C_Sign(
+            session,
+            data.as_mut_ptr(),
+            data.len() as CK_ULONG,
+            signature.as_mut_ptr(),
+            std::ptr::null_mut(),
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_sign_operation_not_initialized() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut data = [0u8; 32];
+        let mut signature = [0u8; 32];
+        let mut signature_len = 32;
+
+        let rv = C_Sign(
+            session,
+            data.as_mut_ptr(),
+            data.len() as CK_ULONG,
+            signature.as_mut_ptr(),
+            &mut signature_len,
+        );
+        assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
+    }
+
+    // #[test]
+    // fn test_sign_null_signature() {
+    //     let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+    //     let mut data = [0u8; 32];
+    //     let mut signature_len = 32;
+
+    //     let rv = C_Sign(
+    //         session,
+    //         data.as_mut_ptr(),
+    //         data.len() as CK_ULONG,
+    //         std::ptr::null_mut(),
+    //         &mut signature_len,
+    //     );
+    //     assert_eq!(rv, cryptoki_sys::CKR_OK);
+    // }
+
+    #[test]
+    fn test_sign_update_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut data = [0u8; 32];
+
+        let rv = C_SignUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_sign_update_null_data() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let rv = C_SignUpdate(session, std::ptr::null_mut(), 0);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_sign_update_operation_not_initialized() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut data = [0u8; 32];
+
+        let rv = C_SignUpdate(session, data.as_mut_ptr(), data.len() as CK_ULONG);
+        assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
+    }
+
+    #[test]
+    fn test_sign_final_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut signature = [0u8; 32];
+        let mut signature_len = 32;
+
+        let rv = C_SignFinal(0, signature.as_mut_ptr(), &mut signature_len);
+        assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_sign_final_null_signature_len() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut signature = [0u8; 32];
+
+        let rv = C_SignFinal(session, signature.as_mut_ptr(), std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_sign_final_operation_not_initialized() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut signature = [0u8; 32];
+        let mut signature_len = 32;
+
+        let rv = C_SignFinal(session, signature.as_mut_ptr(), &mut signature_len);
+        assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
+    }
 
     #[test]
     fn test_sign_recover_init() {

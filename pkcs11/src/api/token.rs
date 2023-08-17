@@ -69,6 +69,10 @@ pub extern "C" fn C_GetSlotInfo(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetSlotInfo() called with slotID: {}", slotID);
 
+    if pInfo.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
     // get the slot
 
     let slot = match get_slot(slotID as usize) {
@@ -77,10 +81,6 @@ pub extern "C" fn C_GetSlotInfo(
             return e;
         }
     };
-
-    if pInfo.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
 
     let mut flags = 0;
 
@@ -240,6 +240,10 @@ pub extern "C" fn C_GetMechanismList(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
+    if let Err(e) = get_slot(slotID as usize) {
+        return e;
+    }
+
     let count = MECHANISM_LIST.len() as CK_ULONG;
 
     // only the count is requested
@@ -322,7 +326,7 @@ pub extern "C" fn C_Login(
 
     let pin = match std::str::from_utf8(pin) {
         Ok(pin) => pin,
-        Err(_) => return cryptoki_sys::CKR_PIN_INCORRECT,
+        Err(_) => return cryptoki_sys::CKR_ARGUMENTS_BAD,
     };
 
     lock_session!(hSession, session);
@@ -354,7 +358,173 @@ pub extern "C" fn C_WaitForSlotEvent(
 
 #[cfg(test)]
 mod tests {
+    use cryptoki_sys::{CKU_USER, CK_MECHANISM_INFO};
+
+    use crate::{backend::slot::set_test_config_env, data::SESSION_MANAGER};
+
     use super::*;
+
+    #[test]
+    fn test_get_slot_list_null_count() {
+        let result = C_GetSlotList(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_get_slot_list_null_list() {
+        set_test_config_env();
+
+        let mut count = 0;
+        let result = C_GetSlotList(0, std::ptr::null_mut(), &mut count);
+        assert_eq!(result, cryptoki_sys::CKR_OK);
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_get_slot_list_small_buffer() {
+        set_test_config_env();
+
+        let mut count = 0;
+        let mut list = [0; 1];
+        let result = C_GetSlotList(0, list.as_mut_ptr(), &mut count);
+        assert_eq!(result, cryptoki_sys::CKR_BUFFER_TOO_SMALL);
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_get_slot_info_invalid_slot() {
+        set_test_config_env();
+
+        let mut info = CK_SLOT_INFO::default();
+        let result = C_GetSlotInfo(99, &mut info);
+        assert_eq!(result, cryptoki_sys::CKR_SLOT_ID_INVALID);
+    }
+
+    #[test]
+    fn test_get_slot_info_null_info() {
+        set_test_config_env();
+
+        let result = C_GetSlotInfo(0, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_get_mechanism_list_null_count() {
+        set_test_config_env();
+
+        let result = C_GetMechanismList(0, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_get_mechanism_list_null_list() {
+        set_test_config_env();
+
+        let mut count = 0;
+        let result = C_GetMechanismList(0, std::ptr::null_mut(), &mut count);
+        assert_eq!(result, cryptoki_sys::CKR_OK);
+        assert_eq!(count, MECHANISM_LIST.len() as CK_ULONG);
+    }
+
+    #[test]
+    fn test_get_mechanism_list_small_buffer() {
+        set_test_config_env();
+
+        let mut count = 0;
+        let mut list = [0; 1];
+        let result = C_GetMechanismList(0, list.as_mut_ptr(), &mut count);
+        assert_eq!(result, cryptoki_sys::CKR_BUFFER_TOO_SMALL);
+        assert_eq!(count, MECHANISM_LIST.len() as CK_ULONG);
+    }
+
+    #[test]
+    fn test_get_mechanism_list_invalid_slot() {
+        set_test_config_env();
+
+        let mut count = 0;
+        let mut list = [0; 1];
+        let result = C_GetMechanismList(99, list.as_mut_ptr(), &mut count);
+        assert_eq!(result, cryptoki_sys::CKR_SLOT_ID_INVALID);
+    }
+
+    #[test]
+    fn test_get_mechanism_info_invalid_mechanism() {
+        set_test_config_env();
+
+        let mut info = CK_MECHANISM_INFO::default();
+        let result = C_GetMechanismInfo(0, 15000, &mut info);
+        assert_eq!(result, cryptoki_sys::CKR_MECHANISM_INVALID);
+    }
+
+    #[test]
+    fn test_get_mechanism_info_invalid_slot() {
+        set_test_config_env();
+
+        let mut info = CK_MECHANISM_INFO::default();
+        let result = C_GetMechanismInfo(99, 0, &mut info);
+        assert_eq!(result, cryptoki_sys::CKR_SLOT_ID_INVALID);
+    }
+
+    #[test]
+    fn test_get_mechanism_info_null_info() {
+        set_test_config_env();
+
+        let result = C_GetMechanismInfo(0, 0, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_get_token_info_invalid_slot() {
+        set_test_config_env();
+
+        let mut info = CK_TOKEN_INFO::default();
+        let result = C_GetTokenInfo(99, &mut info);
+        assert_eq!(result, cryptoki_sys::CKR_SLOT_ID_INVALID);
+    }
+
+    #[test]
+    fn test_get_token_info_null_info() {
+        set_test_config_env();
+
+        let result = C_GetTokenInfo(0, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_login_null_pin() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let result = C_Login(session, CKU_USER, std::ptr::null_mut(), 0);
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_login_non_utf8_pin() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let mut pin = [0xFF, 0xFF, 0xFF, 0xFF];
+
+        let result = C_Login(session, CKU_USER, pin.as_mut_ptr(), 4);
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_login_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let mut pin = "1234".to_string();
+
+        let result = C_Login(0, CKU_USER, pin.as_mut_ptr(), 4);
+        assert_eq!(result, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
+
+    #[test]
+    fn test_logout_invalid_session() {
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
+
+        let result = C_Logout(0);
+        assert_eq!(result, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
+    }
 
     #[test]
     fn test_init_token() {
