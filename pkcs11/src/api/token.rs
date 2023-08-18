@@ -527,6 +527,14 @@ mod tests {
     }
 
     #[test]
+    fn test_logout() {
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+
+        let result = C_Logout(session);
+        assert_eq!(result, cryptoki_sys::CKR_OK);
+    }
+
+    #[test]
     fn test_init_token() {
         let result = C_InitToken(0, std::ptr::null_mut(), 0, std::ptr::null_mut());
         assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
