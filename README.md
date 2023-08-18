@@ -1,5 +1,10 @@
 # PKCS#11 Module for the Nitrokey NetHSM
 
+[![codecov.io][codecov-badge]][codecov-url]
+
+[codecov-badge]: https://codecov.io/gh/nitrokey/nethsm-pkcs11/branch/main/graph/badge.svg
+[codecov-url]: https://app.codecov.io/gh/nitrokey/nethsm-pkcs11/tree/main
+
 This module allows to use a [Nitrokey NetHSM](https://www.nitrokey.com/products/nethsm) as a backend for PKCS#11 operations.
 
 See the [list of supported features](./features.md) for more details.

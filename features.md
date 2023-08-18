@@ -11,18 +11,18 @@ As of current version concurrency is not yet implemented.
 
 ## Base features
 
-| Feature           | Status             | Notes                         |
-| ----------------- | ------------------ | ----------------------------- |
-| C_GetFunctionList | :heavy_check_mark: |                               |
-| C_Initialize      | :warning:          | Custom mutexes are not supported |
-| C_Finalize        | :heavy_check_mark: |                               |
-| C_GetInfo         | :heavy_check_mark: |                               |
+| Feature           | Status             | Notes                            |
+| ----------------- | ------------------ | -------------------------------- |
+| C_GetFunctionList | :heavy_check_mark: |                                  |
+| C_Initialize      | :heavy_check_mark: | Custom mutexes are not supported |
+| C_Finalize        | :heavy_check_mark: |                                  |
+| C_GetInfo         | :heavy_check_mark: |                                  |
 
 ## Session
 
 | Feature             | Status             | Notes                             |
 | ------------------- | ------------------ | --------------------------------- |
-| C_OpenSession       | :warning:          | Notify not supported              |
+| C_OpenSession       | :heavy_check_mark: | Notify not supported              |
 | C_CloseSession      | :heavy_check_mark: |                                   |
 | C_CloseAllSessions  | :heavy_check_mark: |                                   |
 | C_GetSessionInfo    | :heavy_check_mark: |                                   |
@@ -66,15 +66,15 @@ As of current version concurrency is not yet implemented.
 
 ## Sign
 
-| Feature             | Status             | Notes                    |
-| ------------------- | ------------------ | ------------------------ |
-| C_SignInit          | :heavy_check_mark: |                          |
-| C_Sign              | :heavy_check_mark: |                          |
-| C_SignUpdate        | :heavy_check_mark: |                          |
-| C_SignFinal         | :heavy_check_mark: |                          |
-| C_SignRecoverInit   | :x:                | May be implemented later |
-| C_SignRecover       | :x:                | May be implemented later |
-| C_SignEncryptUpdate | :x:                | Not supported by NetHSM  |
+| Feature             | Status             | Notes                   |
+| ------------------- | ------------------ | ----------------------- |
+| C_SignInit          | :heavy_check_mark: |                         |
+| C_Sign              | :heavy_check_mark: |                         |
+| C_SignUpdate        | :heavy_check_mark: |                         |
+| C_SignFinal         | :heavy_check_mark: |                         |
+| C_SignRecoverInit   | :x:                |                         |
+| C_SignRecover       | :x:                |                         |
+| C_SignEncryptUpdate | :x:                | Not supported by NetHSM |
 
 ## Digest :x:
 
@@ -106,9 +106,9 @@ Verify is not supported by NetHSM
 | C_GetAttributeValue | :heavy_check_mark: |                                                                     |
 | C_GetObjectSize     | :heavy_check_mark: |                                                                     |
 | C_CreateObject      | :warning:          | Needs to be logged as admin (SO). Only private keys can be added.   |
-| C_CopyObject        | :warning:          | Always returns CKR_ACTION_PROHIBITED                                |
+| C_CopyObject        | :heavy_check_mark: | Always returns CKR_ACTION_PROHIBITED                                |
 | C_DestroyObject     | :warning:          | Needs to be logged as admin (SO). Only private keys can be deleted. |
-| C_SetAttributeValue | :warning:          | Always returns CKR_ACTION_PROHIBITED                                |
+| C_SetAttributeValue | :heavy_check_mark: | Always returns CKR_ACTION_PROHIBITED                                |
 
 ## Pin management
 
