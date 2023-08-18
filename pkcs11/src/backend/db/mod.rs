@@ -21,7 +21,8 @@ impl Db {
     pub fn new() -> Self {
         Self {
             objects: HashMap::new(),
-            next_handle: 0,
+            // 0 means invalid handle, we need to start from 1
+            next_handle: 1,
             last_fetchall_timestamp: None,
         }
     }

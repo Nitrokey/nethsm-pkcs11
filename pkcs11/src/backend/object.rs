@@ -33,8 +33,7 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
             let mut kind = None;
             let mut raw_id = None;
             for attr in template.iter() {
-                debug!("attr: {:?}", attr.type_());
-                debug!("attr: {:?}", attr.val_bytes());
+                debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
                 if attr.type_() == CKA_CLASS {
                     kind = attr.read_value::<CK_OBJECT_CLASS>().map(ObjectKind::from)
@@ -156,7 +155,6 @@ mod tests {
 
     #[test]
     fn test_parse_key_requirements_id_from_label() -> Result<(), Error> {
-
         let mut bytes = "test".to_string().into_bytes();
 
         let mut attributes = vec![_CK_ATTRIBUTE {
