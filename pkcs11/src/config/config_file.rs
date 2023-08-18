@@ -138,9 +138,54 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    use super::*;
+
+    #[test]
+    fn test_read_home_config() {
+        let config = r#"
+enable_set_attribute_value: true
+log_file: /tmp/p11nethsm.log
+log_level: Trace
+slots:
+  - label: test
+    operator:
+        username: test
+        password: test_password
+    instances:
+        - url: https://localhost:23443
+          danger_insecure_cert: true
+"#;
+        let home = "/tmp/home/";
+
+        // create a temporary "fake" home folder
+        fs::create_dir_all(format!("{}.config/nitrokey", home)).unwrap();
+        fs::write(
+            format!("{}/.config/nitrokey/{}", home, CONFIG_FILE_NAME),
+            config,
+        )
+        .unwrap();
+
+        std::env::set_var("HOME", home);
+        let config = read_configuration().unwrap();
+        assert!(config.enable_set_attribute_value);
+        assert_eq!(config.log_file, Some("/tmp/p11nethsm.log".to_string()));
+        assert!(matches!(config.log_level, Some(LogLevel::Trace)));
+        assert_eq!(config.slots.len(), 1);
+        assert_eq!(config.slots[0].label, "test");
+        assert_eq!(config.slots[0].operator.as_ref().unwrap().username, "test");
+        assert_eq!(
+            config.slots[0].operator.as_ref().unwrap().password,
+            Some("test_password".to_string())
+        );
+        // clean up
+        fs::remove_dir_all(home).unwrap();
+    }
+
     #[test]
     fn test_read_config_no_file() {
-        let config = super::read_configuration();
+        let config = read_configuration();
         assert!(config.is_err());
         assert!(matches!(
             config.unwrap_err(),
