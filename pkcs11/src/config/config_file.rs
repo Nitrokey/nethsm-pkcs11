@@ -127,8 +127,69 @@ where
                 let val = std::env::var(var).map_err(serde::de::Error::custom)?;
                 return Ok(Some(val));
             }
+            if s.is_empty() {
+                return Ok(None);
+            }
             Ok(Some(s))
         }
         None => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_read_config_no_file() {
+        let config = super::read_configuration();
+        assert!(config.is_err());
+        assert!(matches!(
+            config.unwrap_err(),
+            super::ConfigError::NoConfigFile
+        ));
+    }
+
+    #[test]
+    fn test_deserialize_password_env() {
+        let config = r#"
+username: test
+password: env:TEST_PASSWORD
+"#;
+
+        std::env::set_var("TEST_PASSWORD", "test_password");
+        let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
+        assert_eq!(config.username, "test");
+        assert_eq!(config.password, Some("test_password".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_password() {
+        let config = r#"
+username: test
+password: test_password
+"#;
+        let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
+        assert_eq!(config.username, "test");
+        assert_eq!(config.password, Some("test_password".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_password_none() {
+        let config = r#"
+username: test
+"#;
+        let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
+        assert_eq!(config.username, "test");
+        assert_eq!(config.password, None);
+    }
+
+    #[test]
+    fn test_deserialize_password_empty() {
+        let config = r#"
+username: test
+password: ""
+"#;
+        let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
+        assert_eq!(config.username, "test");
+        assert_eq!(config.password, None);
     }
 }
