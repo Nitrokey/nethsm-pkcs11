@@ -78,17 +78,6 @@ pub enum MechDigest {
 }
 
 impl MechDigest {
-    #[allow(dead_code)]
-    pub fn ck_type(&self) -> CK_MECHANISM_TYPE {
-        match self {
-            Self::Md5 => cryptoki_sys::CKM_MD5,
-            Self::Sha1 => cryptoki_sys::CKM_SHA_1,
-            Self::Sha224 => cryptoki_sys::CKM_SHA224,
-            Self::Sha256 => cryptoki_sys::CKM_SHA256,
-            Self::Sha384 => cryptoki_sys::CKM_SHA384,
-            Self::Sha512 => cryptoki_sys::CKM_SHA512,
-        }
-    }
     pub fn from_ck_mech(mech: CK_MECHANISM_TYPE) -> Option<Self> {
         match mech {
             cryptoki_sys::CKM_MD5 => Some(Self::Md5),
@@ -168,32 +157,6 @@ impl Mechanism {
             | Self::GenerateRsa => KeyType::Rsa,
             Self::Ecdsa | Self::GenerateEc => KeyType::EcP256,
             Self::EdDsa | Self::GenerateEd => KeyType::Curve25519,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn from_api_mech(api_mech: &KeyMechanism) -> Self {
-        match api_mech {
-            KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
-            KeyMechanism::AesEncryptionCbc => Self::AesCbc(None),
-            KeyMechanism::EcdsaSignature => Self::Ecdsa,
-            KeyMechanism::EdDsaSignature => Self::EdDsa,
-            KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaPkcsOaep(MechDigest::Md5),
-            KeyMechanism::RsaDecryptionOaepSha1 => Self::RsaPkcsOaep(MechDigest::Sha1),
-            KeyMechanism::RsaDecryptionOaepSha224 => Self::RsaPkcsOaep(MechDigest::Sha224),
-            KeyMechanism::RsaDecryptionOaepSha256 => Self::RsaPkcsOaep(MechDigest::Sha256),
-            KeyMechanism::RsaDecryptionOaepSha384 => Self::RsaPkcsOaep(MechDigest::Sha384),
-            KeyMechanism::RsaDecryptionOaepSha512 => Self::RsaPkcsOaep(MechDigest::Sha512),
-            KeyMechanism::RsaSignaturePssMd5 => Self::RsaPkcsPss(MechDigest::Md5),
-            KeyMechanism::RsaSignaturePssSha1 => Self::RsaPkcsPss(MechDigest::Sha1),
-            KeyMechanism::RsaSignaturePssSha224 => Self::RsaPkcsPss(MechDigest::Sha224),
-            KeyMechanism::RsaSignaturePssSha256 => Self::RsaPkcsPss(MechDigest::Sha256),
-            KeyMechanism::RsaSignaturePssSha384 => Self::RsaPkcsPss(MechDigest::Sha384),
-            KeyMechanism::RsaSignaturePssSha512 => Self::RsaPkcsPss(MechDigest::Sha512),
-            KeyMechanism::RsaDecryptionPkcs1 => Self::RsaPkcs,
-            KeyMechanism::RsaDecryptionRaw => Self::RsaX509,
-
-            KeyMechanism::RsaSignaturePkcs1 => Self::RsaPkcs,
         }
     }
 

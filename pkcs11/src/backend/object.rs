@@ -113,3 +113,67 @@ impl EnumCtx {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use cryptoki_sys::_CK_ATTRIBUTE;
+
+    use super::*;
+
+    #[test]
+    fn test_parse_key_requirements_none_template() -> Result<(), Error> {
+        let template = None;
+        let res = parse_key_requirements(template)?;
+
+        assert_eq!(res.kind, None);
+        assert_eq!(res.id, None);
+        assert_eq!(res.raw_id, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_key_requirements_non_utf8_id() -> Result<(), Error> {
+        let mut bytes: Vec<u8> = vec![0x00, 0xFF, 0x00, 0xFF];
+
+        let mut attributes = vec![_CK_ATTRIBUTE {
+            type_: CKA_ID,
+            pValue: bytes.as_mut_ptr() as *mut _,
+            ulValueLen: 4,
+        }];
+
+        let template =
+            Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(attributes.as_mut_ptr(), 1) });
+
+        let res = parse_key_requirements(template)?;
+
+        assert_eq!(res.kind, None);
+        assert_eq!(res.id, Some("00ff00ff".to_string()));
+        assert_eq!(res.raw_id, Some(vec![0x00, 0xFF, 0x00, 0xFF]));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_key_requirements_id_from_label() -> Result<(), Error> {
+
+        let mut bytes = "test".to_string().into_bytes();
+
+        let mut attributes = vec![_CK_ATTRIBUTE {
+            type_: CKA_LABEL,
+            pValue: bytes.as_mut_ptr() as *mut _,
+            ulValueLen: 4,
+        }];
+
+        let template =
+            Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(attributes.as_mut_ptr(), 1) });
+
+        let res = parse_key_requirements(template)?;
+
+        assert_eq!(res.kind, None);
+        assert_eq!(res.id, Some("test".to_string()));
+        assert_eq!(res.raw_id, None);
+
+        Ok(())
+    }
+}
