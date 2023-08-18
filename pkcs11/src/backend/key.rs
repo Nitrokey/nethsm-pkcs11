@@ -50,8 +50,6 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
     for attr in template.iter() {
         let t = attr.type_();
 
-        debug!("attr: {:?}, value: {:?}", t, attr.val_bytes());
-
         match t {
             CKA_CLASS => match attr.read_value::<CK_OBJECT_CLASS>() {
                 Some(val) => {
@@ -146,8 +144,6 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             }
             CKA_MODULUS_BITS => {
                 parsed.modulus_bits = attr.read_value();
-
-                trace!("modulus_bits: {:?}", parsed.modulus_bits)
             }
 
             _ => {
@@ -237,10 +233,6 @@ pub async fn create_key_from_template(
     {
         CKK_RSA => {
             trace!("Creating RSA key");
-
-            trace!("prime_p: {:?}", parsed.prime_p);
-            trace!("prime_q: {:?}", parsed.prime_q);
-            trace!("public_exponent: {:?}", parsed.public_exponent);
 
             let prime_p = general_purpose::STANDARD
                 .encode(parsed.prime_p.ok_or(Error::MissingAttribute(CKA_PRIME_1))?);
