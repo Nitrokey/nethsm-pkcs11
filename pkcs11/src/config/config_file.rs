@@ -167,7 +167,10 @@ slots:
         )
         .unwrap();
 
+        std::env::remove_var(ENV_VAR_CONFIG_FILE);
+
         std::env::set_var("HOME", home);
+
         let config = read_configuration().unwrap();
         assert!(config.enable_set_attribute_value);
         assert_eq!(config.log_file, Some("/tmp/p11nethsm.log".to_string()));
@@ -185,6 +188,7 @@ slots:
 
     #[test]
     fn test_read_config_no_file() {
+        std::env::remove_var(ENV_VAR_CONFIG_FILE);
         let config = read_configuration();
         assert!(config.is_err());
         assert!(matches!(

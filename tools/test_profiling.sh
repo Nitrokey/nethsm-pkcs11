@@ -1,7 +1,8 @@
 #!/bin/bash
 
+set -e
+
 export LLVM_PROFILE_FILE="${PWD}/profile/%p-%m.profraw"
-echo $LLVM_PROFILE_FILE
 
 rm -rf _test_objects
 
