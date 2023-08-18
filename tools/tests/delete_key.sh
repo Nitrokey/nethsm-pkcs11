@@ -6,7 +6,7 @@ KEYID=tempkey
 HEXID=$(echo -n ${KEYID} | xxd -ps)
 
 # create a key
-curl --fail-with-body -k -i -w '\n' -u admin:Administrator -X POST \
+curl -k -i -w '\n' -u admin:Administrator -X POST \
   https://localhost:8443/api/v1/keys/generate \
   -H "content-type: application/json" \
   -d '{ "mechanisms": [ 

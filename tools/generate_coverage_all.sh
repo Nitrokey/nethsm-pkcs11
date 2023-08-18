@@ -1,5 +1,7 @@
 #!/bin/sh -x
 
+set -e
+
 ./tools/build_profiling.sh
 ./tools/ci_integration_tests.sh
 ./tools/test_profiling.sh
