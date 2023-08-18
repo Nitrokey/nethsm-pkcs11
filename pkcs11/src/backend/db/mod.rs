@@ -90,3 +90,21 @@ impl Db {
         self.objects.remove(&handle)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_adding_same_object() {
+        let mut db = Db::new();
+        let mut object = Object::default();
+
+        object.id = "id".to_string();
+
+        let (handle1, object1) = db.add_object(object.clone());
+        let (handle2, object2) = db.add_object(object.clone());
+        assert_eq!(handle1, handle2);
+        assert_eq!(object1.id, object2.id);
+    }
+}
