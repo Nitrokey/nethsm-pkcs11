@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: read
       checks: write
-      
+
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,8 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -58,7 +60,9 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy, llvm-tools-preview
 
-      - name: install demangler 
+      - uses: Swatinem/rust-cache@v2
+
+      - name: install demangler
         run: cargo install rustfilt
 
       - name: Build with profiling
@@ -66,7 +70,7 @@ jobs:
 
       - name: repalce localhost with nethsm
         run: sed -i 's/localhost/nethsm/g' ./tools/*.sh ./tools/tests/*.sh ./p11nethsm.conf
-        
+
       - name: setup NetHSM
         run: ./tools/ci_setup.sh
 
@@ -75,11 +79,10 @@ jobs:
 
       - name: Run integration tests
         run: ./tools/ci_integration_tests.sh
-        
-      
+
       - name: get coverage
         run: ./tools/get_coverage.sh
-      
+
       - name: upload coverage
         uses: codecov/codecov-action@v3
         with:

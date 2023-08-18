@@ -21,6 +21,8 @@ jobs:
           profile: minimal
           toolchain: stable-x86_64-pc-windows-msvc
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Build project
         run: cargo build --release
 
@@ -45,6 +47,8 @@ jobs:
         with:
           profile: minimal
           toolchain: stable-x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build project
         run: cargo build --release
@@ -95,6 +99,8 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust-version }}
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build project
         run: cargo build --release
