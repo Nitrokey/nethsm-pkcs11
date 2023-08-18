@@ -467,7 +467,10 @@ impl Session {
                         )
                         .await
                         {
-                            Ok(ref mut vec) => results.append(vec),
+                            Ok(ref mut vec) => {
+                                trace!("Fetched certificate: {:?}", vec);
+                                results.append(vec);
+                            }
                             Err(err) => {
                                 debug!("Failed to fetch certificate: {:?}", err);
                             }
