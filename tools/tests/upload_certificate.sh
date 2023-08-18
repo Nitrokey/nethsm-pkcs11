@@ -1,13 +1,10 @@
 #!/bin/sh -x
 
-# disabled, not working with current version of pkcs11-tool
-exit 0
-
 set -e 
 
-rm -rf _cert.key _cert.pem
+rm -rf _cert.key _cert.pem _curl_cert.pem
 
-KEYID=Hello
+KEYID=certtest
 
 HEXID=$(echo -n ${KEYID}| xxd -ps)
 
@@ -15,16 +12,15 @@ HEXID=$(echo -n ${KEYID}| xxd -ps)
 curl -k -u admin:Administrator -v -X DELETE \
   https://localhost:8443/api/v1/keys/$KEYID
 
-# generate a certifcate
 openssl req -x509 -newkey rsa:2048 -keyout _cert.key -out _cert.pem -days 365 -nodes -subj "/CN=www.example.com"
 
-pkcs11-tool --module target/debug/libnethsm_pkcs11.so -y privkey --write-object _cert.key --id $HEXID 
-
-pkcs11-tool --module target/debug/libnethsm_pkcs11.so -y cert --write-object _cert.pem --id $HEXID
-
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-privkey _cert.key
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-certificate _cert.pem
 
 
 # check if the cert is there
 curl -k --fail-with-body -u operator:opPassphrase -v -X GET \
-  https://localhost:8443/api/v1/keys/$KEYID/cert --accept application/x-pem-file 
+  https://localhost:8443/api/v1/keys/$KEYID/cert --header "Accept: application/x-pem-file" -o _curl_cert.pem
+
+diff _cert.pem _curl_cert.pem
 
