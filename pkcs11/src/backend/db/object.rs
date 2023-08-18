@@ -306,6 +306,7 @@ fn configure_generic() -> Result<KeyData, Error> {
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(0));
     attrs.insert(CKA_ALWAYS_AUTHENTICATE, Attr::CK_FALSE);
+    attrs.insert(CKA_VERIFY, Attr::CK_FALSE);
 
     Ok(KeyData {
         key_type: cryptoki_sys::CKK_GENERIC_SECRET,
