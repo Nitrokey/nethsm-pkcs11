@@ -17,6 +17,22 @@
       },
       "cwd": "${workspaceRoot}",
       "valuesFormatting": "prettyPrinters"
+    },
+    {
+      "name": "Debug-Nginx",
+      "type": "gdb",
+      "gdbpath": "/usr/bin/rust-gdb",
+      "request": "launch",
+      "target": "/home/sautax/Downloads/nginx-1.25.2/objs/nginx",
+      "arguments": "-c ${workspaceRoot}/_nginx.conf -g 'daemon off;'",
+      "env": {
+        "P11NETHSM_CONFIG_FILE": "./p11nethsm.conf",
+        "RUST_LOG": "trace",
+        "OPENSSL_CONF": "${workspaceRoot}/_openssl.cnf",
+        "LD_LIBRARY_PATH": "/home/sautax/git/openssl",
+      },
+      "cwd": "${workspaceRoot}",
+      "valuesFormatting": "prettyPrinters",
     }
   ]
 }

@@ -1,4 +1,5 @@
 use cryptoki_sys::CK_ULONG;
+use lazy_static::__Deref;
 use log::{error, trace};
 
 use crate::{
@@ -14,6 +15,8 @@ pub extern "C" fn C_FindObjectsInit(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsInit() called with session {}", hSession);
+
+    trace!("Device: {:?}", DEVICE.deref());
 
     if ulCount > 0 && pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
