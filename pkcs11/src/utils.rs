@@ -2,13 +2,17 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 
-pub fn get_tokio_rt() -> Arc<tokio::runtime::Runtime> {
-    RUNTIME.clone()
+pub fn get_tokio_rt() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_current_thread()
+    .enable_all()
+    .worker_threads(1)
+    .build()
+    .unwrap()
 }
 
 lazy_static! {
     pub static ref RUNTIME: Arc<tokio::runtime::Runtime> = Arc::new(
-        tokio::runtime::Builder::new_multi_thread()
+        tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .worker_threads(1)
             .build()
