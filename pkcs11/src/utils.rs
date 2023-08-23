@@ -1,10 +1,16 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
 };
 
 use lazy_static::lazy_static;
 use log::trace;
+use tokio::runtime::Runtime;
+
+use crate::{
+    config::{device::Slot, initialization::slot_from_config},
+    data::DEVICE, backend::login::LoginCtx,
+};
 
 // Create a runtime if we forked
 pub fn get_tokio_rt() -> Arc<tokio::runtime::Runtime> {
@@ -32,17 +38,13 @@ lazy_static! {
         Arc::new(Mutex::new(HashMap::new()));
 }
 
-fn create_runtime() -> tokio::runtime::Runtime {
+fn create_runtime() -> Runtime {
     trace!("Creating runtime");
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
+    tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .worker_threads(1)
-        .build();
-
-    trace!("Runtime created : {:?}", rt);
-
-    rt.unwrap()
+        .build()
+        .unwrap()
 }
 
 // lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
