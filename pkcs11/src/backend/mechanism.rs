@@ -110,6 +110,32 @@ pub enum Mechanism {
     GenerateEd,
 }
 
+impl From<KeyMechanism> for Mechanism {
+    fn from(value: KeyMechanism) -> Self {
+        match value {
+            KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
+            KeyMechanism::AesEncryptionCbc => Self::AesCbc(None),
+            KeyMechanism::EcdsaSignature => Self::Ecdsa,
+            KeyMechanism::EdDsaSignature => Self::EdDsa,
+            KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaPkcsOaep(MechDigest::Md5),
+            KeyMechanism::RsaDecryptionOaepSha1 => Self::RsaPkcsOaep(MechDigest::Sha1),
+            KeyMechanism::RsaDecryptionOaepSha224 => Self::RsaPkcsOaep(MechDigest::Sha224),
+            KeyMechanism::RsaDecryptionOaepSha256 => Self::RsaPkcsOaep(MechDigest::Sha256),
+            KeyMechanism::RsaDecryptionOaepSha384 => Self::RsaPkcsOaep(MechDigest::Sha384),
+            KeyMechanism::RsaDecryptionOaepSha512 => Self::RsaPkcsOaep(MechDigest::Sha512),
+            KeyMechanism::RsaSignaturePssMd5 => Self::RsaPkcsPss(MechDigest::Md5),
+            KeyMechanism::RsaSignaturePssSha1 => Self::RsaPkcsPss(MechDigest::Sha1),
+            KeyMechanism::RsaSignaturePssSha224 => Self::RsaPkcsPss(MechDigest::Sha224),
+            KeyMechanism::RsaSignaturePssSha256 => Self::RsaPkcsPss(MechDigest::Sha256),
+            KeyMechanism::RsaSignaturePssSha384 => Self::RsaPkcsPss(MechDigest::Sha384),
+            KeyMechanism::RsaSignaturePssSha512 => Self::RsaPkcsPss(MechDigest::Sha512),
+            KeyMechanism::RsaDecryptionPkcs1 => Self::RsaPkcs,
+            KeyMechanism::RsaDecryptionRaw => Self::RsaX509,
+            KeyMechanism::RsaSignaturePkcs1 => Self::RsaPkcs,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum MechMode {
     Sign,

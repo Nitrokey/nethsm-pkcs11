@@ -3,13 +3,14 @@ use base64ct::{Base64, Encoding};
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
 use cryptoki_sys::{
-    CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_CATEGORY, CKA_CERTIFICATE_TYPE,
-    CKA_CLASS, CKA_DECRYPT, CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE,
-    CKA_ID, CKA_ISSUER, CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE,
-    CKA_MODULUS, CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT,
-    CKA_SENSITIVE, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
-    CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
-    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CKA_ALLOWED_MECHANISMS, CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE,
+    CKA_CERTIFICATE_CATEGORY, CKA_CERTIFICATE_TYPE, CKA_CLASS, CKA_DECRYPT, CKA_DERIVE,
+    CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_ISSUER,
+    CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
+    CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
+    CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP, CKA_VALUE,
+    CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CKC_X_509,
+    CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, DecodePem, Encode};
@@ -20,6 +21,7 @@ use std::mem::size_of;
 
 use crate::backend::{
     key::{key_size, key_type_to_asn1},
+    mechanism::Mechanism,
     Error,
 };
 
@@ -358,6 +360,18 @@ pub fn from_key_data(
     };
     attrs.extend(key_attrs.attrs);
 
+    let ck_mech_list: Vec<CK_MECHANISM_TYPE> = key_data
+        .mechanisms
+        .iter()
+        .map(|mech| Mechanism::from(*mech))
+        .map(|m: Mechanism| m.ck_type())
+        .collect();
+
+    attrs.insert(
+        CKA_ALLOWED_MECHANISMS,
+        Attr::from_ck_mechanism_type_vec(ck_mech_list),
+    );
+
     let private_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::PrivateKey,
@@ -383,6 +397,9 @@ pub fn from_key_data(
         mechanisms: vec![],
     };
 
+    public_key
+        .attrs
+        .insert(CKA_ALLOWED_MECHANISMS, Attr::Bytes(vec![]));
     public_key.attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_PUBLIC_KEY),
