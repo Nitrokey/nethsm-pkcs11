@@ -1,17 +1,18 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use cryptoki_sys::{
     CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
-    CK_ULONG, CK_USER_TYPE,
+    CK_USER_TYPE,
 };
 use log::{debug, error, trace};
 use nethsm_sdk_rs::apis::default_api;
-use tokio::{sync::Mutex, task::JoinSet};
 
 use crate::{
     backend::{login::UserMode, Error},
     config::device::Slot,
-    utils::get_tokio_rt,
 };
 
 use super::{
@@ -24,6 +25,8 @@ use super::{
     object::{EnumCtx, KeyRequirements},
     sign::SignCtx,
 };
+
+type WorkResult = Result<Vec<(u64, Object)>, Error>;
 
 #[derive(Debug)]
 pub struct SessionManager {
@@ -150,7 +153,7 @@ impl Session {
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), Error> {
-        Ok(get_tokio_rt().block_on(self.login_ctx.login(user_type, pin))?)
+        Ok(self.login_ctx.login(user_type, pin)?)
     }
 
     // ignore logout for now
@@ -193,8 +196,8 @@ impl Session {
 
         // get key id from the handle
 
-        let key = get_tokio_rt().block_on(async {
-            let db = self.db.lock().await;
+        let key = {
+            let db = self.db.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -203,7 +206,7 @@ impl Session {
                     Err(Error::InvalidObjectHandle(key_handle))
                 }
             }
-        })?;
+        }?;
 
         self.sign_ctx = Some(SignCtx::init(
             mechanism.clone(),
@@ -262,8 +265,8 @@ impl Session {
 
         // get key id from the handle
 
-        let key = get_tokio_rt().block_on(async {
-            let db = self.db.lock().await;
+        let key = {
+            let db = self.db.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -272,7 +275,7 @@ impl Session {
                     Err(Error::InvalidObjectHandle(key_handle))
                 }
             }
-        })?;
+        }?;
 
         self.encrypt_ctx = Some(EncryptCtx::init(
             mechanism.clone(),
@@ -345,8 +348,8 @@ impl Session {
 
         // get key id from the handle
 
-        let key = get_tokio_rt().block_on(async {
-            let db = self.db.lock().await;
+        let key = {
+            let db = self.db.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -355,7 +358,7 @@ impl Session {
                     Err(Error::InvalidObjectHandle(key_handle))
                 }
             }
-        })?;
+        }?;
 
         self.decrypt_ctx = Some(DecryptCtx::init(
             mechanism.clone(),
@@ -410,14 +413,12 @@ impl Session {
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
-        get_tokio_rt().block_on(async {
-            let db = self.db.lock().await;
+        let db = self.db.lock().unwrap();
 
-            db.object(handle).cloned()
-        })
+        db.object(handle).cloned()
     }
 
-    pub(super) async fn find_key(
+    pub(super) fn find_key(
         &mut self,
         requirements: KeyRequirements,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
@@ -425,7 +426,7 @@ impl Session {
             Some(key_id) => {
                 // try to search in the db first
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
-                    let db = self.db.lock().await;
+                    let db = self.db.lock()?;
                     db.enumerate()
                         .filter(|(_, obj)| {
                             obj.id == key_id
@@ -449,8 +450,7 @@ impl Session {
                             requirements.raw_id.clone(),
                             self.login_ctx.clone(),
                             self.db.clone(),
-                        )
-                        .await?
+                        )?
                         .iter()
                         .map(|(handle, obj)| (*handle, obj.clone()))
                         .collect();
@@ -464,9 +464,7 @@ impl Session {
                             requirements.raw_id,
                             self.login_ctx.clone(),
                             self.db.clone(),
-                        )
-                        .await
-                        {
+                        ) {
                             Ok(ref mut vec) => {
                                 trace!("Fetched certificate: {:?}", vec);
                                 results.append(vec);
@@ -480,7 +478,7 @@ impl Session {
                 Ok(results)
             }
 
-            None => self.fetch_all_keys(requirements.kind).await,
+            None => self.fetch_all_keys(requirements.kind),
         }?;
 
         if let Some(kind) = requirements.kind {
@@ -490,12 +488,12 @@ impl Session {
         Ok(result.iter().map(|(handle, _)| *handle).collect())
     }
 
-    async fn fetch_all_keys(
+    fn fetch_all_keys(
         &mut self,
         kind: Option<ObjectKind>,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         {
-            let db = self.db.lock().await;
+            let db = self.db.lock()?;
 
             if db.fetched_all_keys() {
                 return Ok(db
@@ -517,80 +515,85 @@ impl Session {
         let keys = self
             .login_ctx
             .try_(
-                |api_config| async move { default_api::keys_get(&api_config, None).await },
+                |api_config| default_api::keys_get(&api_config, None),
                 super::login::UserMode::OperatorOrAdministrator,
-            )
-            .await?
+            )?
             .entity;
 
-        let mut set: JoinSet<Result<Vec<(CK_ULONG, Object)>, Error>> = JoinSet::new();
+        let results: Arc<Mutex<Vec<WorkResult>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let keys = Arc::new(std::sync::Mutex::new(keys));
+
+        let mut thread_handles = Vec::new();
+
+        // 4 threads
+
+        for _ in 0..4 {
+            let keys = keys.clone();
+
+            let results = results.clone();
+
+            let login_ctx = self.login_ctx.clone();
+            let db = self.db.clone();
+
+            thread_handles.push(std::thread::spawn(move || {
+                while let Some(key) = keys.lock().unwrap().pop() {
+                    let key_id = key.key.clone();
+
+                    if matches!(
+                        kind,
+                        None | Some(ObjectKind::Other)
+                            | Some(ObjectKind::PrivateKey)
+                            | Some(ObjectKind::PublicKey)
+                            | Some(ObjectKind::SecretKey)
+                    ) {
+                        let login_ctx = login_ctx.clone();
+                        let db = db.clone();
+                        let res = fetch_key(&key_id, None, login_ctx, db);
+                        results.lock().unwrap().push(res);
+                    }
+
+                    if matches!(kind, None | Some(ObjectKind::Certificate)) {
+                        let login_ctx = login_ctx.clone();
+                        let db = db.clone();
+                        let res = match fetch_certificate(&key_id, None, login_ctx, db) {
+                            Ok(vec) => Ok(vec),
+                            Err(err) => {
+                                debug!("Failed to fetch certificate: {:?}", err);
+                                Ok(Vec::new())
+                            }
+                        };
+
+                        results.lock().unwrap().push(res);
+                    }
+                }
+            }));
+        }
+
+        for handle in thread_handles {
+            handle.join().unwrap();
+        }
 
         let mut handles = Vec::new();
 
-        // limit to 15 concurrent requests
-        let semaphore: Arc<tokio::sync::Semaphore> = Arc::new(tokio::sync::Semaphore::new(15));
-
-        // If we want everything or only the keys
-        if matches!(
-            kind,
-            None | Some(ObjectKind::Other)
-                | Some(ObjectKind::PrivateKey)
-                | Some(ObjectKind::PublicKey)
-                | Some(ObjectKind::SecretKey)
-        ) {
-            for key in &keys {
-                let key_id = key.key.clone();
-
-                let login_ctx = self.login_ctx.clone();
-                let db = self.db.clone();
-                let semaphore_permit = semaphore.clone().acquire_owned().await.unwrap();
-
-                set.spawn(async move {
-                    let res = fetch_key(&key_id, None, login_ctx, db).await;
-
-                    drop(semaphore_permit);
-
-                    res
-                });
+        for mut result in results.lock().unwrap().drain(..) {
+            match result {
+                Ok(ref mut vec) => {
+                    handles.append(vec);
+                }
+                Err(err) => {
+                    return Err(err);
+                }
             }
         }
 
-        // If we want everything or only the certificates
-        if matches!(kind, None | Some(ObjectKind::Certificate)) {
-            for key in keys {
-                let cert_id = key.key.clone();
-                let login_ctx = self.login_ctx.clone();
-                let db = self.db.clone();
-
-                let semaphore_permit = semaphore.clone().acquire_owned().await.unwrap();
-
-                set.spawn(async move {
-                    let res = match fetch_certificate(&cert_id, None, login_ctx, db).await {
-                        Ok(vec) => Ok(vec),
-                        Err(err) => {
-                            debug!("Failed to fetch certificate: {:?}", err);
-                            Ok(Vec::new())
-                        }
-                    };
-                    drop(semaphore_permit);
-
-                    res
-                });
-            }
-        }
-
-        while let Some(res) = set.join_next().await {
-            let mut objs = res.map_err(|_| Error::InvalidData)??;
-            handles.append(&mut objs);
-        }
-
-        let mut db = self.db.lock().await;
+        let mut db = self.db.lock()?;
         db.set_fetched_all_keys(true);
 
         Ok(handles)
     }
 
-    pub async fn create_object(
+    pub fn create_object(
         &mut self,
         template: CkRawAttrTemplate,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
@@ -603,14 +606,14 @@ impl Session {
 
         let login_ctx = self.login_ctx.clone();
 
-        let key_info = create_key_from_template(template, login_ctx).await?;
+        let key_info = create_key_from_template(template, login_ctx)?;
 
         let login_ctx = self.login_ctx.clone();
         let db = self.db.clone();
 
         match key_info.1 {
-            ObjectKind::Certificate => fetch_certificate(&key_info.0, None, login_ctx, db).await,
-            _ => fetch_key(&key_info.0, None, login_ctx, db).await,
+            ObjectKind::Certificate => fetch_certificate(&key_info.0, None, login_ctx, db),
+            _ => fetch_key(&key_info.0, None, login_ctx, db),
         }
     }
 
@@ -621,55 +624,43 @@ impl Session {
 
         // get key id from the handle
 
-        let key = get_tokio_rt().block_on(async {
-            let db = self.db.lock().await;
+        let key = {
+            let db = self.db.lock()?;
             match db.object(handle) {
                 Some(object) => Ok(object.clone()),
 
                 None => Err(Error::InvalidObjectHandle(handle)),
             }
-        })?;
+        }?;
 
         debug!("Deleting key {} {:?}", key.id, key.kind);
 
         match key.kind {
             ObjectKind::Certificate => {
-                get_tokio_rt().block_on(async {
-                    self.login_ctx
-                        .try_(
-                            |api_config| async move {
-                                default_api::keys_key_id_cert_delete(&api_config, &key.id).await
-                            },
-                            crate::backend::login::UserMode::Administrator,
-                        )
-                        .await
-                })?;
+                self.login_ctx.try_(
+                    |api_config| default_api::keys_key_id_cert_delete(&api_config, &key.id),
+                    crate::backend::login::UserMode::Administrator,
+                )?;
             }
             ObjectKind::SecretKey | ObjectKind::PrivateKey => {
-                get_tokio_rt().block_on(async {
-                    self.login_ctx
-                        .try_(
-                            |api_config| async move {
-                                default_api::keys_key_id_delete(&api_config, &key.id).await
-                            },
-                            crate::backend::login::UserMode::Administrator,
-                        )
-                        .await
-                })?;
+                self.login_ctx.try_(
+                    |api_config| default_api::keys_key_id_delete(&api_config, &key.id),
+                    crate::backend::login::UserMode::Administrator,
+                )?;
             }
             _ => {
                 // we don't support deleting other objects
             }
         }
 
-        get_tokio_rt().block_on(async {
-            let mut db = self.db.lock().await;
+        {
+            let mut db = self.db.lock()?;
             match db.remove(handle) {
                 Some(object) => Ok(object),
 
                 None => Err(Error::InvalidObjectHandle(handle)),
             }
-        })?;
+        }?;
 
         Ok(())
     }

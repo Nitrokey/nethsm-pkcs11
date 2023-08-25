@@ -1,21 +1,3 @@
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
-
-pub fn get_tokio_rt() -> Arc<tokio::runtime::Runtime> {
-    RUNTIME.clone()
-}
-
-lazy_static! {
-    pub static ref RUNTIME: Arc<tokio::runtime::Runtime> = Arc::new(
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .worker_threads(1)
-            .build()
-            .unwrap()
-    );
-}
-
 // lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
 #[macro_export]
 macro_rules! lock_mutex {

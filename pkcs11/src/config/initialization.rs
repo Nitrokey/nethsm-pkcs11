@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use log::trace;
-use reqwest::Certificate;
+use rustls::client::ServerCertVerifier;
 
 use super::{
     config_file::SlotConfig,
@@ -13,9 +12,7 @@ const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
 #[derive(Debug)]
 pub enum InitializationError {
     Config(crate::config::config_file::ConfigError),
-    Reqwest(reqwest::Error),
     NoUser(String),
-    ReadFile(std::io::Error),
 }
 
 pub fn initialize_configuration() -> Result<Device, InitializationError> {
@@ -36,8 +33,30 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
     })
 }
 
+struct DangerIgnoreVerifier {}
+
+impl ServerCertVerifier for DangerIgnoreVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &rustls::Certificate,
+        _intermediates: &[rustls::Certificate],
+        _server_name: &rustls::ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: std::time::SystemTime,
+    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        // always accept the certificate
+        Ok(rustls::client::ServerCertVerified::assertion())
+    }
+}
+
 fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
     let mut instances = vec![];
+
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
+        roots.add(&rustls::Certificate(cert.0)).unwrap();
+    }
 
     let default_user = slot
         .operator
@@ -46,33 +65,34 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         .ok_or(InitializationError::NoUser(slot.label.clone()))?;
 
     for instance in slot.instances.iter() {
-        let mut reqwest_builder = reqwest::Client::builder()
-            .danger_accept_invalid_certs(instance.danger_insecure_cert)
-            .pool_max_idle_per_host(20);
+        let tls_conf = rustls::ClientConfig::builder().with_safe_defaults();
 
-        if let Some(cert_str) = instance.certificate.as_ref() {
-            let cert = Certificate::from_pem(cert_str.trim().as_bytes())
-                .map_err(InitializationError::Reqwest)?;
-            reqwest_builder = reqwest_builder.add_root_certificate(cert);
-            trace!("Added certificate to slot {}", instance.url);
-        }
-        if let Some(file) = instance.certificate_file.as_ref() {
-            let cert = Certificate::from_pem(
-                std::fs::read(file)
-                    .map_err(InitializationError::ReadFile)?
-                    .as_slice(),
-            )
-            .map_err(InitializationError::Reqwest)?;
-            reqwest_builder = reqwest_builder.add_root_certificate(cert);
-            trace!("Added certificate to slot {}", instance.url);
-        }
+        let tls_conf = if instance.danger_insecure_cert {
+            tls_conf
+                .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier {}))
+                .with_no_client_auth()
+        } else {
+            tls_conf
+                .with_root_certificates(roots.clone())
+                .with_no_client_auth()
+        };
+        // TODO : re-implement cert verification
+        // else if let Some(cert_str) = instance.certificate.as_ref() {
+        //     let mut roots = rustls::RootCertStore::empty();
+        //     let cert = Certificate::(cert_str.trim().as_bytes())
+        //         .map_err(InitializationError::Reqwest)?;
+        //     roots.add(&rustls::Certificate(cert.0)).unwrap();
+        //     tls_conf.with_root_certificates(roots).with_no_client_auth()
+        // }
 
-        let reqwest_client = reqwest_builder
-            .build()
-            .map_err(InitializationError::Reqwest)?;
+        let agent = ureq::AgentBuilder::new()
+            .tls_config(Arc::new(tls_conf))
+            .max_idle_connections(2)
+            .max_idle_connections_per_host(2)
+            .build();
 
         let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
-            client: reqwest_client,
+            client: agent,
             base_path: instance.url.clone(),
             basic_auth: Some((default_user.username.clone(), default_user.password.clone())),
             user_agent: Some(DEFAULT_USER_AGENT.to_string()),
@@ -87,6 +107,6 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         instances,
         administrator: slot.administrator.clone(),
         operator: slot.operator.clone(),
-        db: Arc::new(tokio::sync::Mutex::new(crate::backend::db::Db::new())),
+        db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
     })
 }

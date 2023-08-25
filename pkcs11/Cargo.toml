@@ -17,11 +17,12 @@ serde = { version = "1.0.130", features = ["derive"] }
 serde_yaml = "0.9.22"
 serde_json = "1.0.64"
 lazy_static = "1.4.0"
-nethsm-sdk-rs = { git = "https://github.com/Nitrokey/nethsm-sdk-rs", tag = "0.1.0" }
+nethsm-sdk-rs = { git = "https://github.com/Nitrokey/nethsm-sdk-rs", rev= "5f776db1243d80ef6f8c6ab474dc3fbc84252d4b" }
 # need to keep the same version as in the nethsm_sdk_rs crate
-reqwest = { version = "^0.11", features = ["json"] }
+ureq = { version = "2", features = ["json"] }
+rustls = { version = "0.21.6", features = ["dangerous_configuration"] }
+rustls-native-certs = "0.6"
 base64 = "0.21.2"
 yasna = "0.5.2"
 openssl = { version = "0.10.55", features = ["vendored"] }
 hex = "0.4"
-tokio = { version = "1", features = ["full"] }

@@ -1,5 +1,3 @@
-use crate::utils::get_tokio_rt;
-
 use super::{
     db::Object,
     login::{self, LoginCtx},
@@ -83,24 +81,19 @@ impl SignCtx {
 
         let mut login_ctx = self.login_ctx.clone();
 
-        let signature = get_tokio_rt().block_on(async {
-            login_ctx
-                .try_(
-                    |conf| async move {
-                        default_api::keys_key_id_sign_post(
-                            &conf,
-                            &self.key.id.clone(),
-                            nethsm_sdk_rs::models::SignRequestData {
-                                mode,
-                                message: b64_message,
-                            },
-                        )
-                        .await
+        let signature = login_ctx.try_(
+            |conf| {
+                default_api::keys_key_id_sign_post(
+                    &conf,
+                    &self.key.id.clone(),
+                    nethsm_sdk_rs::models::SignRequestData {
+                        mode,
+                        message: b64_message,
                     },
-                    login::UserMode::Operator,
                 )
-                .await
-        })?;
+            },
+            login::UserMode::Operator,
+        )?;
 
         let mut output = general_purpose::STANDARD.decode(signature.entity.signature)?;
 

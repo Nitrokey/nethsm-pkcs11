@@ -3,8 +3,6 @@ use base64::{engine::general_purpose, Engine};
 use log::trace;
 use nethsm_sdk_rs::apis::default_api;
 
-use crate::utils::get_tokio_rt;
-
 use super::{
     db::Object,
     login::{self, LoginCtx},
@@ -75,25 +73,20 @@ impl DecryptCtx {
 
         let key_id = self.key_id.as_str();
 
-        let output = get_tokio_rt().block_on(async {
-            self.login_ctx
-                .try_(
-                    |api_config| async move {
-                        default_api::keys_key_id_decrypt_post(
-                            &api_config,
-                            key_id,
-                            nethsm_sdk_rs::models::DecryptRequestData {
-                                mode,
-                                encrypted: b64_message,
-                                iv,
-                            },
-                        )
-                        .await
+        let output = self.login_ctx.try_(
+            |api_config| {
+                default_api::keys_key_id_decrypt_post(
+                    &api_config,
+                    key_id,
+                    nethsm_sdk_rs::models::DecryptRequestData {
+                        mode,
+                        encrypted: b64_message,
+                        iv,
                     },
-                    login::UserMode::Operator,
                 )
-                .await
-        })?;
+            },
+            login::UserMode::Operator,
+        )?;
 
         Ok(general_purpose::STANDARD.decode(output.entity.decrypted)?)
     }

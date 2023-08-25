@@ -1,5 +1,10 @@
 use std::sync::PoisonError;
 
+use self::{
+    db::object::ObjectKind,
+    login::{LoginError, UserMode},
+    mechanism::{MechMode, Mechanism},
+};
 use cryptoki_sys::{
     CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE,
     CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_ENCRYPTED_DATA_LEN_RANGE, CKR_KEY_HANDLE_INVALID,
@@ -8,13 +13,6 @@ use cryptoki_sys::{
 };
 use log::error;
 use nethsm_sdk_rs::apis;
-use reqwest::StatusCode;
-
-use self::{
-    db::object::ObjectKind,
-    login::{LoginError, UserMode},
-    mechanism::{MechMode, Mechanism},
-};
 
 pub mod db;
 pub mod decrypt;
@@ -29,13 +27,13 @@ pub mod slot;
 
 #[derive(Debug, Clone)]
 pub struct ResponseContent {
-    pub status: reqwest::StatusCode,
+    pub status: u16,
     pub content: String,
 }
 
 #[derive(Debug)]
 pub enum ApiError {
-    Reqwest(reqwest::Error),
+    Ureq(String),
     Serde(serde_json::Error),
     Io(std::io::Error),
     ResponseError(ResponseContent),
@@ -44,7 +42,7 @@ pub enum ApiError {
 impl<T> From<apis::Error<T>> for ApiError {
     fn from(err: apis::Error<T>) -> Self {
         match err {
-            apis::Error::Reqwest(e) => ApiError::Reqwest(e),
+            apis::Error::Ureq(e) => ApiError::Ureq(e.to_string()),
             apis::Error::Serde(e) => ApiError::Serde(e),
             apis::Error::Io(e) => ApiError::Io(e),
             apis::Error::ResponseError(resp) => ApiError::ResponseError(ResponseContent {
@@ -134,13 +132,13 @@ impl From<Error> for CK_RV {
             Error::NoInstance => CKR_DEVICE_ERROR,
             Error::DecodeError(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
             Error::Api(err) => match err {
-                ApiError::Reqwest(_) => CKR_DEVICE_ERROR,
+                ApiError::Ureq(_) => CKR_DEVICE_ERROR,
                 ApiError::Io(_) => CKR_DEVICE_ERROR,
                 ApiError::Serde(_) => CKR_DEVICE_ERROR,
                 ApiError::ResponseError(resp) => match resp.status {
-                    StatusCode::NOT_FOUND => CKR_KEY_HANDLE_INVALID,
-                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => CKR_USER_NOT_LOGGED_IN,
-                    StatusCode::PRECONDITION_FAILED => CKR_TOKEN_NOT_PRESENT,
+                    404 => CKR_KEY_HANDLE_INVALID,
+                    401 | 403 => CKR_USER_NOT_LOGGED_IN,
+                    412 => CKR_TOKEN_NOT_PRESENT,
                     _ => CKR_DEVICE_ERROR,
                 },
             },
@@ -183,15 +181,13 @@ impl std::fmt::Display for Error {
                 format!("Unable to use mechanim {:?} for {:?}", mechanism, mode)
             }
             Error::Api(err) => match err {
-                ApiError::Reqwest(err) => format!("Reqwest error: {:?}", err),
+                ApiError::Ureq(err) => format!("Request error : {}", err),
                 ApiError::Serde(err) => format!("Serde error: {:?}", err),
                 ApiError::Io(err) => format!("IO error: {:?}", err),
                 ApiError::ResponseError(resp) => match resp.status {
-                    StatusCode::NOT_FOUND => "Key not found".to_string(),
-                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => "Not logged in".to_string(),
-                    StatusCode::PRECONDITION_FAILED => {
-                        "The NetHSM is not set up properly".to_string()
-                    }
+                    404 => "Key not found".to_string(),
+                    401 | 403 => "Invalid credentials".to_string(),
+                    412 => "The NetHSM is not set up properly".to_string(),
                     _ => format!("Api error: {:?}", resp),
                 },
             },

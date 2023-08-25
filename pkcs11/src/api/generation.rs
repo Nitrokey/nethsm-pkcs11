@@ -9,7 +9,6 @@ use crate::{
         mechanism::{CkRawMechanism, Mechanism},
     },
     lock_mutex, lock_session,
-    utils::get_tokio_rt,
 };
 
 pub extern "C" fn C_GenerateKey(
@@ -234,37 +233,17 @@ pub extern "C" fn C_GenerateRandom(
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
 
-    let a = |api_config: nethsm_sdk_rs::apis::configuration::Configuration| {
-        // let api_config = api_config;
-        async {
-            let api_config = api_config;
+    let data = match session.login_ctx.try_(
+        |api_config| {
             default_api::random_post(
                 &api_config,
                 nethsm_sdk_rs::models::RandomRequestData {
                     length: ulRandomLen as i32,
                 },
             )
-            .await
-        }
-    };
-
-    let data = match get_tokio_rt().block_on(async {
-        session
-            .login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::random_post(
-                        &api_config,
-                        nethsm_sdk_rs::models::RandomRequestData {
-                            length: ulRandomLen as i32,
-                        },
-                    )
-                    .await
-                },
-                crate::backend::login::UserMode::Operator,
-            )
-            .await
-    }) {
+        },
+        crate::backend::login::UserMode::Operator,
+    ) {
         Ok(data) => data,
         Err(e) => {
             error!("C_GenerateRandom() failed to generate random data: {:?}", e);
