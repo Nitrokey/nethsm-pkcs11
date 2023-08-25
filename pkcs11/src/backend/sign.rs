@@ -87,7 +87,7 @@ impl SignCtx {
             login_ctx
                 .try_(
                     |conf| async move {
-                        trace!("(tokio) Signing with key: {:?}", self.key.id);
+                        // trace!("(tokio) Signing with key: {:?}", self.key.id);
                         default_api::keys_key_id_sign_post(
                             &conf,
                             &self.key.id.clone(),

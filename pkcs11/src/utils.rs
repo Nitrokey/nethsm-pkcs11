@@ -1,41 +1,42 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use lazy_static::lazy_static;
 use log::trace;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Handle, Runtime};
 
 use crate::{
+    backend::login::LoginCtx,
     config::{device::Slot, initialization::slot_from_config},
-    data::DEVICE, backend::login::LoginCtx,
+    data::DEVICE,
 };
 
 // Create a runtime if we forked
-pub fn get_tokio_rt() -> Arc<tokio::runtime::Runtime> {
+pub fn get_tokio_rt() -> Handle {
     let pid = std::process::id();
     trace!("runtime for pid : {:?}", pid);
     let mut rt_conf = RUNTIME.lock().unwrap();
     trace!("runtime locked : {:?}", rt_conf);
-    match rt_conf.get(&pid) {
-        Some(rt) => rt.clone(),
-        None => {
-            trace!("Creating runtime for pid : {:?}", pid);
+    if rt_conf.0 == pid {
+        rt_conf.1.handle().clone()
+    } else {
+        trace!("Creating runtime for pid : {:?}", pid);
 
-            let rt = Arc::new(create_runtime());
-            trace!("Runtime created : {:?}", rt);
+        let rt = create_runtime();
+        trace!("Runtime created : {:?}", rt);
 
-            rt_conf.insert(pid, rt.clone());
-            trace!("Runtime inserted : {:?}", rt);
-            rt
-        }
+        rt_conf.1 = rt;
+        rt_conf.0 = pid;
+        rt_conf.1.handle().clone()
     }
 }
 
 lazy_static! {
-    pub static ref RUNTIME: Arc<Mutex<HashMap<u32, Arc<tokio::runtime::Runtime>>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+    pub static ref RUNTIME: Arc<Mutex<(u32, tokio::runtime::Runtime)>> =
+        Arc::new(Mutex::new((0, create_runtime())));
 }
 
 fn create_runtime() -> Runtime {
@@ -43,6 +44,7 @@ fn create_runtime() -> Runtime {
 
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
+        .thread_keep_alive(Duration::from_millis(4))
         .build()
         .unwrap()
 }

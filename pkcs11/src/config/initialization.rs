@@ -48,12 +48,12 @@ pub fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> 
     for instance in slot.instances.iter() {
         let mut reqwest_builder = reqwest::Client::builder()
             .danger_accept_invalid_certs(instance.danger_insecure_cert)
-            .pool_max_idle_per_host(15)
-            .tcp_keepalive(Some(std::time::Duration::from_secs(20)))
-            .pool_idle_timeout(std::time::Duration::from_secs(10))
-            .timeout(std::time::Duration::from_secs(10));
-            // .http2_keep_alive_timeout(std::time::Duration::from_secs(10));
-            // .http2_keep_alive_while_idle(false);
+            .pool_max_idle_per_host(2);
+        // .tcp_keepalive(Some(std::time::Duration::from_secs(20)))
+        // .pool_idle_timeout(std::time::Duration::from_secs(10))
+        // .timeout(std::time::Duration::from_secs(10));
+        // .http2_keep_alive_timeout(std::time::Duration::from_secs(10));
+        // .http2_keep_alive_while_idle(false);
 
         if let Some(cert_str) = instance.certificate.as_ref() {
             let cert = Certificate::from_pem(cert_str.trim().as_bytes())
