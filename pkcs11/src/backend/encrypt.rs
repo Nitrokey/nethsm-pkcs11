@@ -5,7 +5,6 @@ use nethsm_sdk_rs::apis::default_api;
 
 use crate::backend::mechanism::MechMode;
 use crate::backend::ApiError;
-use crate::utils::get_tokio_rt;
 
 use super::Error;
 
@@ -120,29 +119,24 @@ fn encrypt_data(
         .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
     trace!("iv: {:?}", iv);
 
-    let output = get_tokio_rt()
-        .block_on(async {
-            login_ctx
-                .try_(
-                    |api_config| async move {
-                        default_api::keys_key_id_encrypt_post(
-                            &api_config,
-                            key_id,
-                            nethsm_sdk_rs::models::EncryptRequestData {
-                                mode,
-                                message: b64_message,
-                                iv,
-                            },
-                        )
-                        .await
+    let output = login_ctx
+        .try_(
+            |api_config| {
+                default_api::keys_key_id_encrypt_post(
+                    &api_config,
+                    key_id,
+                    nethsm_sdk_rs::models::EncryptRequestData {
+                        mode,
+                        message: b64_message,
+                        iv,
                     },
-                    login::UserMode::Operator,
                 )
-                .await
-        })
+            },
+            login::UserMode::Operator,
+        )
         .map_err(|err| {
             if let Error::Api(ApiError::ResponseError(ref resp)) = err {
-                if resp.status == reqwest::StatusCode::BAD_REQUEST {
+                if resp.status == 400 {
                     if resp.content.contains("argument length") {
                         return Error::InvalidDataLength;
                     }

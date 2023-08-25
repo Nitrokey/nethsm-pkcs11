@@ -5,7 +5,6 @@ use crate::{
     backend::{db::attr::CkRawAttrTemplate, key},
     data::{DEVICE, KEY_ALIASES},
     lock_mutex, lock_session,
-    utils::get_tokio_rt,
 };
 
 pub extern "C" fn C_FindObjectsInit(
@@ -158,7 +157,7 @@ pub extern "C" fn C_CreateObject(
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
 
-    let objects = match get_tokio_rt().block_on(session.create_object(template)) {
+    let objects = match session.create_object(template) {
         Ok(object) => object,
         Err(err) => {
             return err.into();
@@ -258,9 +257,7 @@ pub extern "C" fn C_SetAttributeValue(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use tokio::sync::Mutex;
+    use std::sync::{Arc, Mutex};
 
     use crate::{
         backend::{

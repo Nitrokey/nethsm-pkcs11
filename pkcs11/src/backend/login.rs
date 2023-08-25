@@ -8,9 +8,9 @@ use nethsm_sdk_rs::{
     apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
 };
-use std::{fmt::Debug, future::Future};
+use std::fmt::Debug;
 
-use crate::{config::config_file::UserConfig, utils::get_tokio_rt};
+use crate::config::config_file::UserConfig;
 
 use super::Error;
 
@@ -91,7 +91,7 @@ impl LoginCtx {
         }
     }
 
-    pub async fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
+    pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
         trace!("Login as {:?} with pin", user_type);
 
         let expected = match user_type {
@@ -125,7 +125,7 @@ impl LoginCtx {
 
         let config = expected.1.ok_or(LoginError::UserNotPresent)?;
 
-        if get_current_user_status(&config).await == expected.0 {
+        if get_current_user_status(&config) == expected.0 {
             self.ck_state = match expected.0 {
                 UserStatus::Operator => CKS_RW_USER_FUNCTIONS,
                 UserStatus::Administrator => CKS_RW_SO_FUNCTIONS,
@@ -193,14 +193,9 @@ impl LoginCtx {
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub async fn try_<'a, F, T, R, Fut>(
-        &mut self,
-        api_call: F,
-        user_mode: UserMode,
-    ) -> Result<R, Error>
+    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
     where
-        F: FnOnce(Configuration) -> Fut + Clone,
-        Fut: Future<Output = Result<R, apis::Error<T>>>,
+        F: FnOnce(Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
         for _ in 0..self.instances.len() {
@@ -210,34 +205,15 @@ impl LoginCtx {
             };
 
             let api_call_clone = api_call.clone();
-            match api_call_clone(conf).await {
+            match api_call_clone(conf) {
                 Ok(result) => return Ok(result),
 
                 // If the server is in an unusable state, try the next one
-                Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::SERVICE_UNAVAILABLE,
-                    ..
-                }))
-                | Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::GATEWAY_TIMEOUT,
-                    ..
-                }))
-                | Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::BAD_GATEWAY,
-                    ..
-                }))
-                | Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::NOT_IMPLEMENTED,
-                    ..
-                }))
-                | Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    ..
-                }))
-                | Err(apis::Error::ResponseError(ResponseContent {
-                    status: reqwest::StatusCode::PRECONDITION_FAILED,
-                    ..
-                })) => continue,
+                Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => continue,
 
                 // Otherwise, return the error
                 Err(err) => return Err(err.into()),
@@ -270,17 +246,16 @@ impl LoginCtx {
             _ => return CKR_USER_NOT_LOGGED_IN,
         };
 
-        match get_tokio_rt().block_on(self.try_(
-            |config| async move {
+        match self.try_(
+            |config| {
                 default_api::users_user_id_passphrase_post(
                     &config,
                     &options.0,
                     nethsm_sdk_rs::models::UserPassphrasePostData { passphrase: pin },
                 )
-                .await
             },
             options.1,
-        )) {
+        ) {
             Ok(_) => CKR_OK,
             Err(err) => {
                 error!("Failed to change pin: {:?}", err);
@@ -305,7 +280,7 @@ pub enum UserStatus {
     LoggedOut,
 }
 
-pub async fn get_current_user_status(
+pub fn get_current_user_status(
     api_config: &nethsm_sdk_rs::apis::configuration::Configuration,
 ) -> UserStatus {
     let auth = match api_config.basic_auth.as_ref() {
@@ -317,7 +292,7 @@ pub async fn get_current_user_status(
         return UserStatus::LoggedOut;
     }
 
-    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()).await {
+    let user = match default_api::users_user_id_get(api_config, auth.0.as_str()) {
         Ok(user) => user.entity,
         Err(err) => {
             error!("Failed to get user: {:?}", err);

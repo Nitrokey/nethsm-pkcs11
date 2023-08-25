@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use super::{
     db::{self, attr::CkRawAttrTemplate, Object},
@@ -8,7 +11,6 @@ use super::{
 use crate::{
     backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError},
     data::{DEVICE, KEY_ALIASES},
-    utils::get_tokio_rt,
 };
 use base64::{engine::general_purpose, Engine};
 use cryptoki_sys::{
@@ -23,7 +25,6 @@ use nethsm_sdk_rs::{
     apis::default_api,
     models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
-use tokio::sync::Mutex;
 use yasna::models::ObjectIdentifier;
 
 #[derive(Debug, Default)]
@@ -155,7 +156,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
     Ok(parsed)
 }
 
-async fn upload_certificate(
+fn upload_certificate(
     parsed_template: &ParsedAttributes,
     mut login_ctx: LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
@@ -187,24 +188,21 @@ async fn upload_certificate(
 
     let key_id = id.as_str();
 
-    login_ctx
-        .try_(
-            |api_config| async move {
-                default_api::keys_key_id_cert_put(
-                    &api_config,
-                    key_id,
-                    default_api::KeysKeyIdCertPutBody::ApplicationXPemFile(body),
-                )
-                .await
-            },
-            login::UserMode::Administrator,
-        )
-        .await?;
+    login_ctx.try_(
+        |api_config| {
+            default_api::keys_key_id_cert_put(
+                &api_config,
+                key_id,
+                default_api::KeysKeyIdCertPutBody::ApplicationXPemFile(body),
+            )
+        },
+        login::UserMode::Administrator,
+    )?;
 
     Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
 }
 
-pub async fn create_key_from_template(
+pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     mut login_ctx: LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
@@ -224,7 +222,7 @@ pub async fn create_key_from_template(
     };
 
     if key_class == ObjectKind::Certificate {
-        return upload_certificate(&parsed, login_ctx).await;
+        return upload_certificate(&parsed, login_ctx);
     }
 
     let (r#type, key) = match parsed
@@ -333,41 +331,34 @@ pub async fn create_key_from_template(
 
     let id = if let Some(id) = parsed.id {
         let key_id = id.as_str();
-        if let Err(err) = login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::keys_key_id_put(
-                        &api_config,
-                        key_id,
-                        default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
-                        Some(mechanisms),
-                        None,
-                    )
-                    .await
-                },
-                login::UserMode::Administrator,
-            )
-            .await
-        {
+        if let Err(err) = login_ctx.try_(
+            |api_config| {
+                default_api::keys_key_id_put(
+                    &api_config,
+                    key_id,
+                    default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
+                    Some(mechanisms),
+                    None,
+                )
+            },
+            login::UserMode::Administrator,
+        ) {
             Err(err)
         } else {
             Ok(id)
         }
     } else {
-        let resp = login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::keys_post(
-                        &api_config,
-                        default_api::KeysPostBody::ApplicationJson(private_key),
-                        Some(mechanisms),
-                        None,
-                    )
-                    .await
-                },
-                login::UserMode::Administrator,
-            )
-            .await;
+        let resp = login_ctx.try_(
+            |api_config| {
+                default_api::keys_post(
+                    &api_config,
+                    default_api::KeysPostBody::ApplicationJson(private_key),
+                    Some(mechanisms),
+                    None,
+                )
+            },
+            login::UserMode::Administrator,
+        );
 
         match resp {
             Ok(resp) => {
@@ -465,34 +456,29 @@ pub fn generate_key_from_template(
         }
     }
 
-    get_tokio_rt().block_on(async {
-        let id = login_ctx
-            .try_(
-                |api_config| async move {
-                    default_api::keys_generate_post(
-                        &api_config,
-                        KeyGenerateRequestData {
-                            mechanisms: api_mechs,
-                            r#type: key_type,
-                            restrictions: None,
-                            id: parsed.id,
-                            length: length.map(|len| len as i32),
-                        },
-                    )
-                    .await
+    let id = login_ctx.try_(
+        |api_config| {
+            default_api::keys_generate_post(
+                &api_config,
+                KeyGenerateRequestData {
+                    mechanisms: api_mechs,
+                    r#type: key_type,
+                    restrictions: None,
+                    id: parsed.id,
+                    length: length.map(|len| len as i32),
                 },
-                login::UserMode::Administrator,
             )
-            .await?;
+        },
+        login::UserMode::Administrator,
+    )?;
 
-        let id = extract_key_id_location_header(id.headers)?;
+    let id = extract_key_id_location_header(id.headers)?;
 
-        fetch_key(&id, parsed.raw_id, login_ctx, db.clone()).await
-    })
+    fetch_key(&id, parsed.raw_id, login_ctx, db.clone())
 }
 
 // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
-pub async fn fetch_key(
+pub fn fetch_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
@@ -504,20 +490,17 @@ pub async fn fetch_key(
         ));
     }
 
-    let key_data = match login_ctx
-        .try_(
-            |api_config| async move { default_api::keys_key_id_get(&api_config, key_id).await },
-            super::login::UserMode::OperatorOrAdministrator,
-        )
-        .await
-    {
+    let key_data = match login_ctx.try_(
+        |api_config| default_api::keys_key_id_get(&api_config, key_id),
+        super::login::UserMode::OperatorOrAdministrator,
+    ) {
         Ok(key_data) => key_data.entity,
         Err(err) => {
             debug!("Failed to fetch key {}: {:?}", key_id, err);
             if matches!(
                 err,
                 Error::Api(ApiError::ResponseError(backend::ResponseContent {
-                    status: reqwest::StatusCode::NOT_FOUND,
+                    status: 404,
                     ..
                 }))
             ) {
@@ -531,7 +514,7 @@ pub async fn fetch_key(
 
     let mut result = Vec::new();
 
-    let mut db = db.lock().await;
+    let mut db = db.lock()?;
 
     for object in objects {
         let r = db.add_object(object.clone());
@@ -541,7 +524,7 @@ pub async fn fetch_key(
     Ok(result)
 }
 
-pub async fn fetch_certificate(
+pub fn fetch_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
@@ -553,34 +536,28 @@ pub async fn fetch_certificate(
         ));
     }
 
-    let cert_data = login_ctx
-        .try_(
-            |api_config| async move {
-                default_api::keys_key_id_cert_get(
-                    &api_config,
-                    key_id,
-                    default_api::KeysKeyIdCertGetAccept::ApplicationXPemFile,
-                )
-                .await
-            },
-            super::login::UserMode::OperatorOrAdministrator,
-        )
-        .await?;
+    let cert_data = login_ctx.try_(
+        |api_config| {
+            default_api::keys_key_id_cert_get(
+                &api_config,
+                key_id,
+                default_api::KeysKeyIdCertGetAccept::ApplicationXPemFile,
+            )
+        },
+        super::login::UserMode::OperatorOrAdministrator,
+    )?;
 
     let object = db::object::from_cert_data(cert_data.entity, key_id, raw_id)?;
 
-    let r = db.lock().await.add_object(object);
+    let r = db.lock()?.add_object(object);
 
     Ok(vec![r])
 }
 
 // get the id from the logation header value :
 // location: /api/v1/keys/<id>?mechanisms=ECDSA_Signature
-fn extract_key_id_location_header(headers: reqwest::header::HeaderMap) -> Result<String, Error> {
-    let location_header = headers
-        .get(reqwest::header::LOCATION)
-        .ok_or(Error::InvalidData)?;
-    let location_header = location_header.to_str().map_err(|_| Error::InvalidData)?;
+fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<String, Error> {
+    let location_header = headers.get("location").ok_or(Error::InvalidData)?;
     let key_id = location_header
         .split('/')
         .last()

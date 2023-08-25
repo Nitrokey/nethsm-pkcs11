@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use nethsm_sdk_rs::apis::configuration::Configuration;
-use tokio::sync::Mutex;
 
 use crate::backend::db::Db;
 
