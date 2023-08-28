@@ -29,3 +29,4 @@ der = { version = "0.7", features = ["pem"] }
 pem-rfc7468 = "0.7"
 num-integer = "0.1"
 x509-cert = "0.2"
+sha2 = "0.10"
