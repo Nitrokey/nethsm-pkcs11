@@ -92,8 +92,8 @@ pub struct InstanceConfig {
     pub url: String,
     #[serde(default)]
     pub danger_insecure_cert: bool,
-    pub certificate: Option<String>,
-    pub certificate_file: Option<String>,
+    #[serde(default)]
+    pub sha256_fingerprints: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
