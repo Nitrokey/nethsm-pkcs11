@@ -13,6 +13,7 @@ use cryptoki_sys::{
     CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
+use der::{DecodePem, Encode};
 use log::{debug, trace};
 use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
@@ -424,9 +425,10 @@ pub fn from_cert_data(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
 ) -> Result<Object, Error> {
-    let openssl_cert = openssl::x509::X509::from_pem(cert.as_bytes())?;
+    let cert = x509_cert::Certificate::from_pem(cert.as_bytes()).map_err(Error::Der)?;
 
-    let cert_der = openssl_cert.to_der()?.to_vec();
+    let mut cert_der = Vec::new();
+    cert.encode_to_vec(&mut cert_der).map_err(Error::Der)?;
 
     let length = cert_der.len();
 
@@ -462,11 +464,11 @@ pub fn from_cert_data(
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
     attrs.insert(
         CKA_SUBJECT,
-        Attr::Bytes(openssl_cert.subject_name().to_der()?),
+        Attr::Bytes(cert.tbs_certificate.subject.to_der().map_err(Error::Der)?),
     );
     attrs.insert(
         CKA_ISSUER,
-        Attr::Bytes(openssl_cert.issuer_name().to_der()?),
+        Attr::Bytes(cert.tbs_certificate.issuer.to_der().map_err(Error::Der)?),
     );
     attrs.insert(CKA_TRUSTED, Attr::CK_TRUE);
     attrs.insert(CKA_CERTIFICATE_TYPE, Attr::from_ck_cert_type(CKC_X_509));

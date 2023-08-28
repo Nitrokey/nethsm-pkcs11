@@ -55,13 +55,14 @@ impl<T> From<apis::Error<T>> for ApiError {
 
 #[derive(Debug)]
 pub enum Error {
+    Der(der::Error),
+    Pem(pem_rfc7468::Error),
     NotLoggedIn(UserMode),
     InvalidObjectHandle(CK_OBJECT_HANDLE),
     InvalidMechanism((String, ObjectKind), Mechanism),
     InvalidAttribute(CK_ATTRIBUTE_TYPE),
     MissingAttribute(CK_ATTRIBUTE_TYPE),
     ObjectClassNotSupported,
-    OpenSSL(openssl::error::ErrorStack),
     InvalidMechanismMode(MechMode, Mechanism),
     Api(ApiError),
     NoInstance,
@@ -96,12 +97,6 @@ impl From<base64::DecodeError> for Error {
     }
 }
 
-impl From<openssl::error::ErrorStack> for Error {
-    fn from(err: openssl::error::ErrorStack) -> Self {
-        Error::OpenSSL(err)
-    }
-}
-
 impl From<std::string::FromUtf8Error> for Error {
     fn from(err: std::string::FromUtf8Error) -> Self {
         Error::StringParse(err)
@@ -113,6 +108,8 @@ impl From<Error> for CK_RV {
         // diplay the error when converting to CK_RV
         error!("{}", err);
         match err {
+            Error::Der(_) => CKR_DEVICE_ERROR,
+            Error::Pem(_) => CKR_DEVICE_ERROR,
             Error::InvalidEncryptedDataLength => CKR_ENCRYPTED_DATA_LEN_RANGE,
             Error::InvalidData => CKR_DATA_INVALID,
             Error::InvalidDataLength => CKR_DATA_LEN_RANGE,
@@ -125,7 +122,6 @@ impl From<Error> for CK_RV {
             Error::InvalidAttribute(_) => CKR_ATTRIBUTE_VALUE_INVALID,
             Error::ObjectClassNotSupported => CKR_DEVICE_MEMORY,
             Error::MissingAttribute(_) => CKR_ARGUMENTS_BAD,
-            Error::OpenSSL(_) => CKR_DEVICE_ERROR,
             Error::NotLoggedIn(_) => CKR_USER_NOT_LOGGED_IN,
             Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
             Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
@@ -150,6 +146,8 @@ impl From<Error> for CK_RV {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
+            Error::Der(err) => format!("DER error: {:?}", err),
+            Error::Pem(err) => format!("PEM error: {:?}", err),
             Error::InvalidEncryptedDataLength => "Invalid encrypted data length".to_string(),
             Error::InvalidData => "Invalid input data".to_string(),
             Error::InvalidDataLength => "Invalid input data length".to_string(),
@@ -176,7 +174,6 @@ impl std::fmt::Display for Error {
             Error::InvalidAttribute(attr) => format!("Invalid attribute: {:?}", attr),
             Error::MissingAttribute(attr) => format!("Missing attribute: {:?}", attr),
             Error::ObjectClassNotSupported => "Object class not supported".to_string(),
-            Error::OpenSSL(err) => format!("OpenSSL error: {:?}", err),
             Error::InvalidMechanismMode(mode, mechanism) => {
                 format!("Unable to use mechanim {:?} for {:?}", mechanism, mode)
             }

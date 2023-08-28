@@ -5,7 +5,7 @@ use super::{
     Error,
 };
 use base64::{engine::general_purpose, Engine as _};
-
+use der::Decode;
 use log::{debug, trace};
 use nethsm_sdk_rs::{apis::default_api, models::SignMode};
 
@@ -99,14 +99,15 @@ impl SignCtx {
 
         // ECDSA signatures returned by the API are DER encoded, we need to remove the DER encoding
         if self.mechanism == Mechanism::Ecdsa {
-            let sign = openssl::ecdsa::EcdsaSig::from_der(&output)?;
-
             let size = self.mechanism.get_key_size(self.key.size);
 
-            let mut o = Vec::new();
+            let sig: der::asn1::SequenceOf<der::asn1::Uint, 2> =
+                der::asn1::SequenceOf::from_der(&output).map_err(Error::Der)?;
 
-            let r = sign.r().to_vec();
-            let s = sign.s().to_vec();
+            let r = sig.get(0).ok_or(Error::InvalidData)?.as_bytes();
+            let s = sig.get(1).ok_or(Error::InvalidData)?.as_bytes();
+
+            let mut o = Vec::new();
 
             if r.len() > size || s.len() > size {
                 return Err(Error::InvalidData);
@@ -115,10 +116,10 @@ impl SignCtx {
             // copy with padding
 
             o.extend_from_slice(&vec![0; size - r.len()]);
-            o.extend_from_slice(&r);
+            o.extend_from_slice(r);
 
             o.extend_from_slice(&vec![0; size - s.len()]);
-            o.extend_from_slice(&s);
+            o.extend_from_slice(s);
 
             output = o;
         }
