@@ -54,8 +54,14 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
             return cryptoki_sys::CKR_ARGUMENTS_BAD;
         }
 
-        trace!("C_Initialize() called with CKF_OS_LOCKING: {:?}", args.flags);
-        trace!("C_Initialize() called with CreateMutex: {:?}", args.CreateMutex);
+        trace!(
+            "C_Initialize() called with CKF_OS_LOCKING: {:?}",
+            args.flags
+        );
+        trace!(
+            "C_Initialize() called with CreateMutex: {:?}",
+            args.CreateMutex
+        );
 
         // currently we don't support custom locking
         // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that

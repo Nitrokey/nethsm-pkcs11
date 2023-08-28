@@ -51,7 +51,3 @@ cargo build && RUST_LOG=trace P11NETHSM_CONFIG_FILE=./p11nethsm.conf NETHSM_PASS
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
-
-## OpenSSL
-
-For ease of use we are statically linking to OpenSSL (via the `openssl` and `openssl-src` crate) ([Apache license](https://www.openssl.org/source/apache-license-2.0.txt)).

@@ -165,8 +165,6 @@ fn upload_certificate(
         .as_ref()
         .ok_or(Error::MissingAttribute(CKA_VALUE))?;
 
-    let openssl_cert = openssl::x509::X509::from_der(cert)?;
-
     let mut id = match parsed_template.id {
         Some(ref id) => id.clone(),
         None => {
@@ -182,9 +180,8 @@ fn upload_certificate(
         }
     }
 
-    let cert_file = openssl_cert.to_pem()?;
-
-    let body = String::from_utf8(cert_file)?;
+    let body = pem_rfc7468::encode_string("CERTIFICATE", pem_rfc7468::LineEnding::default(), cert)
+        .map_err(Error::Pem)?;
 
     let key_id = id.as_str();
 
