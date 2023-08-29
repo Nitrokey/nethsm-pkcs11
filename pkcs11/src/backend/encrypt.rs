@@ -1,5 +1,4 @@
-use base64::{engine::general_purpose, Engine};
-
+use base64ct::{Base64, Encoding};
 use log::{debug, trace};
 use nethsm_sdk_rs::apis::default_api;
 
@@ -106,7 +105,7 @@ fn encrypt_data(
     data: &[u8],
     mechanism: &Mechanism,
 ) -> Result<Vec<u8>, Error> {
-    let b64_message = general_purpose::STANDARD.encode(data);
+    let b64_message = Base64::encode_string(data);
 
     let mode = mechanism.encrypt_name().ok_or(Error::InvalidMechanismMode(
         MechMode::Encrypt,
@@ -116,7 +115,7 @@ fn encrypt_data(
 
     let iv = mechanism
         .iv()
-        .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
+        .map(|iv| Base64::encode_string(iv.as_slice()));
     trace!("iv: {:?}", iv);
 
     let output = login_ctx
@@ -146,5 +145,5 @@ fn encrypt_data(
             err
         })?;
 
-    Ok(general_purpose::STANDARD.decode(output.entity.encrypted)?)
+    Ok(Base64::decode_vec(&output.entity.encrypted)?)
 }

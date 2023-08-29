@@ -12,7 +12,7 @@ use crate::{
     backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError},
     data::{DEVICE, KEY_ALIASES},
 };
-use base64::{engine::general_purpose, Engine};
+use base64ct::{Base64, Encoding};
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
     CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
@@ -228,14 +228,14 @@ pub fn create_key_from_template(
         CKK_RSA => {
             trace!("Creating RSA key");
 
-            let prime_p = general_purpose::STANDARD
-                .encode(parsed.prime_p.ok_or(Error::MissingAttribute(CKA_PRIME_1))?);
+            let prime_p =
+                Base64::encode_string(&parsed.prime_p.ok_or(Error::MissingAttribute(CKA_PRIME_1))?);
 
-            let prime_q = general_purpose::STANDARD
-                .encode(parsed.prime_q.ok_or(Error::MissingAttribute(CKA_PRIME_2))?);
+            let prime_q =
+                Base64::encode_string(&parsed.prime_q.ok_or(Error::MissingAttribute(CKA_PRIME_2))?);
 
-            let public_exponent = general_purpose::STANDARD.encode(
-                parsed
+            let public_exponent = Base64::encode_string(
+                &parsed
                     .public_exponent
                     .ok_or(Error::MissingAttribute(CKA_PUBLIC_EXPONENT))?,
             );
@@ -264,7 +264,7 @@ pub fn create_key_from_template(
                 value.insert(0, 0);
             }
 
-            let b64_private = general_purpose::STANDARD.encode(value.as_slice());
+            let b64_private = Base64::encode_string(value.as_slice());
 
             let key = Box::new(KeyPrivateData {
                 data: Some(b64_private),
@@ -276,7 +276,7 @@ pub fn create_key_from_template(
             (ec_type, key)
         }
         CKK_GENERIC_SECRET => {
-            let b64_private = general_purpose::STANDARD.encode(
+            let b64_private = Base64::encode_string(
                 parsed
                     .value
                     .as_ref()

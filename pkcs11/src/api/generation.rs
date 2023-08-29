@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose, Engine};
+use base64ct::{Base64, Encoding};
 use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 use nethsm_sdk_rs::apis::default_api;
@@ -253,7 +253,7 @@ pub extern "C" fn C_GenerateRandom(
 
     // parse base64 string to bytes
 
-    let raw_data = match general_purpose::STANDARD.decode(data.entity.random) {
+    let raw_data = match Base64::decode_vec(&data.entity.random) {
         Ok(raw_data) => raw_data,
         Err(e) => {
             error!("C_GenerateRandom() failed to decode random data: {:?}", e);

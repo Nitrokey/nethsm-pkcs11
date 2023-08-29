@@ -1,5 +1,4 @@
-use base64::{engine::general_purpose, Engine};
-
+use base64ct::{Base64, Encoding};
 use log::trace;
 use nethsm_sdk_rs::apis::default_api;
 
@@ -55,7 +54,7 @@ impl DecryptCtx {
             return Err(Error::InvalidEncryptedDataLength);
         }
 
-        let b64_message = general_purpose::STANDARD.encode(self.data.as_slice());
+        let b64_message = Base64::encode_string(self.data.as_slice());
 
         let mode = self
             .mechanism
@@ -69,7 +68,7 @@ impl DecryptCtx {
         let iv = self
             .mechanism
             .iv()
-            .map(|iv| general_purpose::STANDARD.encode(iv.as_slice()));
+            .map(|iv| Base64::encode_string(iv.as_slice()));
 
         let key_id = self.key_id.as_str();
 
@@ -88,6 +87,6 @@ impl DecryptCtx {
             login::UserMode::Operator,
         )?;
 
-        Ok(general_purpose::STANDARD.decode(output.entity.decrypted)?)
+        Ok(Base64::decode_vec(&output.entity.decrypted)?)
     }
 }

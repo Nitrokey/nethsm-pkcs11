@@ -4,7 +4,7 @@ use super::{
     mechanism::{MechMode, Mechanism},
     Error,
 };
-use base64::{engine::general_purpose, Engine as _};
+use base64ct::{Base64, Encoding};
 use der::Decode;
 use log::{debug, trace};
 use nethsm_sdk_rs::{apis::default_api, models::SignMode};
@@ -74,7 +74,7 @@ impl SignCtx {
             self.data.clone()
         };
 
-        let b64_message = general_purpose::STANDARD.encode(data.as_slice());
+        let b64_message = Base64::encode_string(data.as_slice());
 
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
@@ -95,7 +95,7 @@ impl SignCtx {
             login::UserMode::Operator,
         )?;
 
-        let mut output = general_purpose::STANDARD.decode(signature.entity.signature)?;
+        let mut output = Base64::decode_vec(&signature.entity.signature)?;
 
         // ECDSA signatures returned by the API are DER encoded, we need to remove the DER encoding
         if self.mechanism == Mechanism::Ecdsa {

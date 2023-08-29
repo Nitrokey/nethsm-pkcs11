@@ -1,8 +1,7 @@
+use base64ct::{Base64, Encoding};
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
-use base64::{engine::general_purpose, Engine as _};
-
 use cryptoki_sys::{
     CKA_ALWAYS_AUTHENTICATE, CKA_ALWAYS_SENSITIVE, CKA_CERTIFICATE_CATEGORY, CKA_CERTIFICATE_TYPE,
     CKA_CLASS, CKA_DECRYPT, CKA_DERIVE, CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE,
@@ -196,8 +195,8 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
         .public_exponent
         .as_ref()
         .ok_or(Error::KeyField("public_exponent".to_string()))?;
-    let modulus = general_purpose::STANDARD.decode(modulus.as_bytes())?;
-    let public_exponent = general_purpose::STANDARD.decode(public_exponent.as_bytes())?;
+    let modulus = Base64::decode_vec(modulus)?;
+    let public_exponent = Base64::decode_vec(public_exponent)?;
 
     let mut attrs = HashMap::new();
 
@@ -236,7 +235,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
 
     trace!("EC key data: {:?}", ec_points);
 
-    let mut ec_point_bytes = general_purpose::STANDARD.decode(ec_points)?;
+    let mut ec_point_bytes = Base64::decode_vec(ec_points)?;
 
     trace!("EC key data bytes length : {}", ec_point_bytes.len());
 
