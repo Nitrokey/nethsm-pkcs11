@@ -412,7 +412,6 @@ dependencies = [
  "log",
  "merge",
  "nethsm-sdk-rs",
- "num-integer",
  "pem-rfc7468",
  "rustls",
  "rustls-native-certs",
@@ -422,17 +421,6 @@ dependencies = [
  "sha2",
  "ureq",
  "x509-cert",
- "yasna",
-]
-
-[[package]]
-name = "num-integer"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
-dependencies = [
- "autocfg",
- "num-traits",
 ]
 
 [[package]]
@@ -1045,12 +1033,6 @@ dependencies = [
  "der",
  "spki",
 ]
-
-[[package]]
-name = "yasna"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
 
 [[package]]
 name = "zeroize"
