@@ -92,8 +92,6 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
     for instance in slot.instances.iter() {
         let tls_conf = rustls::ClientConfig::builder().with_safe_defaults();
 
-        println!("{:?}", instance.sha256_fingerprints);
-
         let tls_conf = if instance.danger_insecure_cert {
             tls_conf
                 .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier {}))
