@@ -66,7 +66,7 @@ pub enum Error {
     InvalidMechanismMode(MechMode, Mechanism),
     Api(ApiError),
     NoInstance,
-    DecodeError(base64::DecodeError),
+    Base64Error(base64ct::Error),
     StringParse(std::string::FromUtf8Error),
     Login(LoginError),
     OperationNotInitialized,
@@ -91,9 +91,9 @@ impl<T> From<apis::Error<T>> for Error {
     }
 }
 
-impl From<base64::DecodeError> for Error {
-    fn from(err: base64::DecodeError) -> Self {
-        Error::DecodeError(err)
+impl From<base64ct::Error> for Error {
+    fn from(err: base64ct::Error) -> Self {
+        Error::Base64Error(err)
     }
 }
 
@@ -126,7 +126,7 @@ impl From<Error> for CK_RV {
             Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
             Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
             Error::NoInstance => CKR_DEVICE_ERROR,
-            Error::DecodeError(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
+            Error::Base64Error(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
             Error::Api(err) => match err {
                 ApiError::Ureq(_) => CKR_DEVICE_ERROR,
                 ApiError::Io(_) => CKR_DEVICE_ERROR,
@@ -189,7 +189,7 @@ impl std::fmt::Display for Error {
                 },
             },
             Error::NoInstance => "No instance".to_string(),
-            Error::DecodeError(err) => format!("Base64 Decode error: {:?}", err),
+            Error::Base64Error(err) => format!("Base64 Decode error: {:?}", err),
             Error::StringParse(err) => format!("String parse error: {:?}", err),
         };
         write!(f, "{}", msg)
