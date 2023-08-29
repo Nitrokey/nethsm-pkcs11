@@ -69,7 +69,7 @@ jobs:
         run: ./tools/build_profiling.sh
 
       - name: repalce localhost with nethsm
-        run: sed -i 's/localhost/nethsm/g' ./tools/*.sh ./tools/tests/*.sh ./p11nethsm.conf
+        run: sed -i 's/localhost/nethsm/g' ./tools/*.sh ./tools/tests/*.sh ./p11nethsm.conf ./tools/*.conf
 
       - name: setup NetHSM
         run: ./tools/ci_setup.sh
