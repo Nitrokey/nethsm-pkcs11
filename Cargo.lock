@@ -387,7 +387,7 @@ dependencies = [
 [[package]]
 name = "nethsm-sdk-rs"
 version = "0.1.0"
-source = "git+https://github.com/Nitrokey/nethsm-sdk-rs?rev=9117200b61eb03cf3a8c6aa640ffa5babb4a2eb3#9117200b61eb03cf3a8c6aa640ffa5babb4a2eb3"
+source = "git+https://github.com/Nitrokey/nethsm-sdk-rs?tag=0.2.0#0c0934a3c392214772bd780cc0ec92e9f7e8a880"
 dependencies = [
  "base64ct",
  "serde",
