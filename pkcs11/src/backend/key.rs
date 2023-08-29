@@ -19,13 +19,12 @@ use cryptoki_sys::{
     CKA_VALUE_LEN, CKK_EC, CKK_EC_EDWARDS, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE,
     CK_OBJECT_CLASS, CK_OBJECT_HANDLE, CK_ULONG,
 };
-use lazy_static::lazy_static;
+use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace};
 use nethsm_sdk_rs::{
     apis::default_api,
     models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
 };
-use yasna::models::ObjectIdentifier;
 
 #[derive(Debug, Default)]
 pub struct ParsedAttributes {
@@ -369,25 +368,19 @@ pub fn create_key_from_template(
     Ok((id, key_class, parsed.raw_id))
 }
 
-lazy_static! {
-    static ref KEYTYPE_EC_P224: ObjectIdentifier =
-        ObjectIdentifier::from_slice(&[1, 3, 132, 0, 33]);
-    static ref KEYTYPE_EC_P256: ObjectIdentifier =
-        ObjectIdentifier::from_slice(&[1, 2, 840, 10045, 3, 1, 7]);
-    static ref KEYTYPE_EC_P384: ObjectIdentifier =
-        ObjectIdentifier::from_slice(&[1, 3, 132, 0, 34]);
-    static ref KEYTYPE_EC_P521: ObjectIdentifier =
-        ObjectIdentifier::from_slice(&[1, 3, 132, 0, 35]);
-    static ref KEYTYPE_CURVE25519: ObjectIdentifier =
-        ObjectIdentifier::from_slice(&[1, 3, 101, 112]);
-}
+const KEYTYPE_EC_P224: ObjectIdentifier = der::oid::db::rfc5912::SECP_224_R_1;
+const KEYTYPE_EC_P256: ObjectIdentifier = der::oid::db::rfc5912::SECP_256_R_1;
+const KEYTYPE_EC_P384: ObjectIdentifier = der::oid::db::rfc5912::SECP_384_R_1;
+const KEYTYPE_EC_P521: ObjectIdentifier = der::oid::db::rfc5912::SECP_521_R_1;
+const KEYTYPE_CURVE25519: ObjectIdentifier = der::oid::db::rfc8410::ID_ED_25519;
+
 pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
     Some(match key_type {
-        KeyType::EcP224 => (*KEYTYPE_EC_P224).clone(),
-        KeyType::EcP256 => (*KEYTYPE_EC_P256).clone(),
-        KeyType::EcP384 => (*KEYTYPE_EC_P384).clone(),
-        KeyType::EcP521 => (*KEYTYPE_EC_P521).clone(),
-        KeyType::Curve25519 => (*KEYTYPE_CURVE25519).clone(),
+        KeyType::EcP224 => KEYTYPE_EC_P224,
+        KeyType::EcP256 => KEYTYPE_EC_P256,
+        KeyType::EcP384 => KEYTYPE_EC_P384,
+        KeyType::EcP521 => KEYTYPE_EC_P521,
+        KeyType::Curve25519 => KEYTYPE_CURVE25519,
         _ => return None,
     })
 }
@@ -408,18 +401,18 @@ pub const fn key_size(t: &KeyType) -> Option<usize> {
 
 fn key_type_from_params(params: &[u8]) -> Option<KeyType> {
     // decode der to ObjectIdentifier
-    let oid: ObjectIdentifier = yasna::decode_ber(params).unwrap();
+    let oid: der::oid::ObjectIdentifier = der::oid::ObjectIdentifier::from_der(params).ok()?;
 
     // we can't do a match on vecs
-    if oid == *KEYTYPE_CURVE25519 {
+    if oid == KEYTYPE_CURVE25519 {
         Some(KeyType::Curve25519)
-    } else if oid == *KEYTYPE_EC_P224 {
+    } else if oid == KEYTYPE_EC_P224 {
         Some(KeyType::EcP224)
-    } else if oid == *KEYTYPE_EC_P256 {
+    } else if oid == KEYTYPE_EC_P256 {
         Some(KeyType::EcP256)
-    } else if oid == *KEYTYPE_EC_P384 {
+    } else if oid == KEYTYPE_EC_P384 {
         Some(KeyType::EcP384)
-    } else if oid == *KEYTYPE_EC_P521 {
+    } else if oid == KEYTYPE_EC_P521 {
         Some(KeyType::EcP521)
     } else {
         None

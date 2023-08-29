@@ -13,7 +13,7 @@ use cryptoki_sys::{
     CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
-use der::{DecodePem, Encode};
+use der::{asn1::OctetString, DecodePem, Encode};
 use log::{debug, trace};
 use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
@@ -241,15 +241,13 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     trace!("EC key data bytes length : {}", ec_point_bytes.len());
 
     // add padding
-    while ec_point_bytes.len() < size {
+    while ec_point_bytes.len() < size / 8 {
         ec_point_bytes.insert(0, 0);
     }
 
     trace!("EC key data bytes: {:?}", ec_point_bytes);
 
-    let encoded_points = yasna::construct_der(|writer| {
-        writer.write_bytes(&ec_point_bytes);
-    });
+    let encoded_points = OctetString::new(ec_point_bytes).unwrap().to_der().unwrap();
 
     trace!("EC key data encoded len : {}", encoded_points.len());
 
@@ -258,9 +256,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         key_data.r#type
     )))?;
 
-    let ec_params = yasna::construct_der(|writer| {
-        writer.write_oid(&key_params);
-    });
+    let ec_params = key_params.to_der().map_err(Error::Der)?;
 
     let key_type = match key_data.r#type {
         KeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
