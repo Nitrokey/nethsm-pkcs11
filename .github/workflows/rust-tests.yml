@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: install opensc and dependencies
-        run: apt-get update && apt-get install -y opensc curl libssl-dev build-essential pkg-config xxd jq gnutls-bin
+        run: apt-get update && apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
