@@ -12,7 +12,7 @@ use std::fmt::Debug;
 
 use crate::config::config_file::UserConfig;
 
-use super::Error;
+use super::{ApiError, Error};
 
 #[derive(Debug, Clone)]
 pub struct LoginCtx {
@@ -65,11 +65,6 @@ impl LoginCtx {
         administrator: Option<UserConfig>,
         instances: Vec<Configuration>,
     ) -> Self {
-        trace!(
-            "Creating login context with administrator: {:?}",
-            administrator
-        );
-
         let mut ck_state = CKS_RO_PUBLIC_SESSION;
 
         let firt_instance = instances.first();
@@ -193,7 +188,7 @@ impl LoginCtx {
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, Error>
+    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, ApiError>
     where
         F: FnOnce(Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
@@ -219,7 +214,7 @@ impl LoginCtx {
                 Err(err) => return Err(err.into()),
             }
         }
-        Err(Error::NoInstance)
+        Err(ApiError::NoInstance)
     }
 
     pub fn ck_state(&self) -> CK_STATE {

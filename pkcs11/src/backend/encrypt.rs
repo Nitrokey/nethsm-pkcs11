@@ -134,7 +134,7 @@ fn encrypt_data(
             login::UserMode::Operator,
         )
         .map_err(|err| {
-            if let Error::Api(ApiError::ResponseError(ref resp)) = err {
+            if let ApiError::ResponseError(ref resp) = err {
                 if resp.status == 400 {
                     if resp.content.contains("argument length") {
                         return Error::InvalidDataLength;
@@ -142,7 +142,7 @@ fn encrypt_data(
                     return Error::InvalidData;
                 }
             }
-            err
+            err.into()
         })?;
 
     Ok(Base64::decode_vec(&output.entity.encrypted)?)

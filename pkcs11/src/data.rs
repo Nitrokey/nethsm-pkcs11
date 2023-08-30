@@ -1,11 +1,13 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+
+use crate::backend::events::EventsManager;
 
 use crate::{
     api,
     backend::session::SessionManager,
     config::{self, device::Device},
 };
-use cryptoki_sys::{CK_FUNCTION_LIST, CK_VERSION};
+use cryptoki_sys::{CK_FUNCTION_LIST, CK_SLOT_ID, CK_VERSION};
 use lazy_static::lazy_static;
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     major: 2,
@@ -26,6 +28,10 @@ lazy_static! {
     // As we are using lazy_static, this field will be initialized the first time it's used.
     // The key of the map is the name the application tries to use, the value is the name given by the NetHSM.
     pub static ref KEY_ALIASES : Arc<Mutex<std::collections::HashMap<String, String>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
+    // Storage of events
+    pub static ref EVENTS_MANAGER : Arc<RwLock<EventsManager>> = Arc::new(RwLock::new(EventsManager::new()));
+    // Token present or not (true = present)
+    pub static ref TOKENS_STATE : Arc<Mutex<std::collections::HashMap<CK_SLOT_ID, bool>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

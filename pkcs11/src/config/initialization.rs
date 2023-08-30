@@ -26,7 +26,6 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
     for slot in config.slots.iter() {
         slots.push(Arc::new(slot_from_config(slot)?));
     }
-
     Ok(Device {
         slots,
         log_file: config.log_file,

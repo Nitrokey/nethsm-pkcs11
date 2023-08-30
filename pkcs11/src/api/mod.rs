@@ -14,7 +14,8 @@ pub mod token;
 pub mod verify;
 
 use crate::{
-    data::{self, DEVICE},
+    backend::events::{fetch_slots_state, EventsManager},
+    data::{self, DEVICE, EVENTS_MANAGER, TOKENS_STATE},
     defs, padded_str,
 };
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
@@ -72,6 +73,12 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         }
     }
 
+    // Initialize the events manager
+    *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
+    *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+
+    fetch_slots_state();
+
     cryptoki_sys::CKR_OK
 }
 
@@ -80,6 +87,8 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     if !pReserved.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
+    EVENTS_MANAGER.write().unwrap().finalized = true;
+
     cryptoki_sys::CKR_OK
 }
 
