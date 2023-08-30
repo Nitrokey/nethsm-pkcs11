@@ -17,6 +17,7 @@ use nethsm_sdk_rs::apis;
 pub mod db;
 pub mod decrypt;
 pub mod encrypt;
+pub mod events;
 pub mod key;
 pub mod login;
 pub mod mechanism;
@@ -37,6 +38,7 @@ pub enum ApiError {
     Serde(serde_json::Error),
     Io(std::io::Error),
     ResponseError(ResponseContent),
+    NoInstance,
 }
 
 impl<T> From<apis::Error<T>> for ApiError {
@@ -65,7 +67,6 @@ pub enum Error {
     ObjectClassNotSupported,
     InvalidMechanismMode(MechMode, Mechanism),
     Api(ApiError),
-    NoInstance,
     Base64Error(base64ct::Error),
     StringParse(std::string::FromUtf8Error),
     Login(LoginError),
@@ -77,6 +78,12 @@ pub enum Error {
     InvalidDataLength,
     InvalidData,
     InvalidEncryptedDataLength,
+}
+
+impl From<ApiError> for Error {
+    fn from(err: ApiError) -> Self {
+        Error::Api(err)
+    }
 }
 
 impl<T> From<PoisonError<T>> for Error {
@@ -125,9 +132,9 @@ impl From<Error> for CK_RV {
             Error::NotLoggedIn(_) => CKR_USER_NOT_LOGGED_IN,
             Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
             Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
-            Error::NoInstance => CKR_DEVICE_ERROR,
             Error::Base64Error(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
             Error::Api(err) => match err {
+                ApiError::NoInstance => CKR_TOKEN_NOT_PRESENT,
                 ApiError::Ureq(_) => CKR_DEVICE_ERROR,
                 ApiError::Io(_) => CKR_DEVICE_ERROR,
                 ApiError::Serde(_) => CKR_DEVICE_ERROR,
@@ -178,6 +185,7 @@ impl std::fmt::Display for Error {
                 format!("Unable to use mechanim {:?} for {:?}", mechanism, mode)
             }
             Error::Api(err) => match err {
+                ApiError::NoInstance => "No valid instance in the slot".to_string(),
                 ApiError::Ureq(err) => format!("Request error : {}", err),
                 ApiError::Serde(err) => format!("Serde error: {:?}", err),
                 ApiError::Io(err) => format!("IO error: {:?}", err),
@@ -188,7 +196,6 @@ impl std::fmt::Display for Error {
                     _ => format!("Api error: {:?}", resp),
                 },
             },
-            Error::NoInstance => "No instance".to_string(),
             Error::Base64Error(err) => format!("Base64 Decode error: {:?}", err),
             Error::StringParse(err) => format!("String parse error: {:?}", err),
         };

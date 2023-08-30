@@ -489,14 +489,11 @@ pub fn fetch_key(
             debug!("Failed to fetch key {}: {:?}", key_id, err);
             if matches!(
                 err,
-                Error::Api(ApiError::ResponseError(backend::ResponseContent {
-                    status: 404,
-                    ..
-                }))
+                ApiError::ResponseError(backend::ResponseContent { status: 404, .. })
             ) {
                 return Ok(vec![]);
             }
-            return Err(err);
+            return Err(err.into());
         }
     };
 

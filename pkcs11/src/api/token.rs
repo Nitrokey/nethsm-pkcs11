@@ -3,14 +3,18 @@ use cryptoki_sys::{
     CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{debug, error, trace, warn};
-use nethsm_sdk_rs::{apis::default_api, models::SystemState};
+use nethsm_sdk_rs::{
+    apis::default_api,
+    models::{HealthStateData, InfoData, SystemState},
+};
 
 use crate::{
     backend::{
+        events::fetch_slots_state,
         login::{LoginCtx, UserMode},
         slot::get_slot,
     },
-    data::DEVICE,
+    data::{DEVICE, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     lock_mutex, lock_session, padded_str, version_struct_from_str,
 };
@@ -89,13 +93,16 @@ pub extern "C" fn C_GetSlotInfo(
         crate::backend::login::UserMode::Guest,
     );
 
-    // // fetch info from the device
+    // fetch info from the device
 
     let info = match result {
-        Ok(info) => info,
+        Ok(info) => info.entity,
         Err(e) => {
-            error!("Error getting info: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
+            trace!("Error getting info: {:?}", e);
+            InfoData {
+                product: "unknown".to_string(),
+                vendor: "unknown".to_string(),
+            }
         }
     };
 
@@ -107,20 +114,22 @@ pub extern "C" fn C_GetSlotInfo(
     // fetch the sysem state
 
     let system_state = match result {
-        Ok(info) => info,
+        Ok(info) => info.entity,
         Err(e) => {
-            error!("Error getting system state: {:?}", e);
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
+            trace!("Error getting system state: {:?}", e);
+            HealthStateData {
+                state: SystemState::Unprovisioned,
+            }
         }
     };
 
-    if system_state.entity.state == SystemState::Operational {
+    if system_state.state == SystemState::Operational {
         flags |= cryptoki_sys::CKF_TOKEN_PRESENT;
     }
 
     let info: CK_SLOT_INFO = CK_SLOT_INFO {
-        slotDescription: padded_str!("info.entity.product", 64),
-        manufacturerID: padded_str!("info.entity.vendor", 32),
+        slotDescription: padded_str!(info.product, 64),
+        manufacturerID: padded_str!(info.vendor, 32),
         flags,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
         firmwareVersion: DEFAULT_FIRMWARE_VERSION,
@@ -351,16 +360,140 @@ pub extern "C" fn C_WaitForSlotEvent(
     pReserved: cryptoki_sys::CK_VOID_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_WaitForSlotEvent() called");
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+
+    if pSlot.is_null() {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    fetch_slots_state();
+
+    loop {
+        // check if there is an event in the queue
+
+        let slot = EVENTS_MANAGER.write().unwrap().events.pop();
+        if let Some(slot) = slot {
+            unsafe {
+                std::ptr::write(pSlot, slot);
+            }
+            return cryptoki_sys::CKR_OK;
+        }
+
+        // if the dont block flag is set, return no event
+        if flags & cryptoki_sys::CKF_DONT_BLOCK == 1 {
+            return cryptoki_sys::CKR_NO_EVENT;
+        } else {
+            // Otherwise, wait for an event
+
+            // If C_Finalize() has been called, return an error
+            if EVENTS_MANAGER.read().unwrap().finalized {
+                return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
+            }
+
+            // sleep for 1 second
+            std::thread::sleep(std::time::Duration::from_secs(1));
+
+            // fetch the slots state so we get the latest events in the next iteration
+            fetch_slots_state();
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use cryptoki_sys::{CKU_USER, CK_MECHANISM_INFO};
+    use cryptoki_sys::{CKF_DONT_BLOCK, CKU_USER, CK_MECHANISM_INFO};
 
-    use crate::{backend::slot::set_test_config_env, data::SESSION_MANAGER};
+    use crate::{
+        api::C_Finalize,
+        backend::{
+            events::{update_slot_state, EventsManager},
+            slot::set_test_config_env,
+        },
+        data::{SESSION_MANAGER, TOKENS_STATE},
+    };
 
     use super::*;
+
+    #[test]
+    fn test_wait_for_slot_event_no_event() {
+        set_test_config_env();
+        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
+        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+
+        let mut slot = 0;
+        let result = C_WaitForSlotEvent(CKF_DONT_BLOCK, &mut slot, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_NO_EVENT);
+    }
+
+    #[test]
+    fn test_wait_for_slot_event_one_event() {
+        set_test_config_env();
+        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
+        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+
+        update_slot_state(0, false);
+        update_slot_state(0, true);
+
+        println!("Events: {:?}", EVENTS_MANAGER.read().unwrap().events);
+
+        let mut slot = 15;
+        let result = C_WaitForSlotEvent(CKF_DONT_BLOCK, &mut slot, std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_OK);
+        assert_eq!(slot, 0);
+    }
+
+    // we ignore this test because it requires cargo test -- --test-threads=1
+    #[test]
+    #[ignore]
+    fn test_wait_for_slot_event_blocking_one_event() {
+        set_test_config_env();
+        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
+        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+
+        // update the slot state in a separate thread
+
+        let handle = std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            update_slot_state(0, false);
+            update_slot_state(0, true);
+        });
+
+        let mut slot = 15;
+        let result = C_WaitForSlotEvent(0, &mut slot, std::ptr::null_mut());
+        handle.join().unwrap();
+        assert_eq!(result, cryptoki_sys::CKR_OK);
+        assert_eq!(slot, 0);
+    }
+
+    // we ignore this test because it requires cargo test -- --test-threads=1
+    #[test]
+    #[ignore]
+    fn test_wait_for_slot_event_blocking_finalize() {
+        set_test_config_env();
+        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
+        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+
+        // update the slot state in a separate thread
+
+        let handle = std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+
+            C_Finalize(std::ptr::null_mut());
+        });
+
+        let mut slot = 15;
+        let result = C_WaitForSlotEvent(0, &mut slot, std::ptr::null_mut());
+        handle.join().unwrap();
+        println!("slot: {}", slot);
+        assert_eq!(result, cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
+    }
+
+    #[test]
+    fn test_wait_for_slot_event_null_slot_ptr() {
+        set_test_config_env();
+
+        let result = C_WaitForSlotEvent(CKF_DONT_BLOCK, std::ptr::null_mut(), std::ptr::null_mut());
+        assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
 
     #[test]
     fn test_get_slot_list_null_count() {
@@ -535,12 +668,6 @@ mod tests {
     #[test]
     fn test_init_token() {
         let result = C_InitToken(0, std::ptr::null_mut(), 0, std::ptr::null_mut());
-        assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
-    }
-
-    #[test]
-    fn test_wait_for_slot_event() {
-        let result = C_WaitForSlotEvent(0, std::ptr::null_mut(), std::ptr::null_mut());
         assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 }
