@@ -123,6 +123,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
+          toolchain: stable
+          
       - name: install cargo-license
         run: cargo install cargo-license
 
