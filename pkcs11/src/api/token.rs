@@ -413,7 +413,9 @@ mod tests {
 
     use super::*;
 
+    // ignored because it needs to be run alone on one thread
     #[test]
+    #[ignore]
     fn test_wait_for_slot_event_no_event() {
         set_test_config_env();
         *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
@@ -424,7 +426,9 @@ mod tests {
         assert_eq!(result, cryptoki_sys::CKR_NO_EVENT);
     }
 
+    // ignored because it needs to be run alone on one thread
     #[test]
+    #[ignore]
     fn test_wait_for_slot_event_one_event() {
         set_test_config_env();
         *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
