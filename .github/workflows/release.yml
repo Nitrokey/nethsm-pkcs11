@@ -112,3 +112,27 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.FILE_NAME }}
+
+  upload-licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+      - name: install cargo-license
+        run: cargo install cargo-license
+
+      - name: Generate licenses
+        run: ./tools/collect_licenses.sh
+
+      - name: rename file
+        run: mv _LICENSE LICENSE
+
+      - name: Upload to the release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LICENSE
