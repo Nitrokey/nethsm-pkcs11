@@ -8,7 +8,7 @@ use crate::{
         db::attr::CkRawAttrTemplate,
         mechanism::{CkRawMechanism, Mechanism},
     },
-    lock_mutex, lock_session,
+    lock_session, read_session,
 };
 
 pub extern "C" fn C_GenerateKey(
@@ -36,7 +36,7 @@ pub extern "C" fn C_GenerateKey(
         }
     };
 
-    lock_session!(hSession, session);
+    read_session!(hSession, session);
 
     let template =
         unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
@@ -101,7 +101,7 @@ pub extern "C" fn C_GenerateKeyPair(
         }
     };
 
-    lock_session!(hSession, session);
+    read_session!(hSession, session);
 
     let public_template = unsafe {
         CkRawAttrTemplate::from_raw_ptr_unchecked(
