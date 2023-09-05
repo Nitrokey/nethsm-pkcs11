@@ -2,7 +2,7 @@ use log::{error, trace};
 
 use crate::backend::slot::get_slot;
 use crate::data::SESSION_MANAGER;
-use crate::lock_mutex;
+use crate::read_session;
 
 pub extern "C" fn C_OpenSession(
     slotID: cryptoki_sys::CK_SLOT_ID,
@@ -34,7 +34,7 @@ pub extern "C" fn C_OpenSession(
     };
 
     // create the session in memory
-    let mut manager = lock_mutex!(SESSION_MANAGER);
+    let mut manager = SESSION_MANAGER.write().unwrap();
     let session = manager.create_session(slotID, slot, flags);
 
     trace!("C_OpenSession() created session: {:?}", session);
@@ -49,7 +49,7 @@ pub extern "C" fn C_OpenSession(
 pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_CloseSession() called with session handle {}.", hSession);
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
+    let mut manager = SESSION_MANAGER.write().unwrap();
     let result = manager.delete_session(hSession);
 
     if result.is_none() {
@@ -74,7 +74,7 @@ pub extern "C" fn C_CloseAllSessions(slotID: cryptoki_sys::CK_SLOT_ID) -> crypto
         return cryptoki_sys::CKR_SLOT_ID_INVALID;
     }
 
-    let mut manager = lock_mutex!(SESSION_MANAGER);
+    let mut manager = SESSION_MANAGER.write().unwrap();
 
     manager.delete_all_slot_sessions(slotID);
 
@@ -94,25 +94,10 @@ pub extern "C" fn C_GetSessionInfo(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let manager = lock_mutex!(SESSION_MANAGER);
-
-    let session = manager.get_session(hSession);
-
-    let session_info = match session {
-        Some(session) => session.get_ck_info(),
-        None => {
-            error!(
-                "C_GetSessionInfo() called with invalid session handle {}.",
-                hSession
-            );
-            return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-        }
-    };
-
-    trace!("C_GetSessionInfo() session info: {:?}", session_info);
+    read_session!(hSession, session);
 
     unsafe {
-        std::ptr::write(pInfo, session_info);
+        std::ptr::write(pInfo, session.get_ck_info());
     }
 
     cryptoki_sys::CKR_OK
@@ -179,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_delete_session_invalid() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let rv = C_CloseSession(0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -198,12 +183,12 @@ mod tests {
         set_test_config_env();
         let slot = get_slot(0).unwrap();
 
-        let handle = SESSION_MANAGER.lock().unwrap().create_session(0, slot, 0);
+        let handle = SESSION_MANAGER.write().unwrap().create_session(0, slot, 0);
 
         let rv = C_CloseAllSessions(0);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
         assert!(SESSION_MANAGER
-            .lock()
+            .write()
             .unwrap()
             .get_session(handle)
             .is_none());
@@ -211,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_get_session_info_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut info = cryptoki_sys::CK_SESSION_INFO::default();
         let rv = C_GetSessionInfo(0, &mut info);
@@ -220,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_get_session_info_null_info() {
-        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let rv = C_GetSessionInfo(session_handle, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);

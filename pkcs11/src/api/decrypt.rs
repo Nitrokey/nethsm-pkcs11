@@ -3,7 +3,7 @@ use log::{error, trace};
 
 use crate::{
     backend::mechanism::{CkRawMechanism, Mechanism},
-    lock_mutex, lock_session,
+    lock_session,
 };
 
 pub extern "C" fn C_DecryptInit(
@@ -208,7 +208,7 @@ mod tests {
     use crate::data::SESSION_MANAGER;
 
     fn setup_session() -> cryptoki_sys::CK_SESSION_HANDLE {
-        SESSION_MANAGER.lock().unwrap().setup_dummy_session()
+        SESSION_MANAGER.write().unwrap().setup_dummy_session()
     }
 
     #[test]
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_init_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let rv = C_Decrypt(
             0,
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_update_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let rv = C_DecryptUpdate(
             0,
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_final_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut pulLastPartLen = 0;
 

@@ -1,9 +1,9 @@
 // lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
 #[macro_export]
 macro_rules! lock_mutex {
-    ($session_manager:expr) => {
-        match $session_manager.lock() {
-            Ok(manager) => manager,
+    ($mutex:expr) => {
+        match $mutex.lock() {
+            Ok(guard) => guard,
             Err(e) => {
                 error!("Failed to lock : {:?}", e);
                 return cryptoki_sys::CKR_FUNCTION_FAILED;
@@ -36,14 +36,36 @@ macro_rules! version_struct_from_str {
 #[macro_export]
 macro_rules! lock_session {
     ($hSession:expr, $session:ident) => {
-        let mut _manager_arc = lock_mutex!($crate::data::SESSION_MANAGER);
-        let $session = match _manager_arc.get_session_mut($hSession) {
+        let $session = match $crate::data::SESSION_MANAGER
+            .read()
+            .unwrap()
+            .get_session($hSession)
+        {
             Some(session) => session,
             None => {
                 error!("function called with invalid session handle {}.", $hSession);
                 return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
             }
         };
+        let mut $session = $session.lock().unwrap();
+    };
+}
+
+#[macro_export]
+macro_rules! read_session {
+    ($hSession:expr, $session:ident) => {
+        let $session = match $crate::data::SESSION_MANAGER
+            .read()
+            .unwrap()
+            .get_session($hSession)
+        {
+            Some(session) => session,
+            None => {
+                error!("function called with invalid session handle {}.", $hSession);
+                return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+            }
+        };
+        let $session = $session.lock().unwrap();
     };
 }
 

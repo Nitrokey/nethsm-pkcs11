@@ -30,7 +30,7 @@ type WorkResult = Result<Vec<(CK_ULONG, Object)>, Error>;
 
 #[derive(Debug)]
 pub struct SessionManager {
-    pub sessions: HashMap<CK_SESSION_HANDLE, Session>,
+    pub sessions: HashMap<CK_SESSION_HANDLE, Arc<Mutex<Session>>>,
     pub next_session_handle: CK_SESSION_HANDLE,
 }
 
@@ -50,31 +50,27 @@ impl SessionManager {
     ) -> CK_SESSION_HANDLE {
         let session = Session::new(slot_id, slot, flags);
         let handle = self.next_session_handle;
-        self.sessions.insert(handle, session);
+        self.sessions.insert(handle, Arc::new(Mutex::new(session)));
 
         self.next_session_handle += 1;
         handle
     }
 
-    pub fn get_session(&self, handle: CK_SESSION_HANDLE) -> Option<&Session> {
-        self.sessions.get(&handle)
-    }
-
-    pub fn get_session_mut(&mut self, handle: CK_SESSION_HANDLE) -> Option<&mut Session> {
-        self.sessions.get_mut(&handle)
+    pub fn get_session(&self, handle: CK_SESSION_HANDLE) -> Option<Arc<Mutex<Session>>> {
+        self.sessions.get(&handle).cloned()
     }
 
     pub fn delete_session(
         &mut self,
         handle: CK_SESSION_HANDLE,
-    ) -> Option<(CK_SESSION_HANDLE, Session)> {
+    ) -> Option<(CK_SESSION_HANDLE, Arc<Mutex<Session>>)> {
         self.sessions.remove_entry(&handle)
     }
 
     pub fn delete_all_slot_sessions(&mut self, slot_id: CK_SLOT_ID) {
         let mut deleted_sessions = Vec::new();
         self.sessions.iter().for_each(|(handle, session)| {
-            if session.slot_id == slot_id {
+            if session.lock().unwrap().slot_id == slot_id {
                 deleted_sessions.push(*handle);
             }
         });
@@ -87,7 +83,7 @@ impl SessionManager {
     #[allow(dead_code)]
     #[cfg(test)]
     pub fn set_session(&mut self, handle: CK_SESSION_HANDLE, session: Session) {
-        self.sessions.insert(handle, session);
+        self.sessions.insert(handle, Arc::new(Mutex::new(session)));
     }
 
     // test only function to setup a blank session

@@ -3,7 +3,7 @@ use log::{error, trace};
 
 use crate::{
     backend::mechanism::{CkRawMechanism, Mechanism},
-    lock_mutex, lock_session,
+    lock_session,
 };
 
 pub extern "C" fn C_SignInit(
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_null_mechanism() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let rv = C_SignInit(session, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -247,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_mechanism() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 15000,
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_sign_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
         let mut signature = [0u8; 32];
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_data() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
         let mut signature_len = 32;
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_signature_len() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
         let mut signature = [0u8; 32];
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_sign_operation_not_initialized() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
         let mut signature = [0u8; 32];
@@ -345,7 +345,7 @@ mod tests {
 
     // #[test]
     // fn test_sign_null_signature() {
-    //     let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+    //     let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
     //     let mut data = [0u8; 32];
     //     let mut signature_len = 32;
@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
 
@@ -372,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_null_data() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let rv = C_SignUpdate(session, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_operation_not_initialized() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
 
@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_invalid_session() {
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.write().unwrap().delete_session(0);
 
         let mut signature = [0u8; 32];
         let mut signature_len = 32;
@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_null_signature_len() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
 
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_operation_not_initialized() {
-        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
         let mut signature_len = 32;
