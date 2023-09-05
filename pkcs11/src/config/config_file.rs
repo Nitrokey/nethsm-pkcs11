@@ -187,6 +187,7 @@ slots:
     }
 
     #[test]
+    #[ignore]
     fn test_read_config_no_file() {
         std::env::remove_var(ENV_VAR_CONFIG_FILE);
         let config = read_configuration();

@@ -11,6 +11,16 @@ pub fn configure_logger(config: &P11Config) {
     }
 
     if let Some(path) = &config.log_file {
+        // get the current rights of the file
+        if let Ok(metadata) = std::fs::metadata(path) {
+            let mut permissions = metadata.permissions();
+            if permissions.readonly() {
+                #[allow(clippy::permissions_set_readonly_false)]
+                permissions.set_readonly(false);
+                std::fs::set_permissions(path, permissions).unwrap();
+            }
+        }
+
         // open the file for appending
         let file = Box::new(
             std::fs::OpenOptions::new()
