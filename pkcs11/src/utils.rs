@@ -36,36 +36,30 @@ macro_rules! version_struct_from_str {
 #[macro_export]
 macro_rules! lock_session {
     ($hSession:expr, $session:ident) => {
-        let $session = match $crate::data::SESSION_MANAGER
-            .read()
-            .unwrap()
-            .get_session($hSession)
-        {
-            Some(session) => session,
-            None => {
-                error!("function called with invalid session handle {}.", $hSession);
-                return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-            }
-        };
-        let mut $session = $session.lock().unwrap();
+        let $session =
+            match $crate::lock_mutex!($crate::data::SESSION_MANAGER).get_session($hSession) {
+                Some(session) => session,
+                None => {
+                    error!("function called with invalid session handle {}.", $hSession);
+                    return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+                }
+            };
+        let mut $session = $crate::lock_mutex!($session);
     };
 }
 
 #[macro_export]
 macro_rules! read_session {
     ($hSession:expr, $session:ident) => {
-        let $session = match $crate::data::SESSION_MANAGER
-            .read()
-            .unwrap()
-            .get_session($hSession)
-        {
-            Some(session) => session,
-            None => {
-                error!("function called with invalid session handle {}.", $hSession);
-                return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-            }
-        };
-        let $session = $session.lock().unwrap();
+        let $session =
+            match $crate::lock_mutex!($crate::data::SESSION_MANAGER).get_session($hSession) {
+                Some(session) => session,
+                None => {
+                    error!("function called with invalid session handle {}.", $hSession);
+                    return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
+                }
+            };
+        let $session = $crate::lock_mutex!($session);
     };
 }
 

@@ -22,7 +22,7 @@ lazy_static! {
             unsafe { libc::exit(1) }
         }
     };
-    pub static ref SESSION_MANAGER : Arc<RwLock<SessionManager>> =  Arc::new(RwLock::new(SessionManager::new()));
+    pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
 
     // Aliases for the keys, used when enable_set_attribute_value is set.
     // As we are using lazy_static, this field will be initialized the first time it's used.
