@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_null_old_pin() {
-        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let newPin = "12345678";
         let rv = C_SetPIN(
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_null_new_pin() {
-        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";
         let rv = C_SetPIN(
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let oldPin = "12345678";
         let newPin = "12345678";
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_old_pin() {
-        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         // random bytes
         let oldPin = [
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_new_pin() {
-        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";
         // random bytes
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_user() {
-        let session_handle = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";
         let newPin = "12345678";

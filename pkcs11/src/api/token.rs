@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_login_null_pin() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let result = C_Login(session, CKU_USER, std::ptr::null_mut(), 0);
         assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -635,7 +635,7 @@ mod tests {
 
     #[test]
     fn test_login_non_utf8_pin() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pin = [0xFF, 0xFF, 0xFF, 0xFF];
 
@@ -645,7 +645,7 @@ mod tests {
 
     #[test]
     fn test_login_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut pin = "1234".to_string();
 
@@ -655,7 +655,7 @@ mod tests {
 
     #[test]
     fn test_logout_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let result = C_Logout(0);
         assert_eq!(result, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -663,7 +663,7 @@ mod tests {
 
     #[test]
     fn test_logout() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let result = C_Logout(session);
         assert_eq!(result, cryptoki_sys::CKR_OK);

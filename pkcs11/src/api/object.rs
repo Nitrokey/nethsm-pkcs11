@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_find_objects_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
         let mut pulObjectCount: cryptoki_sys::CK_ULONG = 0;
@@ -291,7 +291,7 @@ mod tests {
     fn test_find_objects_null_object() {
         let mut pulObjectCount: cryptoki_sys::CK_ULONG = 0;
 
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_FindObjects(session, std::ptr::null_mut(), 1, &mut pulObjectCount);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -301,7 +301,7 @@ mod tests {
     fn test_find_objects_null_object_count() {
         let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_FindObjects(session, &mut phObject, 1, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_find_objects_final_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let rv = C_FindObjectsFinal(0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_get_attribute_value_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut template = vec![];
 
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_get_attribute_value_null_template() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_GetAttributeValue(session, 0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_get_attribute_value_invalid_object() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut template = vec![];
 
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_get_object_size_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut pulSize: cryptoki_sys::CK_ULONG = 0;
 
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_get_object_size_null_size() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_GetObjectSize(session, 0, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_get_object_size_invalid_object() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pulSize: cryptoki_sys::CK_ULONG = 0;
 
@@ -393,7 +393,7 @@ mod tests {
         };
 
         SESSION_MANAGER
-            .write()
+            .lock()
             .unwrap()
             .set_session(session_handle, session);
 
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_create_object_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
         let mut template = vec![];
         let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_create_object_null_object() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut template = vec![];
 
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_create_object_null_template() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
@@ -436,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_destroy_object_invalid_session() {
-        SESSION_MANAGER.write().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let rv = C_DestroyObject(0, 0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_set_attribute_null_template() {
-        let session = SESSION_MANAGER.write().unwrap().setup_dummy_session();
+        let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_SetAttributeValue(session, 0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
