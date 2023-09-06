@@ -98,17 +98,17 @@ Verify is not supported by NetHSM
 
 ## Objects
 
-| Feature             | Status             | Notes                                                               |
-| ------------------- | ------------------ | ------------------------------------------------------------------- |
-| C_FindObjectsInit   | :warning:          | Only lists the available keys                                       |
-| C_FindObjects       | :warning:          | Only lists the available keys                                       |
-| C_FindObjectsFinal  | :heavy_check_mark: |                                                                     |
-| C_GetAttributeValue | :heavy_check_mark: |                                                                     |
-| C_GetObjectSize     | :heavy_check_mark: |                                                                     |
-| C_CreateObject      | :warning:          | Needs to be logged as admin (SO). Only private keys can be added.   |
-| C_CopyObject        | :heavy_check_mark: | Always returns CKR_ACTION_PROHIBITED                                |
-| C_DestroyObject     | :warning:          | Needs to be logged as admin (SO). Only private keys can be deleted. |
-| C_SetAttributeValue | :heavy_check_mark: | Always returns CKR_ACTION_PROHIBITED                                |
+| Feature             | Status             | Notes                                                                                                                       |
+| ------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| C_FindObjectsInit   | :warning:          | Only lists the available keys                                                                                               |
+| C_FindObjects       | :warning:          | Only lists the available keys                                                                                               |
+| C_FindObjectsFinal  | :heavy_check_mark: |                                                                                                                             |
+| C_GetAttributeValue | :heavy_check_mark: |                                                                                                                             |
+| C_GetObjectSize     | :heavy_check_mark: |                                                                                                                             |
+| C_CreateObject      | :warning:          | Needs to be logged as admin (SO). Only private keys can be added.                                                           |
+| C_CopyObject        | :heavy_check_mark: | Always returns CKR_ACTION_PROHIBITED                                                                                        |
+| C_DestroyObject     | :warning:          | Needs to be logged as admin (SO). Only private keys can be deleted.                                                         |
+| C_SetAttributeValue | :heavy_check_mark: | Returns CKR_ACTION_PROHIBITED, a compatibility option is available for Java Sun PKCS11 / EJBCA : enable_set_attribute_value |
 
 ## Pin management
 
