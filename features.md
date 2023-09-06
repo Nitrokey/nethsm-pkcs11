@@ -33,17 +33,17 @@ As of current version concurrency is not yet implemented.
 
 ## Token
 
-| Feature            | Status             | Notes                                                                                                                       |
-| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| C_GetSlotList      | :heavy_check_mark: |                                                                                                                             |
-| C_GetSlotInfo      | :heavy_check_mark: |                                                                                                                             |
-| C_GetTokenInfo     | :heavy_check_mark: |                                                                                                                             |
-| C_InitToken        | :x:                |                                                                                                                             |
-| C_GetMechanismList | :heavy_check_mark: |                                                                                                                             |
-| C_GetMechanismInfo | :heavy_check_mark: |                                                                                                                             |
-| C_Login            | :heavy_check_mark: | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default) |
-| C_Logout           | :heavy_check_mark: |                                                                                                                             |
-| C_WaitForSlotEvent | :x:                | May be used to poll for the status of the server, requires a lot of work                                                    |
+| Feature            | Status             | Notes                                                                                                                             |
+| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| C_GetSlotList      | :heavy_check_mark: |                                                                                                                                   |
+| C_GetSlotInfo      | :heavy_check_mark: |                                                                                                                                   |
+| C_GetTokenInfo     | :heavy_check_mark: |                                                                                                                                   |
+| C_InitToken        | :x:                |                                                                                                                                   |
+| C_GetMechanismList | :heavy_check_mark: |                                                                                                                                   |
+| C_GetMechanismInfo | :heavy_check_mark: |                                                                                                                                   |
+| C_Login            | :heavy_check_mark: | The pin is used as the password, login in as an SO means logging in with an admin account ("admin" username set by default)       |
+| C_Logout           | :heavy_check_mark: |                                                                                                                                   |
+| C_WaitForSlotEvent | :heavy_check_mark: | CKF_DONT_BLOCK set : checks if a slot has changed state since last check. CKF_DONT_BLOCK clear : waits for a slot to change state |
 
 ## Decrypt
 
@@ -72,8 +72,8 @@ As of current version concurrency is not yet implemented.
 | C_Sign              | :heavy_check_mark: |                         |
 | C_SignUpdate        | :heavy_check_mark: |                         |
 | C_SignFinal         | :heavy_check_mark: |                         |
-| C_SignRecoverInit   | :x:                |                         |
-| C_SignRecover       | :x:                |                         |
+| C_SignRecoverInit   | :x:                | Not supported by NetHSM |
+| C_SignRecover       | :x:                | Not supported by NetHSM |
 | C_SignEncryptUpdate | :x:                | Not supported by NetHSM |
 
 ## Digest :x:
