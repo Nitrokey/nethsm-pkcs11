@@ -102,7 +102,7 @@ pub enum Mechanism {
     RsaPkcsPss(MechDigest),
     RsaX509,
     EdDsa,
-    Ecdsa,
+    Ecdsa(Option<MechDigest>),
     GenerateGeneric,
     GenerateAes,
     GenerateRsa,
@@ -115,7 +115,7 @@ impl From<KeyMechanism> for Mechanism {
         match value {
             KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
             KeyMechanism::AesEncryptionCbc => Self::AesCbc(None),
-            KeyMechanism::EcdsaSignature => Self::Ecdsa,
+            KeyMechanism::EcdsaSignature => Self::Ecdsa(None),
             KeyMechanism::EdDsaSignature => Self::EdDsa,
             KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaPkcsOaep(MechDigest::Md5),
             KeyMechanism::RsaDecryptionOaepSha1 => Self::RsaPkcsOaep(MechDigest::Sha1),
@@ -162,12 +162,22 @@ impl Mechanism {
             KeyType::Generic => vec![Self::AesCbc(None)],
             KeyType::Rsa => vec![
                 Self::RsaPkcs,
+                Self::RsaPkcsOaep(MechDigest::Md5),
+                Self::RsaPkcsOaep(MechDigest::Sha1),
+                Self::RsaPkcsOaep(MechDigest::Sha224),
                 Self::RsaPkcsOaep(MechDigest::Sha256),
+                Self::RsaPkcsOaep(MechDigest::Sha384),
+                Self::RsaPkcsOaep(MechDigest::Sha512),
+                Self::RsaPkcsPss(MechDigest::Md5),
+                Self::RsaPkcsPss(MechDigest::Sha1),
+                Self::RsaPkcsPss(MechDigest::Sha224),
                 Self::RsaPkcsPss(MechDigest::Sha256),
+                Self::RsaPkcsPss(MechDigest::Sha384),
+                Self::RsaPkcsPss(MechDigest::Sha512),
                 Self::RsaX509,
             ],
             KeyType::EcP224 | KeyType::EcP256 | KeyType::EcP384 | KeyType::EcP521 => {
-                vec![Self::Ecdsa]
+                vec![Self::Ecdsa(None)]
             }
             KeyType::Curve25519 => vec![Self::EdDsa],
         }
@@ -181,7 +191,8 @@ impl Mechanism {
             | Self::RsaPkcsPss(_)
             | Self::RsaX509
             | Self::GenerateRsa => KeyType::Rsa,
-            Self::Ecdsa | Self::GenerateEc => KeyType::EcP256,
+            // return a default one, the right size will be obtained from the OID in the template
+            Self::Ecdsa(_) | Self::GenerateEc => KeyType::EcP256,
             Self::EdDsa | Self::GenerateEd => KeyType::Curve25519,
         }
     }
@@ -213,7 +224,7 @@ impl Mechanism {
                 KeyMechanism::RsaDecryptionRaw,
                 KeyMechanism::RsaSignaturePkcs1,
             ],
-            Self::Ecdsa | Self::GenerateEc => vec![KeyMechanism::EcdsaSignature],
+            Self::Ecdsa(_) | Self::GenerateEc => vec![KeyMechanism::EcdsaSignature],
             Self::EdDsa | Self::GenerateEd => vec![KeyMechanism::EdDsaSignature],
         }
     }
@@ -232,7 +243,7 @@ impl Mechanism {
                     MechDigest::Sha512 => Some(KeyMechanism::RsaSignaturePssSha512),
                 },
                 Self::RsaX509 => None,
-                Self::Ecdsa => Some(KeyMechanism::EcdsaSignature),
+                Self::Ecdsa(_) => Some(KeyMechanism::EcdsaSignature),
                 Self::EdDsa => Some(KeyMechanism::EdDsaSignature),
                 Self::RsaPkcsOaep(_) => None,
                 _ => None,
@@ -299,7 +310,12 @@ impl Mechanism {
             }
 
             cryptoki_sys::CKM_RSA_X_509 => Self::RsaX509,
-            cryptoki_sys::CKM_ECDSA => Self::Ecdsa,
+            cryptoki_sys::CKM_ECDSA => Self::Ecdsa(None),
+            cryptoki_sys::CKM_ECDSA_SHA1 => Self::Ecdsa(Some(MechDigest::Sha1)),
+            cryptoki_sys::CKM_ECDSA_SHA224 => Self::Ecdsa(Some(MechDigest::Sha224)),
+            cryptoki_sys::CKM_ECDSA_SHA256 => Self::Ecdsa(Some(MechDigest::Sha256)),
+            cryptoki_sys::CKM_ECDSA_SHA384 => Self::Ecdsa(Some(MechDigest::Sha384)),
+            cryptoki_sys::CKM_ECDSA_SHA512 => Self::Ecdsa(Some(MechDigest::Sha512)),
             cryptoki_sys::CKM_EDDSA => Self::EdDsa,
             _ => return Err(Error::UnknownMech(raw_mech.type_())),
         };
@@ -316,7 +332,14 @@ impl Mechanism {
             Self::RsaPkcsOaep(_) => CKM_RSA_PKCS_OAEP,
 
             Self::RsaX509 => cryptoki_sys::CKM_RSA_X_509,
-            Self::Ecdsa => cryptoki_sys::CKM_ECDSA,
+            Self::Ecdsa(None) => cryptoki_sys::CKM_ECDSA,
+            Self::Ecdsa(Some(MechDigest::Sha1)) => cryptoki_sys::CKM_ECDSA_SHA1,
+            Self::Ecdsa(Some(MechDigest::Sha224)) => cryptoki_sys::CKM_ECDSA_SHA224,
+            Self::Ecdsa(Some(MechDigest::Sha256)) => cryptoki_sys::CKM_ECDSA_SHA256,
+            Self::Ecdsa(Some(MechDigest::Sha384)) => cryptoki_sys::CKM_ECDSA_SHA384,
+            Self::Ecdsa(Some(MechDigest::Sha512)) => cryptoki_sys::CKM_ECDSA_SHA512,
+            // should not exist
+            Self::Ecdsa(Some(MechDigest::Md5)) => cryptoki_sys::CKM_ECDSA,
             Self::EdDsa => cryptoki_sys::CKM_EDDSA,
 
             Self::GenerateAes => cryptoki_sys::CKM_AES_KEY_GEN,
@@ -334,7 +357,7 @@ impl Mechanism {
             Self::RsaPkcs | Self::RsaPkcsPss(_) | Self::RsaX509 | Self::GenerateRsa => {
                 (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS)
             }
-            Self::Ecdsa | Self::GenerateEc => (Self::EC_MIN_KEY_BITS, Self::EC_MAX_KEY_BITS),
+            Self::Ecdsa(_) | Self::GenerateEc => (Self::EC_MIN_KEY_BITS, Self::EC_MAX_KEY_BITS),
             Self::RsaPkcsOaep(_) => (Self::RSA_MIN_KEY_BITS, Self::RSA_MAX_KEY_BITS),
             Self::EdDsa | Self::GenerateEd => (Self::ED_MIN_KEY_BITS, Self::ED_MAX_KEY_BITS),
             Self::GenerateGeneric => (128, 256),
@@ -381,7 +404,7 @@ impl Mechanism {
 
                 // "RAW" RSA has decrypt only
                 Self::RsaX509 => cryptoki_sys::CKF_DECRYPT,
-                Self::Ecdsa | Self::GenerateEc => {
+                Self::Ecdsa(_) | Self::GenerateEc => {
                     cryptoki_sys::CKF_SIGN
                         | cryptoki_sys::CKF_EC_F_P
                         | cryptoki_sys::CKF_EC_NAMEDCURVE
@@ -407,7 +430,7 @@ impl Mechanism {
                 MechDigest::Sha384 => Some(SignMode::PssSha384),
                 MechDigest::Sha512 => Some(SignMode::PssSha512),
             },
-            Self::Ecdsa => Some(SignMode::Ecdsa),
+            Self::Ecdsa(_) => Some(SignMode::Ecdsa),
             Self::EdDsa => Some(SignMode::EdDsa),
             _ => None,
         }
@@ -443,7 +466,7 @@ impl Mechanism {
         match self {
             Self::RsaPkcs => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
             Self::RsaPkcsPss(_) => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
-            Self::Ecdsa => {
+            Self::Ecdsa(_) => {
                 let s = key_size.unwrap_or((Self::EC_MAX_KEY_BITS / 8) as usize);
                 if s == 65 {
                     66 // correct the division error for 521
@@ -460,7 +483,7 @@ impl Mechanism {
         match self {
             Self::RsaPkcs => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
             Self::RsaPkcsPss(_) => key_size.unwrap_or((Self::RSA_MAX_KEY_BITS / 8) as usize),
-            Self::Ecdsa => {
+            Self::Ecdsa(_) => {
                 let s = key_size.unwrap_or((Self::EC_MAX_KEY_BITS / 8) as usize);
                 if s == 65 {
                     // p512 uses 64 bytes
@@ -480,7 +503,7 @@ impl Mechanism {
         match self {
             Self::RsaPkcs => key_size,
             Self::RsaPkcsPss(_) => key_size,
-            Self::Ecdsa => key_size * 2,
+            Self::Ecdsa(_) => key_size * 2,
             Self::EdDsa => key_size * 2,
             _ => key_size,
         }
