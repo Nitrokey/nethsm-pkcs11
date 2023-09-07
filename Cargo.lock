@@ -347,6 +347,7 @@ dependencies = [
  "base64ct",
  "cryptoki-sys",
  "der",
+ "digest",
  "env_logger",
  "hex",
  "lazy_static",
@@ -360,6 +361,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "sha1",
  "sha2",
  "ureq",
  "x509-cert",
@@ -605,6 +607,17 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
+]
+
+[[package]]
+name = "sha1"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
 ]
 
 [[package]]
