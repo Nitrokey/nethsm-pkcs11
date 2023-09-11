@@ -5,10 +5,6 @@
 - 🗓️ : Planned
 - :x: : Not in the current scope of the project
 
-## Concurrency
-
-As of current version concurrency is not yet implemented.
-
 ## Base features
 
 | Feature           | Status             | Notes                            |
