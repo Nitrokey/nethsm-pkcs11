@@ -50,7 +50,7 @@ As of current version concurrency is not yet implemented.
 Mechanisms:
 
 - AES-CBC
-- RSA-X-509
+- RSA-X-509 (Raw RSA)
 - RSA-PKCS
 - RSA-PKCS-OAEP: data hashed with MD5/SHA1/SHA224/SHA256/SHA384/SHA512
 
