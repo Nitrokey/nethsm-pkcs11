@@ -47,6 +47,13 @@ As of current version concurrency is not yet implemented.
 
 ## Decrypt
 
+Mechanisms:
+
+- AES-CBC
+- RSA-X-509
+- RSA-PKCS
+- RSA-PKCS-OAEP: data hashed with MD5/SHA1/SHA224/SHA256/SHA384/SHA512
+
 | Feature               | Status             | Notes                                                                                                            |
 | --------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | C_DecryptInit         | :heavy_check_mark: |                                                                                                                  |
@@ -57,6 +64,10 @@ As of current version concurrency is not yet implemented.
 
 ## Encrypt
 
+Mechanisms:
+
+- AES-CBC
+
 | Feature         | Status             | Notes                                                 |
 | --------------- | ------------------ | ----------------------------------------------------- |
 | C_EncryptInit   | :heavy_check_mark: |                                                       |
@@ -65,6 +76,18 @@ As of current version concurrency is not yet implemented.
 | C_EncryptFinal  | :heavy_check_mark: | AES-CBC expects messages with a length multiple of 16 |
 
 ## Sign
+
+Mechanisms:
+
+- RSA-PKCS
+- RSA-PKCS-PSS: expects hashed value with MD5/SHA1/SHA224/SHA256/SHA384/SHA512 (set the correct one in CK_RSA_PKCS_PSS_PARAMS)
+- EDDSA
+- ECDSA
+- ECDSA-SHA1 (hashing done on the application server, NOT the NetHSM)
+- ECDSA-SHA224 (hashing done on the application server, NOT the NetHSM)
+- ECDSA-SHA256 (hashing done on the application server, NOT the NetHSM)
+- ECDSA-SHA384 (hashing done on the application server, NOT the NetHSM)
+- ECDSA-SHA512 (hashing done on the application server, NOT the NetHSM)
 
 | Feature             | Status             | Notes                   |
 | ------------------- | ------------------ | ----------------------- |
