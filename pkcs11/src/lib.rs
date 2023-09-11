@@ -8,6 +8,7 @@ mod backend;
 mod config;
 mod defs;
 
+#[cfg(panic = "abort")]
 mod unwind_stubs;
 
 #[macro_use]
