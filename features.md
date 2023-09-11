@@ -83,11 +83,11 @@ Mechanisms:
 - RSA-PKCS-PSS: expects hashed value with MD5/SHA1/SHA224/SHA256/SHA384/SHA512 (set the correct one in CK_RSA_PKCS_PSS_PARAMS)
 - EDDSA
 - ECDSA
-- ECDSA-SHA1 (hashing done on the application server, NOT the NetHSM)
-- ECDSA-SHA224 (hashing done on the application server, NOT the NetHSM)
-- ECDSA-SHA256 (hashing done on the application server, NOT the NetHSM)
-- ECDSA-SHA384 (hashing done on the application server, NOT the NetHSM)
-- ECDSA-SHA512 (hashing done on the application server, NOT the NetHSM)
+- ECDSA-SHA1 (Hashing is performed by the PKCS#11 module)
+- ECDSA-SHA224 (Hashing is performed by the PKCS#11 module)
+- ECDSA-SHA256 (Hashing is performed by the PKCS#11 module)
+- ECDSA-SHA384 (Hashing is performed by the PKCS#11 module)
+- ECDSA-SHA512 (Hashing is performed by the PKCS#11 module)
 
 | Feature             | Status             | Notes                   |
 | ------------------- | ------------------ | ----------------------- |
