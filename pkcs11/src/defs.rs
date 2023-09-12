@@ -12,11 +12,21 @@ pub const LIB_MANUFACTURER: &str = "Nitrokey";
 pub const DEFAULT_FIRMWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 pub const DEFAULT_HARDWARE_VERSION: CK_VERSION = CK_VERSION { major: 0, minor: 1 };
 
-pub const MECHANISM_LIST: [Mechanism; 17] = [
+pub const MECHANISM_LIST: [Mechanism; 27] = [
     Mechanism::AesCbc(None),
     Mechanism::RsaX509,
-    Mechanism::RsaPkcs,
-    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Md5),
+    Mechanism::RsaPkcs(None),
+    Mechanism::RsaPkcs(Some(crate::backend::mechanism::MechDigest::Sha1)),
+    Mechanism::RsaPkcs(Some(crate::backend::mechanism::MechDigest::Sha224)),
+    Mechanism::RsaPkcs(Some(crate::backend::mechanism::MechDigest::Sha256)),
+    Mechanism::RsaPkcs(Some(crate::backend::mechanism::MechDigest::Sha384)),
+    Mechanism::RsaPkcs(Some(crate::backend::mechanism::MechDigest::Sha512)),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Md5, false),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Sha1, true),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Sha224, true),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Sha256, true),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Sha384, true),
+    Mechanism::RsaPkcsPss(crate::backend::mechanism::MechDigest::Sha512, true),
     Mechanism::RsaPkcsOaep(crate::backend::mechanism::MechDigest::Md5),
     Mechanism::EdDsa,
     Mechanism::Ecdsa(None),

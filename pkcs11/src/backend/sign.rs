@@ -1,3 +1,5 @@
+use crate::backend::mechanism::MechDigest;
+
 use super::{
     db::Object,
     login::{self, LoginCtx},
@@ -67,36 +69,36 @@ impl SignCtx {
     }
 
     pub fn sign_final(&self) -> Result<Vec<u8>, Error> {
+        // helper function to hash the data with the correct algorithm
         fn hasher<D: Digest>(data: &[u8]) -> Vec<u8> {
             let mut hasher = D::new();
             hasher.update(data);
             hasher.finalize().to_vec()
         }
-        // with ecdsa we need to send the correct size, so we truncate/pad the data to the correct size
-        let data = if matches!(self.mechanism, Mechanism::Ecdsa(_)) {
-            let data = match self.mechanism {
-                Mechanism::Ecdsa(Some(digest)) => {
-                    let hasher_fn: fn(&[u8]) -> Vec<u8> = match digest {
-                        crate::backend::mechanism::MechDigest::Sha1 => hasher::<sha1::Sha1>,
-                        crate::backend::mechanism::MechDigest::Sha224 => hasher::<sha2::Sha224>,
-                        crate::backend::mechanism::MechDigest::Sha256 => hasher::<sha2::Sha256>,
-                        crate::backend::mechanism::MechDigest::Sha384 => hasher::<sha2::Sha384>,
-                        crate::backend::mechanism::MechDigest::Sha512 => hasher::<sha2::Sha512>,
-                        // should never happen
-                        _ => hasher::<sha1::Sha1>,
-                    };
-                    hasher_fn(&self.data)
-                }
-                _ => self.data.clone(),
+
+        let mut data = if let Some(digest) = self.mechanism.internal_digest() {
+            let hasher_fn = match digest {
+                MechDigest::Sha1 => hasher::<sha1::Sha1>,
+                MechDigest::Sha224 => hasher::<sha2::Sha224>,
+                MechDigest::Sha256 => hasher::<sha2::Sha256>,
+                MechDigest::Sha384 => hasher::<sha2::Sha384>,
+                MechDigest::Sha512 => hasher::<sha2::Sha512>,
+                // should never happen
+                _ => hasher::<sha1::Sha1>,
             };
+            hasher_fn(&self.data)
+        } else {
+            self.data.clone()
+        };
+
+        // with ecdsa we need to send the correct size, so we truncate/pad the data to the correct size
+        if matches!(self.mechanism, Mechanism::Ecdsa(_)) {
             let size = self.mechanism.get_input_size(self.key.size);
             let mut out = vec![0; size];
             let len = data.len().min(size);
             out[(size - len)..size].copy_from_slice(&data[..len]);
-            out
-        } else {
-            self.data.clone()
-        };
+            data = out;
+        }
 
         let b64_message = Base64::encode_string(data.as_slice());
 
