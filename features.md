@@ -75,7 +75,17 @@ Mechanisms:
 Mechanisms:
 
 - RSA-PKCS
-- RSA-PKCS-PSS: expects hashed value with MD5/SHA1/SHA224/SHA256/SHA384/SHA512 (set the correct one in CK_RSA_PKCS_PSS_PARAMS)
+- SHA1-RSA-PKCS (Hash is computed by the PKCS#11 module)
+- SHA224-RSA-PKCS (Hash is computed by the PKCS#11 module)
+- SHA256-RSA-PKCS (Hash is computed by the PKCS#11 module)
+- SHA384-RSA-PKCS (Hash is computed by the PKCS#11 module)
+- SHA512-RSA-PKCS (Hash is computed by the PKCS#11 module)
+- RSA-PKCS-PSS: expects already hashed value with MD5/SHA1/SHA224/SHA256/SHA384/SHA512 (set the correct one in CK_RSA_PKCS_PSS_PARAMS)
+- SHA1-RSA-PKCS-PSS (Hash is computed by the PKCS#11 module)
+- SHA224-RSA-PKCS-PSS (Hash is computed by the PKCS#11 module)
+- SHA256-RSA-PKCS-PSS (Hash is computed by the PKCS#11 module)
+- SHA384-RSA-PKCS-PSS (Hash is computed by the PKCS#11 module)
+- SHA512-RSA-PKCS-PSS (Hash is computed by the PKCS#11 module)
 - EDDSA
 - ECDSA
 - ECDSA-SHA1 (Hash is computed by the PKCS#11 module)
