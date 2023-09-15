@@ -10,7 +10,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-windows.dll
+      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -37,7 +37,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     env:
-      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-macos.dylib
+      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-x86_64-macos.dylib
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -72,7 +72,7 @@ jobs:
         rust-version: [stable]
 
     env:
-      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-${{ matrix.os }}.so
+      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-x86_64-${{ matrix.os }}.so
       HOME: /root
     steps:
       - name: Checkout code
@@ -113,6 +113,67 @@ jobs:
         with:
           files: ${{ env.FILE_NAME }}
 
+  cross-build-linux:
+    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
+    strategy:
+      matrix:
+        include:
+          - arch: aarch64
+            distro: bullseye
+            target: aarch64-unknown-linux-gnu
+          - arch: aarch64
+            distro: ubuntu22.04
+            target: aarch64-unknown-linux-gnu
+          - arch: aarch64
+            distro: alpine_latest
+            target: aarch64-unknown-linux-musl
+          # Not supported by ring
+          # - arch: riscv64
+          #   distro: ubuntu22.04
+          #   target: riscv64gc-unknown-linux-gnu
+    env:
+      FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-${{ matrix.arch }}-${{ matrix.distro }}.so
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: uraimo/run-on-arch-action@v2
+        name: Build artifact
+        id: build
+        with:
+          githubToken: ${{ github.token }}
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+          setup: |
+            mkdir -p "${PWD}/artifacts"
+          dockerRunArgs: |
+            --volume "${PWD}/artifacts:/artifacts"
+          env: |
+            FILE_NAME: "${{env.FILE_NAME}}"
+            TARGET: "${{ matrix.target }}"
+            RUSTFLAGS: "-C target-feature=-crt-static"
+          shell: /bin/sh
+          install: |
+            case ${{matrix.distro}} in 
+              ubuntu* | bullseye )
+                apt-get update
+                apt-get install -y curl gcc
+                ;;
+              alpine*)
+                apk add curl musl-dev gcc 
+                ;;
+            esac
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            . $HOME/.cargo/env
+            rustup target add ${{ matrix.target }}
+          run: |
+            . $HOME/.cargo/env
+            cargo build --release --target ${{ matrix.target }}
+            mv target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/${{ env.FILE_NAME }}
+
   upload-licenses:
     runs-on: ubuntu-latest
     steps:
@@ -124,7 +185,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          
+
       - name: install cargo-license
         run: cargo install cargo-license
 
