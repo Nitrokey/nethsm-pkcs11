@@ -38,6 +38,7 @@ jobs:
     runs-on: macos-latest
     env:
       FILE_NAME: nethsm-pkcs11-v${{ github.event.release.tag_name }}-x86_64-macos.dylib
+      FILE_NAME_ARM: nethsm-pkcs11-v${{ github.event.release.tag_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -47,19 +48,27 @@ jobs:
         with:
           profile: minimal
           toolchain: stable-x86_64-apple-darwin
+          target: aarch64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
+
+      - name: Build project for MacOs aaarch64
+        run: cargo build --release --target aarch64-apple-darwin
 
       - name: Build project
         run: cargo build --release
 
       - name: rename file
         run: mv target/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME }}
+      - name: rename file arm
+        run: mv target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
       - name: Upload to the release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.FILE_NAME }}
+          files: |
+            ${{ env.FILE_NAME }}
+            ${{ env.FILE_NAME_ARM }}
 
   build-linux:
     runs-on: ubuntu-latest
