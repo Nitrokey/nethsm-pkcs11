@@ -329,8 +329,9 @@ dependencies = [
 
 [[package]]
 name = "nethsm-sdk-rs"
-version = "0.3.0"
-source = "git+https://github.com/Nitrokey/nethsm-sdk-rs?tag=0.4.0#a20aeab15687229e466b0c37599f9ef0e04e51ac"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b92c426163b4c300e5e024e9e823f2ddd67e6eebe998f962be291d5f34f864f1"
 dependencies = [
  "base64",
  "serde",
@@ -363,7 +364,6 @@ dependencies = [
  "serde_yaml",
  "sha1",
  "sha2",
- "ureq",
  "x509-cert",
 ]
 
