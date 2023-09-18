@@ -5,6 +5,7 @@ use super::{
     device::{Device, Slot},
 };
 use log::trace;
+use nethsm_sdk_rs::ureq;
 use rustls::client::ServerCertVerifier;
 use sha2::Digest;
 
