@@ -16,8 +16,8 @@ use crate::{
     },
     data::{DEVICE, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    lock_session, padded_str,
-    utils::version_struct_from_str,
+    lock_session,
+    utils::{padded_str, version_struct_from_str},
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -129,8 +129,8 @@ pub extern "C" fn C_GetSlotInfo(
     }
 
     let info: CK_SLOT_INFO = CK_SLOT_INFO {
-        slotDescription: padded_str!(&info.product, 64),
-        manufacturerID: padded_str!(info.vendor, 32),
+        slotDescription: padded_str(&info.product),
+        manufacturerID: padded_str(&info.vendor),
         flags,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
         firmwareVersion: DEFAULT_FIRMWARE_VERSION,
@@ -209,10 +209,10 @@ pub extern "C" fn C_GetTokenInfo(
     }
 
     let token_info = CK_TOKEN_INFO {
-        label: padded_str!(slot.label, 32),
-        manufacturerID: padded_str!(info.entity.vendor, 32),
-        model: padded_str!(info.entity.product, 16),
-        serialNumber: padded_str!(serial_number, 16),
+        label: padded_str(&slot.label),
+        manufacturerID: padded_str(&info.entity.vendor),
+        model: padded_str(&info.entity.product),
+        serialNumber: padded_str(&serial_number),
         flags,
         hardwareVersion: hardware_version,
         firmwareVersion: firmware_version,

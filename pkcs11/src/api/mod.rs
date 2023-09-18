@@ -16,7 +16,8 @@ pub mod verify;
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
     data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
-    defs, padded_str,
+    defs,
+    utils::padded_str,
 };
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
 use log::{debug, trace};
@@ -99,9 +100,9 @@ pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
 
     let infos = CK_INFO {
         cryptokiVersion: defs::CRYPTOKI_VERSION,
-        manufacturerID: padded_str!(defs::LIB_MANUFACTURER, 32),
+        manufacturerID: padded_str(defs::LIB_MANUFACTURER),
         flags: 0,
-        libraryDescription: padded_str!(defs::LIB_DESCRIPTION, 32),
+        libraryDescription: padded_str(defs::LIB_DESCRIPTION),
         libraryVersion: defs::LIB_VERSION,
     };
 

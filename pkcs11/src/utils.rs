@@ -63,12 +63,9 @@ macro_rules! read_session {
 // Modified from the ACM project : https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/util/mod.rs
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-#[macro_export]
-macro_rules! padded_str {
-    ($src:expr, $len: expr) => {{
-        let mut ret = [b' '; $len];
-        let count = std::cmp::min($src.len(), $len);
-        ret[..count].copy_from_slice(&$src.as_bytes()[..count]);
-        ret
-    }};
+pub fn padded_str<const N: usize>(s: &str) -> [u8; N] {
+    let mut ret = [b' '; N];
+    let count = std::cmp::min(s.len(), N);
+    ret[..count].copy_from_slice(&s.as_bytes()[..count]);
+    ret
 }
