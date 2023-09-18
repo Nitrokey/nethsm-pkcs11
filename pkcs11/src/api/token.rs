@@ -16,7 +16,8 @@ use crate::{
     },
     data::{DEVICE, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    lock_session, padded_str, version_struct_from_str,
+    lock_session, padded_str,
+    utils::version_struct_from_str,
 };
 
 pub extern "C" fn C_GetSlotList(
@@ -128,7 +129,7 @@ pub extern "C" fn C_GetSlotInfo(
     }
 
     let info: CK_SLOT_INFO = CK_SLOT_INFO {
-        slotDescription: padded_str!(info.product, 64),
+        slotDescription: padded_str!(&info.product, 64),
         manufacturerID: padded_str!(info.vendor, 32),
         flags,
         hardwareVersion: DEFAULT_HARDWARE_VERSION,
@@ -192,9 +193,9 @@ pub extern "C" fn C_GetTokenInfo(
             }
             Ok(system_info) => {
                 serial_number = system_info.entity.device_id;
-                hardware_version = version_struct_from_str!(system_info.entity.hardware_version);
+                hardware_version = version_struct_from_str(system_info.entity.hardware_version);
                 // The PKCS11 firmware version actually corresponds to the NetHSM software version
-                firmware_version = version_struct_from_str!(system_info.entity.software_version);
+                firmware_version = version_struct_from_str(system_info.entity.software_version);
             }
         }
     }
