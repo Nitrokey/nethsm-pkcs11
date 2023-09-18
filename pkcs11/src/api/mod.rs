@@ -15,7 +15,7 @@ pub mod verify;
 
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
-    data::{self, DEVICE, EVENTS_MANAGER, TOKENS_STATE},
+    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
     defs, padded_str,
 };
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
@@ -69,7 +69,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
 
         // currently we are using tokio that needs to create threads, so if the programs forbids us to create threads we return an error
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
-            return cryptoki_sys::CKR_NEED_TO_CREATE_THREADS;
+            *THREADS_ALLOWED.lock().unwrap() = false;
         }
     }
 

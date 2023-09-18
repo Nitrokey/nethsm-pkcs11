@@ -32,6 +32,8 @@ lazy_static! {
     pub static ref EVENTS_MANAGER : Arc<RwLock<EventsManager>> = Arc::new(RwLock::new(EventsManager::new()));
     // Token present or not (true = present)
     pub static ref TOKENS_STATE : Arc<Mutex<std::collections::HashMap<CK_SLOT_ID, bool>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
+    // If the calling application allows threads to be used
+    pub static ref THREADS_ALLOWED : Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
 }
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

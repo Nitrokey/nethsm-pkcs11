@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::{
-    db::{self, attr::CkRawAttrTemplate, Object},
+    db::{self, attr::CkRawAttrTemplate, Db, Object},
     login::{self, LoginCtx},
     Error,
 };
@@ -554,4 +554,45 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
         .ok_or(Error::InvalidData)?
         .to_string();
     Ok(key_id)
+}
+
+pub type WorkResult = Result<Vec<(CK_ULONG, Object)>, Error>;
+
+pub fn fetch_loop(
+    keys: Arc<Mutex<Vec<nethsm_sdk_rs::models::KeyItem>>>,
+    db: Arc<Mutex<Db>>,
+    login_ctx: LoginCtx,
+    results: Arc<Mutex<Vec<WorkResult>>>,
+    kind: Option<ObjectKind>,
+) {
+    while let Some(key) = keys.lock().unwrap().pop() {
+        let key_id = key.key.clone();
+
+        if matches!(
+            kind,
+            None | Some(ObjectKind::Other)
+                | Some(ObjectKind::PrivateKey)
+                | Some(ObjectKind::PublicKey)
+                | Some(ObjectKind::SecretKey)
+        ) {
+            let login_ctx = login_ctx.clone();
+            let db = db.clone();
+            let res = fetch_key(&key_id, None, login_ctx, db);
+            results.lock().unwrap().push(res);
+        }
+
+        if matches!(kind, None | Some(ObjectKind::Certificate)) {
+            let login_ctx = login_ctx.clone();
+            let db = db.clone();
+            let res = match fetch_certificate(&key_id, None, login_ctx, db) {
+                Ok(vec) => Ok(vec),
+                Err(err) => {
+                    debug!("Failed to fetch certificate: {:?}", err);
+                    Ok(Vec::new())
+                }
+            };
+
+            results.lock().unwrap().push(res);
+        }
+    }
 }

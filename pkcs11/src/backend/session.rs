@@ -5,7 +5,7 @@ use std::{
 
 use cryptoki_sys::{
     CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
-    CK_ULONG, CK_USER_TYPE,
+    CK_USER_TYPE,
 };
 use log::{debug, error, trace};
 use nethsm_sdk_rs::apis::default_api;
@@ -13,20 +13,22 @@ use nethsm_sdk_rs::apis::default_api;
 use crate::{
     backend::{login::UserMode, Error},
     config::device::Slot,
+    data::THREADS_ALLOWED,
 };
 
 use super::{
     db::{attr::CkRawAttrTemplate, object::ObjectKind, Db, Object},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
-    key::{create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template},
+    key::{
+        create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template,
+        WorkResult,
+    },
     login::LoginCtx,
     mechanism::Mechanism,
     object::{EnumCtx, KeyRequirements},
     sign::SignCtx,
 };
-
-type WorkResult = Result<Vec<(CK_ULONG, Object)>, Error>;
 
 #[derive(Debug)]
 pub struct SessionManager {
@@ -520,54 +522,35 @@ impl Session {
 
         let keys = Arc::new(std::sync::Mutex::new(keys));
 
-        let mut thread_handles = Vec::new();
+        if *THREADS_ALLOWED.lock()? {
+            let mut thread_handles = Vec::new();
 
-        // 4 threads
+            // 4 threads
 
-        for _ in 0..4 {
-            let keys = keys.clone();
+            for _ in 0..4 {
+                let keys = keys.clone();
 
-            let results = results.clone();
+                let results = results.clone();
 
-            let login_ctx = self.login_ctx.clone();
-            let db = self.db.clone();
+                let login_ctx = self.login_ctx.clone();
+                let db = self.db.clone();
 
-            thread_handles.push(std::thread::spawn(move || {
-                while let Some(key) = keys.lock().unwrap().pop() {
-                    let key_id = key.key.clone();
+                thread_handles.push(std::thread::spawn(move || {
+                    super::key::fetch_loop(keys, db, login_ctx, results, kind)
+                }));
+            }
 
-                    if matches!(
-                        kind,
-                        None | Some(ObjectKind::Other)
-                            | Some(ObjectKind::PrivateKey)
-                            | Some(ObjectKind::PublicKey)
-                            | Some(ObjectKind::SecretKey)
-                    ) {
-                        let login_ctx = login_ctx.clone();
-                        let db = db.clone();
-                        let res = fetch_key(&key_id, None, login_ctx, db);
-                        results.lock().unwrap().push(res);
-                    }
-
-                    if matches!(kind, None | Some(ObjectKind::Certificate)) {
-                        let login_ctx = login_ctx.clone();
-                        let db = db.clone();
-                        let res = match fetch_certificate(&key_id, None, login_ctx, db) {
-                            Ok(vec) => Ok(vec),
-                            Err(err) => {
-                                debug!("Failed to fetch certificate: {:?}", err);
-                                Ok(Vec::new())
-                            }
-                        };
-
-                        results.lock().unwrap().push(res);
-                    }
-                }
-            }));
-        }
-
-        for handle in thread_handles {
-            handle.join().unwrap();
+            for handle in thread_handles {
+                handle.join().unwrap();
+            }
+        } else {
+            super::key::fetch_loop(
+                keys,
+                self.db.clone(),
+                self.login_ctx.clone(),
+                results.clone(),
+                kind,
+            );
         }
 
         let mut handles = Vec::new();
