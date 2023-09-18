@@ -88,7 +88,7 @@ pub extern "C" fn C_GenerateKeyPair(
     let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
 
     trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
-    trace!("C_GenerateKey() mech param len: {:?}", mech.len());
+    trace!("C_GenerateKeyPair() mech param len: {:?}", mech.len());
 
     trace!("Private count: {:?}", ulPrivateKeyAttributeCount);
     trace!("Public count: {:?}", ulPublicKeyAttributeCount);

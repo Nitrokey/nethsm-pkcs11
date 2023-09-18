@@ -67,7 +67,6 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
             return cryptoki_sys::CKR_CANT_LOCK;
         }
 
-        // currently we are using tokio that needs to create threads, so if the programs forbids us to create threads we return an error
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
             *THREADS_ALLOWED.lock().unwrap() = false;
         }
