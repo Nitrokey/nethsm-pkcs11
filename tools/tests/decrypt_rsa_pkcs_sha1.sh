@@ -1,5 +1,7 @@
 #!/bin/sh -x
 
+set -e
+
 KEYID=rsakey
 
 HEXID=$(echo -n ${KEYID} | xxd -ps)
