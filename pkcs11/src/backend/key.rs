@@ -51,7 +51,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
         let t = attr.type_();
 
         match t {
-            CKA_CLASS => match attr.read_value::<CK_OBJECT_CLASS>() {
+            CKA_CLASS => match unsafe { attr.read_value::<CK_OBJECT_CLASS>() } {
                 Some(val) => {
                     parsed.key_class = match ObjectKind::from(val) {
                         ObjectKind::Other => {
@@ -96,7 +96,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             }
 
             CKA_KEY_TYPE => {
-                let ktype: CK_KEY_TYPE = match attr.read_value() {
+                let ktype = match unsafe { attr.read_value::<CK_KEY_TYPE>() } {
                     Some(val) => val,
                     None => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
                 };
@@ -140,10 +140,10 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
                 parsed.prime_q = attr.val_bytes().map(|val| val.to_vec());
             }
             CKA_VALUE_LEN => {
-                parsed.value_len = attr.read_value();
+                parsed.value_len = unsafe { attr.read_value::<CK_ULONG>() };
             }
             CKA_MODULUS_BITS => {
-                parsed.modulus_bits = attr.read_value();
+                parsed.modulus_bits = unsafe { attr.read_value::<CK_ULONG>() };
             }
 
             _ => {

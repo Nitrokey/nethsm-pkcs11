@@ -18,13 +18,9 @@ pub extern "C" fn C_FindObjectsInit(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    lock_session!(hSession, session);
+    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) };
 
-    let template = if !pTemplate.is_null() {
-        Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) })
-    } else {
-        None
-    };
+    lock_session!(hSession, session);
     trace!("C_FindObjectsInit() template: {:?}", template);
     match session.enum_init(template) {
         Ok(_) => cryptoki_sys::CKR_OK,
@@ -55,13 +51,11 @@ pub extern "C" fn C_FindObjects(
     };
     trace!("C_FindObjects() objects: {:?}", objects);
 
+    let returned_count = objects.len();
+
     unsafe {
-        std::ptr::copy_nonoverlapping(
-            objects.as_ptr(),
-            phObject,
-            objects.len().min(ulMaxObjectCount as usize),
-        );
-        std::ptr::write(pulObjectCount, objects.len() as CK_ULONG);
+        std::ptr::copy_nonoverlapping(objects.as_ptr(), phObject, returned_count);
+        std::ptr::write(pulObjectCount, returned_count as CK_ULONG);
     }
 
     cryptoki_sys::CKR_OK
@@ -107,8 +101,13 @@ pub extern "C" fn C_GetAttributeValue(
         object.kind
     );
 
-    let mut template =
-        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+    let mut template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+    {
+        Some(template) => template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
     object.fill_attr_template(&mut template)
 }
@@ -148,14 +147,20 @@ pub extern "C" fn C_CreateObject(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_CreateObject() called ");
 
-    if pTemplate.is_null() || phObject.is_null() {
+    // pTemplate checked with from_raw_ptr
+
+    if phObject.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    lock_session!(hSession, session);
+    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
+        Some(template) => template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
-    let template =
-        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+    lock_session!(hSession, session);
 
     let objects = match session.create_object(template) {
         Ok(object) => object,
@@ -209,12 +214,12 @@ pub extern "C" fn C_SetAttributeValue(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetAttributeValue() called");
 
-    if pTemplate.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
-    let template =
-        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
+        Some(template) => template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
     let parsed = match key::parse_attributes(&template) {
         Ok(parsed) => parsed,
         Err(err) => {

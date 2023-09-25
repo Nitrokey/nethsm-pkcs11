@@ -40,7 +40,7 @@ pub extern "C" fn C_OpenSession(
     trace!("C_OpenSession() created session: {:?}", session);
 
     unsafe {
-        *phSession = session;
+        std::ptr::write(phSession, session);
     }
 
     cryptoki_sys::CKR_OK

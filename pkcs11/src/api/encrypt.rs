@@ -16,13 +16,12 @@ pub extern "C" fn C_EncryptInit(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptInit() called");
 
-    if pMechanism.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    }
-
-    trace!("C_EncryptInit() mech: {:?}", unsafe { *pMechanism });
-
-    let raw_mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+    let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
+        Some(mech) => mech,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,

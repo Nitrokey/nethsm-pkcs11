@@ -23,8 +23,12 @@ impl MechParams for cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS {}
 impl MechParams for [cryptoki_sys::CK_BYTE; 16] {}
 
 impl CkRawMechanism {
-    pub unsafe fn from_raw_ptr_unchecked(ptr: *mut cryptoki_sys::CK_MECHANISM) -> Self {
-        Self { ptr }
+    pub unsafe fn from_raw_ptr(ptr: *mut cryptoki_sys::CK_MECHANISM) -> Option<Self> {
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(Self { ptr })
     }
 
     pub fn type_(&self) -> cryptoki_sys::CK_MECHANISM_TYPE {

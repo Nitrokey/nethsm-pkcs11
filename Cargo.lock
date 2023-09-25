@@ -352,7 +352,6 @@ dependencies = [
  "env_logger",
  "hex",
  "lazy_static",
- "libc",
  "log",
  "merge",
  "nethsm-sdk-rs",

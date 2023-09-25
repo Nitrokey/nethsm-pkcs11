@@ -10,6 +10,10 @@ OUTPUT=$(pkcs11-tool --module target/debug/libnethsm_pkcs11.so -y secrkey --writ
 
 id=$(echo "$OUTPUT" | awk '/label:/{print $2}')
 
+echo $id
+
+echo $OUTPUT
+
 # encrypt with openssl aes-256-cbc
 
 IV=$(openssl rand -hex 16)
@@ -19,7 +23,6 @@ echo "NetHSM rulez!  " > _data.txt
 openssl aes-256-cbc -in _data.txt -out _data.crypt -K $(cat _aes.key | xxd -c 256 -p) -iv $IV
 
 # decrypt with api call 
-echo -n $IV | base64
 curl -k --fail-with-body -u operator:opPassphrase -v -X POST \
   -H "Content-Type: application/json" \
   -d '{"mode":"AES_CBC","iv":"'$(echo -n $IV | xxd -r -p | base64)'","encrypted":"'$(cat _data.crypt | base64)'"}' \

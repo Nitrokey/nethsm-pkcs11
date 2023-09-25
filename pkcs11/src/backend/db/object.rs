@@ -54,21 +54,6 @@ impl Attr {
     const CK_TRUE: Self = Self::CkBbool([cryptoki_sys::CK_TRUE; 1]);
     const CK_FALSE: Self = Self::CkBbool([cryptoki_sys::CK_FALSE; 1]);
 
-    pub fn len(&self) -> usize {
-        match self {
-            Self::CkBbool(v) => v.len(),
-            Self::CkByte(v) => v.len(),
-            Self::CkKeyType(v) => v.len(),
-            Self::CkCertType(v) => v.len(),
-            Self::CkCertCategory(v) => v.len(),
-            Self::CkMechanismType(v) => v.len(),
-            Self::CkObjectClass(v) => v.len(),
-            Self::CkUlong(v) => v.len(),
-            Self::Bytes(v) => v.len(),
-            Self::Sensitive => 0,
-        }
-    }
-
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             Self::CkBbool(v) => v,
@@ -509,22 +494,19 @@ impl Object {
                     let sres = match attr {
                         Attr::Sensitive => {
                             rcode = cryptoki_sys::CKR_ATTRIBUTE_SENSITIVE;
-                            raw_attr.set_len(cryptoki_sys::CK_UNAVAILABLE_INFORMATION);
+                            raw_attr.set_unavailable();
                             continue;
                         }
                         a => raw_attr.set_val_bytes(a.as_bytes()),
                     };
-                    match sres {
-                        Err(attr::Error::BufTooSmall) => {
-                            rcode = cryptoki_sys::CKR_BUFFER_TOO_SMALL;
-                            raw_attr.set_len(cryptoki_sys::CK_UNAVAILABLE_INFORMATION);
-                        }
-                        _ => raw_attr.set_len(attr.len() as cryptoki_sys::CK_ULONG),
-                    };
+                    if matches!(sres, Err(attr::Error::BufTooSmall)) {
+                        rcode = cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+                        raw_attr.set_unavailable();
+                    }
                 }
                 None => {
                     rcode = cryptoki_sys::CKR_ATTRIBUTE_TYPE_INVALID;
-                    raw_attr.set_len(cryptoki_sys::CK_UNAVAILABLE_INFORMATION);
+                    raw_attr.set_unavailable();
                 }
             };
             debug!(

@@ -34,7 +34,7 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
                 if attr.type_() == CKA_CLASS {
-                    kind = attr.read_value::<CK_OBJECT_CLASS>().map(ObjectKind::from)
+                    kind = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }.map(ObjectKind::from)
                 }
 
                 if attr.type_() == CKA_ID {
@@ -139,8 +139,10 @@ mod tests {
             ulValueLen: 4,
         }];
 
-        let template =
-            Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(attributes.as_mut_ptr(), 1) });
+        let template = Some(
+            unsafe { CkRawAttrTemplate::from_raw_ptr(attributes.as_mut_ptr(), 1) }
+                .ok_or(Error::InvalidAttribute(CKA_ID))?,
+        );
 
         let res = parse_key_requirements(template)?;
 
@@ -161,8 +163,10 @@ mod tests {
             ulValueLen: 4,
         }];
 
-        let template =
-            Some(unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(attributes.as_mut_ptr(), 1) });
+        let template = Some(
+            unsafe { CkRawAttrTemplate::from_raw_ptr(attributes.as_mut_ptr(), 1) }
+                .ok_or(Error::InvalidAttribute(CKA_ID))?,
+        );
 
         let res = parse_key_requirements(template)?;
 

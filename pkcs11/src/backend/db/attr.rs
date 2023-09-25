@@ -4,6 +4,8 @@
 
 use std::iter::Iterator;
 
+use cryptoki_sys::{CK_ULONG, CK_UNAVAILABLE_INFORMATION};
+
 pub enum Error {
     BufTooSmall,
     NullPtrDeref,
@@ -12,8 +14,11 @@ pub enum Error {
 pub struct CkRawAttr(cryptoki_sys::CK_ATTRIBUTE_PTR);
 
 impl CkRawAttr {
-    pub unsafe fn from_raw_ptr_unchecked(ptr: cryptoki_sys::CK_ATTRIBUTE_PTR) -> Self {
-        Self(ptr)
+    pub unsafe fn from_raw_ptr(ptr: cryptoki_sys::CK_ATTRIBUTE_PTR) -> Option<Self> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(Self(ptr))
     }
 
     pub fn type_(&self) -> cryptoki_sys::CK_ATTRIBUTE_TYPE {
@@ -21,6 +26,11 @@ impl CkRawAttr {
     }
 
     pub fn val_bytes(&self) -> Option<&[u8]> {
+        // check the size of the value
+        if self.len() == CK_UNAVAILABLE_INFORMATION || self.len() == 0 {
+            return None;
+        }
+
         let val_ptr = unsafe { (*self.0).pValue };
         if val_ptr.is_null() {
             return None;
@@ -33,7 +43,16 @@ impl CkRawAttr {
         }
     }
 
-    pub fn read_value<T>(&self) -> Option<T> {
+    pub unsafe fn read_value<T>(&self) -> Option<T> {
+        // check if the size of the value is correct
+        if self.len() == CK_UNAVAILABLE_INFORMATION
+            || self.len() != std::mem::size_of::<T>() as CK_ULONG
+        {
+            return None;
+        }
+
+        // read the value
+
         let val_ptr = unsafe { (*self.0).pValue };
         if val_ptr.is_null() {
             return None;
@@ -45,7 +64,11 @@ impl CkRawAttr {
         unsafe { (*self.0).ulValueLen }
     }
 
-    pub fn set_len(&mut self, len: cryptoki_sys::CK_ULONG) {
+    pub fn set_unavailable(&mut self) {
+        self.set_len(CK_UNAVAILABLE_INFORMATION)
+    }
+
+    fn set_len(&mut self, len: cryptoki_sys::CK_ULONG) {
         unsafe {
             (*self.0).ulValueLen = len;
         }
@@ -54,6 +77,8 @@ impl CkRawAttr {
     pub fn set_val_bytes(&mut self, bytes: &[u8]) -> Result<(), Error> {
         unsafe {
             if (*self.0).pValue.is_null() {
+                // Null ptr means that the application wants to know the size of the value
+                self.set_len(bytes.len() as CK_ULONG);
                 return Err(Error::NullPtrDeref);
             }
             if bytes.len() > (*self.0).ulValueLen as usize {
@@ -61,6 +86,8 @@ impl CkRawAttr {
             }
             std::ptr::copy_nonoverlapping(bytes.as_ptr(), (*self.0).pValue as *mut u8, bytes.len());
         }
+        self.set_len(bytes.len() as CK_ULONG);
+
         Ok(())
     }
 }
@@ -72,18 +99,18 @@ pub struct CkRawAttrTemplate {
 }
 
 impl CkRawAttrTemplate {
-    pub unsafe fn from_raw_ptr_unchecked(
-        ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
-        count: usize,
-    ) -> Self {
-        Self { ptr, count }
+    pub unsafe fn from_raw_ptr(ptr: cryptoki_sys::CK_ATTRIBUTE_PTR, count: usize) -> Option<Self> {
+        if ptr.is_null() {
+            return None;
+        }
+        Some(Self { ptr, count })
     }
 
     pub fn attr_wrapper(&self, index: usize) -> Option<CkRawAttr> {
         if index >= self.count {
             return None;
         }
-        Some(unsafe { CkRawAttr::from_raw_ptr_unchecked(self.ptr.add(index)) })
+        unsafe { CkRawAttr::from_raw_ptr(self.ptr.add(index)) }
     }
 
     pub fn len(&self) -> usize {
