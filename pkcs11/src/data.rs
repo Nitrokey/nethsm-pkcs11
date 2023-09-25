@@ -18,8 +18,7 @@ lazy_static! {
     pub static ref DEVICE: Device = match config::initialization::initialize_configuration() {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("Error initializing configuration: {:?}", e);
-            unsafe { libc::exit(1) }
+            panic!("Error initializing configuration: {:?}", e);
         }
     };
     pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));

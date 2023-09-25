@@ -20,11 +20,18 @@ pub extern "C" fn C_GenerateKey(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKey() called");
 
-    if pMechanism.is_null() || phKey.is_null() || pTemplate.is_null() {
+    // pTemplate and pMechanism are checked for null with `from_raw_ptr`
+
+    if phKey.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+    let mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
+        Some(mech) => mech,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
     trace!("C_GenerateKey() mech: {:?}", mech.type_());
     trace!("C_GenerateKey() mech param len: {:?}", mech.len());
@@ -36,10 +43,14 @@ pub extern "C" fn C_GenerateKey(
         }
     };
 
-    read_session!(hSession, session);
+    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
+        Some(template) => template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
-    let template =
-        unsafe { CkRawAttrTemplate::from_raw_ptr_unchecked(pTemplate, ulCount as usize) };
+    read_session!(hSession, session);
 
     let key = match session.generate_key(&template, None, &mech) {
         Ok(key) => key,
@@ -76,16 +87,18 @@ pub extern "C" fn C_GenerateKeyPair(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKeyPair() called");
 
-    if pMechanism.is_null()
-        || phPublicKey.is_null()
-        || phPrivateKey.is_null()
-        || pPublicKeyTemplate.is_null()
-        || pPrivateKeyTemplate.is_null()
-    {
+    // pMechanism, pPrivateKeyTemplate, pPublicKeyTemplate  checked for null with `from_raw_ptr`
+
+    if phPublicKey.is_null() || phPrivateKey.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mech = unsafe { CkRawMechanism::from_raw_ptr_unchecked(pMechanism) };
+    let mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
+        Some(mech) => mech,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
     trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
     trace!("C_GenerateKeyPair() mech param len: {:?}", mech.len());
@@ -100,30 +113,25 @@ pub extern "C" fn C_GenerateKeyPair(
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
+    let public_template = match unsafe {
+        CkRawAttrTemplate::from_raw_ptr(pPublicKeyTemplate, ulPublicKeyAttributeCount as usize)
+    } {
+        Some(public_template) => public_template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
+
+    let private_template = match unsafe {
+        CkRawAttrTemplate::from_raw_ptr(pPrivateKeyTemplate, ulPrivateKeyAttributeCount as usize)
+    } {
+        Some(private_template) => private_template,
+        None => {
+            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        }
+    };
 
     read_session!(hSession, session);
-
-    let public_template = unsafe {
-        CkRawAttrTemplate::from_raw_ptr_unchecked(
-            pPublicKeyTemplate,
-            ulPublicKeyAttributeCount as usize,
-        )
-    };
-
-    let private_template = unsafe {
-        CkRawAttrTemplate::from_raw_ptr_unchecked(
-            pPrivateKeyTemplate,
-            ulPrivateKeyAttributeCount as usize,
-        )
-    };
-
-    public_template.iter().for_each(|attr| {
-        trace!(
-            "Public template: {:?}, {:?}",
-            attr.type_(),
-            attr.val_bytes()
-        );
-    });
 
     let keys = match session.generate_key(&private_template, Some(&public_template), &mech) {
         Ok(keys) => keys,

@@ -12,7 +12,6 @@ env_logger = { default-features = false, version = "0.10.0", features = [
   "auto-color",
   "humantime",
 ] }
-libc = { default-features = false, version = "0.2.80" }
 cryptoki-sys = "0.1.6"
 log = "0.4.19"
 merge = { features = [
