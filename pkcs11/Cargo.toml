@@ -22,7 +22,7 @@ serde = { version = "1", features = ["derive"], default-features = false }
 serde_yaml = "0.9.22"
 serde_json = { default-features = false, version = "1.0.64" }
 lazy_static = "1.4.0"
-nethsm-sdk-rs = { version = "0.4.0" }
+nethsm-sdk-rs = { version = "0.5" }
 rustls = { version = "0.21", features = [
   "dangerous_configuration",
 ], default-features = false }
