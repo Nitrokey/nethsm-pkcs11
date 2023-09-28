@@ -39,6 +39,7 @@ pub enum ApiError {
     Io(std::io::Error),
     ResponseError(ResponseContent),
     NoInstance,
+    StringParse(std::string::FromUtf8Error),
 }
 
 impl<T> From<apis::Error<T>> for ApiError {
@@ -49,8 +50,15 @@ impl<T> From<apis::Error<T>> for ApiError {
             apis::Error::Io(e) => ApiError::Io(e),
             apis::Error::ResponseError(resp) => ApiError::ResponseError(ResponseContent {
                 status: resp.status,
-                content: resp.content,
+                content: String::from_utf8(resp.content).unwrap_or_else(|e| {
+                    format!(
+                        "Unable to parse response content into string: {:?}",
+                        e.as_bytes()
+                    );
+                    String::default()
+                }),
             }),
+            apis::Error::StringParse(e) => ApiError::StringParse(e),
         }
     }
 }
@@ -144,6 +152,7 @@ impl From<Error> for CK_RV {
                     412 => CKR_TOKEN_NOT_PRESENT,
                     _ => CKR_DEVICE_ERROR,
                 },
+                ApiError::StringParse(_) => CKR_DEVICE_ERROR,
             },
         }
     }
@@ -195,6 +204,7 @@ impl std::fmt::Display for Error {
                     412 => "The NetHSM is not set up properly".to_string(),
                     _ => format!("Api error: {:?}", resp),
                 },
+                ApiError::StringParse(err) => format!("String parse error: {:?}", err),
             },
             Error::Base64Error(err) => format!("Base64 Decode error: {:?}", err),
             Error::StringParse(err) => format!("String parse error: {:?}", err),
