@@ -20,7 +20,7 @@ p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID 
 
 # check if the cert is there
 curl -k --fail-with-body -u operator:opPassphrase -v -X GET \
-  https://localhost:8443/api/v1/keys/$KEYID/cert --header "Accept: application/x-pem-file" -o _curl_cert.pem
+  https://localhost:8443/api/v1/keys/$KEYID/cert --header "Accept: application/octet-stream" -o _curl_cert.pem
 
 diff _cert.pem _curl_cert.pem
 
