@@ -170,9 +170,9 @@ struct KeyData {
 
 fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     let key_data = key_data
-        .key
+        .public
         .as_ref()
-        .ok_or(Error::KeyField("key".to_string()))?;
+        .ok_or(Error::KeyField("public".to_string()))?;
 
     let modulus = key_data
         .modulus
@@ -211,9 +211,9 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
 
 fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
     let ec_points = key_data
-        .key
+        .public
         .as_ref()
-        .ok_or(Error::KeyField("key".to_string()))?
+        .ok_or(Error::KeyField("public".to_string()))?
         .data
         .as_ref()
         .ok_or(Error::KeyField("data".to_string()))?;
@@ -418,11 +418,11 @@ pub fn from_key_data(
 }
 
 pub fn from_cert_data(
-    cert: String,
+    cert: Vec<u8>,
     key_id: &str,
     raw_id: Option<Vec<u8>>,
 ) -> Result<Object, Error> {
-    let cert = x509_cert::Certificate::from_pem(cert.as_bytes()).map_err(Error::Der)?;
+    let cert = x509_cert::Certificate::from_pem(cert).map_err(Error::Der)?;
 
     let mut cert_der = Vec::new();
     cert.encode_to_vec(&mut cert_der).map_err(Error::Der)?;

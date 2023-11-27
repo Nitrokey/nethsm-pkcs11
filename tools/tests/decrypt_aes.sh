@@ -27,7 +27,7 @@ curl -k -i --fail-with-body -w '\n' -u admin:Administrator -X PUT \
       "AES_Decryption_CBC"
       ],
     "type": "Generic",
-    "key": {
+    "private": {
       "data": "'$B64'"
     }
 }'

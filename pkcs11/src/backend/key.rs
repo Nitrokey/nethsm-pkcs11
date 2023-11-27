@@ -185,13 +185,7 @@ fn upload_certificate(
     let key_id = id.as_str();
 
     login_ctx.try_(
-        |api_config| {
-            default_api::keys_key_id_cert_put(
-                &api_config,
-                key_id,
-                default_api::KeysKeyIdCertPutBody::ApplicationXPemFile(body),
-            )
-        },
+        |api_config| default_api::keys_key_id_cert_put(&api_config, key_id, body.into_bytes()),
         login::UserMode::Administrator,
     )?;
 
@@ -319,9 +313,9 @@ pub fn create_key_from_template(
     }
 
     let private_key = PrivateKey {
-        mechanisms: mechanisms.clone(),
+        mechanisms,
         r#type,
-        key,
+        private: key,
         restrictions: None,
     };
 
@@ -333,8 +327,6 @@ pub fn create_key_from_template(
                     &api_config,
                     key_id,
                     default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
-                    Some(mechanisms),
-                    None,
                 )
             },
             login::UserMode::Administrator,
@@ -349,8 +341,6 @@ pub fn create_key_from_template(
                 default_api::keys_post(
                     &api_config,
                     default_api::KeysPostBody::ApplicationJson(private_key),
-                    Some(mechanisms),
-                    None,
                 )
             },
             login::UserMode::Administrator,
@@ -524,13 +514,7 @@ pub fn fetch_certificate(
     }
 
     let cert_data = login_ctx.try_(
-        |api_config| {
-            default_api::keys_key_id_cert_get(
-                &api_config,
-                key_id,
-                default_api::KeysKeyIdCertGetAccept::ApplicationXPemFile,
-            )
-        },
+        |api_config| default_api::keys_key_id_cert_get(&api_config, key_id),
         super::login::UserMode::OperatorOrAdministrator,
     )?;
 
@@ -566,7 +550,7 @@ pub fn fetch_loop(
     kind: Option<ObjectKind>,
 ) {
     while let Some(key) = keys.lock().unwrap().pop() {
-        let key_id = key.key.clone();
+        let key_id = key.id.clone();
 
         if matches!(
             kind,
