@@ -75,7 +75,7 @@ pub enum Error {
     ObjectClassNotSupported,
     InvalidMechanismMode(MechMode, Mechanism),
     Api(ApiError),
-    Base64Error(base64ct::Error),
+    Base64(base64ct::Error),
     StringParse(std::string::FromUtf8Error),
     Login(LoginError),
     OperationNotInitialized,
@@ -108,7 +108,7 @@ impl<T> From<apis::Error<T>> for Error {
 
 impl From<base64ct::Error> for Error {
     fn from(err: base64ct::Error) -> Self {
-        Error::Base64Error(err)
+        Error::Base64(err)
     }
 }
 
@@ -140,7 +140,7 @@ impl From<Error> for CK_RV {
             Error::NotLoggedIn(_) => CKR_USER_NOT_LOGGED_IN,
             Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
             Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
-            Error::Base64Error(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
+            Error::Base64(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
             Error::Api(err) => match err {
                 ApiError::NoInstance => CKR_TOKEN_NOT_PRESENT,
                 ApiError::Ureq(_) => CKR_DEVICE_ERROR,
@@ -206,7 +206,7 @@ impl std::fmt::Display for Error {
                 },
                 ApiError::StringParse(err) => format!("String parse error: {:?}", err),
             },
-            Error::Base64Error(err) => format!("Base64 Decode error: {:?}", err),
+            Error::Base64(err) => format!("Base64 Decode error: {:?}", err),
             Error::StringParse(err) => format!("String parse error: {:?}", err),
         };
         write!(f, "{}", msg)
