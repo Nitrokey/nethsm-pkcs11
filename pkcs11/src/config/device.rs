@@ -33,7 +33,7 @@ impl Slot {
     // the user is connected if the basic auth is filled with an username and a password, otherwise the user will have to login
     pub fn is_connected(&self) -> bool {
         self.instances
-            .get(0)
+            .first()
             .map(|c| {
                 c.basic_auth
                     .as_ref()
