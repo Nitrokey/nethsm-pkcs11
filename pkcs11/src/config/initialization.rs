@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use super::{
     config_file::SlotConfig,
@@ -117,11 +120,16 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             tls_conf.with_root_certificates(roots).with_no_client_auth()
         };
 
-        let agent = ureq::AgentBuilder::new()
+        let mut builder = ureq::AgentBuilder::new()
             .tls_config(Arc::new(tls_conf))
             .max_idle_connections(2)
-            .max_idle_connections_per_host(2)
-            .build();
+            .max_idle_connections_per_host(2);
+
+        if let Some(t) = slot.timeout {
+            builder = builder.timeout(Duration::from_secs(t));
+        }
+
+        let agent = builder.build();
 
         let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
             client: agent,
