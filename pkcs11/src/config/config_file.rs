@@ -103,6 +103,8 @@ pub struct SlotConfig {
     pub administrator: Option<UserConfig>,
     pub description: Option<String>,
     pub instances: Vec<InstanceConfig>,
+    #[serde(default)]
+    pub timeout: Option<u64>,
 }
 
 // An user
