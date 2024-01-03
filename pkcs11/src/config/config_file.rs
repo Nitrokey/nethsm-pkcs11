@@ -87,6 +87,12 @@ pub struct P11Config {
     pub slots: Vec<SlotConfig>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct RetryConfig {
+    pub count: u32,
+    pub delay_seconds: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstanceConfig {
     pub url: String,
@@ -104,7 +110,9 @@ pub struct SlotConfig {
     pub description: Option<String>,
     pub instances: Vec<InstanceConfig>,
     #[serde(default)]
-    pub timeout: Option<u64>,
+    pub retries: Option<RetryConfig>,
+    #[serde(default)]
+    pub timeout_seconds: Option<u64>,
 }
 
 // An user

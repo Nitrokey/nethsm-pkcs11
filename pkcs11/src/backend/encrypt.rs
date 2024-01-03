@@ -122,7 +122,7 @@ fn encrypt_data(
         .try_(
             |api_config| {
                 default_api::keys_key_id_encrypt_post(
-                    &api_config,
+                    api_config,
                     key_id,
                     nethsm_sdk_rs::models::EncryptRequestData {
                         mode,

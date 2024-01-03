@@ -36,12 +36,9 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
 
 pub fn fetch_slots_state() {
     for (index, slot) in DEVICE.slots.iter().enumerate() {
-        let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
+        let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone(), slot.retries);
         let status = login_ctx
-            .try_(
-                |conf| default_api::health_state_get(&conf),
-                super::login::UserMode::Guest,
-            )
+            .try_(default_api::health_state_get, super::login::UserMode::Guest)
             .map(|state| state.entity.state == SystemState::Operational)
             .unwrap_or(false);
 

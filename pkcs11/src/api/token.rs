@@ -87,10 +87,10 @@ pub extern "C" fn C_GetSlotInfo(
 
     let mut flags = 0;
 
-    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone());
+    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone(), slot.retries);
 
     let result = login_ctx.try_(
-        |conf| default_api::info_get(&conf),
+        default_api::info_get,
         crate::backend::login::UserMode::Guest,
     );
 
@@ -108,7 +108,7 @@ pub extern "C" fn C_GetSlotInfo(
     };
 
     let result = login_ctx.try_(
-        |conf| default_api::health_state_get(&conf),
+        default_api::health_state_get,
         crate::backend::login::UserMode::Guest,
     );
 
@@ -160,10 +160,15 @@ pub extern "C" fn C_GetTokenInfo(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut login_ctx = LoginCtx::new(None, slot.administrator.clone(), slot.instances.clone());
+    let mut login_ctx = LoginCtx::new(
+        None,
+        slot.administrator.clone(),
+        slot.instances.clone(),
+        slot.retries,
+    );
 
     let result = login_ctx.try_(
-        |conf| default_api::info_get(&conf),
+        default_api::info_get,
         crate::backend::login::UserMode::Guest,
     );
 
@@ -184,10 +189,7 @@ pub extern "C" fn C_GetTokenInfo(
     // Try to fech system info
 
     if login_ctx.can_run_mode(crate::backend::login::UserMode::Administrator) {
-        match login_ctx.try_(
-            |conf| default_api::system_info_get(&conf),
-            UserMode::Administrator,
-        ) {
+        match login_ctx.try_(default_api::system_info_get, UserMode::Administrator) {
             Err(e) => {
                 warn!("Error getting system info: {:?}", e);
             }

@@ -110,7 +110,7 @@ impl SignCtx {
         let signature = login_ctx.try_(
             |conf| {
                 default_api::keys_key_id_sign_post(
-                    &conf,
+                    conf,
                     &self.key.id.clone(),
                     nethsm_sdk_rs::models::SignRequestData {
                         mode,
