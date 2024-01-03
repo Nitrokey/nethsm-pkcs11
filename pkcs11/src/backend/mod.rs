@@ -7,9 +7,10 @@ use self::{
 };
 use cryptoki_sys::{
     CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE,
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_ENCRYPTED_DATA_LEN_RANGE, CKR_KEY_HANDLE_INVALID,
-    CKR_MECHANISM_INVALID, CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED,
-    CKR_TOKEN_NOT_PRESENT, CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
+    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_DEVICE_REMOVED, CKR_ENCRYPTED_DATA_LEN_RANGE,
+    CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID, CKR_OPERATION_ACTIVE,
+    CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT, CKR_USER_NOT_LOGGED_IN,
+    CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
 };
 use log::error;
 use nethsm_sdk_rs::apis;
@@ -38,6 +39,7 @@ pub enum ApiError {
     Serde(serde_json::Error),
     Io(std::io::Error),
     ResponseError(ResponseContent),
+    InstanceRemoved,
     NoInstance,
     StringParse(std::string::FromUtf8Error),
 }
@@ -153,6 +155,7 @@ impl From<Error> for CK_RV {
                     _ => CKR_DEVICE_ERROR,
                 },
                 ApiError::StringParse(_) => CKR_DEVICE_ERROR,
+                ApiError::InstanceRemoved => CKR_DEVICE_REMOVED,
             },
         }
     }
@@ -205,6 +208,7 @@ impl std::fmt::Display for Error {
                     _ => format!("Api error: {:?}", resp),
                 },
                 ApiError::StringParse(err) => format!("String parse error: {:?}", err),
+                ApiError::InstanceRemoved => "Failed to connect to instance".to_string(),
             },
             Error::Base64(err) => format!("Base64 Decode error: {:?}", err),
             Error::StringParse(err) => format!("String parse error: {:?}", err),

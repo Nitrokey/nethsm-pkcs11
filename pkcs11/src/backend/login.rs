@@ -7,8 +7,8 @@ use log::{debug, error, trace};
 use nethsm_sdk_rs::{
     apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
+    ureq,
 };
-use std::fmt::Debug;
 
 use crate::config::config_file::UserConfig;
 
@@ -190,7 +190,7 @@ impl LoginCtx {
     // Try to run the api call on each instance until one succeeds
     pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, ApiError>
     where
-        F: FnOnce(Configuration) -> Result<R, apis::Error<T>> + Clone,
+        F: FnOnce(&Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
         for _ in 0..self.instances.len() {
@@ -200,7 +200,7 @@ impl LoginCtx {
             };
 
             let api_call_clone = api_call.clone();
-            match api_call_clone(conf) {
+            match api_call_clone(&conf) {
                 Ok(result) => return Ok(result),
 
                 // If the server is in an unusable state, try the next one
@@ -208,8 +208,18 @@ impl LoginCtx {
                 | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
                 | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
                 | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => continue,
+                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => {
+                    continue;
+                }
 
+                Err(apis::Error::Ureq(ureq::Error::Transport(err))) => {
+                    if matches!(
+                        err.kind(),
+                        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+                    ) {
+                        return Err(ApiError::InstanceRemoved);
+                    }
+                }
                 // Otherwise, return the error
                 Err(err) => return Err(err.into()),
             }
