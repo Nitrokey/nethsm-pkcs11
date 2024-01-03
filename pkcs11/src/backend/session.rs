@@ -95,6 +95,7 @@ impl SessionManager {
             0,
             Arc::new(Slot {
                 administrator: None,
+                retries: None,
                 db: Arc::new(Mutex::new(Db::new())),
                 description: None,
                 instances: vec![],
@@ -125,6 +126,7 @@ impl Session {
             slot.operator.clone(),
             slot.administrator.clone(),
             slot.instances.clone(),
+            slot.retries,
         );
 
         Self {
@@ -513,7 +515,7 @@ impl Session {
         let keys = self
             .login_ctx
             .try_(
-                |api_config| default_api::keys_get(&api_config, None),
+                |api_config| default_api::keys_get(api_config, None),
                 super::login::UserMode::OperatorOrAdministrator,
             )?
             .entity;
@@ -617,13 +619,13 @@ impl Session {
         match key.kind {
             ObjectKind::Certificate => {
                 self.login_ctx.try_(
-                    |api_config| default_api::keys_key_id_cert_delete(&api_config, &key.id),
+                    |api_config| default_api::keys_key_id_cert_delete(api_config, &key.id),
                     crate::backend::login::UserMode::Administrator,
                 )?;
             }
             ObjectKind::SecretKey | ObjectKind::PrivateKey => {
                 self.login_ctx.try_(
-                    |api_config| default_api::keys_key_id_delete(&api_config, &key.id),
+                    |api_config| default_api::keys_key_id_delete(api_config, &key.id),
                     crate::backend::login::UserMode::Administrator,
                 )?;
             }

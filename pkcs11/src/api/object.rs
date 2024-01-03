@@ -393,7 +393,7 @@ mod tests {
             device_error: 0,
             enum_ctx: None,
             flags: 0,
-            login_ctx: LoginCtx::new(None, None, vec![]),
+            login_ctx: LoginCtx::new(None, None, vec![], None),
             slot_id: 0,
         };
 

@@ -125,7 +125,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             .max_idle_connections(2)
             .max_idle_connections_per_host(2);
 
-        if let Some(t) = slot.timeout {
+        if let Some(t) = slot.timeout_seconds {
             builder = builder.timeout(Duration::from_secs(t));
         }
 
@@ -147,6 +147,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         instances,
         administrator: slot.administrator.clone(),
         operator: slot.operator.clone(),
+        retries: slot.retries,
         db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
     })
 }

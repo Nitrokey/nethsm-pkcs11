@@ -185,7 +185,7 @@ fn upload_certificate(
     let key_id = id.as_str();
 
     login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_put(&api_config, key_id, body.into_bytes()),
+        |api_config| default_api::keys_key_id_cert_put(api_config, key_id, body.into_bytes()),
         login::UserMode::Administrator,
     )?;
 
@@ -324,7 +324,7 @@ pub fn create_key_from_template(
         if let Err(err) = login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_put(
-                    &api_config,
+                    api_config,
                     key_id,
                     default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
                 )
@@ -339,7 +339,7 @@ pub fn create_key_from_template(
         let resp = login_ctx.try_(
             |api_config| {
                 default_api::keys_post(
-                    &api_config,
+                    api_config,
                     default_api::KeysPostBody::ApplicationJson(private_key),
                 )
             },
@@ -439,7 +439,7 @@ pub fn generate_key_from_template(
     let id = login_ctx.try_(
         |api_config| {
             default_api::keys_generate_post(
-                &api_config,
+                api_config,
                 KeyGenerateRequestData {
                     mechanisms: api_mechs,
                     r#type: key_type,
@@ -471,7 +471,7 @@ pub fn fetch_key(
     }
 
     let key_data = match login_ctx.try_(
-        |api_config| default_api::keys_key_id_get(&api_config, key_id),
+        |api_config| default_api::keys_key_id_get(api_config, key_id),
         super::login::UserMode::OperatorOrAdministrator,
     ) {
         Ok(key_data) => key_data.entity,
@@ -514,7 +514,7 @@ pub fn fetch_certificate(
     }
 
     let cert_data = login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_get(&api_config, key_id),
+        |api_config| default_api::keys_key_id_cert_get(api_config, key_id),
         super::login::UserMode::OperatorOrAdministrator,
     )?;
 

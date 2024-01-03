@@ -244,7 +244,7 @@ pub extern "C" fn C_GenerateRandom(
     let data = match session.login_ctx.try_(
         |api_config| {
             default_api::random_post(
-                &api_config,
+                api_config,
                 nethsm_sdk_rs::models::RandomRequestData {
                     length: ulRandomLen as i32,
                 },

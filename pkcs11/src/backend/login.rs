@@ -3,14 +3,15 @@ use cryptoki_sys::{
     CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS,
     CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV, CK_STATE, CK_USER_TYPE,
 };
-use log::{debug, error, trace};
+use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
     apis::{self, configuration::Configuration, default_api, ResponseContent},
     models::UserRole,
     ureq,
 };
+use std::{thread, time::Duration};
 
-use crate::config::config_file::UserConfig;
+use crate::config::config_file::{RetryConfig, UserConfig};
 
 use super::{ApiError, Error};
 
@@ -21,6 +22,7 @@ pub struct LoginCtx {
     instances: Vec<Configuration>,
     index: usize,
     ck_state: CK_STATE,
+    retries: Option<RetryConfig>,
 }
 
 #[derive(Debug, Clone)]
@@ -64,6 +66,7 @@ impl LoginCtx {
         operator: Option<UserConfig>,
         administrator: Option<UserConfig>,
         instances: Vec<Configuration>,
+        retries: Option<RetryConfig>,
     ) -> Self {
         let mut ck_state = CKS_RO_PUBLIC_SESSION;
 
@@ -81,6 +84,7 @@ impl LoginCtx {
             operator,
             administrator,
             instances,
+            retries,
             index: 0,
             ck_state,
         }
@@ -193,35 +197,53 @@ impl LoginCtx {
         F: FnOnce(&Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
-        for _ in 0..self.instances.len() {
+        'instances: for _ in 0..self.instances.len() {
             let conf = match self.get_config_user_mode(&user_mode) {
                 Some(conf) => conf,
                 None => continue,
             };
 
-            let api_call_clone = api_call.clone();
-            match api_call_clone(&conf) {
-                Ok(result) => return Ok(result),
+            let mut retry_count = 0;
+            let RetryConfig {
+                count: retry_limit,
+                delay_seconds,
+            } = self.retries.unwrap_or(RetryConfig {
+                count: 1,
+                delay_seconds: 0,
+            });
 
-                // If the server is in an unusable state, try the next one
-                Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => {
-                    continue;
-                }
+            loop {
+                retry_count += 1;
+                let api_call_clone = api_call.clone();
+                match api_call_clone(&conf) {
+                    Ok(result) => return Ok(result),
 
-                Err(apis::Error::Ureq(ureq::Error::Transport(err))) => {
-                    if matches!(
-                        err.kind(),
-                        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
-                    ) {
-                        return Err(ApiError::InstanceRemoved);
+                    // If the server is in an unusable state, try the next one
+                    Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
+                    | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
+                    | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
+                    | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
+                    | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => {
+                        continue 'instances;
                     }
+
+                    Err(apis::Error::Ureq(ureq::Error::Transport(err)))
+                        if matches!(
+                            err.kind(),
+                            ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+                        ) =>
+                    {
+                        if retry_count == retry_limit {
+                            error!("Retry count exceeded, instance is unreachable: {err}");
+                            return Err(ApiError::InstanceRemoved);
+                        }
+
+                        warn!("IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
+                        thread::sleep(Duration::from_secs(delay_seconds));
+                    }
+                    // Otherwise, return the error
+                    Err(err) => return Err(err.into()),
                 }
-                // Otherwise, return the error
-                Err(err) => return Err(err.into()),
             }
         }
         Err(ApiError::NoInstance)
@@ -254,7 +276,7 @@ impl LoginCtx {
         match self.try_(
             |config| {
                 default_api::users_user_id_passphrase_post(
-                    &config,
+                    config,
                     &options.0,
                     nethsm_sdk_rs::models::UserPassphrasePostData { passphrase: pin },
                 )
