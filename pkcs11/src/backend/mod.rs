@@ -51,7 +51,7 @@ impl<T> From<apis::Error<T>> for ApiError {
             apis::Error::ResponseError(resp) => ApiError::ResponseError(ResponseContent {
                 status: resp.status,
                 content: String::from_utf8(resp.content).unwrap_or_else(|e| {
-                    format!(
+                    error!(
                         "Unable to parse response content into string: {:?}",
                         e.as_bytes()
                     );
