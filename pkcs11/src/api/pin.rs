@@ -70,18 +70,20 @@ mod tests {
 
     use cryptoki_sys::CK_ULONG;
 
-    use crate::data::SESSION_MANAGER;
+    use crate::{backend::slot::set_test_config_env, data::SESSION_MANAGER};
 
     use super::*;
 
     #[test]
     fn test_init_pin() {
+        set_test_config_env();
         let rv = C_InitPIN(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_set_pin_null_old_pin() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let newPin = "12345678";
@@ -98,6 +100,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_null_new_pin() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";
@@ -114,6 +117,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_invalid_session() {
+        set_test_config_env();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let oldPin = "12345678";
@@ -131,6 +135,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_old_pin() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         // random bytes
@@ -151,6 +156,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_new_pin() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";
@@ -171,6 +177,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_user() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let oldPin = "12345678";

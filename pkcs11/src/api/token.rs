@@ -514,6 +514,7 @@ mod tests {
 
     #[test]
     fn test_get_slot_list_null_count() {
+        set_test_config_env();
         let result = C_GetSlotList(0, std::ptr::null_mut(), std::ptr::null_mut());
         assert_eq!(result, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
@@ -640,6 +641,7 @@ mod tests {
 
     #[test]
     fn test_login_null_pin() {
+        set_test_config_env();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let result = C_Login(session, CKU_USER, std::ptr::null_mut(), 0);
@@ -648,6 +650,7 @@ mod tests {
 
     #[test]
     fn test_login_non_utf8_pin() {
+        set_test_config_env();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pin = [0xFF, 0xFF, 0xFF, 0xFF];
@@ -658,6 +661,7 @@ mod tests {
 
     #[test]
     fn test_login_invalid_session() {
+        set_test_config_env();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut pin = "1234".to_string();
@@ -668,6 +672,7 @@ mod tests {
 
     #[test]
     fn test_logout_invalid_session() {
+        set_test_config_env();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let result = C_Logout(0);
@@ -676,6 +681,7 @@ mod tests {
 
     #[test]
     fn test_logout() {
+        set_test_config_env();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let result = C_Logout(session);
@@ -684,6 +690,7 @@ mod tests {
 
     #[test]
     fn test_init_token() {
+        set_test_config_env();
         let result = C_InitToken(0, std::ptr::null_mut(), 0, std::ptr::null_mut());
         assert_eq!(result, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
