@@ -13,6 +13,8 @@ pub extern "C" fn C_DecryptInit(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptInit() called");
 
+    ensure_init!();
+
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
         None => {
@@ -44,6 +46,8 @@ pub extern "C" fn C_Decrypt(
     pulDataLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Decrypt() called");
+
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -134,6 +138,8 @@ pub extern "C" fn C_DecryptFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptFinal() called");
 
+    ensure_init!();
+
     lock_session!(hSession, session);
 
     if pulLastPartLen.is_null() {
@@ -197,6 +203,9 @@ pub extern "C" fn C_DecryptVerifyUpdate(
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptVerifyUpdate() called");
+
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 

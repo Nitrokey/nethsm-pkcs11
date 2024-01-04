@@ -16,6 +16,7 @@ pub extern "C" fn C_OpenSession(
         slotID,
         flags
     );
+    ensure_init!();
 
     if phSession.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -48,6 +49,7 @@ pub extern "C" fn C_OpenSession(
 
 pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_CloseSession() called with session handle {}.", hSession);
+    ensure_init!();
 
     let mut manager = SESSION_MANAGER.lock().unwrap();
     let result = manager.delete_session(hSession);
@@ -65,6 +67,7 @@ pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> c
 
 pub extern "C" fn C_CloseAllSessions(slotID: cryptoki_sys::CK_SLOT_ID) -> cryptoki_sys::CK_RV {
     trace!("C_CloseAllSessions() called");
+    ensure_init!();
 
     if get_slot(slotID as usize).is_err() {
         error!(
@@ -89,6 +92,7 @@ pub extern "C" fn C_GetSessionInfo(
         "C_GetSessionInfo() called with session handle {}.",
         hSession
     );
+    ensure_init!();
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -109,6 +113,8 @@ pub extern "C" fn C_GetOperationState(
     pulOperationStateLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetOperationState() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -120,6 +126,8 @@ pub extern "C" fn C_SetOperationState(
     hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetOperationState() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -127,6 +135,8 @@ pub extern "C" fn C_GetFunctionStatus(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetFunctionStatus() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
 
@@ -134,6 +144,8 @@ pub extern "C" fn C_CancelFunction(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_CancelFunction() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
 

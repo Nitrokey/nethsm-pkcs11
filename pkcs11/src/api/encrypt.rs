@@ -15,6 +15,7 @@ pub extern "C" fn C_EncryptInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptInit() called");
+    ensure_init!();
 
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
@@ -47,6 +48,7 @@ pub extern "C" fn C_Encrypt(
     pulEncryptedDataLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Encrypt() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -115,6 +117,7 @@ pub extern "C" fn C_EncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptUpdate() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -177,6 +180,7 @@ pub extern "C" fn C_EncryptFinal(
     pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptFinal() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 

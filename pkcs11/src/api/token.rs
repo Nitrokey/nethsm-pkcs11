@@ -26,6 +26,7 @@ pub extern "C" fn C_GetSlotList(
     pulCount: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetSlotList() called");
+    ensure_init!();
 
     if pulCount.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -71,6 +72,7 @@ pub extern "C" fn C_GetSlotInfo(
     pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetSlotInfo() called with slotID: {}", slotID);
+    ensure_init!();
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -148,6 +150,8 @@ pub extern "C" fn C_GetTokenInfo(
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetTokenInfo() called with slotID: {}", slotID);
+    ensure_init!();
+
     // get the slot
     let slot = match get_slot(slotID as usize) {
         Ok(slot) => slot,
@@ -235,6 +239,7 @@ pub extern "C" fn C_InitToken(
     pLabel: cryptoki_sys::CK_UTF8CHAR_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_InitToken() called");
+    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -245,6 +250,7 @@ pub extern "C" fn C_GetMechanismList(
     pulCount: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetMechanismList() called");
+    ensure_init!();
 
     if pulCount.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -295,6 +301,7 @@ pub extern "C" fn C_GetMechanismInfo(
     pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetMechanismInfo() called");
+    ensure_init!();
 
     if let Err(e) = get_slot(slotID as usize) {
         return e;
@@ -325,6 +332,7 @@ pub extern "C" fn C_Login(
     ulPinLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Login() called");
+    ensure_init!();
 
     if pPin.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -348,6 +356,7 @@ pub extern "C" fn C_Login(
 }
 pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_Logout() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -363,6 +372,7 @@ pub extern "C" fn C_WaitForSlotEvent(
     pReserved: cryptoki_sys::CK_VOID_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_WaitForSlotEvent() called");
+    ensure_init!();
 
     if pSlot.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
