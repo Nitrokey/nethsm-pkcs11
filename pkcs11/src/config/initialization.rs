@@ -7,7 +7,7 @@ use super::{
     config_file::SlotConfig,
     device::{Device, Slot},
 };
-use log::trace;
+use log::{debug, error, trace};
 use nethsm_sdk_rs::ureq;
 use rustls::client::ServerCertVerifier;
 use sha2::Digest;
@@ -17,6 +17,7 @@ const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
 #[derive(Debug)]
 pub enum InitializationError {
     Config(crate::config::config_file::ConfigError),
+    NoCerts,
     NoUser(String),
 }
 
@@ -100,21 +101,28 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                 .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier {}))
                 .with_no_client_auth()
         } else if !instance.sha256_fingerprints.is_empty() {
-            let mut fingerprints = vec![];
-
-            for fingerprint in instance.sha256_fingerprints.iter() {
-                fingerprints.push(hex::decode(fingerprint.replace(':', "")).unwrap());
-            }
-
+            let fingerprints = instance
+                .sha256_fingerprints
+                .iter()
+                .map(|f| f.value.clone())
+                .collect();
             tls_conf
                 .with_custom_certificate_verifier(Arc::new(FingerprintVerifier { fingerprints }))
                 .with_no_client_auth()
         } else {
             let mut roots = rustls::RootCertStore::empty();
-            for cert in
-                rustls_native_certs::load_native_certs().expect("could not load platform certs")
-            {
-                roots.add(&rustls::Certificate(cert.0)).unwrap();
+            let native_certs = rustls_native_certs::load_native_certs().map_err(|err| {
+                error!("Failed to load certificates: {err}");
+                InitializationError::NoCerts
+            })?;
+
+            let (added, failed) = roots.add_parsable_certificates(&native_certs);
+            // panic!("{:?}", (added, failed));
+            debug!("Added {added} certifcates and failed to parse {failed} certificates");
+
+            if added == 0 {
+                error!("Added no native certificates");
+                return Err(InitializationError::NoCerts);
             }
 
             tls_conf.with_root_certificates(roots).with_no_client_auth()
