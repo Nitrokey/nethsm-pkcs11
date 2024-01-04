@@ -157,6 +157,7 @@ mod tests {
 
     #[test]
     fn test_open_session_null_session() {
+        set_test_config_env();
         let rv = C_OpenSession(
             0,
             cryptoki_sys::CKF_SERIAL_SESSION | cryptoki_sys::CKF_RW_SESSION,
@@ -169,6 +170,7 @@ mod tests {
 
     #[test]
     fn test_open_session_parallel() {
+        set_test_config_env();
         let mut session = 0;
         let rv = C_OpenSession(0, 0, std::ptr::null_mut(), None, &mut session);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_PARALLEL_NOT_SUPPORTED);
@@ -176,6 +178,7 @@ mod tests {
 
     #[test]
     fn test_delete_session_invalid() {
+        set_test_config_env();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let rv = C_CloseSession(0);
@@ -208,6 +211,7 @@ mod tests {
 
     #[test]
     fn test_get_session_info_invalid_session() {
+        set_test_config_env();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut info = cryptoki_sys::CK_SESSION_INFO::default();
@@ -217,6 +221,7 @@ mod tests {
 
     #[test]
     fn test_get_session_info_null_info() {
+        set_test_config_env();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_GetSessionInfo(session_handle, std::ptr::null_mut());
@@ -225,24 +230,28 @@ mod tests {
 
     #[test]
     fn test_get_operation_state() {
+        set_test_config_env();
         let rv = C_GetOperationState(0, std::ptr::null_mut(), std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_set_operation_state() {
+        set_test_config_env();
         let rv = C_SetOperationState(0, std::ptr::null_mut(), 0, 0, 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_get_function_status() {
+        set_test_config_env();
         let rv = C_GetFunctionStatus(0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL);
     }
 
     #[test]
     fn test_cancel_function() {
+        set_test_config_env();
         let rv = C_CancelFunction(0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL);
     }

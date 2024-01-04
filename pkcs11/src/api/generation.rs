@@ -289,10 +289,13 @@ pub extern "C" fn C_GenerateRandom(
 
 #[cfg(test)]
 mod tests {
+    use crate::backend::slot::set_test_config_env;
+
     use super::*;
 
     #[test]
     fn test_generate_key_null_mech() {
+        set_test_config_env();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -313,6 +316,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_null_template() {
+        set_test_config_env();
         let mut phKey = 0;
 
         let mut mech = cryptoki_sys::CK_MECHANISM {
@@ -327,6 +331,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_null_phkey() {
+        set_test_config_env();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -345,6 +350,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_unknown_mech() {
+        set_test_config_env();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -365,6 +371,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_mech() {
+        set_test_config_env();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -389,6 +396,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_public_template() {
+        set_test_config_env();
         let mut phPublicKey = 0;
         let mut phPrivateKey = 0;
 
@@ -419,6 +427,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_private_template() {
+        set_test_config_env();
         let mut phPublicKey = 0;
         let mut phPrivateKey = 0;
 
@@ -449,6 +458,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_ph_public_key() {
+        set_test_config_env();
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
             pParameter: std::ptr::null_mut(),
@@ -482,6 +492,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_ph_private_key() {
+        set_test_config_env();
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
             pParameter: std::ptr::null_mut(),
@@ -515,6 +526,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_unknown_mech() {
+        set_test_config_env();
         let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -549,12 +561,14 @@ mod tests {
 
     #[test]
     fn test_generate_random_null_data() {
+        set_test_config_env();
         let rv = C_GenerateRandom(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_generate_random_invalid_length() {
+        set_test_config_env();
         let mut random_data = vec![0; 1500];
 
         let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 1500);
@@ -563,6 +577,7 @@ mod tests {
 
     #[test]
     fn test_generate_random_zero_length() {
+        set_test_config_env();
         let mut random_data = vec![0; 1500];
 
         let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 0);
@@ -571,6 +586,7 @@ mod tests {
 
     #[test]
     fn test_wrap_key() {
+        set_test_config_env();
         let rv = C_WrapKey(
             0,
             std::ptr::null_mut(),
@@ -584,6 +600,7 @@ mod tests {
 
     #[test]
     fn test_unwrap_key() {
+        set_test_config_env();
         let rv = C_UnwrapKey(
             0,
             std::ptr::null_mut(),
@@ -599,6 +616,7 @@ mod tests {
 
     #[test]
     fn test_derive_key() {
+        set_test_config_env();
         let rv = C_DeriveKey(
             0,
             std::ptr::null_mut(),
@@ -612,6 +630,7 @@ mod tests {
 
     #[test]
     fn test_seed_random() {
+        set_test_config_env();
         let rv = C_SeedRandom(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
     }
