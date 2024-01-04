@@ -270,6 +270,7 @@ mod tests {
             login::LoginCtx,
             session::Session,
         },
+        config::config_file::RetryConfig,
         data::SESSION_MANAGER,
     };
 
@@ -393,7 +394,15 @@ mod tests {
             device_error: 0,
             enum_ctx: None,
             flags: 0,
-            login_ctx: LoginCtx::new(None, None, vec![], None),
+            login_ctx: LoginCtx::new(
+                None,
+                None,
+                vec![],
+                Some(RetryConfig {
+                    count: 2,
+                    delay_seconds: 0,
+                }),
+            ),
             slot_id: 0,
         };
 
