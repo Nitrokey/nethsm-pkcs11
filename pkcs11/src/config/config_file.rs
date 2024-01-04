@@ -93,13 +93,58 @@ pub struct RetryConfig {
     pub delay_seconds: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct HexFingerprint {
+    pub value: Vec<u8>,
+}
+
+impl Serialize for HexFingerprint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&hex::encode(&self.value))
+    }
+}
+
+impl<'de> Deserialize<'de> for HexFingerprint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct HexFingerprintVisitor;
+        impl<'de> serde::de::Visitor<'de> for HexFingerprintVisitor {
+            type Value = HexFingerprint;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("An hexadecimal value, possibly separated with ':'")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(HexFingerprint {
+                    value: hex::decode(v.replace(':', "")).map_err(|err| {
+                        E::custom(format_args!(
+                            "Failed to parse hexadecimal fingerprint: {err}"
+                        ))
+                    })?,
+                })
+            }
+        }
+
+        deserializer.deserialize_str(HexFingerprintVisitor)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstanceConfig {
     pub url: String,
     #[serde(default)]
     pub danger_insecure_cert: bool,
     #[serde(default)]
-    pub sha256_fingerprints: Vec<String>,
+    pub sha256_fingerprints: Vec<HexFingerprint>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
