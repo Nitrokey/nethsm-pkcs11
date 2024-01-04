@@ -37,7 +37,6 @@ pub extern "C" fn C_GetFunctionList(
     pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetFunctionList() called");
-    ensure_init!();
 
     if pp_fn_list.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
