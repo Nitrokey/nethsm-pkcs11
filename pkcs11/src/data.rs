@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::backend::events::EventsManager;
 
+use crate::config::initialization::InitializationError;
 use crate::{
     api,
     backend::session::SessionManager,
@@ -9,18 +10,31 @@ use crate::{
 };
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_SLOT_ID, CK_VERSION};
 use lazy_static::lazy_static;
+use log::error;
+
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     major: 2,
     minor: 40,
 };
 
 lazy_static! {
-    pub static ref DEVICE: Device = match config::initialization::initialize_configuration() {
+    pub static ref DEVICE_RESULT: Result<Device, InitializationError> = config::initialization::initialize_configuration();
+
+    pub static ref DEVICE: &'static Device = match &*DEVICE_RESULT {
         Ok(config) => config,
         Err(e) => {
             panic!("Error initializing configuration: {:?}", e);
         }
     };
+
+    pub static ref DEVICE_ERROR: bool = match &*DEVICE_RESULT {
+        Ok(_) => false,
+        Err(e) => {
+            error!("Error initializing configuration: {:?}", e);
+            true
+        }
+    };
+
     pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
 
     // Aliases for the keys, used when enable_set_attribute_value is set.
@@ -34,6 +48,7 @@ lazy_static! {
     // If the calling application allows threads to be used
     pub static ref THREADS_ALLOWED : Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
 }
+
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,
     C_Initialize: Some(api::C_Initialize),

@@ -12,6 +12,8 @@ pub extern "C" fn C_InitPIN(
     ulPinLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_InitPIN() called ");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -23,6 +25,8 @@ pub extern "C" fn C_SetPIN(
     ulNewLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetPIN() called ");
+    ensure_init!();
+
     lock_session!(hSession, session);
 
     if pOldPin.is_null() || pNewPin.is_null() {

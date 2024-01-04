@@ -13,6 +13,7 @@ pub extern "C" fn C_FindObjectsInit(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsInit() called with session {}", hSession);
+    ensure_init!();
 
     if ulCount > 0 && pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -35,6 +36,7 @@ pub extern "C" fn C_FindObjects(
     pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjects() called");
+    ensure_init!();
 
     if phObject.is_null() || pulObjectCount.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -64,6 +66,8 @@ pub extern "C" fn C_FindObjectsFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_FindObjectsFinal() called");
+    ensure_init!();
+
     lock_session!(hSession, session);
 
     session.enum_final();
@@ -77,6 +81,7 @@ pub extern "C" fn C_GetAttributeValue(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetAttributeValue() called for object {}.", hObject);
+    ensure_init!();
 
     if pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -117,6 +122,7 @@ pub extern "C" fn C_GetObjectSize(
     pulSize: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetObjectSize() called");
+    ensure_init!();
 
     if pulSize.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -146,6 +152,7 @@ pub extern "C" fn C_CreateObject(
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_CreateObject() called ");
+    ensure_init!();
 
     // pTemplate checked with from_raw_ptr
 
@@ -189,6 +196,8 @@ pub extern "C" fn C_CopyObject(
     phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_CopyObject() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_ACTION_PROHIBITED
 }
 
@@ -197,6 +206,7 @@ pub extern "C" fn C_DestroyObject(
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DestroyObject() called : {}", hObject);
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -213,6 +223,7 @@ pub extern "C" fn C_SetAttributeValue(
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetAttributeValue() called");
+    ensure_init!();
 
     let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
         Some(template) => template,

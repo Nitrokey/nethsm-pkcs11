@@ -9,6 +9,9 @@ pub extern "C" fn C_VerifyInit(
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
+    trace!("C_VerifyInit() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -20,6 +23,8 @@ pub extern "C" fn C_Verify(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Verify() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -29,6 +34,8 @@ pub extern "C" fn C_VerifyUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyUpdate() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -38,6 +45,8 @@ pub extern "C" fn C_VerifyFinal(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyFinal() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -47,6 +56,8 @@ pub extern "C" fn C_VerifyRecoverInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyRecoverInit() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -58,6 +69,8 @@ pub extern "C" fn C_VerifyRecover(
     pulDataLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyRecover() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 

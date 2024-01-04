@@ -19,6 +19,7 @@ pub extern "C" fn C_GenerateKey(
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKey() called");
+    ensure_init!();
 
     // pTemplate and pMechanism are checked for null with `from_raw_ptr`
 
@@ -86,6 +87,7 @@ pub extern "C" fn C_GenerateKeyPair(
     phPrivateKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateKeyPair() called");
+    ensure_init!();
 
     // pMechanism, pPrivateKeyTemplate, pPublicKeyTemplate  checked for null with `from_raw_ptr`
 
@@ -166,6 +168,8 @@ pub extern "C" fn C_WrapKey(
     pulWrappedKeyLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_WrapKey() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -180,6 +184,8 @@ pub extern "C" fn C_UnwrapKey(
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_UnwrapKey() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -192,6 +198,8 @@ pub extern "C" fn C_DeriveKey(
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DeriveKey() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -202,6 +210,8 @@ pub extern "C" fn C_SeedRandom(
     ulSeedLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SeedRandom() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_OK
 }
 
@@ -211,6 +221,7 @@ pub extern "C" fn C_GenerateRandom(
     ulRandomLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GenerateRandom() called");
+    ensure_init!();
 
     if RandomData.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;

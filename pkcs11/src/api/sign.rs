@@ -16,6 +16,7 @@ pub extern "C" fn C_SignInit(
         hKey,
         hSession
     );
+    ensure_init!();
 
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
@@ -48,6 +49,7 @@ pub extern "C" fn C_Sign(
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Sign() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -119,6 +121,7 @@ pub extern "C" fn C_SignUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignUpdate() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -144,6 +147,7 @@ pub extern "C" fn C_SignFinal(
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignFinal() called");
+    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -207,6 +211,8 @@ pub extern "C" fn C_SignRecoverInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignRecoverInit() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -218,6 +224,8 @@ pub extern "C" fn C_SignRecover(
     pulSignatureLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignRecover() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -229,6 +237,8 @@ pub extern "C" fn C_SignEncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignEncryptUpdate() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 

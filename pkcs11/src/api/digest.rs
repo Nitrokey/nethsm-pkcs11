@@ -10,6 +10,8 @@ pub extern "C" fn C_DigestInit(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestInit() called");
 
+    ensure_init!();
+
     if pMechanism.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -26,6 +28,8 @@ pub extern "C" fn C_Digest(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Digest() called");
 
+    ensure_init!();
+
     if pData.is_null() || pDigest.is_null() || pulDigestLen.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -39,6 +43,8 @@ pub extern "C" fn C_DigestUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestUpdate() called");
+
+    ensure_init!();
 
     if pPart.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -54,6 +60,8 @@ pub extern "C" fn C_DigestFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestFinal() called");
 
+    ensure_init!();
+
     if pDigest.is_null() || pulDigestLen.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -66,6 +74,9 @@ pub extern "C" fn C_DigestKey(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestKey() called");
+
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -77,6 +88,8 @@ pub extern "C" fn C_DigestEncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestEncryptUpdate() called");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -88,6 +101,8 @@ pub extern "C" fn C_DecryptDigestUpdate(
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptDigestUpdate() called ");
+    ensure_init!();
+
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 

@@ -2,6 +2,16 @@
 // for now we allow unused variables, but we should remove this when we have implemented all the functions we need
 #![allow(unused_variables)]
 
+/// Immediately return an error if the module failed to initialize
+/// This is preferable to panicking
+macro_rules! ensure_init {
+    () => {
+        if *crate::data::DEVICE_ERROR {
+            return cryptoki_sys::CKR_GENERAL_ERROR;
+        }
+    };
+}
+
 pub mod decrypt;
 pub mod digest;
 pub mod encrypt;
@@ -27,6 +37,8 @@ pub extern "C" fn C_GetFunctionList(
     pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_GetFunctionList() called");
+    ensure_init!();
+
     if pp_fn_list.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -38,12 +50,15 @@ pub extern "C" fn C_GetFunctionList(
 }
 
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
+    trace!("C_Initialize() called with args: {:?}", pInitArgs);
+
+    ensure_init!();
+
     // we force the initialization of the lazy static here
     if DEVICE.slots.is_empty() {
         debug!("No slots configured");
     }
 
-    trace!("C_Initialize() called with args: {:?}", pInitArgs);
     if defs::CRYPTOKI_VERSION.major == 2
         && defs::CRYPTOKI_VERSION.minor == 40
         && !pInitArgs.is_null()
@@ -84,6 +99,9 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
 
 pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     trace!("C_Finalize() called");
+
+    ensure_init!();
+
     if !pReserved.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -94,6 +112,9 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
 
 pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     trace!("C_GetInfo() called");
+
+    ensure_init!();
+
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
