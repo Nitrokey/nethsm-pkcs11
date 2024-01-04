@@ -197,7 +197,7 @@ impl LoginCtx {
         F: FnOnce(&Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
-        'instances: for _ in 0..self.instances.len() {
+        for _ in 0..self.instances.len() {
             let conf = match self.get_config_user_mode(&user_mode) {
                 Some(conf) => conf,
                 None => continue,
@@ -212,21 +212,22 @@ impl LoginCtx {
                 delay_seconds: 0,
             });
 
+            let delay = Duration::from_secs(delay_seconds);
+
             loop {
                 retry_count += 1;
                 let api_call_clone = api_call.clone();
                 match api_call_clone(&conf) {
                     Ok(result) => return Ok(result),
 
-                    // If the server is in an unusable state, try the next one
+                    // If the server is in an unusable state, skip retries and try the next one
                     Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
                     | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
                     | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
                     | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
-                    | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => {
-                        continue 'instances;
-                    }
+                    | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => break,
 
+                    // If the connection to the server failed with a network error, reconnecting might solve the issue
                     Err(apis::Error::Ureq(ureq::Error::Transport(err)))
                         if matches!(
                             err.kind(),
@@ -239,7 +240,7 @@ impl LoginCtx {
                         }
 
                         warn!("IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
-                        thread::sleep(Duration::from_secs(delay_seconds));
+                        thread::sleep(delay);
                     }
                     // Otherwise, return the error
                     Err(err) => return Err(err.into()),
