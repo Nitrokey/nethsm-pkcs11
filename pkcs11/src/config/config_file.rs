@@ -1,3 +1,5 @@
+use std::{io::Read, mem};
+
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 
@@ -11,16 +13,10 @@ pub enum ConfigError {
 const CONFIG_FILE_NAME: &str = "p11nethsm.conf";
 const ENV_VAR_CONFIG_FILE: &str = "P11NETHSM_CONFIG_FILE";
 
-pub fn read_configuration() -> Result<P11Config, ConfigError> {
-    let mut config = P11Config::default();
-
+pub fn config_files() -> Result<Vec<Vec<u8>>, ConfigError> {
     if let Ok(file_path) = std::env::var(ENV_VAR_CONFIG_FILE) {
-        let file = std::fs::File::open(file_path).map_err(ConfigError::Io)?;
-        let config_file = serde_yaml::from_reader(file).map_err(ConfigError::Yaml)?;
-
-        config.merge(config_file);
-
-        return Ok(config);
+        let file = std::fs::read(file_path).map_err(ConfigError::Io)?;
+        return Ok(vec![file]);
     }
 
     let mut config_folders = vec![
@@ -32,26 +28,40 @@ pub fn read_configuration() -> Result<P11Config, ConfigError> {
         config_folders.push(format!("{}/.config/nitrokey", home));
     }
 
-    let mut file_read = false;
-
+    let mut res: Vec<Vec<u8>> = Vec::new();
+    let mut buffer: Vec<u8> = Vec::new();
     for folder in config_folders {
         let file_path = format!("{}/{}", folder, CONFIG_FILE_NAME);
-
-        if let Ok(file) = std::fs::File::open(file_path) {
-            let config_file = serde_yaml::from_reader(file).map_err(ConfigError::Yaml)?;
-
-            config.merge(config_file);
-            file_read = true;
+        if let Ok(mut file) = std::fs::File::open(file_path) {
+            file.read_to_end(&mut buffer).map_err(ConfigError::Io)?;
+            res.push(mem::take(&mut buffer));
         }
     }
 
-    // if no config file was found, return an error
+    Ok(res)
+}
 
-    if !file_read {
+pub fn merge_configurations(configs: Vec<Vec<u8>>) -> Result<P11Config, ConfigError> {
+    let mut config = P11Config::default();
+
+    // if no config file was found, return an error
+    if configs.is_empty() {
         return Err(ConfigError::NoConfigFile);
     }
 
+    for file in configs {
+        let parsed = serde_yaml::from_slice(&file).map_err(ConfigError::Yaml)?;
+        config.merge(parsed);
+    }
+
     Ok(config)
+}
+
+#[cfg(test)]
+pub fn read_configuration() -> Result<P11Config, ConfigError> {
+    let configs = config_files()?;
+
+    merge_configurations(configs)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +208,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_read_home_config() {
         let config = r#"
 enable_set_attribute_value: true

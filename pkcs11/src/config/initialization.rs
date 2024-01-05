@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::{
-    config_file::SlotConfig,
+    config_file::{config_files, SlotConfig},
     device::{Device, Slot},
 };
 use log::{debug, error, trace};
@@ -21,9 +21,9 @@ pub enum InitializationError {
     NoUser(String),
 }
 
-pub fn initialize_configuration() -> Result<Device, InitializationError> {
-    let config =
-        crate::config::config_file::read_configuration().map_err(InitializationError::Config)?;
+pub fn initialize_with_configs(configs: Vec<Vec<u8>>) -> Result<Device, InitializationError> {
+    let config = crate::config::config_file::merge_configurations(configs)
+        .map_err(InitializationError::Config)?;
     crate::config::logging::configure_logger(&config);
 
     // initialize the clients
@@ -36,6 +36,10 @@ pub fn initialize_configuration() -> Result<Device, InitializationError> {
         log_file: config.log_file,
         enable_set_attribute_value: config.enable_set_attribute_value,
     })
+}
+
+pub fn initialize() -> Result<Device, InitializationError> {
+    initialize_with_configs(config_files().map_err(InitializationError::Config)?)
 }
 
 struct DangerIgnoreVerifier {}
@@ -158,4 +162,68 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         retries: slot.retries,
         db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test various good and bad configs for panics
+    #[test]
+    fn test_config_loading() {
+        let configs: Vec<Vec<u8>> = vec![
+            r#"
+slots:
+  - label: LocalHSM
+    description: Local HSM (docker)
+    operator:
+      username: "operator"
+      password: "opPassphrase"
+    administrator:
+      username: "admin"
+      password: "Administrator"
+    instances:
+      - url: "https://localhost:8443/api/v1"
+        danger_insecure_cert: true  
+        sha256_fingerprints: 
+          - "31:92:8E:A4:5E:16:5C:A7:33:44:E8:E9:8E:64:C4:AE:7B:2A:57:E5:77:43:49:F3:69:C9:8F:C4:2F:3A:3B:6E"
+    retries: 
+      count: 10
+      delay_seconds: 1
+    timeout_seconds: 10
+            "#.into(),
+        ];
+
+        assert!(initialize_with_configs(configs).is_ok());
+
+        let configs_bad_fingerprint: Vec<Vec<u8>> = vec![
+            r#"
+slots:
+  - label: LocalHSM
+    description: Local HSM (docker)
+    operator:
+      username: "operator"
+      password: "opPassphrase"
+    administrator:
+      username: "admin"
+      password: "Administrator"
+    instances:
+      - url: "https://localhost:8443/api/v1"
+        danger_insecure_cert: true  
+        sha256_fingerprints: 
+          - "31:92:8E:A4:5Eeeeee:16:5C:A7:33:44:E8:E9:8E:64:C4:AE:7B:2A:57:E5:77:43:49:F3:69:C9:8F:C4:2F:3A:3B:6E"
+    retries: 
+      count: 10
+      delay_seconds: 1
+    timeout_seconds: 10
+            "#.into(),
+        ];
+        assert!(initialize_with_configs(configs_bad_fingerprint).is_err());
+        let configs_bad_yml: Vec<Vec<u8>> = vec![r#"
+dict:
+bad_yml
+            "#
+        .into()];
+        assert!(initialize_with_configs(configs_bad_yml).is_err());
+    }
 }
