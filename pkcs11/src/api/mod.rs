@@ -44,7 +44,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     let mut result = Ok(());
 
     DEVICE_INIT.call_once(|| {
-        let res = crate::config::initialization::initialize_configuration();
+        let res = crate::config::initialization::initialize();
         match res {
             Ok(device) => {
                 _ = DEVICE.set(device);

@@ -32,5 +32,6 @@ pub fn configure_logger(config: &P11Config) {
         builder.target(env_logger::Target::Pipe(file));
     }
 
-    builder.init()
+    // Don't crash on re-initialization
+    builder.try_init().ok();
 }
