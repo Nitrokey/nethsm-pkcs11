@@ -10,7 +10,6 @@ pub extern "C" fn C_VerifyInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyInit() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -23,7 +22,6 @@ pub extern "C" fn C_Verify(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Verify() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -34,7 +32,6 @@ pub extern "C" fn C_VerifyUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyUpdate() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -45,7 +42,6 @@ pub extern "C" fn C_VerifyFinal(
     ulSignatureLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyFinal() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -56,7 +52,6 @@ pub extern "C" fn C_VerifyRecoverInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyRecoverInit() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -69,7 +64,6 @@ pub extern "C" fn C_VerifyRecover(
     pulDataLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_VerifyRecover() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -79,20 +73,20 @@ pub extern "C" fn C_VerifyRecover(
 mod tests {
     use cryptoki_sys::CK_ULONG;
 
-    use crate::backend::slot::set_test_config_env;
+    use crate::backend::slot::init_for_tests;
 
     use super::*;
 
     #[test]
     fn test_verify_init() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_VerifyInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_verify() {
-        set_test_config_env();
+        init_for_tests();
         let mut data = [0u8; 1];
         let mut sig = [0u8; 1];
         let rv = C_Verify(
@@ -107,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_verify_update() {
-        set_test_config_env();
+        init_for_tests();
         let mut data = [0u8; 1];
         let rv = C_VerifyUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
@@ -115,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_verify_final() {
-        set_test_config_env();
+        init_for_tests();
         let mut sig = [0u8; 1];
         let rv = C_VerifyFinal(0, sig.as_mut_ptr(), sig.len() as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
@@ -123,14 +117,14 @@ mod tests {
 
     #[test]
     fn test_verify_recover_init() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_VerifyRecoverInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_verify_recover() {
-        set_test_config_env();
+        init_for_tests();
         let mut sig = [0u8; 1];
         let mut data = [0u8; 1];
         let mut data_len = 0;

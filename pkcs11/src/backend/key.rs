@@ -172,8 +172,13 @@ fn upload_certificate(
         }
     };
 
+    let Some(device) = DEVICE.get() else {
+        error!("Initialization was not performed or failed");
+        return Err(Error::LibraryNotInitialized);
+    };
+
     // Check if an alias is defined for this key
-    if DEVICE.enable_set_attribute_value {
+    if device.enable_set_attribute_value {
         if let Some(real_name) = KEY_ALIASES.lock()?.get(&id).cloned() {
             id = real_name;
         }

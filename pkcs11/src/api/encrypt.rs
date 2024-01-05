@@ -15,7 +15,6 @@ pub extern "C" fn C_EncryptInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptInit() called");
-    ensure_init!();
 
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
@@ -48,7 +47,6 @@ pub extern "C" fn C_Encrypt(
     pulEncryptedDataLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Encrypt() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -117,7 +115,6 @@ pub extern "C" fn C_EncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptUpdate() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -180,7 +177,6 @@ pub extern "C" fn C_EncryptFinal(
     pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_EncryptFinal() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -245,20 +241,20 @@ pub extern "C" fn C_EncryptFinal(
 
 #[cfg(test)]
 mod tests {
-    use crate::{backend::slot::set_test_config_env, data::SESSION_MANAGER};
+    use crate::{backend::slot::init_for_tests, data::SESSION_MANAGER};
 
     use super::*;
 
     #[test]
     fn test_encrypt_init_null_mechanism() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_EncryptInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_encrypt_init_invalid_mechanism() {
-        set_test_config_env();
+        init_for_tests();
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 15000,
             pParameter: std::ptr::null_mut(),
@@ -271,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_init_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -286,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut data: Vec<u8> = Vec::new();
@@ -305,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut data: Vec<u8> = Vec::new();
@@ -324,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut encrypted_data: Vec<u8> = Vec::new();
@@ -336,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_data() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pEncryptedDataLen: CK_ULONG = 0;
@@ -354,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_encrypted_data_len() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -372,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_encrypted_data() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -390,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -409,7 +405,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_part() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pEncryptedPartLen: CK_ULONG = 0;
@@ -427,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_encrypted_part_len() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -445,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_encrypted_part() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -463,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_buffer_too_small() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = vec![0; 100];
@@ -482,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = vec![0; 100];
@@ -501,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_null_encrypted_part() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pEncryptedPartLen: CK_ULONG = 0;
@@ -512,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_null_encrypted_part_len() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pEncryptedPart: Vec<u8> = Vec::new();
@@ -527,7 +523,7 @@ mod tests {
 
     // #[test]
     // fn test_encrypt_final_buffer_too_small() {
-    //     set_test_config_env();
+    //     init_for_tests();
     //     let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
     //     let mut pEncryptedPart: Vec<u8> = Vec::new();
@@ -543,7 +539,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut pEncryptedPart: Vec<u8> = Vec::new();

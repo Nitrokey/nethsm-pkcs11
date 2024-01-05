@@ -1,4 +1,5 @@
 use cryptoki_sys::CK_SLOT_ID;
+use log::error;
 use nethsm_sdk_rs::{apis::default_api, models::SystemState};
 
 use crate::data::{DEVICE, EVENTS_MANAGER, TOKENS_STATE};
@@ -34,8 +35,13 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
     tokens_state.insert(slot_id, present);
 }
 
-pub fn fetch_slots_state() {
-    for (index, slot) in DEVICE.slots.iter().enumerate() {
+pub fn fetch_slots_state() -> Result<(), cryptoki_sys::CK_RV> {
+    let Some(device) = DEVICE.get() else {
+        error!("Initialization was not performed or failed");
+        return Err(cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
+    };
+
+    for (index, slot) in device.slots.iter().enumerate() {
         let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone(), slot.retries);
         let status = login_ctx
             .try_(default_api::health_state_get, super::login::UserMode::Guest)
@@ -44,4 +50,5 @@ pub fn fetch_slots_state() {
 
         update_slot_state(index as CK_SLOT_ID, status);
     }
+    Ok(())
 }
