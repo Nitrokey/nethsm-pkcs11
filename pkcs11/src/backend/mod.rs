@@ -6,11 +6,11 @@ use self::{
     mechanism::{MechMode, Mechanism},
 };
 use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_DATA_INVALID, CKR_DATA_LEN_RANGE,
-    CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_DEVICE_REMOVED, CKR_ENCRYPTED_DATA_LEN_RANGE,
-    CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID, CKR_OPERATION_ACTIVE,
-    CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT, CKR_USER_NOT_LOGGED_IN,
-    CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
+    CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_CRYPTOKI_NOT_INITIALIZED, CKR_DATA_INVALID,
+    CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR, CKR_DEVICE_MEMORY, CKR_DEVICE_REMOVED,
+    CKR_ENCRYPTED_DATA_LEN_RANGE, CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID,
+    CKR_OPERATION_ACTIVE, CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT,
+    CKR_USER_NOT_LOGGED_IN, CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
 };
 use log::error;
 use nethsm_sdk_rs::apis;
@@ -81,6 +81,7 @@ pub enum Error {
     StringParse(std::string::FromUtf8Error),
     Login(LoginError),
     OperationNotInitialized,
+    LibraryNotInitialized,
     OperationActive,
     // a field recieved from the API is not valid
     KeyField(String),
@@ -132,6 +133,7 @@ impl From<Error> for CK_RV {
             Error::InvalidDataLength => CKR_DATA_LEN_RANGE,
             Error::InvalidObjectHandle(_) => CKR_KEY_HANDLE_INVALID,
             Error::OperationNotInitialized => CKR_OPERATION_NOT_INITIALIZED,
+            Error::LibraryNotInitialized => CKR_CRYPTOKI_NOT_INITIALIZED,
             Error::DbLock => CKR_DEVICE_ERROR,
             Error::KeyField(_) => CKR_DEVICE_ERROR,
             Error::OperationActive => CKR_OPERATION_ACTIVE,
@@ -174,6 +176,7 @@ impl std::fmt::Display for Error {
                 format!("Object handle does not exist: {}", handle)
             }
             Error::OperationNotInitialized => "Operation not initialized".to_string(),
+            Error::LibraryNotInitialized => "Library not initialized".to_string(),
             Error::DbLock => "Internal mutex lock error".to_string(),
             Error::KeyField(field) => {
                 format!("Key field {} received from the NetHSM is not valid", field)

@@ -2,16 +2,6 @@
 // for now we allow unused variables, but we should remove this when we have implemented all the functions we need
 #![allow(unused_variables)]
 
-/// Immediately return an error if the module failed to initialize
-/// This is preferable to panicking
-macro_rules! ensure_init {
-    () => {
-        if *crate::data::DEVICE_ERROR {
-            return cryptoki_sys::CKR_GENERAL_ERROR;
-        }
-    };
-}
-
 pub mod decrypt;
 pub mod digest;
 pub mod encrypt;
@@ -25,12 +15,12 @@ pub mod verify;
 
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
-    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
+    data::{self, DEVICE, DEVICE_INIT, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
     defs,
     utils::padded_str,
 };
 use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
-use log::{debug, trace};
+use log::{debug, error, trace};
 
 #[no_mangle]
 pub extern "C" fn C_GetFunctionList(
@@ -51,10 +41,30 @@ pub extern "C" fn C_GetFunctionList(
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     trace!("C_Initialize() called with args: {:?}", pInitArgs);
 
-    ensure_init!();
+    let mut result = Ok(());
+
+    DEVICE_INIT.call_once(|| {
+        let res = crate::config::initialization::initialize_configuration();
+        match res {
+            Ok(device) => {
+                _ = DEVICE.set(device);
+            }
+            Err(err) => result = Err(err),
+        }
+    });
+
+    match result {
+        Ok(()) => {}
+        Err(err) => {
+            error!("Failed to initialize configuration: {err:?}");
+            return cryptoki_sys::CKR_FUNCTION_FAILED;
+        }
+    }
+
+    let device = DEVICE.get().expect("Device was just initializated");
 
     // we force the initialization of the lazy static here
-    if DEVICE.slots.is_empty() {
+    if device.slots.is_empty() {
         debug!("No slots configured");
     }
 
@@ -91,15 +101,14 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
     *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
 
-    fetch_slots_state();
-
-    cryptoki_sys::CKR_OK
+    match fetch_slots_state() {
+        Ok(()) => cryptoki_sys::CKR_OK,
+        Err(err) => err,
+    }
 }
 
 pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     trace!("C_Finalize() called");
-
-    ensure_init!();
 
     if !pReserved.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -111,8 +120,6 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
 
 pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     trace!("C_GetInfo() called");
-
-    ensure_init!();
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;

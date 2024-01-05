@@ -10,8 +10,6 @@ pub extern "C" fn C_DigestInit(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestInit() called");
 
-    ensure_init!();
-
     if pMechanism.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -28,8 +26,6 @@ pub extern "C" fn C_Digest(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Digest() called");
 
-    ensure_init!();
-
     if pData.is_null() || pDigest.is_null() || pulDigestLen.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -43,8 +39,6 @@ pub extern "C" fn C_DigestUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestUpdate() called");
-
-    ensure_init!();
 
     if pPart.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -60,8 +54,6 @@ pub extern "C" fn C_DigestFinal(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestFinal() called");
 
-    ensure_init!();
-
     if pDigest.is_null() || pulDigestLen.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
@@ -75,8 +67,6 @@ pub extern "C" fn C_DigestKey(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestKey() called");
 
-    ensure_init!();
-
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
@@ -88,7 +78,6 @@ pub extern "C" fn C_DigestEncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DigestEncryptUpdate() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -101,7 +90,6 @@ pub extern "C" fn C_DecryptDigestUpdate(
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_DecryptDigestUpdate() called ");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -110,12 +98,12 @@ pub extern "C" fn C_DecryptDigestUpdate(
 mod tests {
     use cryptoki_sys::CK_ULONG;
 
-    use crate::backend::slot::set_test_config_env;
+    use crate::backend::slot::init_for_tests;
 
     use super::*;
     #[test]
     fn test_digest_init() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_DigestInit(0, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -131,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_digest() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_Digest(
             0,
             std::ptr::null_mut(),
@@ -157,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_digest_update() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_DigestUpdate(0, std::ptr::null_mut(), 0 as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -169,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_digest_final() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_DigestFinal(0, std::ptr::null_mut(), std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -182,14 +170,14 @@ mod tests {
 
     #[test]
     fn test_digest_key() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_DigestKey(0, 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_digest_encrypt_update() {
-        set_test_config_env();
+        init_for_tests();
         let mut encrypted_part_len: CK_ULONG = 0;
         let mut encrypted_part: Vec<u8> = Vec::new();
         let mut part: Vec<u8> = Vec::new();
@@ -206,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_digest_update() {
-        set_test_config_env();
+        init_for_tests();
         let mut encrypted_part_len: CK_ULONG = 0;
         let mut encrypted_part: Vec<u8> = Vec::new();
         let mut part: Vec<u8> = Vec::new();

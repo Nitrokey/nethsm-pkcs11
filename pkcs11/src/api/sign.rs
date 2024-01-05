@@ -16,7 +16,6 @@ pub extern "C" fn C_SignInit(
         hKey,
         hSession
     );
-    ensure_init!();
 
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
@@ -49,7 +48,6 @@ pub extern "C" fn C_Sign(
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_Sign() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -121,7 +119,6 @@ pub extern "C" fn C_SignUpdate(
     ulPartLen: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignUpdate() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -147,7 +144,6 @@ pub extern "C" fn C_SignFinal(
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignFinal() called");
-    ensure_init!();
 
     lock_session!(hSession, session);
 
@@ -211,7 +207,6 @@ pub extern "C" fn C_SignRecoverInit(
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignRecoverInit() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -224,7 +219,6 @@ pub extern "C" fn C_SignRecover(
     pulSignatureLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignRecover() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
@@ -237,20 +231,19 @@ pub extern "C" fn C_SignEncryptUpdate(
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SignEncryptUpdate() called");
-    ensure_init!();
 
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{backend::slot::set_test_config_env, data::SESSION_MANAGER};
+    use crate::{backend::slot::init_for_tests, data::SESSION_MANAGER};
 
     use super::*;
 
     #[test]
     fn test_sign_init_null_mechanism() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_SignInit(session, std::ptr::null_mut(), 0);
@@ -259,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_mechanism() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -274,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -289,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_sign_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
@@ -308,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_data() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -326,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_signature_len() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -344,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_sign_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -363,7 +356,7 @@ mod tests {
 
     // #[test]
     // fn test_sign_null_signature() {
-    //     set_test_config_env();
+    //     init_for_tests();
     //     let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
     //     let mut data = [0u8; 32];
@@ -381,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
@@ -392,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_null_data() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_SignUpdate(session, std::ptr::null_mut(), 0);
@@ -401,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -412,7 +405,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_invalid_session() {
-        set_test_config_env();
+        init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut signature = [0u8; 32];
@@ -424,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_null_signature_len() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -435,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_operation_not_initialized() {
-        set_test_config_env();
+        init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -447,14 +440,14 @@ mod tests {
 
     #[test]
     fn test_sign_recover_init() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_SignRecoverInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_sign_recover() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_SignRecover(
             0,
             std::ptr::null_mut(),
@@ -467,7 +460,7 @@ mod tests {
 
     #[test]
     fn test_sign_encrypt_update() {
-        set_test_config_env();
+        init_for_tests();
         let rv = C_SignEncryptUpdate(
             0,
             std::ptr::null_mut(),
