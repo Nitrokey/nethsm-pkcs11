@@ -1,14 +1,12 @@
-FROM rust:1.72-bookworm AS builder
+FROM docker.io/rust:1.72-bookworm AS builder
 
 WORKDIR /rust
 
-ADD .git/ /tmp/repo
-
-RUN git clone -s /tmp/repo build
+ADD '.' /rust/build
 
 RUN cd build && cargo build --release
 
-FROM httpd:2.4
+FROM docker.io/httpd:2.4
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   libengine-pkcs11-openssl \

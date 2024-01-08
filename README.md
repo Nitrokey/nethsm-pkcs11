@@ -45,3 +45,31 @@ RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
+
+## Docker examples
+
+For testing and development purposes there are two examples using the PKCS11 driver with Nginx and Apache.
+
+They require each a certificate built with the `container/<server>/generate.sh`.
+
+They can be built with:
+
+```bash
+# Building the images 
+docker build -t nginx-testing -f container/nginx/Dockerfile .
+docker build -t apache-testing -f container/apache/Dockerfile .
+```
+
+Assuming that a NetHSM is runnig on localhost:8443, they can then be run with :
+
+```bash
+docker run --net=host nginx-testing:latest
+docker run --net=host apache-testing:latest
+```
+
+The NetHSM is expected to have be provisionned with the following configuration:
+
+```bash
+nitropy nethsm --host localhost:8443 --no-verify-tls provision -u 0123456789 -a Administrator
+nitropy nethsm --host localhost:8443 --no-verify-tls add-user -n Operator -u operator -p opPassphrase -r Operator
+```
