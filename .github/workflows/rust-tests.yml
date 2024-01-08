@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: install opensc and dependencies
-        run: apt-get update && apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin
+        run: apt-get update && apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -88,3 +88,8 @@ jobs:
         with:
           files: ./coverage.txt
           verbose: true
+
+      - name: build release
+        run: cargo build --release
+      - name: run fork tests
+        run: cd fork-tests && make
