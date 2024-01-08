@@ -4,10 +4,9 @@ set -e
 
 HOST='localhost:8443'
 ADMIN_ACCOUNT='admin'
-ADMIN_ACCOUNT_PWD='adminadmin'
+ADMIN_ACCOUNT_PWD='Administrator'
 
-OPENSSL_PKCS11_ENGINE_PATH="/usr/lib/x86_64-linux-gnu/engines-3/libpkcs11.so"
-NETHSM_PKCS11_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/pkcs11/libnethsm_pkcs11.so"
+NETHSM_PKCS11_LIBRARY_PATH="target/release/libnethsm_pkcs11.so"
 
 
 CREDENTIALS="${ADMIN_ACCOUNT}:${ADMIN_ACCOUNT_PWD}"
@@ -24,7 +23,6 @@ pkcs11 = pkcs11_section
 
 [pkcs11_section]
 engine_id = pkcs11
-dynamic_path = ${OPENSSL_PKCS11_ENGINE_PATH}
 MODULE_PATH = ${NETHSM_PKCS11_LIBRARY_PATH}
 init = 0
 "
@@ -46,7 +44,7 @@ curl --include --insecure --user $CREDENTIALS --request POST \
 
 export OPENSSL_CONF="/dev/fd/3"
 
-openssl req -new -x509 -out ./_certificate.pem -days 365 -subj "/CN=yourdomain.com" -engine pkcs11 -keyform engine -key "pkcs11:object=webserver;type=public"
+P11NETHSM_CONFIG_FILE="p11nethsm.conf" openssl req -new -x509 -out ./_certificate.pem -days 365 -subj "/CN=yourdomain.com" -engine pkcs11 -keyform engine -key "pkcs11:object=webserver;type=public"
 
 curl -k -i -w '\n' -u $CREDENTIALS -X PUT \
   "https://${HOST}/api/v1/keys/webserver/cert" \
