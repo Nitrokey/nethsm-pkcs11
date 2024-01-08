@@ -19,3 +19,4 @@ profile
 *.profraw
 coverage
 coverage.txt
+fork-tests/fork_test
