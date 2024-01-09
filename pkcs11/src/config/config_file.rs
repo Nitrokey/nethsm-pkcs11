@@ -64,7 +64,7 @@ pub fn read_configuration() -> Result<P11Config, ConfigError> {
     merge_configurations(configs)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -86,7 +86,7 @@ impl From<&LogLevel> for log::LevelFilter {
 }
 
 // representation of the config file to parse
-#[derive(Debug, Clone, Serialize, Deserialize, Merge, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Merge, Default, PartialEq)]
 pub struct P11Config {
     #[merge(strategy = merge::bool::overwrite_false)]
     #[serde(default)]
@@ -97,13 +97,13 @@ pub struct P11Config {
     pub slots: Vec<SlotConfig>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct RetryConfig {
     pub count: u32,
     pub delay_seconds: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HexFingerprint {
     pub value: Vec<u8>,
 }
@@ -148,7 +148,7 @@ impl<'de> Deserialize<'de> for HexFingerprint {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct InstanceConfig {
     pub url: String,
     #[serde(default)]
@@ -159,7 +159,7 @@ pub struct InstanceConfig {
     pub max_idle_connections: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SlotConfig {
     pub label: String,
     pub operator: Option<UserConfig>,
@@ -173,7 +173,7 @@ pub struct SlotConfig {
 }
 
 // An user
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserConfig {
     pub username: String,
     #[serde(deserialize_with = "deserialize_password", default)]
@@ -205,6 +205,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use hex_literal::hex;
     use std::fs;
 
     use super::*;
@@ -309,5 +310,46 @@ password: ""
         let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
         assert_eq!(config.username, "test");
         assert_eq!(config.password, None);
+    }
+
+    #[test]
+    fn test_deserialize_full_example_config() {
+        let config = include_str!("../../../p11nethsm.example.conf");
+        assert_eq!(
+            P11Config {
+                enable_set_attribute_value: false,
+                log_file: Some("/tmp/p11nethsm.log".into()),
+                log_level: Some(LogLevel::Debug),
+                slots: vec![SlotConfig {
+                    label: "LocalHSM".into(),
+                    description: Some("Local HSM (docker)".into()),
+                    operator: Some(UserConfig {
+                        username: "operator".into(),
+                        password: Some("localpass".into())
+                    }),
+                    administrator: Some(UserConfig {
+                        username: "admin".into(),
+                        password: None
+                    }),
+                    instances: vec![InstanceConfig {
+                        url: "https://keyfender:8443/api/v1".into(),
+                        danger_insecure_cert: false,
+                        sha256_fingerprints: vec![HexFingerprint {
+                            value: hex!(
+                                "31928EA45E165CA73344E8E98E64C4AE7B2A57E5774349F369C98FC42F3A3B6E"
+                            )
+                            .into()
+                        }],
+                        max_idle_connections: Some(10),
+                    }],
+                    retries: Some(RetryConfig {
+                        count: 3,
+                        delay_seconds: 1
+                    }),
+                    timeout_seconds: Some(10),
+                }]
+            },
+            serde_yaml::from_str(config).unwrap()
+        );
     }
 }
