@@ -520,53 +520,18 @@ impl Session {
             )?
             .entity;
 
-        let results: Arc<Mutex<Vec<WorkResult>>> = Arc::new(Mutex::new(Vec::new()));
-
-        let keys = Arc::new(std::sync::Mutex::new(keys));
-
-        if THREADS_ALLOWED.load(Ordering::Relaxed) {
-            let mut thread_handles = Vec::new();
-
-            // 4 threads
-
-            for _ in 0..4 {
-                let keys = keys.clone();
-
-                let results = results.clone();
-
-                let login_ctx = self.login_ctx.clone();
-                let db = self.db.clone();
-
-                thread_handles.push(std::thread::spawn(move || {
-                    super::key::fetch_loop(keys, db, login_ctx, results, kind)
-                }));
-            }
-
-            for handle in thread_handles {
-                handle.join().unwrap();
-            }
+        let results: Result<Vec<_>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
+            use rayon::prelude::*;
+            keys.par_iter()
+                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, kind))
+                .collect()
         } else {
-            super::key::fetch_loop(
-                keys,
-                self.db.clone(),
-                self.login_ctx.clone(),
-                results.clone(),
-                kind,
-            );
-        }
+            keys.iter()
+                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, kind))
+                .collect()
+        };
 
-        let mut handles = Vec::new();
-
-        for mut result in results.lock().unwrap().drain(..) {
-            match result {
-                Ok(ref mut vec) => {
-                    handles.append(vec);
-                }
-                Err(err) => {
-                    return Err(err);
-                }
-            }
-        }
+        let handles = results?.into_iter().flatten().collect();
 
         let mut db = self.db.lock()?;
         db.set_fetched_all_keys(true);
