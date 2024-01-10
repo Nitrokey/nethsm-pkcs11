@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex, Once, OnceLock, RwLock};
+use std::collections::HashMap;
+use std::sync::{atomic::AtomicBool, Mutex, Once, OnceLock, RwLock};
 
 use crate::backend::events::EventsManager;
 
@@ -16,19 +17,21 @@ pub static DEVICE_INIT: Once = Once::new();
 pub static DEVICE: OnceLock<Device> = OnceLock::new();
 
 lazy_static! {
-    pub static ref SESSION_MANAGER : Arc<Mutex<SessionManager>> =  Arc::new(Mutex::new(SessionManager::new()));
+    pub static ref SESSION_MANAGER : Mutex<SessionManager> =  Mutex::new(SessionManager::new());
 
     // Aliases for the keys, used when enable_set_attribute_value is set.
     // As we are using lazy_static, this field will be initialized the first time it's used.
     // The key of the map is the name the application tries to use, the value is the name given by the NetHSM.
-    pub static ref KEY_ALIASES : Arc<Mutex<std::collections::HashMap<String, String>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
-    // Storage of events
-    pub static ref EVENTS_MANAGER : Arc<RwLock<EventsManager>> = Arc::new(RwLock::new(EventsManager::new()));
+    pub static ref KEY_ALIASES : Mutex<std::collections::HashMap<String, String>> = Mutex::new(std::collections::HashMap::new());
     // Token present or not (true = present)
-    pub static ref TOKENS_STATE : Arc<Mutex<std::collections::HashMap<CK_SLOT_ID, bool>>> = Arc::new(Mutex::new(std::collections::HashMap::new()));
-    // If the calling application allows threads to be used
-    pub static ref THREADS_ALLOWED : Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
+    pub static ref TOKENS_STATE : Mutex<HashMap<CK_SLOT_ID, bool>> = Mutex::new(HashMap::new());
 }
+
+// Storage of events
+pub static EVENTS_MANAGER: RwLock<EventsManager> = RwLock::new(EventsManager::new());
+
+// If the calling application allows threads to be used
+pub static THREADS_ALLOWED: AtomicBool = AtomicBool::new(true);
 
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

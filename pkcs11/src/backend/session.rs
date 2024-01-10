@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{atomic::Ordering, Arc, Mutex},
 };
 
 use cryptoki_sys::{
@@ -524,7 +524,7 @@ impl Session {
 
         let keys = Arc::new(std::sync::Mutex::new(keys));
 
-        if *THREADS_ALLOWED.lock()? {
+        if THREADS_ALLOWED.load(Ordering::Relaxed) {
             let mut thread_handles = Vec::new();
 
             // 4 threads
