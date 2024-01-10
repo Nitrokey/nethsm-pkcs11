@@ -20,10 +20,7 @@ use super::{
     db::{attr::CkRawAttrTemplate, object::ObjectKind, Db, Object},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
-    key::{
-        create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template,
-        WorkResult,
-    },
+    key::{create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template},
     login::LoginCtx,
     mechanism::Mechanism,
     object::{EnumCtx, KeyRequirements},
