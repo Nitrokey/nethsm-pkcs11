@@ -427,7 +427,7 @@ impl Session {
                 // try to search in the db first
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
                     let db = self.db.lock()?;
-                    db.enumerate()
+                    db.iter()
                         .filter(|(_, obj)| {
                             obj.id == key_id
                                 && requirements.kind.map(|k| k == obj.kind).unwrap_or(true)
@@ -497,7 +497,7 @@ impl Session {
 
             if db.fetched_all_keys() {
                 return Ok(db
-                    .enumerate()
+                    .iter()
                     .map(|(handle, obj)| (handle, obj.clone()))
                     .collect());
             }

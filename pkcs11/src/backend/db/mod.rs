@@ -52,11 +52,10 @@ impl Db {
         self.objects.clear();
     }
 
-    pub fn enumerate(&self) -> impl Iterator<Item = (CK_OBJECT_HANDLE, &Object)> {
+    pub fn iter(&self) -> impl Iterator<Item = (CK_OBJECT_HANDLE, &Object)> {
         self.objects
             .iter()
-            .enumerate()
-            .map(|(_, (handle, object))| (*handle, object))
+            .map(|(handle, object)| (*handle, object))
     }
 
     pub fn add_object(&mut self, object: Object) -> (CK_OBJECT_HANDLE, Object) {
