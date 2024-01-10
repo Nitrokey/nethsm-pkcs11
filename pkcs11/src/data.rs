@@ -22,7 +22,7 @@ lazy_static! {
     // Aliases for the keys, used when enable_set_attribute_value is set.
     // As we are using lazy_static, this field will be initialized the first time it's used.
     // The key of the map is the name the application tries to use, the value is the name given by the NetHSM.
-    pub static ref KEY_ALIASES : Mutex<std::collections::HashMap<String, String>> = Mutex::new(std::collections::HashMap::new());
+    pub static ref KEY_ALIASES : Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
     // Token present or not (true = present)
     pub static ref TOKENS_STATE : Mutex<HashMap<CK_SLOT_ID, bool>> = Mutex::new(HashMap::new());
 }
