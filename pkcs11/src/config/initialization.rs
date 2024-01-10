@@ -1,5 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
+    thread::available_parallelism,
     time::Duration,
 };
 
@@ -132,10 +133,14 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             tls_conf.with_root_certificates(roots).with_no_client_auth()
         };
 
+        // Each agent is created to communicate with a single instance, and therefore should use connection pooling for only one host, with multiple parrellel connection in a multi-threaded context.
+        // By default we expect the number of threads to dictate the number of parrallel connections, but it could be more in practice. If not available, use the default of 100.
+        let connections = available_parallelism().map(Into::into).unwrap_or(100);
+
         let mut builder = ureq::AgentBuilder::new()
             .tls_config(Arc::new(tls_conf))
-            .max_idle_connections(2)
-            .max_idle_connections_per_host(2);
+            .max_idle_connections(connections)
+            .max_idle_connections_per_host(connections);
 
         if let Some(t) = slot.timeout_seconds {
             builder = builder.timeout(Duration::from_secs(t));
