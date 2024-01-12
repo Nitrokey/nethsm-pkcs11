@@ -133,14 +133,18 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             tls_conf.with_root_certificates(roots).with_no_client_auth()
         };
 
-        // Each agent is created to communicate with a single instance, and therefore should use connection pooling for only one host, with multiple parrellel connection in a multi-threaded context.
-        // By default we expect the number of threads to dictate the number of parrallel connections, but it could be more in practice. If not available, use the default of 100.
-        let connections = available_parallelism().map(Into::into).unwrap_or(100);
+        let max_idle_connections = instance
+            .max_idle_connections
+            .or_else(|| available_parallelism().ok().map(Into::into))
+            .unwrap_or(100);
 
+        // 100 idle connections is the default
+        // By default there is 1 idle connection per host, but we are only connecting to 1 host.
+        // So we need to allow the connection pool to scale to match the number of threads
         let mut builder = ureq::AgentBuilder::new()
             .tls_config(Arc::new(tls_conf))
-            .max_idle_connections(connections)
-            .max_idle_connections_per_host(connections);
+            .max_idle_connections(max_idle_connections)
+            .max_idle_connections_per_host(max_idle_connections);
 
         if let Some(t) = slot.timeout_seconds {
             builder = builder.timeout(Duration::from_secs(t));
