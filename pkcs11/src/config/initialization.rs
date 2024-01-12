@@ -1,5 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
+    thread::available_parallelism,
     time::Duration,
 };
 
@@ -132,10 +133,18 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             tls_conf.with_root_certificates(roots).with_no_client_auth()
         };
 
+        let max_idle_connections = instance
+            .max_idle_connections
+            .or_else(|| available_parallelism().ok().map(Into::into))
+            .unwrap_or(100);
+
+        // 100 idle connections is the default
+        // By default there is 1 idle connection per host, but we are only connecting to 1 host.
+        // So we need to allow the connection pool to scale to match the number of threads
         let mut builder = ureq::AgentBuilder::new()
             .tls_config(Arc::new(tls_conf))
-            .max_idle_connections(2)
-            .max_idle_connections_per_host(2);
+            .max_idle_connections(max_idle_connections)
+            .max_idle_connections_per_host(max_idle_connections);
 
         if let Some(t) = slot.timeout_seconds {
             builder = builder.timeout(Duration::from_secs(t));

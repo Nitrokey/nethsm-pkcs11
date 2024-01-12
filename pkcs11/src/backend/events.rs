@@ -14,7 +14,7 @@ pub struct EventsManager {
 }
 
 impl EventsManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         EventsManager {
             events: Vec::new(),
             finalized: false,

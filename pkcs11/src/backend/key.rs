@@ -23,7 +23,7 @@ use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace};
 use nethsm_sdk_rs::{
     apis::default_api,
-    models::{KeyGenerateRequestData, KeyPrivateData, KeyType, PrivateKey},
+    models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType, PrivateKey},
 };
 
 #[derive(Debug, Default)]
@@ -545,43 +545,35 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
     Ok(key_id)
 }
 
-pub type WorkResult = Result<Vec<(CK_ULONG, Object)>, Error>;
-
-pub fn fetch_loop(
-    keys: Arc<Mutex<Vec<nethsm_sdk_rs::models::KeyItem>>>,
-    db: Arc<Mutex<Db>>,
-    login_ctx: LoginCtx,
-    results: Arc<Mutex<Vec<WorkResult>>>,
+pub fn fetch_one(
+    key: &KeyItem,
+    db: &Arc<Mutex<Db>>,
+    login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
-) {
-    while let Some(key) = keys.lock().unwrap().pop() {
-        let key_id = key.id.clone();
+) -> Result<Vec<(CK_ULONG, Object)>, Error> {
+    let mut acc = Vec::new();
 
-        if matches!(
-            kind,
-            None | Some(ObjectKind::Other)
-                | Some(ObjectKind::PrivateKey)
-                | Some(ObjectKind::PublicKey)
-                | Some(ObjectKind::SecretKey)
-        ) {
-            let login_ctx = login_ctx.clone();
-            let db = db.clone();
-            let res = fetch_key(&key_id, None, login_ctx, db);
-            results.lock().unwrap().push(res);
-        }
+    if matches!(
+        kind,
+        None | Some(ObjectKind::Other)
+            | Some(ObjectKind::PrivateKey)
+            | Some(ObjectKind::PublicKey)
+            | Some(ObjectKind::SecretKey)
+    ) {
+        let login_ctx = login_ctx.clone();
+        let db = db.clone();
+        acc = fetch_key(&key.id, None, login_ctx, db)?;
+    }
 
-        if matches!(kind, None | Some(ObjectKind::Certificate)) {
-            let login_ctx = login_ctx.clone();
-            let db = db.clone();
-            let res = match fetch_certificate(&key_id, None, login_ctx, db) {
-                Ok(vec) => Ok(vec),
-                Err(err) => {
-                    debug!("Failed to fetch certificate: {:?}", err);
-                    Ok(Vec::new())
-                }
-            };
-
-            results.lock().unwrap().push(res);
+    if matches!(kind, None | Some(ObjectKind::Certificate)) {
+        let login_ctx = login_ctx.clone();
+        let db = db.clone();
+        match fetch_certificate(&key.id, None, login_ctx, db) {
+            Ok(mut vec) => acc.append(&mut vec),
+            Err(err) => {
+                debug!("Failed to fetch certificate: {:?}", err);
+            }
         }
     }
+    Ok(acc)
 }

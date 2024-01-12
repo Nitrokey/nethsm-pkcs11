@@ -35,3 +35,4 @@ x509-cert = { features = ["pem"], default-features = false, version = "0.2" }
 sha2 = { default-features = false, version = "0.10" }
 sha1 = { default-features = false, version = "0.10" }
 digest = { default-features = false, version = "0.10" }
+rayon = "1.8.0"

@@ -13,6 +13,8 @@ pub mod sign;
 pub mod token;
 pub mod verify;
 
+use std::sync::atomic::Ordering;
+
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
     data::{self, DEVICE, DEVICE_INIT, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
@@ -93,7 +95,9 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         }
 
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
-            *THREADS_ALLOWED.lock().unwrap() = false;
+            THREADS_ALLOWED.store(false, Ordering::Relaxed);
+        } else {
+            THREADS_ALLOWED.store(true, Ordering::Relaxed);
         }
     }
 

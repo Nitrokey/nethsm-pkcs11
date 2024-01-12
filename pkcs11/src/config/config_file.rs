@@ -155,6 +155,8 @@ pub struct InstanceConfig {
     pub danger_insecure_cert: bool,
     #[serde(default)]
     pub sha256_fingerprints: Vec<HexFingerprint>,
+    #[serde(default)]
+    pub max_idle_connections: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
