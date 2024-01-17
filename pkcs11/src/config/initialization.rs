@@ -1,6 +1,6 @@
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Condvar, Mutex},
     thread::available_parallelism,
     time::Duration,
 };
@@ -198,7 +198,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         administrator: slot.administrator.clone(),
         operator: slot.operator.clone(),
         retries: slot.retries,
-        db: Arc::new(Mutex::new(crate::backend::db::Db::new())),
+        db: Arc::new((Mutex::new(crate::backend::db::Db::new()), Condvar::new())),
     })
 }
 
