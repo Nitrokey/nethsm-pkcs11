@@ -269,7 +269,7 @@ pub extern "C" fn C_SetAttributeValue(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Condvar, Mutex};
 
     use crate::{
         backend::{
@@ -407,7 +407,7 @@ mod tests {
 
         let session_handle = 1;
         let session = Session {
-            db: Arc::new(Mutex::new(db)),
+            db: Arc::new((Mutex::new(db), Condvar::new())),
             decrypt_ctx: None,
             encrypt_ctx: None,
             sign_ctx: None,

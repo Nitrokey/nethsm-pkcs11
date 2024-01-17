@@ -40,9 +40,14 @@ impl Db {
             .unwrap_or(false)
     }
 
+    pub fn is_being_fetched(&self) -> bool {
+        self.is_being_fetched
+    }
+
     pub fn set_fetched_all_keys(&mut self, fetched_all_keys: bool) {
         if fetched_all_keys {
             self.last_fetchall_timestamp = Some(SystemTime::now());
+            self.is_being_fetched = false;
         } else {
             self.last_fetchall_timestamp = None;
         }
