@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use nethsm_sdk_rs::apis::configuration::Configuration;
 
@@ -9,7 +12,7 @@ use super::config_file::{RetryConfig, UserConfig};
 // stores the global configuration of the module
 #[derive(Debug, Clone)]
 pub struct Device {
-    pub log_file: Option<String>,
+    pub log_file: Option<PathBuf>,
     pub slots: Vec<Arc<Slot>>,
     pub enable_set_attribute_value: bool,
 }

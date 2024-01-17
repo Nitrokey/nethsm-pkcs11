@@ -1,4 +1,4 @@
-use std::{io::Read, mem};
+use std::{io::Read, mem, net::SocketAddr, path::PathBuf};
 
 use merge::Merge;
 use serde::{Deserialize, Serialize};
@@ -64,7 +64,7 @@ pub fn read_configuration() -> Result<P11Config, ConfigError> {
     merge_configurations(configs)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -73,8 +73,8 @@ pub enum LogLevel {
     Error,
 }
 
-impl From<&LogLevel> for log::LevelFilter {
-    fn from(level: &LogLevel) -> Self {
+impl From<LogLevel> for log::LevelFilter {
+    fn from(level: LogLevel) -> Self {
         match level {
             LogLevel::Trace => log::LevelFilter::Trace,
             LogLevel::Debug => log::LevelFilter::Debug,
@@ -86,12 +86,30 @@ impl From<&LogLevel> for log::LevelFilter {
 }
 
 // representation of the config file to parse
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SyslogUdp {
+    pub to_addr: SocketAddr,
+    pub from_addr: SocketAddr,
+}
+
+// representation of the config file to parse
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Default, PartialEq)]
 pub struct P11Config {
     #[merge(strategy = merge::bool::overwrite_false)]
     #[serde(default)]
     pub enable_set_attribute_value: bool,
-    pub log_file: Option<String>,
+    pub syslog_socket: Option<PathBuf>,
+    pub syslog_udp: Option<SyslogUdp>,
+    pub syslog_tcp: Option<SocketAddr>,
+    #[serde(default)]
+    pub syslog_facility: Option<String>,
+    #[serde(default)]
+    pub syslog_hostname: Option<String>,
+    #[serde(default)]
+    pub syslog_process: Option<String>,
+    #[serde(default)]
+    pub syslog_pid: Option<u32>,
+    pub log_file: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
     #[merge(strategy = merge::vec::append)]
     pub slots: Vec<SlotConfig>,
@@ -242,7 +260,7 @@ slots:
 
         let config = read_configuration().unwrap();
         assert!(config.enable_set_attribute_value);
-        assert_eq!(config.log_file, Some("/tmp/p11nethsm.log".to_string()));
+        assert_eq!(config.log_file, Some("/tmp/p11nethsm.log".into()));
         assert!(matches!(config.log_level, Some(LogLevel::Trace)));
         assert_eq!(config.slots.len(), 1);
         assert_eq!(config.slots[0].label, "test");
@@ -318,7 +336,14 @@ password: ""
         assert_eq!(
             P11Config {
                 enable_set_attribute_value: false,
-                log_file: Some("/tmp/p11nethsm.log".into()),
+                syslog_socket: Some("/var/nethsm/log".into()),
+                syslog_facility: Some("user".into()),
+                syslog_hostname: None,
+                syslog_pid: None,
+                syslog_udp: None,
+                syslog_tcp: None,
+                syslog_process: None,
+                log_file: None,
                 log_level: Some(LogLevel::Debug),
                 slots: vec![SlotConfig {
                     label: "LocalHSM".into(),

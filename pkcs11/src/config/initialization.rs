@@ -227,7 +227,7 @@ slots:
             "#.into(),
         ];
 
-        assert!(initialize_with_configs(configs).is_ok());
+        assert!(initialize_with_configs(Ok(configs)).is_ok());
 
         let configs_bad_fingerprint: Vec<Vec<u8>> = vec![
             r#"
@@ -251,12 +251,12 @@ slots:
     timeout_seconds: 10
             "#.into(),
         ];
-        assert!(initialize_with_configs(configs_bad_fingerprint).is_err());
+        assert!(initialize_with_configs(Ok(configs_bad_fingerprint)).is_err());
         let configs_bad_yml: Vec<Vec<u8>> = vec![r#"
 dict:
 bad_yml
             "#
         .into()];
-        assert!(initialize_with_configs(configs_bad_yml).is_err());
+        assert!(initialize_with_configs(Ok(configs_bad_yml)).is_err());
     }
 }
