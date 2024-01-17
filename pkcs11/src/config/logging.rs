@@ -1,7 +1,17 @@
-use super::config_file::P11Config;
+use super::{config_file::P11Config, initialization::InitializationError};
 
-// output to stdout and a file
-pub fn configure_logger(config: &P11Config) {
+// output to stdout, a file or syslog
+pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
+    let Ok(config) = config else {
+        // On error, first try logging to syslog
+        if syslog::init(syslog::Facility::LOG_USER, log::LevelFilter::Info, None).is_ok() {
+            return;
+        };
+        // Otherwise try to log to stderr
+        env_logger::try_init().ok();
+        return;
+    };
+
     let mut builder = env_logger::Builder::from_default_env();
 
     // set the log level
