@@ -486,9 +486,23 @@ impl Session {
     }
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
-        {
-            let db = self.db.0.lock()?;
+        let condvar = &self.db.1;
 
+        let db = self.db.0.lock()?;
+
+        if db.fetched_all_keys() {
+            return Ok(db
+                .iter()
+                .map(|(handle, obj)| (handle, obj.clone()))
+                .collect());
+        } else if db.is_being_fetched() {
+            let mut db = db;
+            while db.is_being_fetched() {
+                // Wait for the fetching to be over
+                db = condvar.wait(db).unwrap();
+            }
+
+            // If for some reason the fetching did not lead to keys being fetched, refetch everything.
             if db.fetched_all_keys() {
                 return Ok(db
                     .iter()
@@ -496,6 +510,15 @@ impl Session {
                     .collect());
             }
         }
+
+        struct NotifyAllGuard<'a>(&'a Condvar);
+        impl<'a> Drop for NotifyAllGuard<'a> {
+            fn drop(&mut self) {
+                self.0.notify_all()
+            }
+        }
+
+        NotifyAllGuard(condvar);
 
         if !self
             .login_ctx
