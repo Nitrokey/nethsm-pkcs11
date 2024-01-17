@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Mutex};
 
 use super::{
     db::{self, attr::CkRawAttrTemplate, Db, Object},
@@ -419,7 +416,7 @@ pub fn generate_key_from_template(
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
     mut login_ctx: LoginCtx,
-    db: Arc<Mutex<db::Db>>,
+    db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
@@ -459,7 +456,7 @@ pub fn generate_key_from_template(
 
     let id = extract_key_id_location_header(id.headers)?;
 
-    fetch_key(&id, parsed.raw_id, login_ctx, db.clone())
+    fetch_key(&id, parsed.raw_id, login_ctx, &db)
 }
 
 // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
@@ -467,7 +464,7 @@ pub fn fetch_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
-    db: Arc<Mutex<db::Db>>,
+    db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
@@ -510,7 +507,7 @@ pub fn fetch_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
-    db: Arc<Mutex<db::Db>>,
+    db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
@@ -547,7 +544,7 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
 
 pub fn fetch_one(
     key: &KeyItem,
-    db: &Arc<Mutex<Db>>,
+    db: &Mutex<Db>,
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
 ) -> Result<Vec<(CK_ULONG, Object)>, Error> {
@@ -561,13 +558,11 @@ pub fn fetch_one(
             | Some(ObjectKind::SecretKey)
     ) {
         let login_ctx = login_ctx.clone();
-        let db = db.clone();
         acc = fetch_key(&key.id, None, login_ctx, db)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
         let login_ctx = login_ctx.clone();
-        let db = db.clone();
         match fetch_certificate(&key.id, None, login_ctx, db) {
             Ok(mut vec) => acc.append(&mut vec),
             Err(err) => {

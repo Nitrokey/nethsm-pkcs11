@@ -1,6 +1,6 @@
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Condvar, Mutex},
 };
 
 use nethsm_sdk_rs::apis::configuration::Configuration;
@@ -30,7 +30,7 @@ pub struct Slot {
     pub instances: Vec<Configuration>,
     pub operator: Option<UserConfig>,
     pub administrator: Option<UserConfig>,
-    pub db: Arc<Mutex<Db>>,
+    pub db: Arc<(Mutex<Db>, Condvar)>,
 }
 
 impl Slot {

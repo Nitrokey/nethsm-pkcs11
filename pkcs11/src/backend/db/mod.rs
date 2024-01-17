@@ -15,6 +15,7 @@ pub struct Db {
     objects: HashMap<CK_OBJECT_HANDLE, Object>,
     next_handle: CK_OBJECT_HANDLE,
     last_fetchall_timestamp: Option<SystemTime>,
+    is_being_fetched: bool,
 }
 
 impl Db {
@@ -24,6 +25,7 @@ impl Db {
             // 0 means invalid handle, we need to start from 1
             next_handle: 1,
             last_fetchall_timestamp: None,
+            is_being_fetched: false,
         }
     }
 

@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::{atomic::Ordering, Arc, Condvar, Mutex},
 };
 
 use cryptoki_sys::{
@@ -93,7 +93,7 @@ impl SessionManager {
             Arc::new(Slot {
                 administrator: None,
                 retries: None,
-                db: Arc::new(Mutex::new(Db::new())),
+                db: Arc::new((Mutex::new(Db::new()), Condvar::new())),
                 description: None,
                 instances: vec![],
                 label: "test".to_string(),
@@ -110,7 +110,7 @@ pub struct Session {
     pub login_ctx: LoginCtx,
     pub flags: CK_FLAGS,
     pub device_error: CK_RV,
-    pub db: Arc<Mutex<Db>>,
+    pub db: Arc<(Mutex<Db>, Condvar)>,
     pub sign_ctx: Option<SignCtx>,
     pub encrypt_ctx: Option<EncryptCtx>,
     pub decrypt_ctx: Option<DecryptCtx>,
@@ -194,7 +194,7 @@ impl Session {
         // get key id from the handle
 
         let key = {
-            let db = self.db.lock()?;
+            let db = self.db.0.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -263,7 +263,7 @@ impl Session {
         // get key id from the handle
 
         let key = {
-            let db = self.db.lock()?;
+            let db = self.db.0.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -346,7 +346,7 @@ impl Session {
         // get key id from the handle
 
         let key = {
-            let db = self.db.lock()?;
+            let db = self.db.0.lock()?;
             match db.object(key_handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -410,7 +410,7 @@ impl Session {
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.0.lock().unwrap();
 
         db.object(handle).cloned()
     }
@@ -423,7 +423,7 @@ impl Session {
             Some(key_id) => {
                 // try to search in the db first
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
-                    let db = self.db.lock()?;
+                    let db = self.db.0.lock()?;
                     db.iter()
                         .filter(|(_, obj)| {
                             obj.id == key_id
@@ -446,7 +446,7 @@ impl Session {
                             &key_id,
                             requirements.raw_id.clone(),
                             self.login_ctx.clone(),
-                            self.db.clone(),
+                            &self.db.0,
                         )?
                         .iter()
                         .map(|(handle, obj)| (*handle, obj.clone()))
@@ -460,7 +460,7 @@ impl Session {
                             &key_id,
                             requirements.raw_id,
                             self.login_ctx.clone(),
-                            self.db.clone(),
+                            &self.db.0,
                         ) {
                             Ok(ref mut vec) => {
                                 trace!("Fetched certificate: {:?}", vec);
@@ -487,7 +487,7 @@ impl Session {
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         {
-            let db = self.db.lock()?;
+            let db = self.db.0.lock()?;
 
             if db.fetched_all_keys() {
                 return Ok(db
@@ -517,17 +517,17 @@ impl Session {
         let results: Result<Vec<_>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
             use rayon::prelude::*;
             keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, None))
+                .map(|k| super::key::fetch_one(k, &self.db.0, &self.login_ctx, None))
                 .collect()
         } else {
             keys.iter()
-                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, None))
+                .map(|k| super::key::fetch_one(k, &self.db.0, &self.login_ctx, None))
                 .collect()
         };
 
         let handles = results?.into_iter().flatten().collect();
 
-        let mut db = self.db.lock()?;
+        let mut db = self.db.0.lock()?;
         db.set_fetched_all_keys(true);
 
         Ok(handles)
@@ -552,8 +552,8 @@ impl Session {
         let db = self.db.clone();
 
         match key_info.1 {
-            ObjectKind::Certificate => fetch_certificate(&key_info.0, None, login_ctx, db),
-            _ => fetch_key(&key_info.0, None, login_ctx, db),
+            ObjectKind::Certificate => fetch_certificate(&key_info.0, None, login_ctx, &db.0),
+            _ => fetch_key(&key_info.0, None, login_ctx, &db.0),
         }
     }
 
@@ -565,7 +565,7 @@ impl Session {
         // get key id from the handle
 
         let key = {
-            let db = self.db.lock()?;
+            let db = self.db.0.lock()?;
             match db.object(handle) {
                 Some(object) => Ok(object.clone()),
 
@@ -594,7 +594,7 @@ impl Session {
         }
 
         {
-            let mut db = self.db.lock()?;
+            let mut db = self.db.0.lock()?;
             match db.remove(handle) {
                 Some(object) => Ok(object),
 
@@ -620,7 +620,7 @@ impl Session {
             public_template,
             mechanism,
             self.login_ctx.clone(),
-            self.db.clone(),
+            &self.db.0,
         )
     }
 }
