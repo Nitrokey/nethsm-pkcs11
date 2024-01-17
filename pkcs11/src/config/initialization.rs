@@ -5,7 +5,7 @@ use std::{
 };
 
 use super::{
-    config_file::{config_files, SlotConfig},
+    config_file::{config_files, ConfigError, SlotConfig},
     device::{Device, Slot},
 };
 use log::{debug, error, info, trace};
@@ -22,10 +22,19 @@ pub enum InitializationError {
     NoUser(String),
 }
 
-pub fn initialize_with_configs(configs: Vec<Vec<u8>>) -> Result<Device, InitializationError> {
-    let config = crate::config::config_file::merge_configurations(configs)
-        .map_err(InitializationError::Config)?;
-    crate::config::logging::configure_logger(&config);
+pub fn initialize_with_configs(
+    configs: Result<Vec<Vec<u8>>, ConfigError>,
+) -> Result<Device, InitializationError> {
+    // Use a closure called immediately so that `?` can be used
+    let config_res = (|| {
+        crate::config::config_file::merge_configurations(
+            configs.map_err(InitializationError::Config)?,
+        )
+        .map_err(InitializationError::Config)
+    })();
+
+    crate::config::logging::configure_logger(&config_res);
+    let config = config_res?;
 
     info!("Loaded configuration with {} slots", config.slots.len());
     // initialize the clients
@@ -41,7 +50,7 @@ pub fn initialize_with_configs(configs: Vec<Vec<u8>>) -> Result<Device, Initiali
 }
 
 pub fn initialize() -> Result<Device, InitializationError> {
-    initialize_with_configs(config_files().map_err(InitializationError::Config)?)
+    initialize_with_configs(config_files())
 }
 
 struct DangerIgnoreVerifier {}
