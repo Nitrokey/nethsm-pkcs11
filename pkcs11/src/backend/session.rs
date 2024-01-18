@@ -497,12 +497,9 @@ impl Session {
                 .collect());
         } else if db.is_being_fetched() {
             let mut db = db;
-            while db.is_being_fetched() {
-                // Wait for the fetching to be over
-                db = condvar.wait(db).unwrap();
-            }
+            db = condvar.wait_while(db, |db| db.is_being_fetched()).unwrap();
 
-            // If for some reason the fetching did not lead to keys being fetched, refetch everything.
+            // If for some reason the waiting did not lead to keys being fetched, refetch everything.
             if db.fetched_all_keys() {
                 return Ok(db
                     .iter()
@@ -511,6 +508,7 @@ impl Session {
             }
         }
 
+        /// Drop the Condvar to notify on close
         struct NotifyAllGuard<'a>(&'a Condvar);
         impl<'a> Drop for NotifyAllGuard<'a> {
             fn drop(&mut self) {
