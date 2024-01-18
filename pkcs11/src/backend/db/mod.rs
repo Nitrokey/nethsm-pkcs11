@@ -44,6 +44,10 @@ impl Db {
         self.is_being_fetched
     }
 
+    pub fn set_is_being_fetched(&mut self, value: bool) {
+        self.is_being_fetched = value;
+    }
+
     pub fn set_fetched_all_keys(&mut self, fetched_all_keys: bool) {
         if fetched_all_keys {
             self.last_fetchall_timestamp = Some(SystemTime::now());
