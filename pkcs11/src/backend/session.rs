@@ -520,6 +520,7 @@ impl Session {
 
             // The cache is empty or the fetching failed, we are now the one fetching.
             db.set_is_being_fetched(true);
+            debug!("Preparing to fetch");
         }
 
         /// Drop the Condvar to notify on close
