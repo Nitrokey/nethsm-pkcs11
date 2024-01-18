@@ -456,7 +456,7 @@ pub fn generate_key_from_template(
 
     let id = extract_key_id_location_header(id.headers)?;
 
-    fetch_key(&id, parsed.raw_id, login_ctx, &db)
+    fetch_key(&id, parsed.raw_id, login_ctx, db)
 }
 
 // we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
