@@ -488,35 +488,50 @@ impl Session {
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         let condvar = &self.db.1;
 
-        let db = self.db.0.lock()?;
+        {
+            let mut db = self.db.0.lock()?;
 
-        if db.fetched_all_keys() {
-            return Ok(db
-                .iter()
-                .map(|(handle, obj)| (handle, obj.clone()))
-                .collect());
-        } else if db.is_being_fetched() {
-            let mut db = db;
-            db = condvar.wait_while(db, |db| db.is_being_fetched()).unwrap();
-
-            // If for some reason the waiting did not lead to keys being fetched, refetch everything.
             if db.fetched_all_keys() {
+                debug!("All keys already in cache. Returning");
                 return Ok(db
                     .iter()
                     .map(|(handle, obj)| (handle, obj.clone()))
                     .collect());
+            } else if db.is_being_fetched() {
+                debug!("Fetch in progress, waiting");
+                let mut db_inner = db;
+                db_inner = condvar
+                    .wait_while(db_inner, |db| {
+                        debug!("Woken up");
+                        db.is_being_fetched()
+                    })
+                    .unwrap();
+                debug!("Waited for fetch");
+
+                // If for some reason the waiting did not lead to keys being fetched, refetch everything.
+                if db_inner.fetched_all_keys() {
+                    return Ok(db_inner
+                        .iter()
+                        .map(|(handle, obj)| (handle, obj.clone()))
+                        .collect());
+                }
+                db = db_inner;
             }
+
+            // The cache is empty or the fetching failed, we are now the one fetching.
+            db.set_is_being_fetched(true);
         }
 
         /// Drop the Condvar to notify on close
-        struct NotifyAllGuard<'a>(&'a Condvar);
+        struct NotifyAllGuard<'a>(&'a (Mutex<Db>, Condvar));
         impl<'a> Drop for NotifyAllGuard<'a> {
             fn drop(&mut self) {
-                self.0.notify_all()
+                self.0 .0.lock().unwrap().set_is_being_fetched(false);
+                self.0 .1.notify_all();
             }
         }
 
-        NotifyAllGuard(condvar);
+        NotifyAllGuard(&self.db);
 
         if !self
             .login_ctx
