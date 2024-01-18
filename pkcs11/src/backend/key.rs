@@ -491,16 +491,9 @@ pub fn fetch_key(
 
     let objects = db::object::from_key_data(key_data, key_id, raw_id)?;
 
-    let mut result = Vec::new();
-
     let mut db = db.lock()?;
 
-    for object in objects {
-        let r = db.add_object(object.clone());
-        result.push((r.0, r.1.clone()));
-    }
-
-    Ok(result)
+    Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
 }
 
 pub fn fetch_certificate(
@@ -547,7 +540,7 @@ pub fn fetch_one(
     db: &Mutex<Db>,
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
-) -> Result<Vec<(CK_ULONG, Object)>, Error> {
+) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let mut acc = Vec::new();
 
     if matches!(
