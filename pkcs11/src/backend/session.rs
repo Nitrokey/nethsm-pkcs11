@@ -419,7 +419,7 @@ impl Session {
         &mut self,
         requirements: KeyRequirements,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
-        let mut result = match requirements.id {
+        let result = match requirements.id {
             Some(key_id) => {
                 // try to search in the db first
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
@@ -475,11 +475,17 @@ impl Session {
             None => self.fetch_all_keys(),
         }?;
 
-        if let Some(kind) = requirements.kind {
-            result.retain(|(_, obj)| obj.kind == kind);
-        }
-
-        Ok(result.iter().map(|(handle, _)| *handle).collect())
+        Ok(result
+            .into_iter()
+            .filter(|(_, obj)| {
+                if let Some(kind) = requirements.kind {
+                    kind == obj.kind
+                } else {
+                    true
+                }
+            })
+            .map(|(handle, _)| handle)
+            .collect())
     }
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
