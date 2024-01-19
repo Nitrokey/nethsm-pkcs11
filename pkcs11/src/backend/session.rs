@@ -447,10 +447,7 @@ impl Session {
                             requirements.raw_id.clone(),
                             self.login_ctx.clone(),
                             &self.db.0,
-                        )?
-                        .iter()
-                        .map(|(handle, obj)| (*handle, obj.clone()))
-                        .collect();
+                        )?;
                     }
 
                     if (requirements.kind.is_none() && !results.is_empty())
