@@ -147,7 +147,9 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             .max_idle_connections_per_host(max_idle_connections);
 
         if let Some(t) = slot.timeout_seconds {
-            builder = builder.timeout(Duration::from_secs(t));
+            builder = builder
+                .timeout(Duration::from_secs(t))
+                .timeout_connect(Duration::from_secs(10));
         }
 
         let agent = builder.build();
