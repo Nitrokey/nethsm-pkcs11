@@ -64,12 +64,14 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
 
     if let Some(level) = config.log_level {
         log::set_max_level(level.into());
+    } else {
+        log::set_max_level(log::LevelFilter::Info);
     }
-
-    let mut currently_logging = "Failed to set a logger";
 
     // Warning messages for invalid configuration
     let mut messages = Vec::new();
+    // Info messages to log after logger is configured
+    let mut info_messages = Vec::new();
     if config.syslog_socket.is_some() as u32
         + config.syslog_tcp.is_some() as u32
         + config.syslog_udp.is_some() as u32
@@ -130,28 +132,28 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         if let Some(path) = &config.syslog_socket {
             if let Ok(logger) = syslog::unix_custom(formatter, path) {
                 syslog_logger = Some(BasicLogger::new(logger));
-                currently_logging = "Logging to Unix socket";
+                info_messages.push("Logging to Unix socket".into());
             } else {
                 messages.push("Could not open SYSLOG socket".into());
             }
         } else if let Some(addr) = config.syslog_tcp {
             if let Ok(logger) = syslog::tcp(formatter, addr) {
                 syslog_logger = Some(BasicLogger::new(logger));
-                currently_logging = "Logging to TCP";
+                info_messages.push("Logging to TCP".into());
             } else {
                 messages.push("Failed to create TCP logger".to_string());
             }
         } else if let Some(udp_conf) = config.syslog_udp {
             if let Ok(logger) = syslog::udp(formatter, udp_conf.from_addr, udp_conf.to_addr) {
                 syslog_logger = Some(BasicLogger::new(logger));
-                currently_logging = "Logging to UDP";
+                info_messages.push("Logging to UDP".into());
             } else {
                 messages.push("Failed to create UDP logger".to_string());
             }
         } else {
             if let Ok(logger) = syslog::unix(formatter) {
                 syslog_logger = Some(BasicLogger::new(logger));
-                currently_logging = "Logging to standard Unix socket";
+                info_messages.push("Logging to standard Unix socket".into());
             } else {
                 messages.push("Failed to create standard unix logger".to_string());
             }
@@ -164,7 +166,7 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         if let Some(path) = &config.log_file {
             if path.as_os_str() == "-" {
                 builder.target(env_logger::Target::Stderr);
-                currently_logging = "Logging to STDERR";
+                info_messages.push("Logging to STDERR".into());
             } else {
                 match std::fs::OpenOptions::new()
                     .create(true)
@@ -174,7 +176,10 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
                     Ok(file) => {
                         // open the file for appending
                         builder.target(env_logger::Target::Pipe(Box::new(file)));
-                        currently_logging = "Logging to File";
+                        info_messages.push(format!(
+                            "Logging to File {}",
+                            path.as_os_str().to_string_lossy()
+                        ));
                     }
                     Err(err) => {
                         messages.push(format!("Failed to open file for logging: {err}"));
@@ -192,7 +197,9 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
     }))
     .ok();
 
-    info!("{currently_logging}");
+    for m in info_messages {
+        info!("{m}");
+    }
     for m in messages {
         warn!("{m}");
     }
