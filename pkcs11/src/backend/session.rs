@@ -459,9 +459,9 @@ impl Session {
                             self.login_ctx.clone(),
                             &self.db.0,
                         ) {
-                            Ok(ref mut vec) => {
-                                trace!("Fetched certificate: {:?}", vec);
-                                results.append(vec);
+                            Ok(cert) => {
+                                trace!("Fetched certificate: {:?}", cert);
+                                results.push(cert);
                             }
                             Err(err) => {
                                 debug!("Failed to fetch certificate: {:?}", err);
@@ -554,20 +554,25 @@ impl Session {
             )?
             .entity;
 
-        let results: Result<Vec<_>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
+        let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
             use rayon::prelude::*;
             keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.db.0, &self.login_ctx, None))
+                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
                 .collect()
         } else {
             keys.iter()
-                .map(|k| super::key::fetch_one(k, &self.db.0, &self.login_ctx, None))
+                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
                 .collect()
         };
 
-        let handles = results?.into_iter().flatten().collect();
+        let results = results?;
 
         let mut db = self.db.0.lock()?;
+        let handles = results
+            .into_iter()
+            .flatten()
+            .map(|o| db.add_object(o))
+            .collect();
         db.set_fetched_all_keys(true);
 
         Ok(handles)
@@ -592,7 +597,12 @@ impl Session {
         let db = self.db.clone();
 
         match key_info.1 {
-            ObjectKind::Certificate => fetch_certificate(&key_info.0, None, login_ctx, &db.0),
+            ObjectKind::Certificate => Ok(vec![fetch_certificate(
+                &key_info.0,
+                None,
+                login_ctx,
+                &db.0,
+            )?]),
             _ => fetch_key(&key_info.0, None, login_ctx, &db.0),
         }
     }
