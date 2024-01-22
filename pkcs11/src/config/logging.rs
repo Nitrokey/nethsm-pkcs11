@@ -166,26 +166,20 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
                 builder.target(env_logger::Target::Stderr);
                 currently_logging = "Logging to STDERR";
             } else {
-                currently_logging = "Logging to File";
-                // get the current rights of the file
-                if let Ok(metadata) = std::fs::metadata(path) {
-                    let mut permissions = metadata.permissions();
-                    if permissions.readonly() {
-                        #[allow(clippy::permissions_set_readonly_false)]
-                        permissions.set_readonly(false);
-                        std::fs::set_permissions(path, permissions).unwrap();
+                match std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(path)
+                {
+                    Ok(file) => {
+                        // open the file for appending
+                        builder.target(env_logger::Target::Pipe(Box::new(file)));
+                        currently_logging = "Logging to File";
                     }
-                }
-
-                // open the file for appending
-                let file = Box::new(
-                    std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(path)
-                        .expect("could not open log file"),
-                );
-                builder.target(env_logger::Target::Pipe(file));
+                    Err(err) => {
+                        messages.push(format!("Failed to open file for logging: {err}"));
+                    }
+                };
             }
         }
 
