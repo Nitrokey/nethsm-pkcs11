@@ -1,24 +1,70 @@
 use log::{info, warn};
 use syslog::{BasicLogger, Formatter3164};
 
-use super::{
-    config_file::{LogLevel, P11Config},
-    initialization::InitializationError,
-};
+use super::{config_file::P11Config, initialization::InitializationError};
+
+pub struct MultiLog {
+    syslog_logger: Option<BasicLogger>,
+    env_logger: Option<env_logger::Logger>,
+}
+
+impl log::Log for MultiLog {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        self.syslog_logger
+            .as_ref()
+            .is_some_and(|logger| log::Log::enabled(logger, metadata))
+            || self
+                .env_logger
+                .as_ref()
+                .is_some_and(|logger| log::Log::enabled(logger, metadata))
+    }
+
+    fn log(&self, record: &log::Record) {
+        if let Some(ref logger) = self.syslog_logger {
+            log::Log::log(logger, record)
+        };
+        if let Some(ref logger) = self.env_logger {
+            log::Log::log(logger, record)
+        };
+    }
+
+    fn flush(&self) {
+        if let Some(ref logger) = self.syslog_logger {
+            log::Log::flush(logger)
+        };
+        if let Some(ref logger) = self.env_logger {
+            log::Log::flush(logger)
+        };
+    }
+}
 
 // output to stdout, a file or syslog
 pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
     let Ok(config) = config else {
-        // On error, first try logging to syslog
-        if syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info).is_ok() {
-            return;
+        let formatter = Formatter3164 {
+            facility: syslog::Facility::LOG_USER,
+            hostname: None,
+            process: std::env::current_exe()
+                .map(|p| p.into_os_string().to_string_lossy().into_owned())
+                .unwrap_or_else(|_| "NetHSM PKCS11 module".into()),
+            pid: std::process::id(),
         };
-        // Otherwise try to log to stderr
-        env_logger::try_init().ok();
+
+        let unix_logger = syslog::unix(formatter).map(BasicLogger::new).ok();
+        let env_logger = env_logger::Builder::from_default_env().build();
+
+        log::set_boxed_logger(Box::new(MultiLog {
+            syslog_logger: unix_logger,
+            env_logger: Some(env_logger),
+        }))
+        .ok();
+        log::set_max_level(log::LevelFilter::Info);
         return;
     };
 
-    let log_level = config.log_level.unwrap_or(LogLevel::Warn);
+    if let Some(level) = config.log_level {
+        log::set_max_level(level.into());
+    }
 
     let mut currently_logging = "Failed to set a logger";
 
@@ -32,7 +78,8 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         messages.push("Multiple syslog target selected".to_string());
     }
 
-    let use_syslog = config.syslog_socket.is_some()
+    // The user asked for syslog
+    let use_syslog_explicit = config.syslog_socket.is_some()
         || config.syslog_tcp.is_some()
         || config.syslog_udp.is_some()
         || config.syslog_facility.is_some()
@@ -40,14 +87,18 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         || config.syslog_process.is_some()
         || config.syslog_pid.is_some();
 
-    let use_file = config.log_file.is_some();
+    // The user asked for env logging
+    let use_file_explicit = config.log_file.is_some();
 
-    if use_syslog && use_file {
-        messages.push("Cannot log both to file and to syslog".to_string())
-    }
+    // Automatically enable a logger if the other is not enabled
+    let use_syslog = use_syslog_explicit || !use_file_explicit;
+    let use_file = use_file_explicit || !use_syslog_explicit;
+
+    let mut syslog_logger = None;
+    let mut env_logger = None;
 
     // syslog is used if neither syslog nor file is configured
-    if use_syslog || !use_file {
+    if use_syslog {
         let facility = config
             .syslog_facility
             .as_ref()
@@ -69,63 +120,46 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
             current_exe.as_os_str().to_string_lossy().into_owned()
         };
 
+        let formatter = Formatter3164 {
+            facility,
+            hostname: config.syslog_hostname.clone(),
+            process: config.syslog_process.clone().unwrap_or_else(process_name),
+            pid: config.syslog_pid.unwrap_or_else(std::process::id),
+        };
+
         if let Some(path) = &config.syslog_socket {
-            syslog::init_unix_custom(facility, log_level.into(), path).ok();
-            if config.syslog_hostname.is_some()
-                || config.syslog_process.is_some()
-                || config.syslog_pid.is_some()
-            {
-                messages.push(
-                    "Cannot configure PID, Process  name or hostname when logging to unix socket"
-                        .into(),
-                );
+            if let Ok(logger) = syslog::unix_custom(formatter, path) {
+                syslog_logger = Some(BasicLogger::new(logger));
+                currently_logging = "Logging to Unix socket";
+            } else {
+                messages.push("Could not open SYSLOG socket".into());
             }
-            currently_logging = "Logging to unix socket";
         } else if let Some(addr) = config.syslog_tcp {
-            let formatter = Formatter3164 {
-                facility,
-                hostname: config.syslog_hostname.clone(),
-                process: config.syslog_process.clone().unwrap_or_else(process_name),
-                pid: config.syslog_pid.unwrap_or_else(std::process::id),
-            };
             if let Ok(logger) = syslog::tcp(formatter, addr) {
-                log::set_boxed_logger(Box::new(BasicLogger::new(logger))).ok();
+                syslog_logger = Some(BasicLogger::new(logger));
                 currently_logging = "Logging to TCP";
             } else {
                 messages.push("Failed to create TCP logger".to_string());
             }
         } else if let Some(udp_conf) = config.syslog_udp {
-            let formatter = Formatter3164 {
-                facility,
-                hostname: config.syslog_hostname.clone(),
-                process: config.syslog_process.clone().unwrap_or_else(process_name),
-                pid: config.syslog_pid.unwrap_or_else(std::process::id),
-            };
             if let Ok(logger) = syslog::udp(formatter, udp_conf.from_addr, udp_conf.to_addr) {
-                log::set_boxed_logger(Box::new(BasicLogger::new(logger))).ok();
+                syslog_logger = Some(BasicLogger::new(logger));
                 currently_logging = "Logging to UDP";
             } else {
                 messages.push("Failed to create UDP logger".to_string());
             }
         } else {
-            syslog::init_unix(facility, log_level.into()).ok();
-            if config.syslog_hostname.is_some()
-                || config.syslog_process.is_some()
-                || config.syslog_pid.is_some()
-            {
-                messages.push(
-                    "Cannot configure PID, Process  name or hostname when logging to unix socket"
-                        .into(),
-                );
+            if let Ok(logger) = syslog::unix(formatter) {
+                syslog_logger = Some(BasicLogger::new(logger));
+                currently_logging = "Logging to standard Unix socket";
+            } else {
+                messages.push("Failed to create standard unix logger".to_string());
             }
-            currently_logging = "Logging to unix socket";
         }
-    } else {
+    }
+
+    if use_file {
         let mut builder = env_logger::Builder::from_default_env();
-
-        // set the log level
-
-        builder.filter_level(log_level.into());
 
         if let Some(path) = &config.log_file {
             if path.as_os_str() == "-" {
@@ -155,9 +189,14 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
             }
         }
 
-        // Don't crash on re-initialization
-        builder.try_init().ok();
+        env_logger = Some(builder.build());
     }
+
+    log::set_boxed_logger(Box::new(MultiLog {
+        syslog_logger,
+        env_logger,
+    }))
+    .ok();
 
     info!("{currently_logging}");
     for m in messages {
