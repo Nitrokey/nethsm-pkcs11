@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use super::{
-    db::{self, attr::CkRawAttrTemplate, Db, Object},
+    db::{self, attr::CkRawAttrTemplate, Object},
     login::{self, LoginCtx},
     Error,
 };
@@ -459,13 +459,11 @@ pub fn generate_key_from_template(
     fetch_key(&id, parsed.raw_id, login_ctx, db)
 }
 
-// we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
-pub fn fetch_key(
+fn fetch_one_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
-    db: &Mutex<db::Db>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+) -> Result<Vec<Object>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -491,17 +489,28 @@ pub fn fetch_key(
 
     let objects = db::object::from_key_data(key_data, key_id, raw_id)?;
 
+    Ok(objects)
+}
+
+// we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
+pub fn fetch_key(
+    key_id: &str,
+    raw_id: Option<Vec<u8>>,
+    login_ctx: LoginCtx,
+    db: &Mutex<db::Db>,
+) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    let objects = fetch_one_key(key_id, raw_id, login_ctx)?;
+
     let mut db = db.lock()?;
 
     Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
 }
 
-pub fn fetch_certificate(
+fn fetch_one_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
     mut login_ctx: LoginCtx,
-    db: &Mutex<db::Db>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+) -> Result<Object, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -515,9 +524,19 @@ pub fn fetch_certificate(
 
     let object = db::object::from_cert_data(cert_data.entity, key_id, raw_id)?;
 
+    Ok(object)
+}
+
+pub fn fetch_certificate(
+    key_id: &str,
+    raw_id: Option<Vec<u8>>,
+    login_ctx: LoginCtx,
+    db: &Mutex<db::Db>,
+) -> Result<(CK_OBJECT_HANDLE, Object), Error> {
+    let object = fetch_one_certificate(key_id, raw_id, login_ctx)?;
     let r = db.lock()?.add_object(object);
 
-    Ok(vec![r])
+    Ok(r)
 }
 
 // get the id from the logation header value :
@@ -537,10 +556,9 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
 
 pub fn fetch_one(
     key: &KeyItem,
-    db: &Mutex<Db>,
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+) -> Result<Vec<Object>, Error> {
     let mut acc = Vec::new();
 
     if matches!(
@@ -551,13 +569,13 @@ pub fn fetch_one(
             | Some(ObjectKind::SecretKey)
     ) {
         let login_ctx = login_ctx.clone();
-        acc = fetch_key(&key.id, None, login_ctx, db)?;
+        acc = fetch_one_key(&key.id, None, login_ctx)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
         let login_ctx = login_ctx.clone();
-        match fetch_certificate(&key.id, None, login_ctx, db) {
-            Ok(mut vec) => acc.append(&mut vec),
+        match fetch_one_certificate(&key.id, None, login_ctx) {
+            Ok(cert) => acc.push(cert),
             Err(err) => {
                 debug!("Failed to fetch certificate: {:?}", err);
             }
