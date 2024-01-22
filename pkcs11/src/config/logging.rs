@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::{info, warn, LevelFilter};
 use syslog::{BasicLogger, Formatter3164};
 
 use super::{config_file::P11Config, initialization::InitializationError};
@@ -61,12 +61,6 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         log::set_max_level(log::LevelFilter::Info);
         return;
     };
-
-    if let Some(level) = config.log_level {
-        log::set_max_level(level.into());
-    } else {
-        log::set_max_level(log::LevelFilter::Info);
-    }
 
     // Warning messages for invalid configuration
     let mut messages = Vec::new();
@@ -189,6 +183,17 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
         }
 
         env_logger = Some(builder.build());
+    }
+
+    // RUST_LOG must override the default filter
+    match (env_logger.as_ref(), config.log_level.as_ref()) {
+        (Some(logger), Some(_)) if logger.filter() < LevelFilter::Error => {
+            log::set_max_level(logger.filter());
+        }
+        (_, Some(level)) => {
+            log::set_max_level((*level).into());
+        }
+        _ => {}
     }
 
     log::set_boxed_logger(Box::new(MultiLog {
