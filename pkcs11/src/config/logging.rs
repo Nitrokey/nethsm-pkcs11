@@ -145,6 +145,7 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
                 messages.push("Failed to create UDP logger".to_string());
             }
         } else {
+            #[allow(clippy::collapsible_else_if)]
             if let Ok(logger) = syslog::unix(formatter) {
                 syslog_logger = Some(BasicLogger::new(logger));
                 info_messages.push("Logging to standard Unix socket".into());
