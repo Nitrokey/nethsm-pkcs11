@@ -8,7 +8,7 @@ use super::{
     config_file::{config_files, SlotConfig},
     device::{Device, Slot},
 };
-use log::{debug, error, trace};
+use log::{debug, error, info, trace};
 use nethsm_sdk_rs::ureq;
 use rustls::client::ServerCertVerifier;
 use sha2::Digest;
@@ -27,6 +27,7 @@ pub fn initialize_with_configs(configs: Vec<Vec<u8>>) -> Result<Device, Initiali
         .map_err(InitializationError::Config)?;
     crate::config::logging::configure_logger(&config);
 
+    info!("Loaded configuration with {} slots", config.slots.len());
     // initialize the clients
     let mut slots = vec![];
     for slot in config.slots.iter() {
@@ -98,6 +99,13 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         .or(slot.administrator.as_ref())
         .ok_or(InitializationError::NoUser(slot.label.clone()))?;
 
+    info!(
+        "Slot with {} instances, timeout: {:?}, retries: {:?}",
+        slot.instances.len(),
+        slot.timeout_seconds,
+        slot.retries
+    );
+
     for instance in slot.instances.iter() {
         let tls_conf = rustls::ClientConfig::builder().with_safe_defaults();
 
@@ -132,6 +140,11 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
 
             tls_conf.with_root_certificates(roots).with_no_client_auth()
         };
+
+        info!(
+            "Instance configured with: max_idle_connection: {:?}",
+            instance.max_idle_connections
+        );
 
         let max_idle_connections = instance
             .max_idle_connections
