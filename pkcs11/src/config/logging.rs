@@ -158,29 +158,29 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
     if use_file {
         let mut builder = env_logger::Builder::from_default_env();
 
-        if let Some(path) = &config.log_file {
-            if path.as_os_str() == "-" {
-                builder.target(env_logger::Target::Stderr);
-                info_messages.push("Logging to STDERR".into());
-            } else {
-                match std::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(path)
-                {
-                    Ok(file) => {
-                        // open the file for appending
-                        builder.target(env_logger::Target::Pipe(Box::new(file)));
-                        info_messages.push(format!(
-                            "Logging to File {}",
-                            path.as_os_str().to_string_lossy()
-                        ));
-                    }
-                    Err(err) => {
-                        messages.push(format!("Failed to open file for logging: {err}"));
-                    }
-                };
-            }
+        let path = &config.log_file.as_deref().unwrap_or("-".as_ref());
+
+        if path.as_os_str() == "-" {
+            builder.target(env_logger::Target::Stderr);
+            info_messages.push("Logging to STDERR".into());
+        } else {
+            match std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+            {
+                Ok(file) => {
+                    // open the file for appending
+                    builder.target(env_logger::Target::Pipe(Box::new(file)));
+                    info_messages.push(format!(
+                        "Logging to File {}",
+                        path.as_os_str().to_string_lossy()
+                    ));
+                }
+                Err(err) => {
+                    messages.push(format!("Failed to open file for logging: {err}"));
+                }
+            };
         }
 
         env_logger = Some(builder.build());
@@ -188,10 +188,13 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
 
     // RUST_LOG must override the default filter
     match (env_logger.as_ref(), config.log_level.as_ref()) {
-        (Some(logger), Some(_)) if logger.filter() < LevelFilter::Error => {
+        (Some(logger), Some(config_filter)) => {
+            log::set_max_level(logger.filter().min(LevelFilter::from(*config_filter)));
+        }
+        (Some(logger), _) if logger.filter() > LevelFilter::Error => {
             log::set_max_level(logger.filter());
         }
-        (_, Some(level)) => {
+        (None, Some(level)) => {
             log::set_max_level((*level).into());
         }
         _ => {}
