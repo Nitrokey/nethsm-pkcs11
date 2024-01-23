@@ -235,11 +235,11 @@ impl LoginCtx {
                         ) =>
                     {
                         if retry_count == retry_limit {
-                            error!("Retry count exceeded, instance is unreachable: {err}");
+                            error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {err}");
                             return Err(ApiError::InstanceRemoved);
                         }
 
-                        warn!("IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
+                        warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
                         thread::sleep(delay);
                     }
                     // Otherwise, return the error
