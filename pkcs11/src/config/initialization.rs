@@ -1,4 +1,5 @@
 use std::{
+    path::PathBuf,
     sync::{Arc, Mutex},
     thread::available_parallelism,
     time::Duration,
@@ -23,18 +24,22 @@ pub enum InitializationError {
 }
 
 pub fn initialize_with_configs(
-    configs: Result<Vec<Vec<u8>>, ConfigError>,
+    configs: Result<Vec<(Vec<u8>, PathBuf)>, ConfigError>,
 ) -> Result<Device, InitializationError> {
     // Use a closure called immediately so that `?` can be used
     let config_res = (|| {
-        crate::config::config_file::merge_configurations(
-            configs.map_err(InitializationError::Config)?,
+        let configs_files = configs.map_err(InitializationError::Config)?;
+
+        let config = crate::config::config_file::merge_configurations(
+            configs_files.iter().map(|(data, _)| &**data),
         )
-        .map_err(InitializationError::Config)
+        .map_err(InitializationError::Config)?;
+        let file_paths: Vec<PathBuf> = configs_files.into_iter().map(|(_, path)| path).collect();
+        Ok((config, file_paths))
     })();
 
     crate::config::logging::configure_logger(&config_res);
-    let config = config_res?;
+    let (config, _) = config_res?;
 
     info!("Loaded configuration with {} slots", config.slots.len());
     // initialize the clients
@@ -204,8 +209,7 @@ mod tests {
     /// Test various good and bad configs for panics
     #[test]
     fn test_config_loading() {
-        let configs: Vec<Vec<u8>> = vec![
-            r#"
+        let config_content = r#"
 slots:
   - label: LocalHSM
     description: Local HSM (docker)
@@ -224,13 +228,13 @@ slots:
       count: 10
       delay_seconds: 1
     timeout_seconds: 10
-            "#.into(),
-        ];
+            "#;
+        let config_path = "/path/to/config.conf";
+        let configs = vec![(config_content.into(), config_path.into())];
 
         assert!(initialize_with_configs(Ok(configs)).is_ok());
 
-        let configs_bad_fingerprint: Vec<Vec<u8>> = vec![
-            r#"
+        let config_bad_fingerprint_content = r#"
 slots:
   - label: LocalHSM
     description: Local HSM (docker)
@@ -249,14 +253,15 @@ slots:
       count: 10
       delay_seconds: 1
     timeout_seconds: 10
-            "#.into(),
-        ];
+            "#;
+        let configs_bad_fingerprint =
+            vec![(config_bad_fingerprint_content.into(), config_path.into())];
         assert!(initialize_with_configs(Ok(configs_bad_fingerprint)).is_err());
-        let configs_bad_yml: Vec<Vec<u8>> = vec![r#"
+        let config_bad_yml_content = r#"
 dict:
 bad_yml
-            "#
-        .into()];
+            "#;
+        let configs_bad_yml = vec![(config_bad_yml_content.into(), config_path.into())];
         assert!(initialize_with_configs(Ok(configs_bad_yml)).is_err());
     }
 }

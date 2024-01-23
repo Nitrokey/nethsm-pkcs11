@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use log::{info, warn, LevelFilter};
 use syslog::{BasicLogger, Formatter3164};
 
@@ -39,8 +41,8 @@ impl log::Log for MultiLog {
 }
 
 // output to stdout, a file or syslog
-pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
-    let Ok(config) = config else {
+pub fn configure_logger(config: &Result<(P11Config, Vec<PathBuf>), InitializationError>) {
+    let Ok((config, file_paths)) = config else {
         let formatter = Formatter3164 {
             facility: syslog::Facility::LOG_USER,
             hostname: None,
@@ -66,6 +68,11 @@ pub fn configure_logger(config: &Result<P11Config, InitializationError>) {
     let mut messages = Vec::new();
     // Info messages to log after logger is configured
     let mut info_messages = Vec::new();
+
+    for path in file_paths {
+        info_messages.push(format!("Loaded config file at: {}", path.to_string_lossy()));
+    }
+
     if config.syslog_socket.is_some() as u32
         + config.syslog_tcp.is_some() as u32
         + config.syslog_udp.is_some() as u32

@@ -13,10 +13,10 @@ pub enum ConfigError {
 const CONFIG_FILE_NAME: &str = "p11nethsm.conf";
 const ENV_VAR_CONFIG_FILE: &str = "P11NETHSM_CONFIG_FILE";
 
-pub fn config_files() -> Result<Vec<Vec<u8>>, ConfigError> {
+pub fn config_files() -> Result<Vec<(Vec<u8>, PathBuf)>, ConfigError> {
     if let Ok(file_path) = std::env::var(ENV_VAR_CONFIG_FILE) {
-        let file = std::fs::read(file_path).map_err(ConfigError::Io)?;
-        return Ok(vec![file]);
+        let file = std::fs::read(&file_path).map_err(ConfigError::Io)?;
+        return Ok(vec![(file, file_path.into())]);
     }
 
     let mut config_folders = vec![
@@ -28,30 +28,33 @@ pub fn config_files() -> Result<Vec<Vec<u8>>, ConfigError> {
         config_folders.push(format!("{}/.config/nitrokey", home));
     }
 
-    let mut res: Vec<Vec<u8>> = Vec::new();
-    let mut buffer: Vec<u8> = Vec::new();
+    let mut res = Vec::new();
+    let mut buffer = Vec::new();
     for folder in config_folders {
         let file_path = format!("{}/{}", folder, CONFIG_FILE_NAME);
-        if let Ok(mut file) = std::fs::File::open(file_path) {
+        if let Ok(mut file) = std::fs::File::open(&file_path) {
             file.read_to_end(&mut buffer).map_err(ConfigError::Io)?;
-            res.push(mem::take(&mut buffer));
+            res.push((mem::take(&mut buffer), file_path.into()));
         }
     }
 
     Ok(res)
 }
 
-pub fn merge_configurations(configs: Vec<Vec<u8>>) -> Result<P11Config, ConfigError> {
+pub fn merge_configurations<'a>(
+    configs: impl IntoIterator<Item = &'a [u8]>,
+) -> Result<P11Config, ConfigError> {
     let mut config = P11Config::default();
 
-    // if no config file was found, return an error
-    if configs.is_empty() {
-        return Err(ConfigError::NoConfigFile);
+    let mut no_config = true;
+    for file in configs {
+        let parsed = serde_yaml::from_slice(file).map_err(ConfigError::Yaml)?;
+        no_config = false;
+        config.merge(parsed);
     }
 
-    for file in configs {
-        let parsed = serde_yaml::from_slice(&file).map_err(ConfigError::Yaml)?;
-        config.merge(parsed);
+    if no_config {
+        return Err(ConfigError::NoConfigFile);
     }
 
     Ok(config)
@@ -61,7 +64,7 @@ pub fn merge_configurations(configs: Vec<Vec<u8>>) -> Result<P11Config, ConfigEr
 pub fn read_configuration() -> Result<P11Config, ConfigError> {
     let configs = config_files()?;
 
-    merge_configurations(configs)
+    merge_configurations(configs.iter().map(|(data, _)| &**data))
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
