@@ -1,3 +1,4 @@
+use std::env;
 use std::path::PathBuf;
 
 use log::{info, warn, LevelFilter};
@@ -162,8 +163,13 @@ pub fn configure_logger(config: &Result<(P11Config, Vec<PathBuf>), Initializatio
         }
     }
 
+    let mut log_level: LevelFilter = config
+        .log_level
+        .map(Into::into)
+        .unwrap_or_else(log::max_level);
+
     if use_file {
-        let mut builder = env_logger::Builder::from_default_env();
+        let mut builder = env_logger::Builder::new();
 
         let path = &config.log_file.as_deref().unwrap_or("-".as_ref());
 
@@ -190,22 +196,28 @@ pub fn configure_logger(config: &Result<(P11Config, Vec<PathBuf>), Initializatio
             };
         }
 
-        env_logger = Some(builder.build());
+        let mut override_filter = false;
+        if let Ok(filters) = env::var("RUST_LOG") {
+            builder.parse_filters(&filters);
+            override_filter = true;
+        } else if let Some(filter) = config.log_level {
+            builder.filter_level(filter.into());
+        }
+
+        if let Ok(format) = env::var("RUST_LOG_STYLE") {
+            builder.parse_write_style(&format);
+        }
+
+        let tmp = builder.build();
+
+        if override_filter {
+            log_level = tmp.filter();
+        }
+
+        env_logger = Some(tmp);
     }
 
-    // RUST_LOG must override the default filter
-    match (env_logger.as_ref(), config.log_level.as_ref()) {
-        (Some(logger), Some(config_filter)) => {
-            log::set_max_level(logger.filter().min(LevelFilter::from(*config_filter)));
-        }
-        (Some(logger), _) if logger.filter() > LevelFilter::Error => {
-            log::set_max_level(logger.filter());
-        }
-        (None, Some(level)) => {
-            log::set_max_level((*level).into());
-        }
-        _ => {}
-    }
+    log::set_max_level(log_level);
 
     log::set_boxed_logger(Box::new(MultiLog {
         syslog_logger,
