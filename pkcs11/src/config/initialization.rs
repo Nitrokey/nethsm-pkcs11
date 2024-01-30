@@ -14,7 +14,7 @@ use nethsm_sdk_rs::ureq;
 use rustls::client::ServerCertVerifier;
 use sha2::Digest;
 
-const DEFAULT_USER_AGENT: &str = "pkcs11-rs/0.1.0";
+const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug)]
 pub enum InitializationError {
