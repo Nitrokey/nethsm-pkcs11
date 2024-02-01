@@ -8,9 +8,9 @@ use cryptoki_sys::{
     CKA_EC_PARAMS, CKA_EC_POINT, CKA_ENCRYPT, CKA_EXTRACTABLE, CKA_ID, CKA_ISSUER,
     CKA_KEY_GEN_MECHANISM, CKA_KEY_TYPE, CKA_LABEL, CKA_LOCAL, CKA_MODIFIABLE, CKA_MODULUS,
     CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
-    CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP, CKA_VALUE,
-    CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED, CKC_X_509,
-    CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CKA_SERIAL_NUMBER, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
+    CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
+    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, DecodePem, Encode};
@@ -467,6 +467,15 @@ pub fn from_cert_data(
         CKA_ISSUER,
         Attr::Bytes(cert.tbs_certificate.issuer.to_der().map_err(Error::Der)?),
     );
+    attrs.insert(
+        CKA_SERIAL_NUMBER,
+        Attr::Bytes(
+            cert.tbs_certificate
+                .serial_number
+                .to_der()
+                .map_err(Error::Der)?,
+        ),
+    );
     attrs.insert(CKA_TRUSTED, Attr::CK_TRUE);
     attrs.insert(CKA_CERTIFICATE_TYPE, Attr::from_ck_cert_type(CKC_X_509));
     attrs.insert(CKA_CERTIFICATE_CATEGORY, Attr::from_ck_cert_category(0));
@@ -505,7 +514,7 @@ impl Object {
                     }
                 }
                 None => {
-                    rcode = cryptoki_sys::CKR_ATTRIBUTE_TYPE_INVALID;
+                    // rcode = cryptoki_sys::CKR_CRYPTOKI_ALREADY_INITIALIZED;
                     raw_attr.set_unavailable();
                 }
             };
