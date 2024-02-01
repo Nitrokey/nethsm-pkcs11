@@ -674,3 +674,54 @@ impl Session {
         )
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        backend::slot::{get_slot, init_for_tests},
+        config::config_file::RetryConfig,
+    };
+    use std::thread;
+
+    use super::*;
+
+    #[test]
+    fn parrallel_fetch_all_keys() {
+        init_for_tests();
+        let slot = get_slot(0).unwrap();
+
+        let db = Arc::new((Mutex::new(Db::new()), Condvar::new()));
+        let mut sessions = Vec::new();
+        for _ in 0..20 {
+            let session = Session {
+                db: db.clone(),
+                decrypt_ctx: None,
+                encrypt_ctx: None,
+                sign_ctx: None,
+                device_error: 0,
+                enum_ctx: None,
+                flags: 0,
+                login_ctx: LoginCtx::new(
+                    Some(crate::config::config_file::UserConfig {
+                        username: "operator".into(),
+                        password: Some("opPassphrase".into()),
+                    }),
+                    None,
+                    vec![slot.instances[0].clone()],
+                    Some(RetryConfig {
+                        count: 2,
+                        delay_seconds: 0,
+                    }),
+                ),
+                slot_id: 0,
+            };
+            sessions.push(session);
+        }
+
+        thread::scope(|s| {
+            for session in &mut sessions {
+                s.spawn(|| session.fetch_all_keys().unwrap());
+            }
+        })
+    }
+}
