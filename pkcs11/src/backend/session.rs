@@ -475,7 +475,7 @@ impl Session {
                 Ok(results)
             }
 
-            None => self.fetch_all_keys(requirements.kind),
+            None => self.fetch_all_keys(),
         }?;
 
         if let Some(kind) = requirements.kind {
@@ -485,10 +485,7 @@ impl Session {
         Ok(result.iter().map(|(handle, _)| *handle).collect())
     }
 
-    fn fetch_all_keys(
-        &mut self,
-        kind: Option<ObjectKind>,
-    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         {
             let db = self.db.lock()?;
 
@@ -520,11 +517,11 @@ impl Session {
         let results: Result<Vec<_>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
             use rayon::prelude::*;
             keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, kind))
+                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, None))
                 .collect()
         } else {
             keys.iter()
-                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, kind))
+                .map(|k| super::key::fetch_one(k, &self.db, &self.login_ctx, None))
                 .collect()
         };
 
