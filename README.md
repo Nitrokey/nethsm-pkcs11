@@ -9,7 +9,6 @@ This module allows to use a [Nitrokey NetHSM](https://www.nitrokey.com/products/
 
 See the [list of supported features](./features.md) for more details.
 
-Minimum supported rust version (MSRV): 1.70
 ## Download
 
 Download the latest binary from the [release page](https://github.com/Nitrokey/nethsm-pkcs11/releases).
@@ -18,35 +17,11 @@ Download the latest binary from the [release page](https://github.com/Nitrokey/n
 
 Follow the [documentation](https://docs.nitrokey.com/nethsm/pkcs11-setup.html) for usage instructions.
 
-## Building
-
-`gcc` and a working Rust toolchain are required.
-
-```
-cargo build --release
-```
-
-The dynamic library will be in `${CARGO_TARGET_DIR:-target}/release/libnethsm_pkcs11.so`.
-
-### Alpine Linux
-
-You need to install `musl-dev` and `gcc`:
-
-```
-apk add musl-dev gcc
-```
-
-To build on Alpine Linux you will need to add the C argument `target-feature=-crt-static`:
-
-```
-RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
-```
-
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
 
-## Docker examples
+## Docker Examples
 
 For testing and development purposes there are two examples using the PKCS11 driver with Nginx and Apache.
 
@@ -72,4 +47,28 @@ The NetHSM is expected to have be provisionned with the following configuration:
 ```bash
 nitropy nethsm --host localhost:8443 --no-verify-tls provision -u 0123456789 -a Administrator
 nitropy nethsm --host localhost:8443 --no-verify-tls add-user -n Operator -u operator -p opPassphrase -r Operator
+```
+
+## Building
+
+Required are `gcc` and a working Rust toolchain of at least version (MSRV) 1.70.
+
+```
+cargo build --release
+```
+
+The dynamic library will be in `${CARGO_TARGET_DIR:-target}/release/libnethsm_pkcs11.so`.
+
+### Alpine Linux
+
+You need to install `musl-dev` and `gcc`:
+
+```
+apk add musl-dev gcc
+```
+
+To build on Alpine Linux you will need to add the C argument `target-feature=-crt-static`:
+
+```
+RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 ```
