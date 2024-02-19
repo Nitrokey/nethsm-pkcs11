@@ -700,6 +700,8 @@ mod test {
 
     use super::*;
 
+    // Ignored by default due to network access
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn parrallel_fetch_all_keys() {
@@ -741,6 +743,8 @@ mod test {
         })
     }
 
+    // Ignored by default due to network access
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn parrallel_fetch_all_keys_fail() {
