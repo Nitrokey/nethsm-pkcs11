@@ -231,6 +231,8 @@ mod tests {
 
     use super::*;
 
+    // Ignored by default due ENV variable being changed for the duration of the tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_read_home_config() {
@@ -276,6 +278,8 @@ slots:
         fs::remove_dir_all(home).unwrap();
     }
 
+    // Ignored by default due ENV variable being changed for the duration of the tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_read_config_no_file() {

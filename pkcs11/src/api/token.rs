@@ -428,7 +428,8 @@ mod tests {
 
     use super::*;
 
-    // ignored because it needs to be run alone on one thread
+    // Ignored by default because it would race with the other #[ignore] tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_wait_for_slot_event_no_event() {
@@ -441,7 +442,8 @@ mod tests {
         assert_eq!(result, cryptoki_sys::CKR_NO_EVENT);
     }
 
-    // ignored because it needs to be run alone on one thread
+    // Ignored by default because it would race with the other #[ignore] tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_wait_for_slot_event_one_event() {
@@ -460,7 +462,8 @@ mod tests {
         assert_eq!(slot, 0);
     }
 
-    // we ignore this test because it requires cargo test -- --test-threads=1
+    // Ignored by default because it would race with the other #[ignore] tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_wait_for_slot_event_blocking_one_event() {
@@ -483,7 +486,8 @@ mod tests {
         assert_eq!(slot, 0);
     }
 
-    // we ignore this test because it requires cargo test -- --test-threads=1
+    // Ignored by default because it would race with the other #[ignore] tests
+    // Run with cargo test -- --test-threads=1 --ignored
     #[test]
     #[ignore]
     fn test_wait_for_slot_event_blocking_finalize() {
