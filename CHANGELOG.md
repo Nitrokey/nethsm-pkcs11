@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.1][] (2024-04-19)
+
+### Fixed
+
+- Update `rustls` dependency to 0.21.11 to fix [RUSTSEC-2024-0336][]
+
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/1.3.0...1.3.1)
+
+[1.3.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/1.3.1
+
+[RUSTSEC-2024-0336]: https://rustsec.org/advisories/RUSTSEC-2024-0336.html
+
 ## [1.3.0][] (2024-01-12)
 
 ### Fixed
