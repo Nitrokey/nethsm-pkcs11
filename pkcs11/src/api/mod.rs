@@ -13,6 +13,7 @@ pub mod sign;
 pub mod token;
 pub mod verify;
 
+use std::ptr::addr_of_mut;
 use std::sync::atomic::Ordering;
 
 use crate::{
@@ -35,7 +36,7 @@ pub extern "C" fn C_GetFunctionList(
     }
 
     unsafe {
-        std::ptr::write(pp_fn_list, &mut data::FN_LIST);
+        std::ptr::write(pp_fn_list, addr_of_mut!(data::FN_LIST));
     }
     cryptoki_sys::CKR_OK
 }
