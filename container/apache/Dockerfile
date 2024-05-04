@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /rust/build/target/release/libnethsm_pkcs11.so /usr/lib/x86_64-linux-gnu/pkcs11/libnethsm_pkcs11.so
-COPY _certificate.pem /certs/certificate.pem
 
 ADD container/apache/openssl.cnf /etc/ssl/openssl.cnf
 ADD container/apache/p11nethsm.conf /etc/nitrokey/p11nethsm.conf
