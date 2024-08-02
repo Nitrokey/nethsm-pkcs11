@@ -3,10 +3,13 @@ use std::{io::Read, mem, net::SocketAddr, path::PathBuf};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
+    #[error("Failed to load configuration file")]
     Io(std::io::Error),
+    #[error("Failed to parse configuration file {0}")]
     Yaml(serde_yaml::Error),
+    #[error("Config file not found")]
     NoConfigFile,
 }
 

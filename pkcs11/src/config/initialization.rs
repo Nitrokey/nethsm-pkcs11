@@ -16,10 +16,13 @@ use sha2::Digest;
 
 const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION"));
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum InitializationError {
+    #[error("Failed to load config")]
     Config(crate::config::config_file::ConfigError),
+    #[error("Failed to load certificates")]
     NoCerts,
+    #[error("No operator or administrator for slot: {0}")]
     NoUser(String),
 }
 
@@ -49,7 +52,6 @@ pub fn initialize_with_configs(
     }
     Ok(Device {
         slots,
-        log_file: config.log_file,
         enable_set_attribute_value: config.enable_set_attribute_value,
     })
 }
@@ -192,7 +194,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
     }
 
     Ok(Slot {
-        description: slot.description.clone(),
+        _description: slot.description.clone(),
         label: slot.label.clone(),
         instances,
         administrator: slot.administrator.clone(),

@@ -156,12 +156,6 @@ pub struct Object {
     pub mechanisms: Vec<KeyMechanism>,
 }
 
-#[derive(Debug, Clone)]
-pub struct KeyPair {
-    pub public_key: Object,
-    pub private_key: Object,
-}
-
 struct KeyData {
     key_type: CK_KEY_TYPE,
     key_size: Option<usize>,
