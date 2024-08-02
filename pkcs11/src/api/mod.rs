@@ -59,7 +59,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     match result {
         Ok(()) => {}
         Err(err) => {
-            error!("NetHSM PKCS#11: Failed to initialize configuration: {err:?}");
+            error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     }

@@ -94,7 +94,7 @@ impl SessionManager {
                 administrator: None,
                 retries: None,
                 db: Arc::new((Mutex::new(Db::new()), Condvar::new())),
-                description: None,
+                _description: None,
                 instances: vec![],
                 label: "test".to_string(),
                 operator: None,

@@ -1,7 +1,4 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, Condvar, Mutex},
-};
+use std::sync::{Arc, Condvar, Mutex};
 
 use nethsm_sdk_rs::apis::configuration::Configuration;
 
@@ -12,21 +9,15 @@ use super::config_file::{RetryConfig, UserConfig};
 // stores the global configuration of the module
 #[derive(Debug, Clone)]
 pub struct Device {
-    pub log_file: Option<PathBuf>,
     pub slots: Vec<Arc<Slot>>,
     pub enable_set_attribute_value: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct ClusterInstance {
-    pub api_config: nethsm_sdk_rs::apis::configuration::Configuration,
 }
 
 #[derive(Debug, Clone)]
 pub struct Slot {
     pub label: String,
     pub retries: Option<RetryConfig>,
-    pub description: Option<String>,
+    pub _description: Option<String>,
     pub instances: Vec<Configuration>,
     pub operator: Option<UserConfig>,
     pub administrator: Option<UserConfig>,

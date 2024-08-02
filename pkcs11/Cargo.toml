@@ -37,6 +37,7 @@ sha1 = { default-features = false, version = "0.10" }
 digest = { default-features = false, version = "0.10" }
 rayon = "1.8.0"
 syslog = "6.1.0"
+thiserror = "1.0.63"
 
 [dev-dependencies]
 hex-literal = "0.4.1"

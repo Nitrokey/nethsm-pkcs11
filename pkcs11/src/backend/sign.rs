@@ -8,7 +8,6 @@ use super::{
 };
 use base64ct::{Base64, Encoding};
 use der::Decode;
-use digest::{FixedOutput, HashMarker};
 use log::{debug, trace};
 use nethsm_sdk_rs::{apis::default_api, models::SignMode};
 use sha2::Digest;
@@ -21,8 +20,6 @@ pub struct SignCtx {
     pub data: Vec<u8>,
     pub login_ctx: LoginCtx,
 }
-
-pub trait GenericDigest: HashMarker + FixedOutput {}
 
 impl SignCtx {
     pub fn init(mechanism: Mechanism, key: Object, login_ctx: LoginCtx) -> Result<Self, Error> {
