@@ -205,7 +205,7 @@ pub fn create_key_from_template(
 
     let key_class = if let Some(ref key_class) = parsed.key_class {
         let key_class = *key_class;
-        if key_class == ObjectKind::Other && key_class == ObjectKind::PublicKey {
+        if key_class == ObjectKind::Other || key_class == ObjectKind::PublicKey {
             return Err(Error::ObjectClassNotSupported);
         }
         key_class
