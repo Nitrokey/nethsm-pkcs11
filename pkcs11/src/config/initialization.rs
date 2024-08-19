@@ -263,6 +263,12 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                 .timeout(Duration::from_secs(t))
                 .timeout_connect(Duration::from_secs(10));
         }
+        if let Some(keepalive) = slot.tcp_keepalives {
+            builder = builder
+                .tcp_keepalive_time(Duration::from_secs(keepalive.time_seconds))
+                .tcp_keepalive_interval(Duration::from_secs(keepalive.interval_seconds))
+                .tcp_keepalive_retries(keepalive.retries);
+        }
 
         let agent = builder.build();
 

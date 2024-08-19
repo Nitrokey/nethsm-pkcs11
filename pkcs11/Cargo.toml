@@ -38,7 +38,7 @@ syslog = "6.1.0"
 thiserror = "1.0.63"
 
 # Needed to prevent breaking change with rustls updates
-ureq = { version = "2.10", default-features = false }
+ureq = { version = "2.10", features = ["keepalive"], default-features  = false }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
