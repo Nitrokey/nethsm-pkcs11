@@ -200,11 +200,11 @@ pub struct SlotConfig {
     #[serde(default)]
     pub retries: Option<RetryConfig>,
     #[serde(default)]
-    pub tcp_keepalives: Option<TcpKeepaliveConfig>,
+    pub tcp_keepalive: Option<TcpKeepaliveConfig>,
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
     #[serde(default)]
-    pub connection_stale_after_seconds: Option<u64>,
+    pub connections_max_idle_duration: Option<u64>,
 }
 
 // An user
@@ -393,6 +393,12 @@ password: ""
                         delay_seconds: 1
                     }),
                     timeout_seconds: Some(10),
+                    tcp_keepalive: Some(TcpKeepaliveConfig {
+                        time_seconds: 600,
+                        interval_seconds: 60,
+                        retries: 3
+                    }),
+                    connections_max_idle_duration: Some(60 * 30)
                 }]
             },
             serde_yaml::from_str(config).unwrap()
