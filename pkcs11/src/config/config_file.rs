@@ -127,6 +127,13 @@ pub struct RetryConfig {
     pub delay_seconds: u64,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct TcpKeepaliveConfig {
+    pub time_seconds: u64,
+    pub interval_seconds: u64,
+    pub retries: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HexFingerprint {
     pub value: Vec<u8>,
@@ -193,7 +200,11 @@ pub struct SlotConfig {
     #[serde(default)]
     pub retries: Option<RetryConfig>,
     #[serde(default)]
+    pub tcp_keepalives: Option<TcpKeepaliveConfig>,
+    #[serde(default)]
     pub timeout_seconds: Option<u64>,
+    #[serde(default)]
+    pub connection_stale_after_seconds: Option<u64>,
 }
 
 // An user
