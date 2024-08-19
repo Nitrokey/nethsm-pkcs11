@@ -198,7 +198,7 @@ impl LoginCtx {
     {
         // we loop for a maximum of instances.len() times
         for _ in 0..self.instances.len() {
-            let conf = match self.get_config_user_mode(&user_mode) {
+            let mut conf = match self.get_config_user_mode(&user_mode) {
                 Some(conf) => conf,
                 None => continue,
             };
@@ -241,6 +241,9 @@ impl LoginCtx {
 
                         warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
                         thread::sleep(delay);
+                        if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
+                            conf = new_conf;
+                        }
                     }
                     // Otherwise, return the error
                     Err(err) => return Err(err.into()),
