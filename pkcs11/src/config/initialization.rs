@@ -11,7 +11,10 @@ use super::{
 };
 use log::{debug, error, info, trace};
 use nethsm_sdk_rs::ureq;
-use rustls::client::ServerCertVerifier;
+use rustls::{
+    client::danger::ServerCertVerifier,
+    crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider},
+};
 use sha2::Digest;
 
 const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION"));
@@ -57,26 +60,67 @@ pub fn initialize_with_configs(
 }
 
 pub fn initialize() -> Result<Device, InitializationError> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .unwrap();
     initialize_with_configs(config_files())
 }
 
-struct DangerIgnoreVerifier {}
+#[derive(Debug)]
+struct DangerIgnoreVerifier;
 
 impl ServerCertVerifier for DangerIgnoreVerifier {
     fn verify_server_cert(
         &self,
-        _end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &rustls::ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _end_entity: &rustls::pki_types::CertificateDer<'_>,
+        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
+        _server_name: &rustls::pki_types::ServerName<'_>,
         _ocsp_response: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
-        // always accept the certificate
-        Ok(rustls::client::ServerCertVerified::assertion())
+        _now: rustls::pki_types::UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+        verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &default_provider.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+        verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &default_provider.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+
+        default_provider
+            .signature_verification_algorithms
+            .supported_schemes()
     }
 }
 
+#[derive(Debug)]
 struct FingerprintVerifier {
     fingerprints: Vec<Vec<u8>>,
 }
@@ -84,25 +128,62 @@ struct FingerprintVerifier {
 impl ServerCertVerifier for FingerprintVerifier {
     fn verify_server_cert(
         &self,
-        end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &rustls::ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
+        end_entity: &rustls::pki_types::CertificateDer<'_>,
+        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
+        _server_name: &rustls::pki_types::ServerName<'_>,
         _ocsp_response: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        _now: rustls::pki_types::UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
         let mut hasher = sha2::Sha256::new();
-        hasher.update(&end_entity.0);
+        hasher.update(end_entity.as_ref());
         let result = hasher.finalize();
-        for fingerprint in self.fingerprints.iter() {
-            if fingerprint == &result[..] {
+        for fingerprint in &self.fingerprints {
+            if fingerprint == &*result {
                 trace!("Certificate fingerprint matches");
-                return Ok(rustls::client::ServerCertVerified::assertion());
+                return Ok(rustls::client::danger::ServerCertVerified::assertion());
             }
         }
         Err(rustls::Error::General(
             "Could not verify certificate fingerprint".to_string(),
         ))
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+        verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &default_provider.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+        verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &default_provider.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        let default_provider = CryptoProvider::get_default().unwrap();
+
+        default_provider
+            .signature_verification_algorithms
+            .supported_schemes()
     }
 }
 
@@ -123,11 +204,12 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
     );
 
     for instance in slot.instances.iter() {
-        let tls_conf = rustls::ClientConfig::builder().with_safe_defaults();
+        let tls_conf = rustls::ClientConfig::builder();
 
         let tls_conf = if instance.danger_insecure_cert {
             tls_conf
-                .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier {}))
+                .dangerous()
+                .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier))
                 .with_no_client_auth()
         } else if !instance.sha256_fingerprints.is_empty() {
             let fingerprints = instance
@@ -136,6 +218,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                 .map(|f| f.value.clone())
                 .collect();
             tls_conf
+                .dangerous()
                 .with_custom_certificate_verifier(Arc::new(FingerprintVerifier { fingerprints }))
                 .with_no_client_auth()
         } else {
@@ -145,7 +228,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                 InitializationError::NoCerts
             })?;
 
-            let (added, failed) = roots.add_parsable_certificates(&native_certs);
+            let (added, failed) = roots.add_parsable_certificates(native_certs);
             // panic!("{:?}", (added, failed));
             debug!("Added {added} certifcates and failed to parse {failed} certificates");
 

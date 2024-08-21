@@ -22,11 +22,9 @@ serde = { version = "1", features = ["derive"], default-features = false }
 serde_yaml = "0.9.22"
 serde_json = { default-features = false, version = "1.0.64" }
 lazy_static = "1.4.0"
-nethsm-sdk-rs = { version = "1" }
-rustls = { version = "0.21", features = [
-  "dangerous_configuration",
-], default-features = false }
-rustls-native-certs = "0.6"
+nethsm-sdk-rs = { version = "1.1" }
+rustls = { version = "0.23", default-features = false }
+rustls-native-certs = "0.7"
 base64ct = { version = "1.6", default-features = false }
 hex = "0.4"
 der = { version = "0.7", default-features = false }
@@ -38,6 +36,9 @@ digest = { default-features = false, version = "0.10" }
 rayon = "1.8.0"
 syslog = "6.1.0"
 thiserror = "1.0.63"
+
+# Needed to prevent breaking change with rustls updates
+ureq = { version = "2.10", default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
