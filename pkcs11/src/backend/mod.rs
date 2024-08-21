@@ -61,7 +61,7 @@ impl<T> From<apis::Error<T>> for ApiError {
                 }),
             }),
             apis::Error::StringParse(e) => ApiError::StringParse(e),
-            apis::Error::Multipart { field: _, error } => ApiError::Io(error),
+            // apis::Error::Multipart { field: _, error } => ApiError::Io(error),
         }
     }
 }
