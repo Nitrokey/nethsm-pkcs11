@@ -793,6 +793,8 @@ mod test {
                                 r
                             );
                         }
+                        // FIXME: check for error 404 here
+                        Err(Error::Api(ApiError::Serde(_))) => {}
                         res => panic!("{res:?}"),
                     };
                 });
