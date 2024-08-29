@@ -46,7 +46,7 @@ ureq = { version = "2.10", features = ["keepalive"], default-features  = false }
 hex-literal = "0.4.1"
 pkcs11 = "0.5.0"
 tempfile = "3.12.0"
+time = "0.3.36"
 
 [features]
 pkcs11-full-tests = []
-default = ["pkcs11-full-tests"]
