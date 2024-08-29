@@ -50,3 +50,4 @@ time = "0.3.36"
 
 [features]
 pkcs11-full-tests = []
+default = []

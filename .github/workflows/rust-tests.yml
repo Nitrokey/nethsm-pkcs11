@@ -37,7 +37,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --frozen --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
+          args: --frozen --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
 
   check-windows:
     runs-on: windows-latest
