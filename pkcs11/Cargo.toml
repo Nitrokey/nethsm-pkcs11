@@ -37,8 +37,16 @@ rayon = "1.8.0"
 syslog = "6.1.0"
 thiserror = "1.0.63"
 
+config_file = { path = "config_file" }
+
 # Needed to prevent breaking change with rustls updates
 ureq = { version = "2.10", features = ["keepalive"], default-features  = false }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
+pkcs11 = "0.5.0"
+tempfile = "3.12.0"
+
+[features]
+pkcs11-full-tests = []
+default = ["pkcs11-full-tests"]
