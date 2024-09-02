@@ -99,11 +99,15 @@ fn tls_conf() -> rustls::ClientConfig {
 }
 
 pub struct TestContext {
+    blocked_ports: HashSet<u16>,
+}
+
+pub struct TestDropper {
     // treated as dead code even though it shouldn't: https://github.com/rust-lang/rust/issues/122833
     #[allow(dead_code)]
     serialize_test: MutexGuard<'static, ()>,
     command_to_kill: Child,
-    blocked_ports: HashSet<u16>,
+    context: TestContext,
 }
 
 fn iptables() -> Command {
@@ -117,6 +121,41 @@ fn iptables() -> Command {
 }
 
 impl TestContext {
+    fn unblock(port: u16) {
+        let out_in = iptables()
+            .args([
+                "-D",
+                "INPUT",
+                "-p",
+                "tcp",
+                "--dport",
+                &port.to_string(),
+                "-j",
+                "DROP",
+            ])
+            .output()
+            .unwrap();
+        assert!(out_in.status.success());
+        let out_in = iptables()
+            .args([
+                "-D",
+                "OUTPUT",
+                "-p",
+                "tcp",
+                "--dport",
+                &port.to_string(),
+                "-j",
+                "DROP",
+            ])
+            .output()
+            .unwrap();
+        assert!(out_in.status.success());
+    }
+    pub fn remove_block(&mut self, port: u16) {
+        assert!(self.blocked_ports.remove(&port));
+        Self::unblock(port);
+    }
+
     pub fn add_block(&mut self, port: u16) {
         if !self.blocked_ports.insert(port) {
             return;
@@ -153,7 +192,7 @@ impl TestContext {
     }
 }
 
-impl Drop for TestContext {
+impl Drop for TestDropper {
     fn drop(&mut self) {
         Command::new("kill")
             .args([self.command_to_kill.id().to_string()])
@@ -177,35 +216,8 @@ impl Drop for TestContext {
             .read_to_string(&mut buf)
             .unwrap();
 
-        for p in self.blocked_ports.iter().cloned() {
-            let out_in = iptables()
-                .args([
-                    "-D",
-                    "INPUT",
-                    "-p",
-                    "tcp",
-                    "--dport",
-                    &p.to_string(),
-                    "-j",
-                    "DROP",
-                ])
-                .output()
-                .unwrap();
-            assert!(out_in.status.success());
-            let out_in = iptables()
-                .args([
-                    "-D",
-                    "OUTPUT",
-                    "-p",
-                    "tcp",
-                    "--dport",
-                    &p.to_string(),
-                    "-j",
-                    "DROP",
-                ])
-                .output()
-                .unwrap();
-            assert!(out_in.status.success());
+        for p in self.context.blocked_ports.iter().cloned() {
+            TestContext::unblock(p);
         }
         println!("{buf}");
     }
@@ -289,7 +301,7 @@ pub fn run_tests(
     config: P11Config,
     f: impl FnOnce(&mut TestContext, &mut Ctx),
 ) {
-    let mut test_ctx = TestContext {
+    let mut test_dropper = TestDropper {
         serialize_test: DOCKER_HELD.lock().unwrap(),
         command_to_kill: Command::new("podman")
             .args([
@@ -305,7 +317,9 @@ pub fn run_tests(
             .stderr(Stdio::piped())
             .spawn()
             .unwrap(),
-        blocked_ports: HashSet::new(),
+        context: TestContext {
+            blocked_ports: HashSet::new(),
+        },
     };
 
     let client = AgentBuilder::new().tls_config(Arc::new(tls_conf())).build();
@@ -354,6 +368,6 @@ pub fn run_tests(
     let path = tmpfile.path();
     set_var(config_file::ENV_VAR_CONFIG_FILE, path);
     let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
-    f(&mut test_ctx, &mut ctx);
+    f(&mut test_dropper.context, &mut ctx);
     ctx.close_all_sessions(0).unwrap();
 }
