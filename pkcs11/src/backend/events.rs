@@ -36,7 +36,7 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
 }
 
 pub fn fetch_slots_state() -> Result<(), cryptoki_sys::CK_RV> {
-    let Some(device) = DEVICE.get() else {
+    let Some(device) = DEVICE.load_full() else {
         error!("Initialization was not performed or failed");
         return Err(cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
     };

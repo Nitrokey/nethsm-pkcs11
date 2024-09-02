@@ -36,6 +36,7 @@ digest = { default-features = false, version = "0.10" }
 rayon = "1.8.0"
 syslog = "6.1.0"
 thiserror = "1.0.63"
+arc-swap = "1.7.1"
 
 config_file = { path = "config_file" }
 

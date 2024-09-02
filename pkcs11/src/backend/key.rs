@@ -169,7 +169,7 @@ fn upload_certificate(
         }
     };
 
-    let Some(device) = DEVICE.get() else {
+    let Some(device) = DEVICE.load_full() else {
         error!("Initialization was not performed or failed");
         return Err(Error::LibraryNotInitialized);
     };

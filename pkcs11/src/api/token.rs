@@ -31,7 +31,7 @@ pub extern "C" fn C_GetSlotList(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let Some(device) = DEVICE.get() else {
+    let Some(device) = DEVICE.load_full() else {
         error!("Initialization was not performed or failed");
         return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
     };
