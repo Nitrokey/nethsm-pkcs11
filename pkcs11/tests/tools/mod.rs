@@ -1,6 +1,8 @@
+use std::collections::HashSet;
 use std::io::{BufWriter, Read};
+use std::net::Ipv4Addr;
 use std::process::{Child, Stdio};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use std::thread::sleep;
 use std::time::Duration;
 use std::{env::set_var, process::Command};
@@ -21,6 +23,10 @@ use rustls::{
 };
 use tempfile::NamedTempFile;
 use time::format_description;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::runtime::{self};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::task::AbortHandle;
 use ureq::AgentBuilder;
 
 pub const TEST_NETHSM_INSTANCE: &str = match option_env!("TEST_NETHSM_INSTANCE") {
@@ -92,38 +98,200 @@ fn tls_conf() -> rustls::ClientConfig {
         .with_no_client_auth()
 }
 
-struct Dropper(Child);
+pub struct TestContext {
+    // treated as dead code even though it shouldn't: https://github.com/rust-lang/rust/issues/122833
+    #[allow(dead_code)]
+    serialize_test: MutexGuard<'static, ()>,
+    command_to_kill: Child,
+    blocked_ports: HashSet<u16>,
+}
 
-impl Drop for Dropper {
+fn iptables() -> Command {
+    if option_env!("USE_SUDO").is_some() {
+        let mut command = Command::new("sudo");
+        command.arg("iptables");
+        command
+    } else {
+        Command::new("iptables")
+    }
+}
+
+impl TestContext {
+    pub fn add_block(&mut self, port: u16) {
+        if !self.blocked_ports.insert(port) {
+            return;
+        }
+
+        let out_in = iptables()
+            .args([
+                "-A",
+                "INPUT",
+                "-p",
+                "tcp",
+                "--dport",
+                &port.to_string(),
+                "-j",
+                "DROP",
+            ])
+            .output()
+            .unwrap();
+        assert!(out_in.status.success());
+        let out_in = iptables()
+            .args([
+                "-A",
+                "OUTPUT",
+                "-p",
+                "tcp",
+                "--dport",
+                &port.to_string(),
+                "-j",
+                "DROP",
+            ])
+            .output()
+            .unwrap();
+        assert!(out_in.status.success());
+    }
+}
+
+impl Drop for TestContext {
     fn drop(&mut self) {
         Command::new("kill")
-            .args([self.0.id().to_string()])
+            .args([self.command_to_kill.id().to_string()])
             .spawn()
             .unwrap()
             .wait()
             .unwrap();
-        self.0.wait().unwrap();
+        self.command_to_kill.wait().unwrap();
         let mut buf = String::new();
-        self.0
+        self.command_to_kill
             .stdout
             .take()
             .unwrap()
             .read_to_string(&mut buf)
             .unwrap();
         buf.push('\n');
-        self.0
+        self.command_to_kill
             .stderr
             .take()
             .unwrap()
             .read_to_string(&mut buf)
             .unwrap();
+
+        for p in self.blocked_ports.iter().cloned() {
+            let out_in = iptables()
+                .args([
+                    "-D",
+                    "INPUT",
+                    "-p",
+                    "tcp",
+                    "--dport",
+                    &p.to_string(),
+                    "-j",
+                    "DROP",
+                ])
+                .output()
+                .unwrap();
+            assert!(out_in.status.success());
+            let out_in = iptables()
+                .args([
+                    "-D",
+                    "OUTPUT",
+                    "-p",
+                    "tcp",
+                    "--dport",
+                    &p.to_string(),
+                    "-j",
+                    "DROP",
+                ])
+                .output()
+                .unwrap();
+            assert!(out_in.status.success());
+        }
         println!("{buf}");
     }
 }
 
-pub fn run_tests(config: P11Config, f: impl FnOnce(&mut Ctx)) {
-    let _dropper = Dropper(
-        Command::new("podman")
+static PROXY_SENDER: LazyLock<UnboundedSender<(u16, u16)>> = LazyLock::new(|| {
+    let (tx, mut rx) = unbounded_channel();
+    std::thread::spawn(move || {
+        runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .unwrap()
+            .block_on(async move {
+                let mut tasks = Vec::new();
+                while let Some((from_port, to_port)) = rx.recv().await {
+                    tasks.push(tokio::spawn(proxy(from_port, to_port)));
+                }
+                for task in tasks {
+                    task.abort();
+                }
+            })
+    });
+    tx
+});
+
+async fn proxy(from_port: u16, to_port: u16) {
+    let listener = TcpListener::bind(((Ipv4Addr::from([127, 0, 0, 1])), from_port))
+        .await
+        .unwrap();
+    struct Droppper(Vec<AbortHandle>);
+    impl Drop for Droppper {
+        fn drop(&mut self) {
+            assert!(!self.0.is_empty(), "The proxy was not used");
+            for handle in &self.0 {
+                handle.abort();
+            }
+        }
+    }
+
+    let mut dropper = Droppper(Vec::new());
+
+    loop {
+        let (socket1, _) = listener.accept().await.unwrap();
+
+        let socket2 = TcpStream::connect((Ipv4Addr::from([127, 0, 0, 1]), to_port))
+            .await
+            .unwrap();
+
+        async fn handle_stream(
+            mut rx: tokio::net::tcp::OwnedReadHalf,
+            mut tx: tokio::net::tcp::OwnedWriteHalf,
+        ) {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            let mut buffer = vec![0; 12 * 1024];
+            loop {
+                let n = rx.read(&mut buffer).await.unwrap();
+
+                if n == 0 {
+                    return;
+                }
+
+                tx.write_all(&buffer[..n]).await.unwrap();
+            }
+        }
+
+        let (rx1, tx1) = socket1.into_split();
+        let (rx2, tx2) = socket2.into_split();
+        dropper
+            .0
+            .push(tokio::spawn(handle_stream(rx1, tx2)).abort_handle());
+        dropper
+            .0
+            .push(tokio::spawn(handle_stream(rx2, tx1)).abort_handle());
+    }
+}
+
+static DOCKER_HELD: Mutex<()> = Mutex::new(());
+
+pub fn run_tests(
+    proxies: &[(u16, u16)],
+    config: P11Config,
+    f: impl FnOnce(&mut TestContext, &mut Ctx),
+) {
+    let mut test_ctx = TestContext {
+        serialize_test: DOCKER_HELD.lock().unwrap(),
+        command_to_kill: Command::new("podman")
             .args([
                 "run",
                 "--rm",
@@ -137,7 +305,8 @@ pub fn run_tests(config: P11Config, f: impl FnOnce(&mut Ctx)) {
             .stderr(Stdio::piped())
             .spawn()
             .unwrap(),
-    );
+        blocked_ports: HashSet::new(),
+    };
 
     let client = AgentBuilder::new().tls_config(Arc::new(tls_conf())).build();
 
@@ -150,15 +319,6 @@ pub fn run_tests(config: P11Config, f: impl FnOnce(&mut Ctx)) {
 
     sleep(Duration::from_secs(2));
 
-    // match system_factory_reset_post(&sdk_config) {
-    //     Ok(_) => {}
-    //     Err(nethsm_sdk_rs::apis::Error::ResponseError(ResponseContent {
-    //         entity: SystemFactoryResetPostError::Status412(),
-    //         ..
-    //     })) => {}
-    //     Err(nethsm_sdk_rs::apis::Error::Ureq(ureq::Error::Status(412, _))) => {}
-    //     Err(e) => panic!("{e}"),
-    // };
     provision_post(
         &sdk_config,
         ProvisionRequestData {
@@ -184,12 +344,16 @@ pub fn run_tests(config: P11Config, f: impl FnOnce(&mut Ctx)) {
     )
     .unwrap();
 
+    for (in_port, out_port) in proxies {
+        PROXY_SENDER.send((*in_port, *out_port)).unwrap();
+    }
+
     let mut tmpfile: NamedTempFile = NamedTempFile::new().unwrap();
 
     serde_yaml::to_writer(BufWriter::new(tmpfile.as_file_mut()), &config).unwrap();
     let path = tmpfile.path();
     set_var(config_file::ENV_VAR_CONFIG_FILE, path);
     let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
-    f(&mut ctx);
+    f(&mut test_ctx, &mut ctx);
     ctx.close_all_sessions(0).unwrap();
 }
