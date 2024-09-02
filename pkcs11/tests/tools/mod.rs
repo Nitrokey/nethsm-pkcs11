@@ -1,7 +1,7 @@
 use std::collections::HashSet;
-use std::io::{BufWriter, Read};
+use std::io::BufWriter;
+use std::mem;
 use std::net::Ipv4Addr;
-use std::process::{Child, Stdio};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use std::thread::sleep;
 use std::time::Duration;
@@ -29,9 +29,9 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::task::AbortHandle;
 use ureq::AgentBuilder;
 
-pub const TEST_NETHSM_INSTANCE: &str = match option_env!("TEST_NETHSM_INSTANCE") {
+pub const NETHSM_DOCKER_HOSTNAME: &str = match option_env!("NETHSM_DOCKER_HOSTNAME") {
     Some(v) => v,
-    None => "https://localhost:8443/api/v1",
+    None => "localhost",
 };
 
 #[derive(Debug)]
@@ -105,13 +105,12 @@ pub struct TestContext {
 pub struct TestDropper {
     // treated as dead code even though it shouldn't: https://github.com/rust-lang/rust/issues/122833
     #[allow(dead_code)]
-    serialize_test: MutexGuard<'static, ()>,
-    command_to_kill: Child,
+    serialize_test: MutexGuard<'static, bool>,
     context: TestContext,
 }
 
 fn iptables() -> Command {
-    if option_env!("USE_SUDO").is_some() {
+    if option_env!("USE_SUDO_IPTABLES").is_some() {
         let mut command = Command::new("sudo");
         command.arg("iptables");
         command
@@ -119,7 +118,6 @@ fn iptables() -> Command {
         Command::new("iptables")
     }
 }
-
 impl TestContext {
     fn unblock(port: u16) {
         let out_in = iptables()
@@ -194,32 +192,10 @@ impl TestContext {
 
 impl Drop for TestDropper {
     fn drop(&mut self) {
-        Command::new("kill")
-            .args([self.command_to_kill.id().to_string()])
-            .spawn()
-            .unwrap()
-            .wait()
-            .unwrap();
-        self.command_to_kill.wait().unwrap();
-        let mut buf = String::new();
-        self.command_to_kill
-            .stdout
-            .take()
-            .unwrap()
-            .read_to_string(&mut buf)
-            .unwrap();
-        buf.push('\n');
-        self.command_to_kill
-            .stderr
-            .take()
-            .unwrap()
-            .read_to_string(&mut buf)
-            .unwrap();
-
         for p in self.context.blocked_ports.iter().cloned() {
             TestContext::unblock(p);
         }
-        println!("{buf}");
+        println!("Finished unblocking ports");
     }
 }
 
@@ -294,69 +270,77 @@ async fn proxy(from_port: u16, to_port: u16) {
     }
 }
 
-static DOCKER_HELD: Mutex<()> = Mutex::new(());
+/// Contain true if the nethsm has already been provisionned
+static DOCKER_HELD: Mutex<bool> = Mutex::new(false);
 
 pub fn run_tests(
     proxies: &[(u16, u16)],
     config: P11Config,
     f: impl FnOnce(&mut TestContext, &mut Ctx),
 ) {
+    let Ok(serialize_test) = DOCKER_HELD.lock() else {
+        eprintln!("Test not run");
+        return;
+    };
     let mut test_dropper = TestDropper {
-        serialize_test: DOCKER_HELD.lock().unwrap(),
-        command_to_kill: Command::new("podman")
-            .args([
-                "run",
-                "--rm",
-                "-ti",
-                "-p8443:8443",
-                "-p8080:8080",
-                "docker.io/nitrokey/nethsm:testing",
-            ])
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap(),
+        serialize_test,
         context: TestContext {
             blocked_ports: HashSet::new(),
         },
     };
 
-    let client = AgentBuilder::new().tls_config(Arc::new(tls_conf())).build();
+    let is_provisionned = mem::replace(&mut *test_dropper.serialize_test, true);
+    if !is_provisionned {
+        let client = AgentBuilder::new()
+            .tls_config(Arc::new(tls_conf()))
+            .timeout_connect(Duration::from_secs(1))
+            .timeout_read(Duration::from_secs(10))
+            .timeout_write(Duration::from_secs(10))
+            .build();
 
-    let sdk_config = Configuration {
-        client,
-        base_path: TEST_NETHSM_INSTANCE.into(),
-        basic_auth: Some(("admin".into(), Some("Administrator".into()))),
-        ..Default::default()
-    };
+        let sdk_config = Configuration {
+            client,
+            base_path: format!("https://{NETHSM_DOCKER_HOSTNAME}:8443/api/v1"),
+            basic_auth: Some(("admin".into(), Some("Administrator".into()))),
+            ..Default::default()
+        };
 
-    sleep(Duration::from_secs(2));
+        println!(
+            "Configuration built, waiting for test instance to be up at {}",
+            &sdk_config.base_path
+        );
+        sleep(Duration::from_secs(2));
+        println!("Attempting provisionning");
 
-    provision_post(
-        &sdk_config,
-        ProvisionRequestData {
-            unlock_passphrase: "1234567890".into(),
-            admin_passphrase: "Administrator".into(),
-            system_time: time::OffsetDateTime::now_utc()
-                .format(
-                    &format_description::parse("[year]-[month]-[day]T[hour]:[minute]:[second]Z")
+        provision_post(
+            &sdk_config,
+            ProvisionRequestData {
+                unlock_passphrase: "1234567890".into(),
+                admin_passphrase: "Administrator".into(),
+                system_time: time::OffsetDateTime::now_utc()
+                    .format(
+                        &format_description::parse(
+                            "[year]-[month]-[day]T[hour]:[minute]:[second]Z",
+                        )
                         .unwrap(),
-                )
-                .unwrap(),
-        },
-    )
-    .unwrap();
-    users_user_id_put(
-        &sdk_config,
-        "operator",
-        UserPostData {
-            real_name: "Operator".into(),
-            role: UserRole::Operator,
-            passphrase: "opPassphrase".into(),
-        },
-    )
-    .unwrap();
+                    )
+                    .unwrap(),
+            },
+        )
+        .unwrap();
+        users_user_id_put(
+            &sdk_config,
+            "operator",
+            UserPostData {
+                real_name: "Operator".into(),
+                role: UserRole::Operator,
+                passphrase: "opPassphrase".into(),
+            },
+        )
+        .unwrap();
+    } else {
+        println!("Already provisionned")
+    }
 
     for (in_port, out_port) in proxies {
         PROXY_SENDER.send((*in_port, *out_port)).unwrap();
@@ -370,4 +354,5 @@ pub fn run_tests(
     let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
     f(&mut test_dropper.context, &mut ctx);
     ctx.close_all_sessions(0).unwrap();
+    println!("Ending test");
 }

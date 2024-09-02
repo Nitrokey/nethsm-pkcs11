@@ -49,6 +49,18 @@ nitropy nethsm --host localhost:8443 --no-verify-tls provision -u 0123456789 -a 
 nitropy nethsm --host localhost:8443 --no-verify-tls add-user -n Operator -u operator -p opPassphrase -r Operator
 ```
 
+## Testing retries
+
+There is a set of tests that run with multiple instances and test the retry and timeout mechanisms.
+They require: access to `sudo` (or being run as root) and `podman`.
+You can run the command:
+
+```bash
+USE_SUDO=true cargo t -p nethsm_pkcs11 --test basic -- multi_instance_retries
+# Or remove the use of sudo if running as root
+cargo t -p nethsm_pkcs11 --test basic -- multi_instance_retries
+```
+
 ## Building
 
 Required are `gcc` and a working Rust toolchain of at least version (MSRV) 1.70.
