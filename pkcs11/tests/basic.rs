@@ -13,6 +13,7 @@ use pkcs11::types::{
 };
 
 mod tools;
+use tools::NETHSM_DOCKER_HOSTNAME;
 
 const RSA_PRIVATE_KEY_ATTRIBUTES: &[CK_ATTRIBUTE] = &[
     CK_ATTRIBUTE {
@@ -73,22 +74,22 @@ fn basic() {
                 }),
                 description: Some("Test slot".into()),
                 instances: vec![InstanceConfig {
-                    url: option_env!("TEST_NETHSM_INSTANCE")
-                        .unwrap_or("https://localhost:8443/api/v1")
-                        .into(),
+                    url: "https://localhost:8443/api/v1".into(),
                     danger_insecure_cert: true,
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
                 retries: None,
-                timeout_seconds: None,
+                timeout_seconds: Some(10),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
             }],
             ..Default::default()
         },
         |_test_ctx, ctx| {
             let slot = 0;
             let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-            let (_public_key, private_key) = ctx
+            let (public_key, private_key) = ctx
                 .generate_key_pair(
                     session,
                     &RSA_MECHANISM,
@@ -101,6 +102,8 @@ fn basic() {
 
             // Verifying signatures is not supported
             let _signature = ctx.sign(session, &data).unwrap();
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
         },
     )
 }
@@ -123,31 +126,29 @@ fn multiple_instances() {
                 description: Some("Test slot".into()),
                 instances: vec![
                     InstanceConfig {
-                        url: option_env!("TEST_NETHSM_INSTANCE")
-                            .unwrap_or("https://localhost:8443/api/v1")
-                            .into(),
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8443/api/v1"),
                         danger_insecure_cert: true,
                         sha256_fingerprints: Vec::new(),
                         max_idle_connections: None,
                     },
                     InstanceConfig {
-                        url: option_env!("TEST_NETHSM_INSTANCE")
-                            .unwrap_or("https://localhost:8444/api/v1")
-                            .into(),
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8444/api/v1"),
                         danger_insecure_cert: true,
                         sha256_fingerprints: Vec::new(),
                         max_idle_connections: None,
                     },
                 ],
                 retries: None,
-                timeout_seconds: None,
+                timeout_seconds: Some(10),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
             }],
             ..Default::default()
         },
         |_test_ctx, ctx| {
             let slot = 0;
             let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-            let (_public_key, private_key) = ctx
+            let (public_key, private_key) = ctx
                 .generate_key_pair(
                     session,
                     &RSA_MECHANISM,
@@ -162,6 +163,8 @@ fn multiple_instances() {
                 // Verifying signatures is not supported
                 let _signature = ctx.sign(session, &data).unwrap();
             }
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
         },
     )
 }
@@ -183,22 +186,22 @@ fn timeout() {
                 }),
                 description: Some("Test slot".into()),
                 instances: vec![InstanceConfig {
-                    url: option_env!("TEST_NETHSM_INSTANCE")
-                        .unwrap_or("https://localhost:8443/api/v1")
-                        .into(),
+                    url: "https://localhost:8443/api/v1".into(),
                     danger_insecure_cert: true,
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
                 retries: None,
                 timeout_seconds: Some(10),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
             }],
             ..Default::default()
         },
         |test_ctx, ctx| {
             let slot = 0;
             let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-            let (_public_key, private_key) = ctx
+            let (public_key, private_key) = ctx
                 .generate_key_pair(
                     session,
                     &RSA_MECHANISM,
@@ -221,6 +224,9 @@ fn timeout() {
             let elapsed = start.elapsed();
             assert!(elapsed > Duration::from_secs(10), "Elapsed: {elapsed:?}");
             assert!(elapsed < Duration::from_secs(11), "Elapsed: {elapsed:?}");
+            test_ctx.remove_block(8443);
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
         },
     )
 }
@@ -242,25 +248,25 @@ fn retries() {
                 }),
                 description: Some("Test slot".into()),
                 instances: vec![InstanceConfig {
-                    url: option_env!("TEST_NETHSM_INSTANCE")
-                        .unwrap_or("https://localhost:8443/api/v1")
-                        .into(),
+                    url: "https://localhost:8443/api/v1".into(),
                     danger_insecure_cert: true,
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
                 retries: Some(RetryConfig {
                     count: 2,
-                    delay_seconds: 1,
+                    delay_seconds: 2,
                 }),
                 timeout_seconds: Some(10),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
             }],
             ..Default::default()
         },
         |test_ctx, ctx| {
             let slot = 0;
             let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-            let (_public_key, private_key) = ctx
+            let (public_key, private_key) = ctx
                 .generate_key_pair(
                     session,
                     &RSA_MECHANISM,
@@ -288,8 +294,81 @@ fn retries() {
                 ctx.sign(session, &data).unwrap();
                 let elapsed = start.elapsed();
                 assert!(elapsed > Duration::from_secs(11), "Elapsed: {elapsed:?}");
-                assert!(elapsed < Duration::from_secs(12), "Elapsed: {elapsed:?}");
+                assert!(elapsed < Duration::from_secs(13), "Elapsed: {elapsed:?}");
             });
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
+        },
+    )
+}
+
+#[test_log::test]
+fn multi_instance_retries() {
+    tools::run_tests(
+        &[(8444, 8443)],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![
+                    InstanceConfig {
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8443/api/v1"),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                    InstanceConfig {
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8444/api/v1"),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                ],
+                retries: Some(RetryConfig {
+                    count: 3,
+                    delay_seconds: 1,
+                }),
+                timeout_seconds: Some(1),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
+            }],
+            ..Default::default()
+        },
+        |test_ctx, ctx| {
+            let slot = 0;
+            let session = ctx.open_session(slot, 0x04, None, None).unwrap();
+            let (public_key, private_key) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+            let data = [0x42; 32];
+
+            for _ in 0..2 {
+                ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+                // Verifying signatures is not supported
+                let _signature = ctx.sign(session, &data).unwrap();
+            }
+
+            test_ctx.add_block(8444);
+            for _ in 0..2 {
+                ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+                ctx.sign(session, &data).unwrap();
+            }
+            test_ctx.remove_block(8444);
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
         },
     )
 }

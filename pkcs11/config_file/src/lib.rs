@@ -14,7 +14,7 @@ pub enum ConfigError {
 }
 
 const CONFIG_FILE_NAME: &str = "p11nethsm.conf";
-const ENV_VAR_CONFIG_FILE: &str = "P11NETHSM_CONFIG_FILE";
+pub const ENV_VAR_CONFIG_FILE: &str = "P11NETHSM_CONFIG_FILE";
 
 pub fn config_files() -> Result<Vec<(Vec<u8>, PathBuf)>, ConfigError> {
     if let Ok(file_path) = std::env::var(ENV_VAR_CONFIG_FILE) {

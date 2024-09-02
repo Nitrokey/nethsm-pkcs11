@@ -134,3 +134,33 @@ jobs:
         run: cargo build --release
       - name: run fork tests
         run: cd fork-tests && make
+  test_network:
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: full
+      RUST_LOG: trace
+      USE_SUDO_IPTABLES: true
+    services:
+      nethsm:
+        image: nitrokey/nethsm:testing
+        ports:
+          - 8443:8443
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install opensc and dependencies
+        run: sudo apt-get update && sudo apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy, llvm-tools-preview
+      - name: pull docker image
+        run: docker pull nitrokey/nethsm:testing
+
+      - uses: Swatinem/rust-cache@v2
+      - name: build release
+        run: cargo build --release
+      - name: run network tests
+        run: cargo t --features pkcs11-full-tests -p nethsm_pkcs11 --test basic -- --nocapture
