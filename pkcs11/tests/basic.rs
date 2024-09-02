@@ -1,6 +1,7 @@
 #![cfg(feature = "pkcs11-full-tests")]
 
 use core::ptr;
+use std::time::{Duration, Instant};
 
 use config_file::{InstanceConfig, P11Config, SlotConfig, UserConfig};
 use pkcs11::types::{
@@ -52,10 +53,10 @@ const RSA_MECHANISM: CK_MECHANISM = CK_MECHANISM {
     ulParameterLen: 0,
 };
 
-#[test]
+#[test_log::test]
 fn basic() {
-    env_logger::init();
     tools::run_tests(
+        &[],
         P11Config {
             slots: vec![SlotConfig {
                 label: "Test slot".into(),
@@ -81,7 +82,7 @@ fn basic() {
             }],
             ..Default::default()
         },
-        |ctx| {
+        |_test_ctx, ctx| {
             let slot = 0;
             let session = ctx.open_session(slot, 0x04, None, None).unwrap();
             let (_public_key, private_key) = ctx
@@ -97,6 +98,126 @@ fn basic() {
 
             // Verifying signatures is not supported
             let _signature = ctx.sign(session, &data).unwrap();
+        },
+    )
+}
+
+#[test_log::test]
+fn multiple_instances() {
+    tools::run_tests(
+        &[(8444, 8443)],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![
+                    InstanceConfig {
+                        url: option_env!("TEST_NETHSM_INSTANCE")
+                            .unwrap_or("https://localhost:8443/api/v1")
+                            .into(),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                    InstanceConfig {
+                        url: option_env!("TEST_NETHSM_INSTANCE")
+                            .unwrap_or("https://localhost:8444/api/v1")
+                            .into(),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                ],
+                retries: None,
+                timeout_seconds: None,
+            }],
+            ..Default::default()
+        },
+        |_test_ctx, ctx| {
+            let slot = 0;
+            let session = ctx.open_session(slot, 0x04, None, None).unwrap();
+            let (_public_key, private_key) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+            let data = [0x42; 32];
+
+            for _ in 0..10 {
+                ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+                // Verifying signatures is not supported
+                let _signature = ctx.sign(session, &data).unwrap();
+            }
+        },
+    )
+}
+
+#[test_log::test]
+fn timeout() {
+    tools::run_tests(
+        &[],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![InstanceConfig {
+                    url: option_env!("TEST_NETHSM_INSTANCE")
+                        .unwrap_or("https://localhost:8443/api/v1")
+                        .into(),
+                    danger_insecure_cert: true,
+                    sha256_fingerprints: Vec::new(),
+                    max_idle_connections: None,
+                }],
+                retries: None,
+                timeout_seconds: Some(10),
+            }],
+            ..Default::default()
+        },
+        |test_ctx, ctx| {
+            let slot = 0;
+            let session = ctx.open_session(slot, 0x04, None, None).unwrap();
+            let (_public_key, private_key) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+            let data = [0x42; 32];
+
+            for _ in 0..10 {
+                ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+                // Verifying signatures is not supported
+                let _signature = ctx.sign(session, &data).unwrap();
+            }
+
+            test_ctx.add_block(8443);
+            ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+            let start = Instant::now();
+            ctx.sign(session, &data).unwrap_err();
+            let elapsed = start.elapsed();
+            assert!(elapsed > Duration::from_secs(10),);
+            assert!(elapsed < Duration::from_secs(11),);
         },
     )
 }
