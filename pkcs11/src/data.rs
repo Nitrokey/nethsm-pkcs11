@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Mutex, Once, OnceLock, RwLock};
+use std::sync::{atomic::AtomicBool, Mutex, RwLock};
 
 use crate::backend::events::EventsManager;
 
 use crate::{api, backend::session::SessionManager, config::device::Device};
+use arc_swap::ArcSwapOption;
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_SLOT_ID, CK_VERSION};
 use lazy_static::lazy_static;
 
@@ -12,9 +13,7 @@ pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     minor: 40,
 };
 
-/// A separate DEVICE_INIT is required because `OnceLock::get_or_try_insert` is unstable
-pub static DEVICE_INIT: Once = Once::new();
-pub static DEVICE: OnceLock<Device> = OnceLock::new();
+pub static DEVICE: ArcSwapOption<Device> = ArcSwapOption::const_empty();
 
 lazy_static! {
     pub static ref SESSION_MANAGER : Mutex<SessionManager> =  Mutex::new(SessionManager::new());

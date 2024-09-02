@@ -13,12 +13,12 @@ pub mod sign;
 pub mod token;
 pub mod verify;
 
-use std::ptr::addr_of_mut;
 use std::sync::atomic::Ordering;
+use std::{ptr::addr_of_mut, sync::Arc};
 
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
-    data::{self, DEVICE, DEVICE_INIT, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
+    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
     defs,
     utils::padded_str,
 };
@@ -44,27 +44,18 @@ pub extern "C" fn C_GetFunctionList(
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     trace!("C_Initialize() called with args: {:?}", pInitArgs);
 
-    let mut result = Ok(());
-
-    DEVICE_INIT.call_once(|| {
-        let res = crate::config::initialization::initialize();
-        match res {
-            Ok(device) => {
-                _ = DEVICE.set(device);
-            }
-            Err(err) => result = Err(err),
+    let res = crate::config::initialization::initialize();
+    let device = match res {
+        Ok(device) => {
+            let arced = Arc::new(device);
+            DEVICE.store(Some(arced.clone()));
+            arced
         }
-    });
-
-    match result {
-        Ok(()) => {}
         Err(err) => {
             error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
-    }
-
-    let device = DEVICE.get().expect("Device was just initializated");
+    };
 
     // we force the initialization of the lazy static here
     if device.slots.is_empty() {
@@ -118,6 +109,7 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     if !pReserved.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
+    DEVICE.store(None);
     EVENTS_MANAGER.write().unwrap().finalized = true;
 
     cryptoki_sys::CKR_OK

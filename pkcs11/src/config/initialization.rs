@@ -62,7 +62,7 @@ pub fn initialize_with_configs(
 pub fn initialize() -> Result<Device, InitializationError> {
     rustls::crypto::ring::default_provider()
         .install_default()
-        .unwrap();
+        .ok();
     initialize_with_configs(config_files())
 }
 
