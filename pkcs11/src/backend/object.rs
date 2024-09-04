@@ -1,4 +1,4 @@
-use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
+use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CKA_SUBJECT, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
 use log::{debug, trace};
 
 use super::{
@@ -22,6 +22,7 @@ pub struct KeyRequirements {
     pub kind: Option<ObjectKind>,
     pub id: Option<String>,
     pub raw_id: Option<Vec<u8>>,
+    pub cka_subject: Option<Vec<u8>>,
 }
 
 fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
@@ -30,6 +31,7 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
             let mut key_id = None;
             let mut kind = None;
             let mut raw_id = None;
+            let mut cka_subject = None;
             for attr in template.iter() {
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
@@ -59,17 +61,26 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
                 if attr.type_() == CKA_LABEL && key_id.is_none() {
                     key_id = Some(parse_str_from_attr(&attr)?);
                 }
+
+                if attr.type_() == CKA_SUBJECT {
+                    let bytes = attr
+                        .val_bytes()
+                        .ok_or(Error::InvalidAttribute(attr.type_()))?;
+                    cka_subject = Some(bytes.to_vec());
+                }
             }
             Ok(KeyRequirements {
                 kind,
                 id: key_id,
                 raw_id,
+                cka_subject,
             })
         }
         None => Ok(KeyRequirements {
             kind: None,
             id: None,
             raw_id: None,
+            cka_subject: None,
         }),
     }
 }
