@@ -9,20 +9,30 @@ use nethsm_sdk_rs::{
     models::UserRole,
     ureq,
 };
-use std::{thread, time::Duration};
+use std::{
+    sync::{atomic::Ordering::Relaxed, Arc},
+    thread,
+    time::Duration,
+};
 
-use crate::config::config_file::{RetryConfig, UserConfig};
+use crate::config::{
+    config_file::{RetryConfig, UserConfig},
+    device::Slot,
+};
 
 use super::{ApiError, Error};
 
 #[derive(Debug, Clone)]
 pub struct LoginCtx {
-    operator: Option<UserConfig>,
-    administrator: Option<UserConfig>,
-    instances: Vec<Configuration>,
-    index: usize,
+    slot: Arc<Slot>,
+    /// If set to `Some`, this will be used to replace the slot's default value when performing requests
+    ///
+    /// Set to `Some` by `C_Login`
+    operator_login_override: Option<UserConfig>,
+    admin_login_override: Option<UserConfig>,
+    admin_allowed: bool,
+    operator_allowed: bool,
     ck_state: CK_STATE,
-    retries: Option<RetryConfig>,
 }
 
 #[derive(Debug, Clone)]
@@ -62,32 +72,42 @@ impl std::fmt::Display for LoginError {
 }
 
 impl LoginCtx {
-    pub fn new(
-        operator: Option<UserConfig>,
-        administrator: Option<UserConfig>,
-        instances: Vec<Configuration>,
-        retries: Option<RetryConfig>,
-    ) -> Self {
+    pub fn new(slot: Arc<Slot>, admin_allowed: bool, operator_allowed: bool) -> Self {
         let mut ck_state = CKS_RO_PUBLIC_SESSION;
 
-        let firt_instance = instances.first();
-        if let Some(instance) = firt_instance {
-            // CKS_RW_USER_FUNCTIONS has the priority, OpenDNSSEC checks for it
-            if get_user_api_config(&operator, instance).is_some() {
-                ck_state = CKS_RW_USER_FUNCTIONS;
-            } else if get_user_api_config(&administrator, instance).is_some() {
-                ck_state = CKS_RW_SO_FUNCTIONS
-            }
+        // CKS_RW_USER_FUNCTIONS has the priority, OpenDNSSEC checks for it
+        if operator_allowed && slot.operator.is_some() {
+            ck_state = CKS_RW_USER_FUNCTIONS;
+        } else if admin_allowed && slot.administrator.is_some() {
+            ck_state = CKS_RW_SO_FUNCTIONS
         }
 
         Self {
-            operator,
-            administrator,
-            instances,
-            retries,
-            index: 0,
+            slot,
+            operator_login_override: None,
+            admin_login_override: None,
+            operator_allowed,
+            admin_allowed,
             ck_state,
         }
+    }
+
+    fn operator_config(&self) -> Option<&UserConfig> {
+        if !self.operator_allowed {
+            return None;
+        }
+        self.operator_login_override
+            .as_ref()
+            .or(self.slot.operator.as_ref())
+    }
+
+    fn admin_config(&self) -> Option<&UserConfig> {
+        if !self.admin_allowed {
+            return None;
+        }
+        self.admin_login_override
+            .as_ref()
+            .or(self.slot.administrator.as_ref())
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
@@ -96,25 +116,27 @@ impl LoginCtx {
         let expected = match user_type {
             CKU_CONTEXT_SPECIFIC => return Err(LoginError::InvalidUser),
             CKU_SO => {
-                trace!("administrator: {:?}", self.administrator);
+                trace!("administrator: {:?}", self.slot.administrator);
 
-                self.administrator = match self.administrator.as_ref() {
+                self.admin_login_override = match self.admin_config() {
                     None => return Err(LoginError::UserNotPresent),
                     Some(user) => Some(UserConfig {
                         password: Some(pin),
                         ..user.clone()
                     }),
                 };
+                self.admin_allowed = true;
                 (UserStatus::Administrator, self.administrator())
             }
             CKU_USER => {
-                self.operator = match self.operator.as_ref() {
+                self.operator_login_override = match self.operator_config() {
                     None => return Err(LoginError::UserNotPresent),
                     Some(user) => Some(UserConfig {
                         password: Some(pin),
                         ..user.clone()
                     }),
                 };
+                self.operator_allowed = true;
                 (UserStatus::Operator, self.operator())
             }
             _ => return Err(LoginError::BadArgument),
@@ -137,31 +159,30 @@ impl LoginCtx {
         }
     }
 
-    fn next_instance(&mut self) -> Option<Configuration> {
-        self.index = (self.index + 1) % self.instances.len();
-        self.instances.get(self.index).cloned()
+    fn next_instance(&self) -> &Configuration {
+        let index = self.slot.instance_balancer.fetch_add(1, Relaxed);
+        let index = index % self.slot.instances.len();
+        &self.slot.instances[index]
     }
 
-    fn operator(&mut self) -> Option<Configuration> {
-        self.next_instance()
-            .and_then(|instance| get_user_api_config(&self.operator, &instance))
+    fn operator(&self) -> Option<Configuration> {
+        get_user_api_config(self.operator_config(), self.next_instance())
     }
 
-    fn administrator(&mut self) -> Option<Configuration> {
-        self.next_instance()
-            .and_then(|instance| get_user_api_config(&self.administrator, &instance))
+    fn administrator(&self) -> Option<Configuration> {
+        get_user_api_config(self.admin_config(), self.next_instance())
     }
 
-    fn operator_or_administrator(&mut self) -> Option<Configuration> {
+    fn operator_or_administrator(&self) -> Option<Configuration> {
         self.operator().or_else(|| self.administrator())
     }
 
-    fn guest(&mut self) -> Option<Configuration> {
+    fn guest(&self) -> &Configuration {
         self.next_instance()
     }
 
     pub fn can_run_mode(&self, mode: UserMode) -> bool {
-        if self.instances.is_empty() {
+        if self.slot.instances.is_empty() {
             debug!("No instance configured");
             return false;
         }
@@ -169,11 +190,11 @@ impl LoginCtx {
         // trace!("Checking if user can run mode: {:?}", mode);
 
         match mode {
-            UserMode::Operator => user_is_valid(&self.operator),
-            UserMode::Administrator => user_is_valid(&self.administrator),
+            UserMode::Operator => user_is_valid(self.operator_config()),
+            UserMode::Administrator => user_is_valid(self.admin_config()),
             UserMode::Guest => true,
             UserMode::OperatorOrAdministrator => {
-                user_is_valid(&self.operator) || user_is_valid(&self.administrator)
+                user_is_valid(self.operator_config()) || user_is_valid(self.admin_config())
             }
         }
     }
@@ -182,75 +203,74 @@ impl LoginCtx {
         self.ck_state = CKS_RO_PUBLIC_SESSION;
     }
 
-    pub fn get_config_user_mode(&mut self, user_mode: &UserMode) -> Option<Configuration> {
+    pub fn get_config_user_mode(&self, user_mode: &UserMode) -> Option<Configuration> {
         match user_mode {
             UserMode::Operator => self.operator(),
             UserMode::Administrator => self.administrator(),
-            UserMode::Guest => self.guest(),
+            UserMode::Guest => Some(self.guest().clone()),
             UserMode::OperatorOrAdministrator => self.operator_or_administrator(),
         }
     }
 
     // Try to run the api call on each instance until one succeeds
-    pub fn try_<F, T, R>(&mut self, api_call: F, user_mode: UserMode) -> Result<R, ApiError>
+    pub fn try_<F, T, R>(&self, api_call: F, user_mode: UserMode) -> Result<R, Error>
     where
         F: FnOnce(&Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
-        for _ in 0..self.instances.len() {
-            let mut conf = match self.get_config_user_mode(&user_mode) {
-                Some(conf) => conf,
-                None => continue,
-            };
+        let mut conf = match self.get_config_user_mode(&user_mode) {
+            Some(conf) => conf,
+            None => return Err(Error::Login(LoginError::UserNotPresent)),
+        };
 
-            let mut retry_count = 0;
-            let RetryConfig {
-                count: retry_limit,
-                delay_seconds,
-            } = self.retries.unwrap_or(RetryConfig {
-                count: 1,
-                delay_seconds: 0,
-            });
+        let mut retry_count = 0;
+        let RetryConfig {
+            count: retry_limit,
+            delay_seconds,
+        } = self.slot.retries.unwrap_or(RetryConfig {
+            count: 1,
+            delay_seconds: 0,
+        });
 
-            let delay = Duration::from_secs(delay_seconds);
+        let delay = Duration::from_secs(delay_seconds);
 
-            loop {
-                retry_count += 1;
-                let api_call_clone = api_call.clone();
-                match api_call_clone(&conf) {
-                    Ok(result) => return Ok(result),
+        loop {
+            retry_count += 1;
+            let api_call_clone = api_call.clone();
+            match api_call_clone(&conf) {
+                Ok(result) => return Ok(result),
 
-                    // If the server is in an unusable state, skip retries and try the next one
-                    Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
-                    | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
-                    | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
-                    | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
-                    | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => break,
+                // If the server is in an unusable state, skip retries and try the next one
+                Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
+                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => break,
 
-                    // If the connection to the server failed with a network error, reconnecting might solve the issue
-                    Err(apis::Error::Ureq(ureq::Error::Transport(err)))
-                        if matches!(
-                            err.kind(),
-                            ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
-                        ) =>
-                    {
-                        if retry_count == retry_limit {
-                            error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {err}");
-                            return Err(ApiError::InstanceRemoved);
-                        }
-
-                        warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
-                        thread::sleep(delay);
-                        if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
-                            conf = new_conf;
-                        }
+                // If the connection to the server failed with a network error, reconnecting might solve the issue
+                Err(apis::Error::Ureq(ureq::Error::Transport(err)))
+                    if matches!(
+                        err.kind(),
+                        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+                    ) =>
+                {
+                    if retry_count == retry_limit {
+                        error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {err}");
+                        return Err(ApiError::InstanceRemoved.into());
                     }
-                    // Otherwise, return the error
-                    Err(err) => return Err(err.into()),
+
+                    warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
+                    thread::sleep(delay);
+                    if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
+                        conf = new_conf;
+                    }
                 }
+                // Otherwise, return the error
+                Err(err) => return Err(err.into()),
             }
         }
-        Err(ApiError::NoInstance)
+
+        Err(ApiError::NoInstance.into())
     }
 
     pub fn ck_state(&self) -> CK_STATE {
@@ -259,16 +279,16 @@ impl LoginCtx {
     pub fn change_pin(&mut self, pin: String) -> CK_RV {
         let options = match self.ck_state {
             CKS_RW_SO_FUNCTIONS => {
-                let username = match self.administrator {
-                    Some(ref user) => user.username.clone(),
+                let username = match self.admin_config() {
+                    Some(user) => user.username.clone(),
                     None => return CKR_USER_NOT_LOGGED_IN,
                 };
 
                 (username, UserMode::Administrator)
             }
             CKS_RW_USER_FUNCTIONS => {
-                let username = match self.operator {
-                    Some(ref user) => user.username.clone(),
+                let username = match self.operator_config() {
+                    Some(user) => user.username.clone(),
                     None => return CKR_USER_NOT_LOGGED_IN,
                 };
 
@@ -339,33 +359,28 @@ pub fn get_current_user_status(
 }
 // Check if the user is logged in and then return the configuration to connect as this user
 fn get_user_api_config(
-    user: &Option<UserConfig>,
+    user: Option<&UserConfig>,
     api_config: &nethsm_sdk_rs::apis::configuration::Configuration,
 ) -> Option<nethsm_sdk_rs::apis::configuration::Configuration> {
-    user.as_ref().and_then(|user| {
-        let config = api_config.clone();
-        if user.password.is_none() {
-            None
-        } else {
-            Some(Configuration {
-                basic_auth: Some((user.username.clone(), user.password.clone())),
-                ..config
-            })
-        }
+    let user = user?;
+
+    #[allow(clippy::question_mark)]
+    if user.password.is_none() {
+        return None;
+    }
+
+    Some(Configuration {
+        basic_auth: Some((user.username.clone(), user.password.clone())),
+        ..api_config.clone()
     })
 }
 
-fn user_is_valid(user: &Option<UserConfig>) -> bool {
-    user.as_ref()
-        .map(|user| {
-            !user.username.is_empty()
-                && user
-                    .password
-                    .as_ref()
-                    .map(|password| !password.is_empty())
-                    .unwrap_or(false)
-        })
-        .unwrap_or(false)
+fn user_is_valid(user: Option<&UserConfig>) -> bool {
+    let Some(user) = user else { return false };
+    let Some(ref password) = user.password else {
+        return false;
+    };
+    !user.username.is_empty() && !password.is_empty()
 }
 
 #[cfg(test)]
@@ -382,8 +397,8 @@ mod test {
             password: None,
         };
 
-        assert!(user_is_valid(&Some(user)));
-        assert!(!user_is_valid(&None));
-        assert!(!user_is_valid(&Some(empty_password_user)));
+        assert!(user_is_valid(Some(&user)));
+        assert!(!user_is_valid(None));
+        assert!(!user_is_valid(Some(&empty_password_user)));
     }
 }

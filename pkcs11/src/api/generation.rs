@@ -8,7 +8,7 @@ use crate::{
         db::attr::CkRawAttrTemplate,
         mechanism::{CkRawMechanism, Mechanism},
     },
-    lock_session, read_session,
+    read_session,
 };
 
 pub extern "C" fn C_GenerateKey(
@@ -232,7 +232,7 @@ pub extern "C" fn C_GenerateRandom(
 
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
-    lock_session!(hSession, session);
+    read_session!(hSession, session);
 
     if !session
         .login_ctx

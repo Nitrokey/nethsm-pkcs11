@@ -276,9 +276,8 @@ mod tests {
             db::{Db, Object},
             login::LoginCtx,
             session::Session,
-            slot::init_for_tests,
+            slot::{get_slot, init_for_tests},
         },
-        config::config_file::RetryConfig,
         data::SESSION_MANAGER,
     };
 
@@ -399,6 +398,7 @@ mod tests {
     #[test]
     fn test_get_object_size() {
         init_for_tests();
+        let slot = get_slot(0).unwrap();
         let size = 32;
         let mut db = Db::new();
         let mut object = Object::default();
@@ -414,15 +414,7 @@ mod tests {
             device_error: 0,
             enum_ctx: None,
             flags: 0,
-            login_ctx: LoginCtx::new(
-                None,
-                None,
-                vec![],
-                Some(RetryConfig {
-                    count: 2,
-                    delay_seconds: 0,
-                }),
-            ),
+            login_ctx: LoginCtx::new(slot, false, false),
             slot_id: 0,
         };
 

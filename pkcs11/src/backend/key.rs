@@ -154,7 +154,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
 
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
-    mut login_ctx: LoginCtx,
+    login_ctx: LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let cert = parsed_template
         .value
@@ -196,7 +196,7 @@ fn upload_certificate(
 
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
-    mut login_ctx: LoginCtx,
+    login_ctx: LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let parsed = parse_attributes(&template)?;
 
@@ -415,7 +415,7 @@ pub fn generate_key_from_template(
     template: &CkRawAttrTemplate,
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
-    mut login_ctx: LoginCtx,
+    login_ctx: LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let parsed = parse_attributes(template)?;
@@ -462,7 +462,7 @@ pub fn generate_key_from_template(
 fn fetch_one_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    mut login_ctx: LoginCtx,
+    login_ctx: LoginCtx,
 ) -> Result<Vec<Object>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
@@ -479,11 +479,14 @@ fn fetch_one_key(
             debug!("Failed to fetch key {}: {:?}", key_id, err);
             if matches!(
                 err,
-                ApiError::ResponseError(backend::ResponseContent { status: 404, .. })
+                Error::Api(ApiError::ResponseError(backend::ResponseContent {
+                    status: 404,
+                    ..
+                }))
             ) {
                 return Ok(vec![]);
             }
-            return Err(err.into());
+            return Err(err);
         }
     };
 
@@ -509,7 +512,7 @@ pub fn fetch_key(
 fn fetch_one_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    mut login_ctx: LoginCtx,
+    login_ctx: LoginCtx,
 ) -> Result<Object, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(

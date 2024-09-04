@@ -95,9 +95,10 @@ impl SessionManager {
                 retries: None,
                 db: Arc::new((Mutex::new(Db::new()), Condvar::new())),
                 _description: None,
-                instances: vec![],
+                instances: Default::default(),
                 label: "test".to_string(),
                 operator: None,
+                instance_balancer: Default::default(),
             }),
             0,
         )
@@ -119,18 +120,14 @@ pub struct Session {
 
 impl Session {
     pub fn new(slot_id: CK_SLOT_ID, slot: Arc<Slot>, flags: CK_FLAGS) -> Self {
-        let login_ctx = LoginCtx::new(
-            slot.operator.clone(),
-            slot.administrator.clone(),
-            slot.instances.clone(),
-            slot.retries,
-        );
+        let db = slot.db.clone();
+        let login_ctx = LoginCtx::new(slot, true, true);
 
         Self {
             login_ctx,
             slot_id,
             flags,
-            db: slot.db.clone(),
+            db,
             device_error: CKR_OK,
             sign_ctx: None,
             encrypt_ctx: None,
@@ -719,18 +716,7 @@ mod test {
                 device_error: 0,
                 enum_ctx: None,
                 flags: 0,
-                login_ctx: LoginCtx::new(
-                    Some(crate::config::config_file::UserConfig {
-                        username: "operator".into(),
-                        password: Some("opPassphrase".into()),
-                    }),
-                    None,
-                    vec![slot.instances[0].clone()],
-                    Some(RetryConfig {
-                        count: 2,
-                        delay_seconds: 0,
-                    }),
-                ),
+                login_ctx: LoginCtx::new(slot.clone(), false, true),
                 slot_id: 0,
             };
             sessions.push(session);
@@ -750,33 +736,27 @@ mod test {
     fn parrallel_fetch_all_keys_fail() {
         THREADS_ALLOWED.store(false, Ordering::Relaxed);
         init_for_tests();
-        let slot = get_slot(0).unwrap();
-
-        let db = Arc::new((Mutex::new(Db::new()), Condvar::new()));
+        let mut slot = get_slot(0).unwrap();
         let mut sessions = Vec::new();
         for _ in 0..10 {
-            let mut bad_instance = slot.instances[0].clone();
+            let slot_mut = Arc::make_mut(&mut slot);
+
+            slot_mut.db = Arc::new((Mutex::new(Db::new()), Condvar::new()));
+            slot_mut.retries = Some(RetryConfig {
+                count: 2,
+                delay_seconds: 0,
+            });
+            let bad_instance = &mut slot_mut.instances[0];
             bad_instance.base_path.push_str("/corrupted_url");
             let session = Session {
-                db: db.clone(),
+                db: slot_mut.db.clone(),
                 decrypt_ctx: None,
                 encrypt_ctx: None,
                 sign_ctx: None,
                 device_error: 0,
                 enum_ctx: None,
                 flags: 0,
-                login_ctx: LoginCtx::new(
-                    Some(crate::config::config_file::UserConfig {
-                        username: "operator".into(),
-                        password: Some("opPassphrase".into()),
-                    }),
-                    None,
-                    vec![bad_instance],
-                    Some(RetryConfig {
-                        count: 2,
-                        delay_seconds: 0,
-                    }),
-                ),
+                login_ctx: LoginCtx::new(slot.clone(), false, true),
                 slot_id: 0,
             };
             sessions.push(session);

@@ -102,7 +102,7 @@ impl SignCtx {
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
 
-        let mut login_ctx = self.login_ctx.clone();
+        let login_ctx = self.login_ctx.clone();
 
         let signature = login_ctx.try_(
             |conf| {

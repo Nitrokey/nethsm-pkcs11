@@ -1,4 +1,4 @@
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{atomic::AtomicUsize, Arc, Condvar, Mutex};
 
 use nethsm_sdk_rs::apis::configuration::Configuration;
 
@@ -22,6 +22,7 @@ pub struct Slot {
     pub operator: Option<UserConfig>,
     pub administrator: Option<UserConfig>,
     pub db: Arc<(Mutex<Db>, Condvar)>,
+    pub instance_balancer: Arc<AtomicUsize>,
 }
 
 impl Slot {
