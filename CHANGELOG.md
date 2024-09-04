@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.1][] (2024-09-05)
+
+- Change instance on each retry after a network failure ([#206][])
+- Enable configuring tcp keepalive ([#207][])
+- Enable configuring a time after which an idle connection is considered "stale" and not reused ([#207][])
+
+[#206]: https://github.com/Nitrokey/nethsm-pkcs11/pulls/#206
+[#207]: https://github.com/Nitrokey/nethsm-pkcs11/pulls/#207
+
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/1.3.1...1.4.0)
+
 ## [1.3.1][] (2024-04-19)
 
 ### Fixed
