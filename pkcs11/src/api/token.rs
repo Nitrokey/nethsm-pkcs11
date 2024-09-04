@@ -92,7 +92,7 @@ pub extern "C" fn C_GetSlotInfo(
 
     let mut flags = 0;
 
-    let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone(), slot.retries);
+    let login_ctx = LoginCtx::new(slot.clone(), false, false);
 
     let result = login_ctx.try_(
         default_api::info_get,
@@ -166,12 +166,7 @@ pub extern "C" fn C_GetTokenInfo(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    let mut login_ctx = LoginCtx::new(
-        None,
-        slot.administrator.clone(),
-        slot.instances.clone(),
-        slot.retries,
-    );
+    let login_ctx = LoginCtx::new(slot.clone(), true, false);
 
     let result = login_ctx.try_(
         default_api::info_get,

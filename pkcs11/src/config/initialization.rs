@@ -27,6 +27,8 @@ pub enum InitializationError {
     NoCerts,
     #[error("No operator or administrator for slot: {0}")]
     NoUser(String),
+    #[error("No instance given for a slot")]
+    NoInstance,
 }
 
 pub fn initialize_with_configs(
@@ -188,8 +190,6 @@ impl ServerCertVerifier for FingerprintVerifier {
 }
 
 fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
-    let mut instances = vec![];
-
     let default_user = slot
         .operator
         .as_ref()
@@ -202,8 +202,8 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         slot.timeout_seconds,
         slot.retries
     );
-
-    for instance in slot.instances.iter() {
+    let mut instances = Vec::new();
+    for instance in &slot.instances {
         let tls_conf = rustls::ClientConfig::builder();
 
         let tls_conf = if instance.danger_insecure_cert {
@@ -285,6 +285,10 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         };
         instances.push(api_config);
     }
+    if instances.is_empty() {
+        error!("Slot without any instance configured");
+        return Err(InitializationError::NoInstance);
+    }
 
     Ok(Slot {
         _description: slot.description.clone(),
@@ -294,6 +298,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         operator: slot.operator.clone(),
         retries: slot.retries,
         db: Arc::new((Mutex::new(crate::backend::db::Db::new()), Condvar::new())),
+        instance_balancer: Default::default(),
     })
 }
 

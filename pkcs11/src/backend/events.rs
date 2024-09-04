@@ -42,7 +42,7 @@ pub fn fetch_slots_state() -> Result<(), cryptoki_sys::CK_RV> {
     };
 
     for (index, slot) in device.slots.iter().enumerate() {
-        let mut login_ctx = LoginCtx::new(None, None, slot.instances.clone(), slot.retries);
+        let login_ctx = LoginCtx::new(slot.clone(), false, false);
         let status = login_ctx
             .try_(default_api::health_state_get, super::login::UserMode::Guest)
             .map(|state| state.entity.state == SystemState::Operational)
