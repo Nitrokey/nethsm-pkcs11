@@ -21,11 +21,10 @@ pub struct EncryptCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    login_ctx: LoginCtx,
 }
 
 impl EncryptCtx {
-    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: LoginCtx) -> Result<Self, Error> {
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
         if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
             return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
@@ -56,7 +55,6 @@ impl EncryptCtx {
             mechanism,
             key_id: key.id.clone(),
             data: Vec::new(),
-            login_ctx,
         })
     }
 
@@ -70,7 +68,7 @@ impl EncryptCtx {
         full_blocks * ENCRYPT_BLOCK_SIZE
     }
 
-    pub fn encrypt_available_data(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn encrypt_available_data(&mut self, login_ctx: &LoginCtx) -> Result<Vec<u8>, Error> {
         let chunk_size = self.get_biggest_chunk_len();
 
         // if there is no data to encrypt, return an empty vector
@@ -81,18 +79,13 @@ impl EncryptCtx {
         // drain the data to encrypt from the data vector
 
         let input_data = self.data.drain(..chunk_size).collect::<Vec<u8>>();
-        encrypt_data(
-            &self.key_id,
-            self.login_ctx.clone(),
-            &input_data,
-            &self.mechanism,
-        )
+        encrypt_data(&self.key_id, login_ctx, &input_data, &self.mechanism)
     }
 
-    pub fn encrypt_final(&self) -> Result<Vec<u8>, Error> {
+    pub fn encrypt_final(&self, login_ctx: &LoginCtx) -> Result<Vec<u8>, Error> {
         encrypt_data(
             &self.key_id,
-            self.login_ctx.clone(),
+            login_ctx,
             self.data.as_slice(),
             &self.mechanism,
         )
@@ -101,7 +94,7 @@ impl EncryptCtx {
 
 fn encrypt_data(
     key_id: &str,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
     data: &[u8],
     mechanism: &Mechanism,
 ) -> Result<Vec<u8>, Error> {

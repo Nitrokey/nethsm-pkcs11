@@ -18,11 +18,10 @@ pub struct SignCtx {
     pub sign_name: SignMode,
     pub key: Object,
     pub data: Vec<u8>,
-    pub login_ctx: LoginCtx,
 }
 
 impl SignCtx {
-    pub fn init(mechanism: Mechanism, key: Object, login_ctx: LoginCtx) -> Result<Self, Error> {
+    pub fn init(mechanism: Mechanism, key: Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
         trace!("key_type: {:?}", key.kind);
 
         if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
@@ -58,14 +57,13 @@ impl SignCtx {
             key,
             sign_name,
             data: Vec::new(),
-            login_ctx,
         })
     }
     pub fn update(&mut self, data: &[u8]) {
         self.data.extend_from_slice(data);
     }
 
-    pub fn sign_final(&self) -> Result<Vec<u8>, Error> {
+    pub fn sign_final(&self, login_ctx: &LoginCtx) -> Result<Vec<u8>, Error> {
         // helper function to hash the data with the correct algorithm
         fn hasher<D: Digest>(data: &[u8]) -> Vec<u8> {
             let mut hasher = D::new();
@@ -101,8 +99,6 @@ impl SignCtx {
 
         let mode = self.sign_name;
         trace!("Signing with mode: {:?}", mode);
-
-        let login_ctx = self.login_ctx.clone();
 
         let signature = login_ctx.try_(
             |conf| {
