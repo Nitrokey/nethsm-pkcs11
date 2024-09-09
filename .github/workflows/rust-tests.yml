@@ -36,6 +36,44 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
 
+  check-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable-x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build project
+        run: cargo check
+    
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable-x86_64-apple-darwin
+          target: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build project for MacOs aaarch64
+        run: cargo check --target aarch64-apple-darwin
+
+      - name: Build project
+        run: cargo check
+
   tests:
     runs-on: ubuntu-latest
     container: debian:12
