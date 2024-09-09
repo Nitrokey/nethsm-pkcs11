@@ -202,11 +202,7 @@ impl Session {
             }
         }?;
 
-        self.sign_ctx = Some(SignCtx::init(
-            mechanism.clone(),
-            key,
-            self.login_ctx.clone(),
-        )?);
+        self.sign_ctx = Some(SignCtx::init(mechanism.clone(), key, &self.login_ctx)?);
 
         Ok(())
     }
@@ -236,7 +232,7 @@ impl Session {
             .as_mut()
             .ok_or(Error::OperationNotInitialized)?;
 
-        sign_ctx.sign_final()
+        sign_ctx.sign_final(&self.login_ctx)
     }
 
     pub fn sign(&mut self, data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -271,11 +267,7 @@ impl Session {
             }
         }?;
 
-        self.encrypt_ctx = Some(EncryptCtx::init(
-            mechanism.clone(),
-            &key,
-            self.login_ctx.clone(),
-        )?);
+        self.encrypt_ctx = Some(EncryptCtx::init(mechanism.clone(), &key, &self.login_ctx)?);
 
         Ok(())
     }
@@ -296,7 +288,7 @@ impl Session {
             .as_mut()
             .ok_or(Error::OperationNotInitialized)?;
 
-        encrypt_ctx.encrypt_available_data()
+        encrypt_ctx.encrypt_available_data(&self.login_ctx)
     }
 
     pub fn encrypt_update(&mut self, data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -319,7 +311,7 @@ impl Session {
             .as_mut()
             .ok_or(Error::OperationNotInitialized)?;
 
-        encrypt_ctx.encrypt_final()
+        encrypt_ctx.encrypt_final(&self.login_ctx)
     }
 
     pub fn encrypt(&mut self, data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -354,11 +346,7 @@ impl Session {
             }
         }?;
 
-        self.decrypt_ctx = Some(DecryptCtx::init(
-            mechanism.clone(),
-            &key,
-            self.login_ctx.clone(),
-        )?);
+        self.decrypt_ctx = Some(DecryptCtx::init(mechanism.clone(), &key, &self.login_ctx)?);
 
         Ok(())
     }
@@ -394,7 +382,7 @@ impl Session {
             .as_mut()
             .ok_or(Error::OperationNotInitialized)?;
 
-        decrypt_ctx.decrypt_final()
+        decrypt_ctx.decrypt_final(&self.login_ctx)
     }
 
     pub fn decrypt(&mut self, data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -442,7 +430,7 @@ impl Session {
                         results = fetch_key(
                             &key_id,
                             requirements.raw_id.clone(),
-                            self.login_ctx.clone(),
+                            &self.login_ctx,
                             &self.db.0,
                         )?;
                     }
@@ -453,7 +441,7 @@ impl Session {
                         match fetch_certificate(
                             &key_id,
                             requirements.raw_id,
-                            self.login_ctx.clone(),
+                            &self.login_ctx,
                             &self.db.0,
                         ) {
                             Ok(cert) => {
@@ -598,21 +586,18 @@ impl Session {
             return Err(Error::NotLoggedIn(super::login::UserMode::Administrator));
         }
 
-        let login_ctx = self.login_ctx.clone();
+        let key_info = create_key_from_template(template, &self.login_ctx)?;
 
-        let key_info = create_key_from_template(template, login_ctx)?;
-
-        let login_ctx = self.login_ctx.clone();
         let db = self.db.clone();
 
         match key_info.1 {
             ObjectKind::Certificate => Ok(vec![fetch_certificate(
                 &key_info.0,
                 None,
-                login_ctx,
+                &self.login_ctx,
                 &db.0,
             )?]),
-            _ => fetch_key(&key_info.0, None, login_ctx, &db.0),
+            _ => fetch_key(&key_info.0, None, &self.login_ctx, &db.0),
         }
     }
 
@@ -678,7 +663,7 @@ impl Session {
             template,
             public_template,
             mechanism,
-            self.login_ctx.clone(),
+            &self.login_ctx,
             &self.db.0,
         )
     }

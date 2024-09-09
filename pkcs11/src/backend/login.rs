@@ -22,7 +22,7 @@ use crate::config::{
 
 use super::{ApiError, Error};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct LoginCtx {
     slot: Arc<Slot>,
     /// If set to `Some`, this will be used to replace the slot's default value when performing requests

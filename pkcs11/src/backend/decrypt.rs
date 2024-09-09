@@ -14,11 +14,10 @@ pub struct DecryptCtx {
     pub mechanism: Mechanism,
     pub key_id: String,
     pub data: Vec<u8>,
-    login_ctx: LoginCtx,
 }
 
 impl DecryptCtx {
-    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: LoginCtx) -> Result<Self, Error> {
+    pub fn init(mechanism: Mechanism, key: &Object, login_ctx: &LoginCtx) -> Result<Self, Error> {
         if !login_ctx.can_run_mode(crate::backend::login::UserMode::Operator) {
             return Err(Error::NotLoggedIn(login::UserMode::Operator));
         }
@@ -42,14 +41,13 @@ impl DecryptCtx {
             mechanism,
             key_id: key.id.clone(),
             data: Vec::new(),
-            login_ctx,
         })
     }
     pub fn update(&mut self, data: &[u8]) {
         self.data.extend_from_slice(data);
     }
 
-    pub fn decrypt_final(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn decrypt_final(&mut self, login_ctx: &LoginCtx) -> Result<Vec<u8>, Error> {
         if self.data.is_empty() {
             return Err(Error::InvalidEncryptedDataLength);
         }
@@ -72,7 +70,7 @@ impl DecryptCtx {
 
         let key_id = self.key_id.as_str();
 
-        let output = self.login_ctx.try_(
+        let output = login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_decrypt_post(
                     api_config,

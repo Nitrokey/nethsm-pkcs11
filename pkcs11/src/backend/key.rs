@@ -154,7 +154,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
 
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let cert = parsed_template
         .value
@@ -196,7 +196,7 @@ fn upload_certificate(
 
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
 ) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
     let parsed = parse_attributes(&template)?;
 
@@ -415,7 +415,7 @@ pub fn generate_key_from_template(
     template: &CkRawAttrTemplate,
     public_template: Option<&CkRawAttrTemplate>,
     mechanism: &Mechanism,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let parsed = parse_attributes(template)?;
@@ -462,7 +462,7 @@ pub fn generate_key_from_template(
 fn fetch_one_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
 ) -> Result<Vec<Object>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
@@ -499,7 +499,7 @@ fn fetch_one_key(
 pub fn fetch_key(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let objects = fetch_one_key(key_id, raw_id, login_ctx)?;
@@ -512,7 +512,7 @@ pub fn fetch_key(
 fn fetch_one_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
 ) -> Result<Object, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
@@ -533,7 +533,7 @@ fn fetch_one_certificate(
 pub fn fetch_certificate(
     key_id: &str,
     raw_id: Option<Vec<u8>>,
-    login_ctx: LoginCtx,
+    login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<(CK_OBJECT_HANDLE, Object), Error> {
     let object = fetch_one_certificate(key_id, raw_id, login_ctx)?;
@@ -571,12 +571,10 @@ pub fn fetch_one(
             | Some(ObjectKind::PublicKey)
             | Some(ObjectKind::SecretKey)
     ) {
-        let login_ctx = login_ctx.clone();
         acc = fetch_one_key(&key.id, None, login_ctx)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
-        let login_ctx = login_ctx.clone();
         match fetch_one_certificate(&key.id, None, login_ctx) {
             Ok(cert) => acc.push(cert),
             Err(err) => {
