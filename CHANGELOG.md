@@ -1,6 +1,15 @@
 # Changelog
 
-## [1.4.1][] (2024-09-05)
+## [1.4.1][] (2024-09-09)
+
+- Fix compilation on windows ([#219][])
+
+[#219]: https://github.com/Nitrokey/nethsm-pkcs11/pull/219
+
+[1.4.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.4.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.4.0...v1.4.1)
+
+## [1.4.0][] (2024-09-05)
 
 - Change instance on each retry after a network failure ([#206][])
 - Enable configuring tcp keepalive ([#207][])
@@ -9,7 +18,9 @@
 [#206]: https://github.com/Nitrokey/nethsm-pkcs11/pulls/#206
 [#207]: https://github.com/Nitrokey/nethsm-pkcs11/pulls/#207
 
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/1.3.1...1.4.0)
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.3.1...v1.4.0)
+
+[1.4.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.4.0
 
 ## [1.3.1][] (2024-04-19)
 
@@ -17,9 +28,9 @@
 
 - Update `rustls` dependency to 0.21.11 to fix [RUSTSEC-2024-0336][]
 
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/1.3.0...1.3.1)
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/1.3.0...v1.3.1)
 
-[1.3.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/1.3.1
+[1.3.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.3.1
 
 [RUSTSEC-2024-0336]: https://rustsec.org/advisories/RUSTSEC-2024-0336.html
 
