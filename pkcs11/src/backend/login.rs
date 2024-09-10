@@ -17,7 +17,7 @@ use std::{
 
 use crate::config::{
     config_file::{RetryConfig, UserConfig},
-    device::Slot,
+    device::{InstanceData, Slot},
 };
 
 use super::{ApiError, Error};
@@ -144,7 +144,7 @@ impl LoginCtx {
 
         trace!("Config: {:?}", expected.1);
 
-        let config = expected.1.ok_or(LoginError::UserNotPresent)?;
+        let config = expected.1.ok_or(LoginError::UserNotPresent)?.config;
 
         if get_current_user_status(&config) == expected.0 {
             self.ck_state = match expected.0 {
@@ -159,25 +159,25 @@ impl LoginCtx {
         }
     }
 
-    fn next_instance(&self) -> &Configuration {
+    fn next_instance(&self) -> &InstanceData {
         let index = self.slot.instance_balancer.fetch_add(1, Relaxed);
         let index = index % self.slot.instances.len();
         &self.slot.instances[index]
     }
 
-    fn operator(&self) -> Option<Configuration> {
+    fn operator(&self) -> Option<InstanceData> {
         get_user_api_config(self.operator_config(), self.next_instance())
     }
 
-    fn administrator(&self) -> Option<Configuration> {
+    fn administrator(&self) -> Option<InstanceData> {
         get_user_api_config(self.admin_config(), self.next_instance())
     }
 
-    fn operator_or_administrator(&self) -> Option<Configuration> {
+    fn operator_or_administrator(&self) -> Option<InstanceData> {
         self.operator().or_else(|| self.administrator())
     }
 
-    fn guest(&self) -> &Configuration {
+    fn guest(&self) -> &InstanceData {
         self.next_instance()
     }
 
@@ -203,7 +203,7 @@ impl LoginCtx {
         self.ck_state = CKS_RO_PUBLIC_SESSION;
     }
 
-    pub fn get_config_user_mode(&self, user_mode: &UserMode) -> Option<Configuration> {
+    pub fn get_config_user_mode(&self, user_mode: &UserMode) -> Option<InstanceData> {
         match user_mode {
             UserMode::Operator => self.operator(),
             UserMode::Administrator => self.administrator(),
@@ -218,9 +218,8 @@ impl LoginCtx {
         F: FnOnce(&Configuration) -> Result<R, apis::Error<T>> + Clone,
     {
         // we loop for a maximum of instances.len() times
-        let mut conf = match self.get_config_user_mode(&user_mode) {
-            Some(conf) => conf,
-            None => return Err(Error::Login(LoginError::UserNotPresent)),
+        let Some(mut instance) = self.get_config_user_mode(&user_mode) else {
+            return Err(Error::Login(LoginError::UserNotPresent));
         };
 
         let mut retry_count = 0;
@@ -237,7 +236,7 @@ impl LoginCtx {
         loop {
             retry_count += 1;
             let api_call_clone = api_call.clone();
-            match api_call_clone(&conf) {
+            match api_call_clone(&instance.config) {
                 Ok(result) => return Ok(result),
 
                 // If the server is in an unusable state, skip retries and try the next one
@@ -262,7 +261,7 @@ impl LoginCtx {
                     warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
                     thread::sleep(delay);
                     if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
-                        conf = new_conf;
+                        instance = new_conf;
                     }
                 }
                 // Otherwise, return the error
@@ -360,8 +359,8 @@ pub fn get_current_user_status(
 // Check if the user is logged in and then return the configuration to connect as this user
 fn get_user_api_config(
     user: Option<&UserConfig>,
-    api_config: &nethsm_sdk_rs::apis::configuration::Configuration,
-) -> Option<nethsm_sdk_rs::apis::configuration::Configuration> {
+    api_config: &InstanceData,
+) -> Option<InstanceData> {
     let user = user?;
 
     #[allow(clippy::question_mark)]
@@ -369,9 +368,12 @@ fn get_user_api_config(
         return None;
     }
 
-    Some(Configuration {
-        basic_auth: Some((user.username.clone(), user.password.clone())),
-        ..api_config.clone()
+    Some(InstanceData {
+        config: Configuration {
+            basic_auth: Some((user.username.clone(), user.password.clone())),
+            ..api_config.config.clone()
+        },
+        state: api_config.state.clone(),
     })
 }
 

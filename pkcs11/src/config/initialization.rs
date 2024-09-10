@@ -5,6 +5,8 @@ use std::{
     time::Duration,
 };
 
+use crate::config::device::InstanceData;
+
 use super::{
     config_file::{config_files, ConfigError, SlotConfig},
     device::{Device, Slot},
@@ -283,7 +285,10 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             user_agent: Some(DEFAULT_USER_AGENT.to_string()),
             ..Default::default()
         };
-        instances.push(api_config);
+        instances.push(InstanceData {
+            config: api_config,
+            state: Default::default(),
+        });
     }
     if instances.is_empty() {
         error!("Slot without any instance configured");
