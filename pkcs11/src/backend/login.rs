@@ -17,7 +17,7 @@ use std::{
 
 use crate::config::{
     config_file::{RetryConfig, UserConfig},
-    device::{InstanceData, Slot},
+    device::{InstanceAttempt, InstanceData, Slot},
 };
 
 use super::{ApiError, Error};
@@ -162,6 +162,28 @@ impl LoginCtx {
     fn next_instance(&self) -> &InstanceData {
         let index = self.slot.instance_balancer.fetch_add(1, Relaxed);
         let index = index % self.slot.instances.len();
+        let instance = &self.slot.instances[index];
+        match instance.should_try() {
+            InstanceAttempt::Failed => {}
+            InstanceAttempt::Working | InstanceAttempt::Retry => return instance,
+        }
+        for i in 0..self.slot.instances.len() - 1 {
+            let instance = &self.slot.instances[index + i];
+
+            match instance.should_try() {
+                InstanceAttempt::Failed => continue,
+                InstanceAttempt::Working | InstanceAttempt::Retry => {
+                    // This not true round-robin in case of multithreaded acces
+                    // This is degraded mode so best-effort is attempted at best
+                    self.slot.instance_balancer.fetch_add(i, Relaxed);
+                    return instance;
+                }
+            }
+        }
+
+        // No instance is valid, return a failed instance for an attempt
+        let index = self.slot.instance_balancer.fetch_add(1, Relaxed);
+        let index = index % self.slot.instances.len();
         &self.slot.instances[index]
     }
 
@@ -237,14 +259,29 @@ impl LoginCtx {
             retry_count += 1;
             let api_call_clone = api_call.clone();
             match api_call_clone(&instance.config) {
-                Ok(result) => return Ok(result),
+                Ok(result) => {
+                    instance.clear_failed();
+                    return Ok(result);
+                }
 
                 // If the server is in an unusable state, skip retries and try the next one
-                Err(apis::Error::ResponseError(ResponseContent { status: 500, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 501, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 502, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 503, .. }))
-                | Err(apis::Error::ResponseError(ResponseContent { status: 412, .. })) => break,
+                Err(apis::Error::ResponseError(err @ ResponseContent { status: 500, .. }))
+                | Err(apis::Error::ResponseError(err @ ResponseContent { status: 501, .. }))
+                | Err(apis::Error::ResponseError(err @ ResponseContent { status: 502, .. }))
+                | Err(apis::Error::ResponseError(err @ ResponseContent { status: 503, .. }))
+                | Err(apis::Error::ResponseError(err @ ResponseContent { status: 412, .. })) => {
+                    instance.bump_failed();
+                    if retry_count == retry_limit {
+                        error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {:?}",err.status);
+                        return Err(ApiError::InstanceRemoved.into());
+                    }
+
+                    warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {:?}, retrying in {delay_seconds}s", err.status);
+                    thread::sleep(delay);
+                    if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
+                        instance = new_conf;
+                    }
+                }
 
                 // If the connection to the server failed with a network error, reconnecting might solve the issue
                 Err(apis::Error::Ureq(ureq::Error::Transport(err)))
@@ -253,6 +290,7 @@ impl LoginCtx {
                         ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
                     ) =>
                 {
+                    instance.bump_failed();
                     if retry_count == retry_limit {
                         error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {err}");
                         return Err(ApiError::InstanceRemoved.into());
@@ -268,8 +306,6 @@ impl LoginCtx {
                 Err(err) => return Err(err.into()),
             }
         }
-
-        Err(ApiError::NoInstance.into())
     }
 
     pub fn ck_state(&self) -> CK_STATE {
