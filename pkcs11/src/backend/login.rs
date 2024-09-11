@@ -249,14 +249,14 @@ impl LoginCtx {
             count: retry_limit,
             delay_seconds,
         } = self.slot.retries.unwrap_or(RetryConfig {
-            count: 1,
+            count: 0,
             delay_seconds: 0,
         });
 
         let delay = Duration::from_secs(delay_seconds);
 
         loop {
-            if retry_count == retry_limit {
+            if retry_count > retry_limit {
                 error!(
                     "Retry count exceeded after {retry_limit} attempts, instance is unreachable"
                 );
@@ -292,6 +292,7 @@ impl LoginCtx {
                         ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
                     ) =>
                 {
+                    self.slot.clear_all_pools();
                     instance.bump_failed();
                     warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
                     thread::sleep(delay);
