@@ -256,6 +256,12 @@ impl LoginCtx {
         let delay = Duration::from_secs(delay_seconds);
 
         loop {
+            if retry_count == retry_limit {
+                error!(
+                    "Retry count exceeded after {retry_limit} attempts, instance is unreachable"
+                );
+                return Err(ApiError::InstanceRemoved.into());
+            }
             retry_count += 1;
             let api_call_clone = api_call.clone();
             match api_call_clone(&instance.config) {
@@ -271,12 +277,8 @@ impl LoginCtx {
                 | Err(apis::Error::ResponseError(err @ ResponseContent { status: 503, .. }))
                 | Err(apis::Error::ResponseError(err @ ResponseContent { status: 412, .. })) => {
                     instance.bump_failed();
-                    if retry_count == retry_limit {
-                        error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {:?}",err.status);
-                        return Err(ApiError::InstanceRemoved.into());
-                    }
 
-                    warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {:?}, retrying in {delay_seconds}s", err.status);
+                    warn!("Connection attempt {retry_count} failed: Status error connecting to the instance, {:?}, retrying in {delay_seconds}s", err.status);
                     thread::sleep(delay);
                     if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
                         instance = new_conf;
@@ -291,11 +293,6 @@ impl LoginCtx {
                     ) =>
                 {
                     instance.bump_failed();
-                    if retry_count == retry_limit {
-                        error!("Retry count exceeded after {retry_limit} attempts, instance is unreachable: {err}");
-                        return Err(ApiError::InstanceRemoved.into());
-                    }
-
                     warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
                     thread::sleep(delay);
                     if let Some(new_conf) = self.get_config_user_mode(&user_mode) {
