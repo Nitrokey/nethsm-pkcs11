@@ -208,4 +208,10 @@ impl Slot {
 
         !pwd.is_empty()
     }
+
+    pub fn clear_all_pools(&self) {
+        for instance in &self.instances {
+            instance.config.client.clear_pool();
+        }
+    }
 }

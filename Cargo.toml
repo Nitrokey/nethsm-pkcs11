@@ -13,4 +13,4 @@ panic = 'abort'     # Abort on panic
 strip = true        # Strip symbols from binary
 
 [patch.crates-io]
-ureq =  { git = "https://github.com/Nitrokey/ureq.git", rev = "dc716a0eb412db14ca75694ab7b99fb6f5d179f0" }
+ureq =  { git = "https://github.com/Nitrokey/ureq.git", rev = "9ee324596cad8132d488721652dad7c37ed1987c" }

@@ -1466,7 +1466,7 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 [[package]]
 name = "ureq"
 version = "2.10.1"
-source = "git+https://github.com/Nitrokey/ureq.git?rev=dc716a0eb412db14ca75694ab7b99fb6f5d179f0#dc716a0eb412db14ca75694ab7b99fb6f5d179f0"
+source = "git+https://github.com/Nitrokey/ureq.git?rev=9ee324596cad8132d488721652dad7c37ed1987c#9ee324596cad8132d488721652dad7c37ed1987c"
 dependencies = [
  "base64 0.22.1",
  "log",

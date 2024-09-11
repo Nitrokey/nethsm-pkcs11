@@ -372,3 +372,77 @@ fn multi_instance_retries() {
         },
     )
 }
+
+#[test_log::test]
+fn pool_not_reused() {
+    tools::run_tests(
+        &[(8444, 8443), (8445, 8443)],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![
+                    InstanceConfig {
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8444/api/v1"),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                    InstanceConfig {
+                        url: format!("https://{NETHSM_DOCKER_HOSTNAME}:8445/api/v1"),
+                        danger_insecure_cert: true,
+                        sha256_fingerprints: Vec::new(),
+                        max_idle_connections: None,
+                    },
+                ],
+                retries: None,
+                timeout_seconds: Some(5),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
+            }],
+            ..Default::default()
+        },
+        |test_ctx, ctx| {
+            let slot = 0;
+            let session = ctx.open_session(slot, 0x04, None, None).unwrap();
+            let (public_key, private_key) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+            let data = [0x42; 32];
+
+            for _ in 0..2 {
+                ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+                // Verifying signatures is not supported
+                let _signature = ctx.sign(session, &data).unwrap();
+            }
+
+            test_ctx.stall_active_connections();
+            let start_at = Instant::now();
+            ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+            ctx.sign(session, &data).unwrap_err();
+            assert!(start_at.elapsed() > Duration::from_secs(5));
+            assert!(start_at.elapsed() < Duration::from_secs(6));
+
+            let start_at = Instant::now();
+            ctx.sign_init(session, &RSA_MECHANISM, private_key).unwrap();
+            ctx.sign(session, &data).unwrap();
+            assert!(start_at.elapsed() < Duration::from_secs(1));
+
+            ctx.destroy_object(session, public_key).unwrap();
+            ctx.destroy_object(session, private_key).unwrap();
+        },
+    )
+}

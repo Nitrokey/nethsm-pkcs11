@@ -25,6 +25,7 @@ use tempfile::NamedTempFile;
 use time::format_description;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::{self};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::task::AbortHandle;
 use ureq::AgentBuilder;
@@ -100,6 +101,7 @@ fn tls_conf() -> rustls::ClientConfig {
 
 pub struct TestContext {
     blocked_ports: HashSet<u16>,
+    stall_connections: broadcast::Sender<()>,
 }
 
 pub struct TestDropper {
@@ -188,6 +190,11 @@ impl TestContext {
             .unwrap();
         assert!(out_in.status.success());
     }
+
+    /// Make all active connections wait before killing the connection
+    pub fn stall_active_connections(&self) {
+        self.stall_connections.send(()).unwrap();
+    }
 }
 
 impl Drop for TestDropper {
@@ -199,27 +206,28 @@ impl Drop for TestDropper {
     }
 }
 
-static PROXY_SENDER: LazyLock<UnboundedSender<(u16, u16)>> = LazyLock::new(|| {
-    let (tx, mut rx) = unbounded_channel();
-    std::thread::spawn(move || {
-        runtime::Builder::new_current_thread()
-            .enable_io()
-            .build()
-            .unwrap()
-            .block_on(async move {
-                let mut tasks = Vec::new();
-                while let Some((from_port, to_port)) = rx.recv().await {
-                    tasks.push(tokio::spawn(proxy(from_port, to_port)));
-                }
-                for task in tasks {
-                    task.abort();
-                }
-            })
+static PROXY_SENDER: LazyLock<UnboundedSender<(u16, u16, broadcast::Sender<()>)>> =
+    LazyLock::new(|| {
+        let (tx, mut rx) = unbounded_channel();
+        std::thread::spawn(move || {
+            runtime::Builder::new_current_thread()
+                .enable_io()
+                .build()
+                .unwrap()
+                .block_on(async move {
+                    let mut tasks = Vec::new();
+                    while let Some((from_port, to_port, sender)) = rx.recv().await {
+                        tasks.push(tokio::spawn(proxy(from_port, to_port, sender)));
+                    }
+                    for task in tasks {
+                        task.abort();
+                    }
+                })
+        });
+        tx
     });
-    tx
-});
 
-async fn proxy(from_port: u16, to_port: u16) {
+async fn proxy(from_port: u16, to_port: u16, stall_sender: broadcast::Sender<()>) {
     let listener = TcpListener::bind(((Ipv4Addr::from([127, 0, 0, 1])), from_port))
         .await
         .unwrap();
@@ -245,13 +253,26 @@ async fn proxy(from_port: u16, to_port: u16) {
         async fn handle_stream(
             mut rx: tokio::net::tcp::OwnedReadHalf,
             mut tx: tokio::net::tcp::OwnedWriteHalf,
+            mut stall_receiver: broadcast::Receiver<()>,
         ) {
             use tokio::io::{AsyncReadExt, AsyncWriteExt};
             let mut buffer = vec![0; 12 * 1024];
+            let mut should_stall = false;
             loop {
                 let n = rx.read(&mut buffer).await.unwrap();
 
+                match stall_receiver.try_recv() {
+                    Ok(()) | Err(broadcast::error::TryRecvError::Lagged(_)) => should_stall = true,
+                    Err(broadcast::error::TryRecvError::Empty) => {}
+                    Err(broadcast::error::TryRecvError::Closed) => {}
+                }
+
                 if n == 0 {
+                    return;
+                }
+
+                if should_stall {
+                    tokio::time::sleep(Duration::from_secs(50)).await;
                     return;
                 }
 
@@ -261,12 +282,14 @@ async fn proxy(from_port: u16, to_port: u16) {
 
         let (rx1, tx1) = socket1.into_split();
         let (rx2, tx2) = socket2.into_split();
+        let stall_rx = stall_sender.subscribe();
+        let stall_tx = stall_sender.subscribe();
         dropper
             .0
-            .push(tokio::spawn(handle_stream(rx1, tx2)).abort_handle());
+            .push(tokio::spawn(handle_stream(rx1, tx2, stall_tx)).abort_handle());
         dropper
             .0
-            .push(tokio::spawn(handle_stream(rx2, tx1)).abort_handle());
+            .push(tokio::spawn(handle_stream(rx2, tx1, stall_rx)).abort_handle());
     }
 }
 
@@ -286,6 +309,7 @@ pub fn run_tests(
         serialize_test,
         context: TestContext {
             blocked_ports: HashSet::new(),
+            stall_connections: broadcast::channel(1).0,
         },
     };
 
@@ -343,7 +367,13 @@ pub fn run_tests(
     }
 
     for (in_port, out_port) in proxies {
-        PROXY_SENDER.send((*in_port, *out_port)).unwrap();
+        PROXY_SENDER
+            .send((
+                *in_port,
+                *out_port,
+                test_dropper.context.stall_connections.clone(),
+            ))
+            .unwrap();
     }
 
     let mut tmpfile: NamedTempFile = NamedTempFile::new().unwrap();
