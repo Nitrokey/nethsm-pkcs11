@@ -3,7 +3,7 @@ use std::{
     sync::{
         atomic::{AtomicUsize, Ordering::Relaxed},
         mpsc::{self, RecvTimeoutError},
-        Arc, Condvar, LazyLock, Mutex, RwLock,
+        Arc, Condvar, LazyLock, Mutex, RwLock, Weak,
     },
     thread,
     time::{Duration, Instant},
@@ -27,7 +27,7 @@ fn background_timer(
     rx: mpsc::Receiver<(Duration, InstanceData)>,
     tx_instance: mpsc::Sender<InstanceData>,
 ) -> impl FnOnce() {
-    let mut jobs: BTreeMap<Instant, InstanceData> = BTreeMap::new();
+    let mut jobs: BTreeMap<Instant, WeakInstanceData> = BTreeMap::new();
     move || loop {
         let next_job = jobs.pop_first();
         let Some((next_job_deadline, next_job_instance)) = next_job else {
@@ -36,22 +36,25 @@ fn background_timer(
                 return;
             };
 
-            jobs.insert(Instant::now() + new_job_duration, new_state);
+            jobs.insert(Instant::now() + new_job_duration, new_state.into());
             continue;
         };
 
         let now = Instant::now();
 
         if now >= next_job_deadline {
-            tx_instance.send(next_job_instance).unwrap();
-            continue;
+            if let Some(instance) = next_job_instance.upgrade() {
+                tx_instance.send(instance).unwrap();
+                continue;
+            }
+        } else {
+            jobs.insert(next_job_deadline, next_job_instance);
         }
-        jobs.insert(next_job_deadline, next_job_instance);
 
         let timeout = next_job_deadline.duration_since(now);
         match rx.recv_timeout(timeout) {
             Ok((run_in, new_instance)) => {
-                jobs.insert(now + run_in, new_instance);
+                jobs.insert(now + run_in, new_instance.into());
                 continue;
             }
             Err(RecvTimeoutError::Timeout) => continue,
@@ -101,6 +104,31 @@ impl InstanceState {
 pub struct InstanceData {
     pub config: Configuration,
     pub state: Arc<RwLock<InstanceState>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeakInstanceData {
+    pub config: Configuration,
+    pub state: Weak<RwLock<InstanceState>>,
+}
+
+impl From<InstanceData> for WeakInstanceData {
+    fn from(value: InstanceData) -> Self {
+        Self {
+            config: value.config,
+            state: Arc::downgrade(&value.state),
+        }
+    }
+}
+
+impl WeakInstanceData {
+    fn upgrade(self) -> Option<InstanceData> {
+        let state = self.state.upgrade()?;
+        Some(InstanceData {
+            config: self.config,
+            state,
+        })
+    }
 }
 
 pub enum InstanceAttempt {
