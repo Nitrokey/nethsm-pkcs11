@@ -16,6 +16,7 @@ pub mod verify;
 use std::sync::atomic::Ordering;
 use std::{ptr::addr_of_mut, sync::Arc};
 
+use crate::config::device::{RetryThreadMessage, RETRY_THREAD};
 use crate::{
     backend::events::{fetch_slots_state, EventsManager},
     data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
@@ -110,6 +111,9 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
     DEVICE.store(None);
+    if THREADS_ALLOWED.load(Ordering::Relaxed) {
+        RETRY_THREAD.send(RetryThreadMessage::Finalize).unwrap();
+    }
     EVENTS_MANAGER.write().unwrap().finalized = true;
 
     cryptoki_sys::CKR_OK
