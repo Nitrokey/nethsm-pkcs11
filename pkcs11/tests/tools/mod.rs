@@ -197,8 +197,8 @@ impl TestContext {
     }
 }
 
-impl Drop for TestDropper {
-    fn drop(&mut self) {
+impl TestDropper {
+    fn clear(&mut self) {
         for p in self.context.blocked_ports.iter().cloned() {
             TestContext::unblock(p);
         }
@@ -206,26 +206,45 @@ impl Drop for TestDropper {
     }
 }
 
-static PROXY_SENDER: LazyLock<UnboundedSender<(u16, u16, broadcast::Sender<()>)>> =
-    LazyLock::new(|| {
-        let (tx, mut rx) = unbounded_channel();
-        std::thread::spawn(move || {
-            runtime::Builder::new_current_thread()
-                .enable_io()
-                .build()
-                .unwrap()
-                .block_on(async move {
-                    let mut tasks = Vec::new();
-                    while let Some((from_port, to_port, sender)) = rx.recv().await {
-                        tasks.push(tokio::spawn(proxy(from_port, to_port, sender)));
+impl Drop for TestDropper {
+    fn drop(&mut self) {
+        self.clear();
+    }
+}
+
+enum ProxyMessage {
+    NewProxy(u16, u16, broadcast::Sender<()>),
+    CloseAll,
+}
+
+static PROXY_SENDER: LazyLock<UnboundedSender<ProxyMessage>> = LazyLock::new(|| {
+    let (tx, mut rx) = unbounded_channel();
+    std::thread::spawn(move || {
+        runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .unwrap()
+            .block_on(async move {
+                let mut tasks = Vec::new();
+                while let Some(msg) = rx.recv().await {
+                    match msg {
+                        ProxyMessage::NewProxy(from_port, to_port, sender) => {
+                            tasks.push(tokio::spawn(proxy(from_port, to_port, sender)))
+                        }
+                        ProxyMessage::CloseAll => {
+                            for task in mem::take(&mut tasks) {
+                                task.abort();
+                            }
+                        }
                     }
-                    for task in tasks {
-                        task.abort();
-                    }
-                })
-        });
-        tx
+                }
+                for task in tasks {
+                    task.abort();
+                }
+            })
     });
+    tx
+});
 
 async fn proxy(from_port: u16, to_port: u16, stall_sender: broadcast::Sender<()>) {
     let listener = TcpListener::bind(((Ipv4Addr::from([127, 0, 0, 1])), from_port))
@@ -368,7 +387,7 @@ pub fn run_tests(
 
     for (in_port, out_port) in proxies {
         PROXY_SENDER
-            .send((
+            .send(ProxyMessage::NewProxy(
                 *in_port,
                 *out_port,
                 test_dropper.context.stall_connections.clone(),
@@ -384,5 +403,6 @@ pub fn run_tests(
     let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
     f(&mut test_dropper.context, &mut ctx);
     ctx.close_all_sessions(0).unwrap();
+    PROXY_SENDER.send(ProxyMessage::CloseAll).unwrap();
     println!("Ending test");
 }
