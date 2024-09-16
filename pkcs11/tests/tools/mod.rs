@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::io::BufWriter;
 use std::mem;
 use std::net::Ipv4Addr;
+use std::ptr;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use std::thread::sleep;
 use std::time::Duration;
@@ -16,7 +17,7 @@ use nethsm_sdk_rs::{
     },
     models::{ProvisionRequestData, UserPostData, UserRole},
 };
-use pkcs11::Ctx;
+use pkcs11::{types::CK_C_INITIALIZE_ARGS, Ctx};
 use rustls::{
     client::danger::ServerCertVerifier,
     crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider},
@@ -318,7 +319,7 @@ static DOCKER_HELD: Mutex<bool> = Mutex::new(false);
 pub fn run_tests(
     proxies: &[(u16, u16)],
     config: P11Config,
-    f: impl FnOnce(&mut TestContext, &mut Ctx),
+    f: impl FnOnce(&mut TestContext, &mut Ctx) + Clone,
 ) {
     let Ok(serialize_test) = DOCKER_HELD.lock() else {
         eprintln!("Test not run");
@@ -400,9 +401,26 @@ pub fn run_tests(
     serde_yaml::to_writer(BufWriter::new(tmpfile.as_file_mut()), &config).unwrap();
     let path = tmpfile.path();
     set_var(config_file::ENV_VAR_CONFIG_FILE, path);
-    let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
-    f(&mut test_dropper.context, &mut ctx);
-    ctx.close_all_sessions(0).unwrap();
+    {
+        let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
+        let f_cl = f.clone();
+        f_cl(&mut test_dropper.context, &mut ctx);
+        ctx.close_all_sessions(0).unwrap();
+    }
+    {
+        let mut ctx = Ctx::new("../target/release/libnethsm_pkcs11.so").unwrap();
+        ctx.initialize(Some(CK_C_INITIALIZE_ARGS {
+            CreateMutex: None,
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS,
+            pReserved: ptr::null_mut(),
+        }))
+        .unwrap();
+        f(&mut test_dropper.context, &mut ctx);
+        ctx.close_all_sessions(0).unwrap();
+    }
     PROXY_SENDER.send(ProxyMessage::CloseAll).unwrap();
     println!("Ending test");
 }
