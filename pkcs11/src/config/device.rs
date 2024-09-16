@@ -2,7 +2,7 @@ use std::{
     collections::BTreeMap,
     sync::{
         atomic::{AtomicUsize, Ordering::Relaxed},
-        mpsc::{self, RecvTimeoutError},
+        mpsc::{self, RecvError, RecvTimeoutError},
         Arc, Condvar, LazyLock, Mutex, RwLock, Weak,
     },
     thread,
@@ -15,7 +15,17 @@ use crate::{backend::db::Db, data::THREADS_ALLOWED};
 
 use super::config_file::{RetryConfig, UserConfig};
 
-static RETRY_THREAD: LazyLock<mpsc::Sender<(Duration, InstanceData)>> = LazyLock::new(|| {
+#[allow(clippy::large_enum_variant)]
+pub enum RetryThreadMessage {
+    FailedInstnace {
+        retry_in: Duration,
+        instance: InstanceData,
+    },
+    /// The device is being removed, clear all connections
+    Finalize,
+}
+
+pub static RETRY_THREAD: LazyLock<mpsc::Sender<RetryThreadMessage>> = LazyLock::new(|| {
     let (tx, rx) = mpsc::channel();
     let (tx_instance, rx_instance) = mpsc::channel();
     thread::spawn(background_thread(rx_instance));
@@ -24,7 +34,7 @@ static RETRY_THREAD: LazyLock<mpsc::Sender<(Duration, InstanceData)>> = LazyLock
 });
 
 fn background_timer(
-    rx: mpsc::Receiver<(Duration, InstanceData)>,
+    rx: mpsc::Receiver<RetryThreadMessage>,
     tx_instance: mpsc::Sender<InstanceData>,
 ) -> impl FnOnce() {
     let mut jobs: BTreeMap<Instant, WeakInstanceData> = BTreeMap::new();
@@ -32,12 +42,14 @@ fn background_timer(
         let next_job = jobs.pop_first();
         let Some((next_job_deadline, next_job_instance)) = next_job else {
             // No jobs in the queue, we can just run the next
-            let Ok((new_job_duration, new_state)) = rx.recv() else {
-                return;
-            };
-
-            jobs.insert(Instant::now() + new_job_duration, new_state.into());
-            continue;
+            match rx.recv() {
+                Err(RecvError) => break,
+                Ok(RetryThreadMessage::Finalize) => continue,
+                Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
+                    jobs.insert(Instant::now() + retry_in, instance.into());
+                    continue;
+                }
+            }
         };
 
         let now = Instant::now();
@@ -53,8 +65,12 @@ fn background_timer(
 
         let timeout = next_job_deadline.duration_since(now);
         match rx.recv_timeout(timeout) {
-            Ok((run_in, new_instance)) => {
-                jobs.insert(now + run_in, new_instance.into());
+            Ok(RetryThreadMessage::Finalize) => {
+                jobs.clear();
+                continue;
+            }
+            Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
+                jobs.insert(now + retry_in, instance.into());
                 continue;
             }
             Err(RecvTimeoutError::Timeout) => continue,
@@ -191,7 +207,10 @@ impl InstanceData {
         drop(write);
         if THREADS_ALLOWED.load(Relaxed) {
             RETRY_THREAD
-                .send((retry_duration_from_count(retry_count), self.clone()))
+                .send(RetryThreadMessage::FailedInstnace {
+                    retry_in: retry_duration_from_count(retry_count),
+                    instance: self.clone(),
+                })
                 .ok();
         }
     }
