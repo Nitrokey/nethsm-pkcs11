@@ -1,5 +1,22 @@
 # Changelog
 
+
+## [1.5.0][] (2024-09-18)
+
+- Make instance use within a slot really round-robin ([#218][])
+- Mark instances as bad on network failure ([#218][])
+- Automatically clear all connection pools on network failure ([#218][])
+- Retry bad instances in a background thread ([#218][])
+- Retry bad instance "inline" with the requests if background threads are not allowd ([#223][])
+- Add tests for retry mechanisms and timeouts with dead or stalled connections ([#214][])
+
+[#214]: https://github.com/Nitrokey/nethsm-pkcs11/pull/214
+[#218]: https://github.com/Nitrokey/nethsm-pkcs11/pull/218
+[#223]: https://github.com/Nitrokey/nethsm-pkcs11/pull/223
+
+[1.5.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.5.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.4.1...v1.5.0)
+
 ## [1.4.1][] (2024-09-09)
 
 - Fix compilation on windows ([#219][])
