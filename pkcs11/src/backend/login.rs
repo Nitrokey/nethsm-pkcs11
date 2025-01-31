@@ -96,8 +96,7 @@ impl std::fmt::Display for LoginError {
 
 /// Perform a health check with a timeout of 1 second
 fn health_check_get_timeout(instance: &InstanceData) -> bool {
-    todo!("{instance:?}");
-    // instance.config.client.clear_pool();
+    instance.clear_pool();
     let config = &instance.config;
     let uri_str = format!("{}/health/ready", config.base_path);
     let mut req = config
@@ -534,6 +533,7 @@ fn get_user_api_config(
             ..api_config.config.clone()
         },
         state: api_config.state.clone(),
+        clear_flag: api_config.clear_flag.clone(),
     })
 }
 

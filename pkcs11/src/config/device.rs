@@ -1,7 +1,10 @@
 use std::{
     collections::BTreeMap,
     sync::{
-        atomic::{AtomicUsize, Ordering::Relaxed},
+        atomic::{
+            AtomicBool, AtomicUsize,
+            Ordering::{self, Relaxed},
+        },
         mpsc::{self, RecvError, RecvTimeoutError},
         Arc, Condvar, LazyLock, Mutex, RwLock, Weak,
     },
@@ -9,6 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use arc_swap::ArcSwap;
 use nethsm_sdk_rs::apis::{configuration::Configuration, default_api::health_ready_get};
 
 use crate::{backend::db::Db, data::THREADS_ALLOWED};
@@ -82,8 +86,7 @@ fn background_timer(
 fn background_thread(rx: mpsc::Receiver<InstanceData>) -> impl FnOnce() {
     move || loop {
         while let Ok(instance) = rx.recv() {
-            todo!("{instance:?}");
-            // instance.config.client.clear_pool();
+            instance.clear_pool();
             match health_ready_get(&instance.config) {
                 Ok(_) => instance.clear_failed(),
                 Err(_) => instance.bump_failed(),
@@ -122,12 +125,21 @@ impl InstanceState {
 pub struct InstanceData {
     pub config: Configuration,
     pub state: Arc<RwLock<InstanceState>>,
+    pub clear_flag: Arc<ArcSwap<AtomicBool>>,
+}
+
+impl InstanceData {
+    pub fn clear_pool(&self) {
+        let old_flag = self.clear_flag.swap(Arc::new(AtomicBool::new(true)));
+        old_flag.store(false, Ordering::Relaxed);
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct WeakInstanceData {
     pub config: Configuration,
     pub state: Weak<RwLock<InstanceState>>,
+    pub clear_flag: Arc<ArcSwap<AtomicBool>>,
 }
 
 impl From<InstanceData> for WeakInstanceData {
@@ -135,6 +147,7 @@ impl From<InstanceData> for WeakInstanceData {
         Self {
             config: value.config,
             state: Arc::downgrade(&value.state),
+            clear_flag: value.clear_flag,
         }
     }
 }
@@ -145,6 +158,7 @@ impl WeakInstanceData {
         Some(InstanceData {
             config: self.config,
             state,
+            clear_flag: self.clear_flag,
         })
     }
 }
@@ -260,8 +274,7 @@ impl Slot {
 
     pub fn clear_all_pools(&self) {
         for instance in &self.instances {
-            todo!("{instance:?}");
-            // instance.config.client.clear_pool();
+            instance.clear_pool();
         }
     }
 }

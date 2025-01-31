@@ -1,8 +1,11 @@
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration as StdDuration;
 use std::{fmt, io};
 
+use arc_swap::ArcSwap;
 use ureq::config::Config;
 use ureq::unversioned::transport::time::Duration;
 use ureq::Error;
@@ -22,6 +25,9 @@ pub struct TcpConnector {
     pub tcp_keepalive_time: Option<StdDuration>,
     pub tcp_keepalive_interval: Option<StdDuration>,
     pub tcp_keepalive_retries: Option<u32>,
+    /// True means connection can continue, false
+    /// means connection must be closed
+    pub clear_flag: Arc<ArcSwap<AtomicBool>>,
 }
 
 impl<In: Transport> Connector<In> for TcpConnector {
@@ -71,7 +77,7 @@ impl<In: Transport> Connector<In> for TcpConnector {
         }
 
         let buffers = LazyBuffers::new(config.input_buffer_size(), config.output_buffer_size());
-        let transport = TcpTransport::new(socket.into(), buffers);
+        let transport = TcpTransport::new(socket.into(), buffers, self.clear_flag.load_full());
 
         Ok(Some(Either::B(transport)))
     }
@@ -139,15 +145,22 @@ pub struct TcpTransport {
     buffers: LazyBuffers,
     timeout_write: Option<Duration>,
     timeout_read: Option<Duration>,
+    /// Flag used to indicate that the connection must be closed
+    clear_flag: Arc<AtomicBool>,
 }
 
 impl TcpTransport {
-    pub fn new(stream: TcpStream, buffers: LazyBuffers) -> TcpTransport {
+    pub fn new(
+        stream: TcpStream,
+        buffers: LazyBuffers,
+        clear_flag: Arc<AtomicBool>,
+    ) -> TcpTransport {
         TcpTransport {
             stream,
             buffers,
             timeout_read: None,
             timeout_write: None,
+            clear_flag,
         }
     }
 }
@@ -217,7 +230,8 @@ impl Transport for TcpTransport {
     }
 
     fn is_open(&mut self) -> bool {
-        probe_tcp_stream(&mut self.stream).unwrap_or(false)
+        self.clear_flag.load(Ordering::Relaxed)
+            && probe_tcp_stream(&mut self.stream).unwrap_or(false)
     }
 }
 
@@ -227,15 +241,9 @@ fn probe_tcp_stream(stream: &mut TcpStream) -> Result<bool, Error> {
 
     let mut buf = [0];
     match stream.read(&mut buf) {
-        Err(e)
-            if matches!(
-                e.kind(),
-                io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
-            ) =>
-        {
+        Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
             // This is the correct condition. There should be no waiting
             // bytes, and therefore reading would block
-            // And a time out means the connection died and was detected dead by the tcp keepalive
         }
         // Any bytes read means the server sent some garbage we didn't ask for
         Ok(_) => {
