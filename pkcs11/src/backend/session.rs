@@ -513,7 +513,7 @@ impl Session {
 
         /// Drop the Condvar to notify on close
         struct NotifyAllGuard<'a>(Option<&'a (Mutex<Db>, Condvar)>);
-        impl<'a> Drop for NotifyAllGuard<'a> {
+        impl Drop for NotifyAllGuard<'_> {
             fn drop(&mut self) {
                 if let Some(cv) = self.0 {
                     cv.0.lock().unwrap().set_is_being_fetched(false);
