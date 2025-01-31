@@ -5,7 +5,10 @@ use std::{
     time::Duration,
 };
 
-use crate::config::device::InstanceData;
+use crate::{
+    config::device::InstanceData,
+    ureq::{rustls_connector::RustlsConnector, tcp_connector::TcpConnector},
+};
 
 use super::{
     config_file::{config_files, ConfigError, SlotConfig},
@@ -18,6 +21,12 @@ use rustls::{
     crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider},
 };
 use sha2::Digest;
+use ureq::{
+    tls::{TlsConfig, TlsProvider::Rustls},
+    unversioned::transport::{ConnectProxyConnector, Connector},
+};
+
+use ureq::unversioned::resolver::DefaultResolver;
 
 const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION"));
 
@@ -255,31 +264,42 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         // 100 idle connections is the default
         // By default there is 1 idle connection per host, but we are only connecting to 1 host.
         // So we need to allow the connection pool to scale to match the number of threads
-        let mut builder = ureq::AgentBuilder::new()
-            .tls_config(Arc::new(tls_conf))
+        let mut builder = ureq::Agent::config_builder()
+            .tls_config(TlsConfig::builder().provider(Rustls).build())
             .max_idle_connections(max_idle_connections)
             .max_idle_connections_per_host(max_idle_connections);
 
         if let Some(t) = slot.timeout_seconds {
-            builder = builder
-                .timeout(Duration::from_secs(t))
-                .timeout_connect(Duration::from_secs(10));
+            builder = builder.timeout_global(Some(Duration::from_secs(t)));
         }
+
+        let mut tcp_keepalive_time = None;
+        let mut tcp_keepalive_retries = None;
+        let mut tcp_keepalive_interval = None;
         if let Some(keepalive) = slot.tcp_keepalive {
-            builder = builder
-                .tcp_keepalive_time(Duration::from_secs(keepalive.time_seconds))
-                .tcp_keepalive_interval(Duration::from_secs(keepalive.interval_seconds))
-                .tcp_keepalive_retries(keepalive.retries);
+            tcp_keepalive_time = Some(Duration::from_secs(keepalive.time_seconds));
+            tcp_keepalive_interval = Some(Duration::from_secs(keepalive.interval_seconds));
+            tcp_keepalive_retries = Some(keepalive.retries);
         }
 
         if let Some(max_idle_duration) = slot.connections_max_idle_duration {
-            builder = builder.max_idle_duration(Duration::from_secs(max_idle_duration));
+            builder = builder.max_idle_age(Duration::from_secs(max_idle_duration));
         }
 
-        let agent = builder.build();
-
         let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
-            client: agent,
+            client: ureq::Agent::with_parts(
+                builder.build(),
+                ().chain(TcpConnector {
+                    tcp_keepalive_time,
+                    tcp_keepalive_retries,
+                    tcp_keepalive_interval,
+                })
+                .chain(RustlsConnector {
+                    config: tls_conf.into(),
+                })
+                .chain(ConnectProxyConnector::default()),
+                DefaultResolver::default(),
+            ),
             base_path: instance.url.clone(),
             basic_auth: Some((default_user.username.clone(), default_user.password.clone())),
             user_agent: Some(DEFAULT_USER_AGENT.to_string()),
