@@ -154,7 +154,7 @@ impl<'de> Deserialize<'de> for HexFingerprint {
         D: serde::Deserializer<'de>,
     {
         struct HexFingerprintVisitor;
-        impl<'de> serde::de::Visitor<'de> for HexFingerprintVisitor {
+        impl serde::de::Visitor<'_> for HexFingerprintVisitor {
             type Value = HexFingerprint;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

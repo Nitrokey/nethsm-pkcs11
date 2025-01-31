@@ -130,7 +130,7 @@ pub struct CkRawAttrTemplateIter<'a> {
     index: usize,
 }
 
-impl<'a> Iterator for CkRawAttrTemplateIter<'a> {
+impl Iterator for CkRawAttrTemplateIter<'_> {
     type Item = CkRawAttr;
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.tpl.len() {
