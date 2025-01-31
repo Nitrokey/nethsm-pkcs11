@@ -20,3 +20,8 @@ profile
 coverage
 coverage.txt
 fork-tests/fork_test
+pkcs11-proxy-raw
+pkcs11-proxy-slow
+pkcs11-thread-bench
+stress-test
+certutil-db

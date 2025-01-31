@@ -96,12 +96,18 @@ impl std::fmt::Display for LoginError {
 
 /// Perform a health check with a timeout of 1 second
 fn health_check_get_timeout(instance: &InstanceData) -> bool {
-    instance.config.client.clear_pool();
+    todo!("{instance:?}");
+    // instance.config.client.clear_pool();
     let config = &instance.config;
     let uri_str = format!("{}/health/ready", config.base_path);
-    let mut req = config.client.get(&uri_str).timeout(Duration::from_secs(1));
+    let mut req = config
+        .client
+        .get(&uri_str)
+        .config()
+        .timeout_global(Some(Duration::from_secs(1)))
+        .build();
     if let Some(ref user_agent) = config.user_agent {
-        req = req.set("user-agent", user_agent);
+        req = req.header("user-agent", user_agent);
     }
 
     match req.call() {
@@ -110,7 +116,7 @@ fn health_check_get_timeout(instance: &InstanceData) -> bool {
                 instance.clear_failed();
                 return true;
             }
-            log::warn!("Failed retry {}", r.status_text());
+            log::warn!("Failed retry {}", r.status());
             instance.bump_failed();
             false
         }
@@ -404,12 +410,17 @@ impl LoginCtx {
                 }
 
                 // If the connection to the server failed with a network error, reconnecting might solve the issue
-                Err(apis::Error::Ureq(ureq::Error::Transport(err)))
-                    if matches!(
-                        err.kind(),
-                        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
-                    ) =>
-                {
+                // Err(apis::Error::Ureq(ureq::Error::Transport(err)))
+                //     if matches!(
+                //         err.kind(),
+                //         ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+                //     ) =>
+                // {
+                Err(apis::Error::Ureq(
+                    err @ (ureq::Error::Io(_)
+                    | ureq::Error::ConnectionFailed
+                    | ureq::Error::ConnectProxyFailed(_)),
+                )) => {
                     self.slot.clear_all_pools();
                     instance.bump_failed();
                     warn!("Connection attempt {retry_count} failed: IO error connecting to the instance, {err}, retrying in {delay_seconds}s");
