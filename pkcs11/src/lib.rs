@@ -1,5 +1,3 @@
-#![allow(unreachable_code)]
-
 mod api;
 
 mod data;

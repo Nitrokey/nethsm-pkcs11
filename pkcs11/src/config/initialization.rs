@@ -1,6 +1,6 @@
 use std::{
     path::PathBuf,
-    sync::{Arc, Condvar, Mutex},
+    sync::{atomic::AtomicBool, Arc, Condvar, Mutex},
     thread::available_parallelism,
     time::Duration,
 };
@@ -14,6 +14,7 @@ use super::{
     config_file::{config_files, ConfigError, SlotConfig},
     device::{Device, Slot},
 };
+use arc_swap::ArcSwap;
 use log::{debug, error, info, trace};
 use nethsm_sdk_rs::ureq;
 use rustls::{
@@ -286,6 +287,8 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             builder = builder.max_idle_age(Duration::from_secs(max_idle_duration));
         }
 
+        let clear_flag = Arc::new(ArcSwap::new(Arc::new(AtomicBool::new(true))));
+
         let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
             client: ureq::Agent::with_parts(
                 builder.build(),
@@ -293,6 +296,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                     tcp_keepalive_time,
                     tcp_keepalive_retries,
                     tcp_keepalive_interval,
+                    clear_flag: clear_flag.clone(),
                 })
                 .chain(RustlsConnector {
                     config: tls_conf.into(),
@@ -308,6 +312,7 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         instances.push(InstanceData {
             config: api_config,
             state: Default::default(),
+            clear_flag,
         });
     }
     if instances.is_empty() {
