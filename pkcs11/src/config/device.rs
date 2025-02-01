@@ -9,9 +9,18 @@ use std::{
     time::{Duration, Instant},
 };
 
+use arc_swap::ArcSwap;
 use nethsm_sdk_rs::apis::{configuration::Configuration, default_api::health_ready_get};
+use ureq::unversioned::{
+    resolver::{DefaultResolver, Resolver},
+    transport::{ConnectProxyConnector, Connector},
+};
 
-use crate::{backend::db::Db, data::THREADS_ALLOWED};
+use crate::{
+    backend::db::Db,
+    data::THREADS_ALLOWED,
+    ureq::{rustls_connector::RustlsConnector, tcp_connector::TcpConnector},
+};
 
 use super::config_file::{RetryConfig, UserConfig};
 
@@ -82,7 +91,7 @@ fn background_timer(
 fn background_thread(rx: mpsc::Receiver<InstanceData>) -> impl FnOnce() {
     move || loop {
         while let Ok(instance) = rx.recv() {
-            instance.config.client.clear_pool();
+            instance.clear_pool();
             match health_ready_get(&instance.config) {
                 Ok(_) => instance.clear_failed(),
                 Err(_) => instance.bump_failed(),
@@ -108,6 +117,14 @@ pub enum InstanceState {
     },
 }
 
+pub fn create_ureq_connector(tcp: TcpConnector, rustls: RustlsConnector) -> impl Connector {
+    tcp.chain(rustls).chain(ConnectProxyConnector::default())
+}
+
+pub fn create_ureq_resolver() -> impl Resolver {
+    DefaultResolver::default()
+}
+
 impl InstanceState {
     pub fn new_failed() -> InstanceState {
         InstanceState::Failed {
@@ -119,19 +136,82 @@ impl InstanceState {
 
 #[derive(Debug, Clone)]
 pub struct InstanceData {
-    pub config: Configuration,
+    pub agent: Arc<ArcSwap<ureq::Agent>>,
+    pub agent_config: ureq::config::Config,
+    pub tcp_connector: TcpConnector,
+    pub rustls_connector: RustlsConnector,
+    config: Configuration,
     pub state: Arc<RwLock<InstanceState>>,
+}
+
+impl InstanceData {
+    pub fn new(
+        agent: Arc<ArcSwap<ureq::Agent>>,
+        agent_config: ureq::config::Config,
+        tcp_connector: TcpConnector,
+        rustls_connector: RustlsConnector,
+        config: Configuration,
+        state: Arc<RwLock<InstanceState>>,
+    ) -> Self {
+        Self {
+            agent,
+            agent_config,
+            tcp_connector,
+            rustls_connector,
+            config,
+            state,
+        }
+    }
+
+    pub fn with_custom_config(&self, f: impl FnOnce(Configuration) -> Configuration) -> Self {
+        Self {
+            config: f(self.config()),
+            ..self.clone()
+        }
+    }
+
+    pub fn clear_pool(&self) {
+        let agent = ureq::Agent::with_parts(
+            self.agent_config.clone(),
+            self.tcp_connector
+                .clone()
+                .chain(self.rustls_connector.clone())
+                .chain(ConnectProxyConnector::default()),
+            DefaultResolver::default(),
+        );
+        self.agent.swap(Arc::new(agent.clone()));
+    }
+
+    pub fn config(&self) -> Configuration {
+        Configuration {
+            client: (**self.agent.load()).clone(),
+            ..self.config.clone()
+        }
+    }
+
+    #[cfg(test)]
+    pub fn config_mut(&mut self) -> &mut Configuration {
+        &mut self.config
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct WeakInstanceData {
-    pub config: Configuration,
+    pub agent: Arc<ArcSwap<ureq::Agent>>,
+    pub agent_config: ureq::config::Config,
+    pub tcp_connector: TcpConnector,
+    pub rustls_connector: RustlsConnector,
+    config: Configuration,
     pub state: Weak<RwLock<InstanceState>>,
 }
 
 impl From<InstanceData> for WeakInstanceData {
     fn from(value: InstanceData) -> Self {
         Self {
+            agent: value.agent,
+            agent_config: value.agent_config,
+            tcp_connector: value.tcp_connector,
+            rustls_connector: value.rustls_connector,
             config: value.config,
             state: Arc::downgrade(&value.state),
         }
@@ -142,6 +222,10 @@ impl WeakInstanceData {
     fn upgrade(self) -> Option<InstanceData> {
         let state = self.state.upgrade()?;
         Some(InstanceData {
+            agent: self.agent,
+            agent_config: self.agent_config,
+            tcp_connector: self.tcp_connector,
+            rustls_connector: self.rustls_connector,
             config: self.config,
             state,
         })
@@ -259,7 +343,7 @@ impl Slot {
 
     pub fn clear_all_pools(&self) {
         for instance in &self.instances {
-            instance.config.client.clear_pool();
+            instance.clear_pool();
         }
     }
 }

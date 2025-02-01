@@ -7,6 +7,7 @@ pub mod utils;
 mod backend;
 mod config;
 mod defs;
+mod ureq;
 
 #[cfg(panic = "abort")]
 mod unwind_stubs;

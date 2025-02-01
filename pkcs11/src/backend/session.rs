@@ -732,7 +732,10 @@ mod test {
                 delay_seconds: 0,
             });
             let bad_instance = &mut slot_mut.instances[0];
-            bad_instance.config.base_path.push_str("/corrupted_url");
+            bad_instance
+                .config_mut()
+                .base_path
+                .push_str("/corrupted_url");
             let session = Session {
                 db: slot_mut.db.clone(),
                 decrypt_ctx: None,
