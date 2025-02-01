@@ -1,12 +1,12 @@
 use std::{
     path::PathBuf,
-    sync::{atomic::AtomicBool, Arc, Condvar, Mutex},
+    sync::{Arc, Condvar, Mutex},
     thread::available_parallelism,
     time::Duration,
 };
 
 use crate::{
-    config::device::InstanceData,
+    config::device::{create_ureq_connector, create_ureq_resolver, InstanceData},
     ureq::{rustls_connector::RustlsConnector, tcp_connector::TcpConnector},
 };
 
@@ -22,12 +22,7 @@ use rustls::{
     crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider},
 };
 use sha2::Digest;
-use ureq::{
-    tls::{TlsConfig, TlsProvider::Rustls},
-    unversioned::transport::{ConnectProxyConnector, Connector},
-};
-
-use ureq::unversioned::resolver::DefaultResolver;
+use ureq::tls::{TlsConfig, TlsProvider::Rustls};
 
 const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION"));
 
@@ -289,33 +284,37 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
             builder = builder.max_idle_age(Duration::MAX)
         }
 
-        let clear_flag = Arc::new(ArcSwap::new(Arc::new(AtomicBool::new(true))));
+        let tcp_connector = TcpConnector {
+            tcp_keepalive_time,
+            tcp_keepalive_retries,
+            tcp_keepalive_interval,
+        };
+        let rustls_connector = RustlsConnector {
+            config: tls_conf.into(),
+        };
 
+        let agent_config = builder.build();
+        let agent = ureq::Agent::with_parts(
+            agent_config.clone(),
+            create_ureq_connector(tcp_connector.clone(), rustls_connector.clone()),
+            create_ureq_resolver(),
+        );
         let api_config = nethsm_sdk_rs::apis::configuration::Configuration {
-            client: ureq::Agent::with_parts(
-                builder.build(),
-                ().chain(TcpConnector {
-                    tcp_keepalive_time,
-                    tcp_keepalive_retries,
-                    tcp_keepalive_interval,
-                    clear_flag: clear_flag.clone(),
-                })
-                .chain(RustlsConnector {
-                    config: tls_conf.into(),
-                })
-                .chain(ConnectProxyConnector::default()),
-                DefaultResolver::default(),
-            ),
+            client: agent.clone(),
             base_path: instance.url.clone(),
             basic_auth: Some((default_user.username.clone(), default_user.password.clone())),
             user_agent: Some(DEFAULT_USER_AGENT.to_string()),
             ..Default::default()
         };
-        instances.push(InstanceData {
-            config: api_config,
-            state: Default::default(),
-            clear_flag,
-        });
+
+        instances.push(InstanceData::new(
+            Arc::new(ArcSwap::new(Arc::new(agent))),
+            agent_config,
+            tcp_connector,
+            rustls_connector,
+            api_config,
+            Default::default(),
+        ));
     }
     if instances.is_empty() {
         error!("Slot without any instance configured");
