@@ -155,6 +155,7 @@ static PROXY_SENDER: LazyLock<UnboundedSender<ProxyMessage>> = LazyLock::new(|| 
     let (tx, mut rx) = unbounded_channel();
     std::thread::spawn(move || {
         runtime::Builder::new_current_thread()
+            .enable_time()
             .enable_io()
             .build()
             .unwrap()
