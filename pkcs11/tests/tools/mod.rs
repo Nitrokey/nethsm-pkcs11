@@ -3,7 +3,7 @@ use std::io::BufWriter;
 use std::mem;
 use std::net::Ipv4Addr;
 use std::ptr;
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
+use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::thread::sleep;
 use std::time::Duration;
 use std::{env::set_var, process::Command};
@@ -18,10 +18,6 @@ use nethsm_sdk_rs::{
     models::{ProvisionRequestData, UserPostData, UserRole},
 };
 use pkcs11::{types::CK_C_INITIALIZE_ARGS, Ctx};
-use rustls::{
-    client::danger::ServerCertVerifier,
-    crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider},
-};
 use tempfile::NamedTempFile;
 use time::format_description;
 use tokio::net::{TcpListener, TcpStream};
@@ -29,76 +25,13 @@ use tokio::runtime::{self};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::task::AbortHandle;
-use ureq::AgentBuilder;
+
+use ureq::tls::TlsConfig;
 
 pub const NETHSM_DOCKER_HOSTNAME: &str = match option_env!("NETHSM_DOCKER_HOSTNAME") {
     Some(v) => v,
     None => "localhost",
 };
-
-#[derive(Debug)]
-struct DangerIgnoreVerifier;
-
-impl ServerCertVerifier for DangerIgnoreVerifier {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &rustls::pki_types::CertificateDer<'_>,
-        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
-        _server_name: &rustls::pki_types::ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: rustls::pki_types::UnixTime,
-    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-        Ok(rustls::client::danger::ServerCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        message: &[u8],
-        cert: &rustls::pki_types::CertificateDer<'_>,
-        dss: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        let default_provider = CryptoProvider::get_default().unwrap();
-        verify_tls12_signature(
-            message,
-            cert,
-            dss,
-            &default_provider.signature_verification_algorithms,
-        )
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        message: &[u8],
-        cert: &rustls::pki_types::CertificateDer<'_>,
-        dss: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        let default_provider = CryptoProvider::get_default().unwrap();
-        verify_tls13_signature(
-            message,
-            cert,
-            dss,
-            &default_provider.signature_verification_algorithms,
-        )
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        let default_provider = CryptoProvider::get_default().unwrap();
-
-        default_provider
-            .signature_verification_algorithms
-            .supported_schemes()
-    }
-}
-
-fn tls_conf() -> rustls::ClientConfig {
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .ok();
-    rustls::ClientConfig::builder()
-        .dangerous()
-        .with_custom_certificate_verifier(Arc::new(DangerIgnoreVerifier))
-        .with_no_client_auth()
-}
 
 pub struct TestContext {
     blocked_ports: HashSet<u16>,
@@ -335,12 +268,12 @@ pub fn run_tests(
 
     let is_provisionned = mem::replace(&mut *test_dropper.serialize_test, true);
     if !is_provisionned {
-        let client = AgentBuilder::new()
-            .tls_config(Arc::new(tls_conf()))
-            .timeout_connect(Duration::from_secs(1))
-            .timeout_read(Duration::from_secs(10))
-            .timeout_write(Duration::from_secs(10))
-            .build();
+        let client = ureq::Agent::config_builder()
+            .tls_config(TlsConfig::builder().disable_verification(true).build())
+            .timeout_connect(Some(Duration::from_secs(1)))
+            .timeout_global(Some(Duration::from_secs(10)))
+            .build()
+            .into();
 
         let sdk_config = Configuration {
             client,
