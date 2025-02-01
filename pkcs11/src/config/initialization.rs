@@ -285,6 +285,8 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
 
         if let Some(max_idle_duration) = slot.connections_max_idle_duration {
             builder = builder.max_idle_age(Duration::from_secs(max_idle_duration));
+        } else {
+            builder = builder.max_idle_age(Duration::MAX)
         }
 
         let clear_flag = Arc::new(ArcSwap::new(Arc::new(AtomicBool::new(true))));
