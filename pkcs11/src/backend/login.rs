@@ -418,6 +418,7 @@ impl LoginCtx {
                 Err(apis::Error::Ureq(
                     err @ (ureq::Error::Io(_)
                     | ureq::Error::ConnectionFailed
+                    | ureq::Error::Timeout(_)
                     | ureq::Error::ConnectProxyFailed(_)),
                 )) => {
                     self.slot.clear_all_pools();
