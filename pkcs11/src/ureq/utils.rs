@@ -19,6 +19,8 @@ impl<T> IoResultExt for io::Result<T> {
         }
     }
 }
+
+// Remove when https://github.com/algesten/ureq/pull/974 is released
 pub(crate) fn timeout_not_zero(this: &NextTimeout) -> Option<Duration> {
     if this.after.is_not_happening() {
         None
