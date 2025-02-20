@@ -54,8 +54,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build project
-        run: cargo check
-    
+        run: cargo build --release
+
+      - name: Archive Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethsm-pkcs11-x86_64-windows.dll
+          path: target/release/nethsm_pkcs11.dll
+          if-no-files-found: error
+        
   build-macos:
     runs-on: macos-latest
     steps:
@@ -71,11 +78,26 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Build project for MacOs aaarch64
-        run: cargo check --target aarch64-apple-darwin
+      - name: Build project for MacOs x86_64
+        run: cargo build --release
 
-      - name: Build project
-        run: cargo check
+      - name: Archive Artifact x86_64
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethsm-pkcs11-x86_64-apple.dylib
+          path: target/release/libnethsm_pkcs11.dylib
+          if-no-files-found: error
+
+      - name: Build project MacOs aaarch64
+        run: cargo build --target aarch64-apple-darwin --release
+
+      - name: Archive Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethsm-pkcs11-aarch64-apple.dylib
+          path: target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib
+          if-no-files-found: error
+      
 
   tests:
     runs-on: ubuntu-latest
@@ -134,6 +156,14 @@ jobs:
         run: cargo build --release
       - name: run fork tests
         run: cd fork-tests && make
+
+      - name: Archive Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethsm-pkcs11-x86_64-linux-gnu.so
+          path:  target/release/libnethsm_pkcs11.so
+          if-no-files-found: error
+      
   test_network:
     runs-on: ubuntu-latest
     env:
