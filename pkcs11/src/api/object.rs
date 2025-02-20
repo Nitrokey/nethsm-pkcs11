@@ -7,6 +7,7 @@ use crate::{
     lock_session, read_session,
 };
 
+#[no_mangle]
 pub extern "C" fn C_FindObjectsInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -28,6 +29,7 @@ pub extern "C" fn C_FindObjectsInit(
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_FindObjects(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -60,6 +62,7 @@ pub extern "C" fn C_FindObjects(
 
     cryptoki_sys::CKR_OK
 }
+#[no_mangle]
 pub extern "C" fn C_FindObjectsFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
@@ -71,6 +74,7 @@ pub extern "C" fn C_FindObjectsFinal(
 
     cryptoki_sys::CKR_OK
 }
+#[no_mangle]
 pub extern "C" fn C_GetAttributeValue(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -112,6 +116,7 @@ pub extern "C" fn C_GetAttributeValue(
 
     object.fill_attr_template(&mut template)
 }
+#[no_mangle]
 pub extern "C" fn C_GetObjectSize(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -140,6 +145,7 @@ pub extern "C" fn C_GetObjectSize(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_CreateObject(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -182,6 +188,7 @@ pub extern "C" fn C_CreateObject(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_CopyObject(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -194,6 +201,7 @@ pub extern "C" fn C_CopyObject(
     cryptoki_sys::CKR_ACTION_PROHIBITED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DestroyObject(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -208,6 +216,7 @@ pub extern "C" fn C_DestroyObject(
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_SetAttributeValue(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,

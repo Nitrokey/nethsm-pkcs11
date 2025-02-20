@@ -4,6 +4,7 @@ use crate::backend::slot::get_slot;
 use crate::data::SESSION_MANAGER;
 use crate::read_session;
 
+#[no_mangle]
 pub extern "C" fn C_OpenSession(
     slotID: cryptoki_sys::CK_SLOT_ID,
     flags: cryptoki_sys::CK_FLAGS,
@@ -46,6 +47,7 @@ pub extern "C" fn C_OpenSession(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_CloseSession() called with session handle {}.", hSession);
 
@@ -63,6 +65,7 @@ pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> c
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_CloseAllSessions(slotID: cryptoki_sys::CK_SLOT_ID) -> cryptoki_sys::CK_RV {
     trace!("C_CloseAllSessions() called");
 
@@ -81,6 +84,7 @@ pub extern "C" fn C_CloseAllSessions(slotID: cryptoki_sys::CK_SLOT_ID) -> crypto
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetSessionInfo(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pInfo: cryptoki_sys::CK_SESSION_INFO_PTR,
@@ -103,6 +107,7 @@ pub extern "C" fn C_GetSessionInfo(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetOperationState(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pOperationState: cryptoki_sys::CK_BYTE_PTR,
@@ -113,6 +118,7 @@ pub extern "C" fn C_GetOperationState(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_SetOperationState(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pOperationState: cryptoki_sys::CK_BYTE_PTR,
@@ -125,6 +131,7 @@ pub extern "C" fn C_SetOperationState(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetFunctionStatus(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {
@@ -133,6 +140,7 @@ pub extern "C" fn C_GetFunctionStatus(
     cryptoki_sys::CKR_FUNCTION_NOT_PARALLEL
 }
 
+#[no_mangle]
 pub extern "C" fn C_CancelFunction(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 ) -> cryptoki_sys::CK_RV {

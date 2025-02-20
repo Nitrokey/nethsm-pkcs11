@@ -4,6 +4,7 @@
 
 use log::trace;
 
+#[no_mangle]
 pub extern "C" fn C_VerifyInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -14,6 +15,7 @@ pub extern "C" fn C_VerifyInit(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_Verify(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: cryptoki_sys::CK_BYTE_PTR,
@@ -26,6 +28,7 @@ pub extern "C" fn C_Verify(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_VerifyUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -36,6 +39,7 @@ pub extern "C" fn C_VerifyUpdate(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_VerifyFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSignature: cryptoki_sys::CK_BYTE_PTR,
@@ -46,6 +50,7 @@ pub extern "C" fn C_VerifyFinal(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_VerifyRecoverInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -56,6 +61,7 @@ pub extern "C" fn C_VerifyRecoverInit(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_VerifyRecover(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSignature: cryptoki_sys::CK_BYTE_PTR,

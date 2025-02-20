@@ -11,6 +11,7 @@ use crate::{
     read_session,
 };
 
+#[no_mangle]
 pub extern "C" fn C_GenerateKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -75,6 +76,7 @@ pub extern "C" fn C_GenerateKey(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GenerateKeyPair(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -157,6 +159,7 @@ pub extern "C" fn C_GenerateKeyPair(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_WrapKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -170,6 +173,7 @@ pub extern "C" fn C_WrapKey(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_UnwrapKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -185,6 +189,7 @@ pub extern "C" fn C_UnwrapKey(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DeriveKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -199,6 +204,7 @@ pub extern "C" fn C_DeriveKey(
 }
 
 // we silently ignore this function as NetHSM handles the random number generation
+#[no_mangle]
 pub extern "C" fn C_SeedRandom(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSeed: cryptoki_sys::CK_BYTE_PTR,
@@ -209,6 +215,7 @@ pub extern "C" fn C_SeedRandom(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GenerateRandom(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     RandomData: cryptoki_sys::CK_BYTE_PTR,

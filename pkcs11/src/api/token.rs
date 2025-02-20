@@ -20,6 +20,7 @@ use crate::{
     utils::{padded_str, version_struct_from_str},
 };
 
+#[no_mangle]
 pub extern "C" fn C_GetSlotList(
     tokenPresent: cryptoki_sys::CK_BBOOL,
     pSlotList: cryptoki_sys::CK_SLOT_ID_PTR,
@@ -71,6 +72,7 @@ pub extern "C" fn C_GetSlotList(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetSlotInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
@@ -148,6 +150,7 @@ pub extern "C" fn C_GetSlotInfo(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetTokenInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
@@ -229,6 +232,7 @@ pub extern "C" fn C_GetTokenInfo(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_InitToken(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
@@ -240,6 +244,7 @@ pub extern "C" fn C_InitToken(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetMechanismList(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pMechanismList: cryptoki_sys::CK_MECHANISM_TYPE_PTR,
@@ -290,6 +295,7 @@ pub extern "C" fn C_GetMechanismList(
     CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetMechanismInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     type_: cryptoki_sys::CK_MECHANISM_TYPE,
@@ -319,6 +325,7 @@ pub extern "C" fn C_GetMechanismInfo(
     CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_Login(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     userType: cryptoki_sys::CK_USER_TYPE,
@@ -347,6 +354,7 @@ pub extern "C" fn C_Login(
         Err(e) => e.into(),
     }
 }
+#[no_mangle]
 pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
     trace!("C_Logout() called");
 
@@ -358,6 +366,7 @@ pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptok
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_WaitForSlotEvent(
     flags: cryptoki_sys::CK_FLAGS,
     pSlot: cryptoki_sys::CK_SLOT_ID_PTR,

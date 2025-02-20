@@ -42,6 +42,7 @@ pub extern "C" fn C_GetFunctionList(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     trace!("C_Initialize() called with args: {:?}", pInitArgs);
 
@@ -104,6 +105,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     trace!("C_Finalize() called");
 
@@ -119,6 +121,7 @@ pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     trace!("C_GetInfo() called");
 
