@@ -9,6 +9,7 @@ use crate::{
     lock_session,
 };
 
+#[no_mangle]
 pub extern "C" fn C_EncryptInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -39,6 +40,7 @@ pub extern "C" fn C_EncryptInit(
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_Encrypt(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: cryptoki_sys::CK_BYTE_PTR,
@@ -107,6 +109,7 @@ pub extern "C" fn C_Encrypt(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_EncryptUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -171,6 +174,7 @@ pub extern "C" fn C_EncryptUpdate(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_EncryptFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pLastEncryptedPart: cryptoki_sys::CK_BYTE_PTR,

@@ -4,6 +4,7 @@
 
 use log::trace;
 
+#[no_mangle]
 pub extern "C" fn C_DigestInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
@@ -17,6 +18,7 @@ pub extern "C" fn C_DigestInit(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_Digest(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: *mut cryptoki_sys::CK_BYTE,
@@ -33,6 +35,7 @@ pub extern "C" fn C_Digest(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DigestUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: *mut cryptoki_sys::CK_BYTE,
@@ -47,6 +50,7 @@ pub extern "C" fn C_DigestUpdate(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DigestFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pDigest: *mut cryptoki_sys::CK_BYTE,
@@ -61,6 +65,7 @@ pub extern "C" fn C_DigestFinal(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DigestKey(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -70,6 +75,7 @@ pub extern "C" fn C_DigestKey(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DigestEncryptUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -82,6 +88,7 @@ pub extern "C" fn C_DigestEncryptUpdate(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_DecryptDigestUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,

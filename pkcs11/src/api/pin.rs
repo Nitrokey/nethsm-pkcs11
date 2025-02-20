@@ -6,6 +6,7 @@ use log::{error, trace};
 
 use crate::lock_session;
 
+#[no_mangle]
 pub extern "C" fn C_InitPIN(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     uPin: cryptoki_sys::CK_UTF8CHAR_PTR,
@@ -16,6 +17,7 @@ pub extern "C" fn C_InitPIN(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_SetPIN(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pOldPin: cryptoki_sys::CK_UTF8CHAR_PTR,

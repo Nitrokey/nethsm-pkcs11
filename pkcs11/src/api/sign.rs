@@ -6,6 +6,7 @@ use crate::{
     lock_session,
 };
 
+#[no_mangle]
 pub extern "C" fn C_SignInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
@@ -40,6 +41,7 @@ pub extern "C" fn C_SignInit(
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_Sign(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: *mut cryptoki_sys::CK_BYTE,
@@ -113,6 +115,7 @@ pub extern "C" fn C_Sign(
     cryptoki_sys::CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_SignUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: *mut cryptoki_sys::CK_BYTE,
@@ -138,6 +141,7 @@ pub extern "C" fn C_SignUpdate(
     }
 }
 
+#[no_mangle]
 pub extern "C" fn C_SignFinal(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSignature: *mut cryptoki_sys::CK_BYTE,
@@ -201,6 +205,7 @@ pub extern "C" fn C_SignFinal(
     CKR_OK
 }
 
+#[no_mangle]
 pub extern "C" fn C_SignRecoverInit(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
@@ -211,6 +216,7 @@ pub extern "C" fn C_SignRecoverInit(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_SignRecover(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: cryptoki_sys::CK_BYTE_PTR,
@@ -223,6 +229,7 @@ pub extern "C" fn C_SignRecover(
     cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
 }
 
+#[no_mangle]
 pub extern "C" fn C_SignEncryptUpdate(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
