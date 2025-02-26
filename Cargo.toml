@@ -11,6 +11,3 @@ lto = true          # Enable link-time optimization
 codegen-units = 1   # Reduce number of codegen units to increase optimizations
 panic = 'abort'     # Abort on panic
 strip = true        # Strip symbols from binary
-
-[patch.crates-io]
-nethsm-sdk-rs =  { git = "https://github.com/Nitrokey/nethsm-sdk-rs.git", rev = "d6eb424acfc69f4cc0105e7d1229315d7a0992df" }
