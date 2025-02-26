@@ -1,6 +1,17 @@
 # Changelog
 
 
+## [1.6.0][] (2025-02-26)
+
+- Expose all PKCS11 functions as part of the C API, not just `C_GetFunctionList` ([#231][])
+- Upgrade to upstream ureq 3.0 ([#229][])
+
+[#231]: https://github.com/Nitrokey/nethsm-pkcs11/pull/231
+[#229]: https://github.com/Nitrokey/nethsm-pkcs11/pull/229
+
+[1.6.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.6.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.5.0...v1.6.0)
+
 ## [1.5.0][] (2024-09-18)
 
 - Make instance use within a slot really round-robin ([#218][])
