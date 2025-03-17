@@ -113,7 +113,7 @@ impl EnumCtx {
 
 #[cfg(test)]
 mod tests {
-    use cryptoki_sys::_CK_ATTRIBUTE;
+    use cryptoki_sys::CK_ATTRIBUTE;
 
     use super::*;
 
@@ -133,7 +133,7 @@ mod tests {
     fn test_parse_key_requirements_non_utf8_id() -> Result<(), Error> {
         let mut bytes: Vec<u8> = vec![0x00, 0xFF, 0x00, 0xFF];
 
-        let mut attributes = vec![_CK_ATTRIBUTE {
+        let mut attributes = vec![CK_ATTRIBUTE {
             type_: CKA_ID,
             pValue: bytes.as_mut_ptr() as *mut _,
             ulValueLen: 4,
@@ -157,7 +157,7 @@ mod tests {
     fn test_parse_key_requirements_id_from_label() -> Result<(), Error> {
         let mut bytes = "test".to_string().into_bytes();
 
-        let mut attributes = vec![_CK_ATTRIBUTE {
+        let mut attributes = vec![CK_ATTRIBUTE {
             type_: CKA_LABEL,
             pValue: bytes.as_mut_ptr() as *mut _,
             ulValueLen: 4,
