@@ -12,7 +12,7 @@ merge = { features = [
   "std",
 ], default-features = false, version = "0.1.0" }
 hex = "0.4.3"
-thiserror = "1.0.63"
+thiserror = "2.0.12"
 
 [dev-dependencies]
-hex-literal = "0.4.1"
+hex-literal = "1.0.0"

@@ -8,11 +8,8 @@ name = "nethsm_pkcs11"
 crate-type = ["cdylib"]
 
 [dependencies]
-env_logger = { default-features = false, version = "0.10.0", features = [
-  "auto-color",
-  "humantime",
-] }
-cryptoki-sys = "0.1.6"
+env_logger = { default-features = false, version = "0.11.7", features = ["auto-color", "humantime"] }
+cryptoki-sys = "0.3.0"
 log = "0.4.19"
 merge = { features = [
   "derive",
@@ -24,7 +21,7 @@ serde_json = { default-features = false, version = "1.0.64" }
 lazy_static = "1.4.0"
 nethsm-sdk-rs = { version = "2.0" }
 rustls = { version = "0.23", default-features = false }
-rustls-native-certs = "0.7"
+rustls-native-certs = "0.8"
 base64ct = { version = "1.6", default-features = false }
 hex = "0.4"
 der = { version = "0.7", default-features = false }
@@ -34,8 +31,8 @@ sha2 = { default-features = false, version = "0.10" }
 sha1 = { default-features = false, version = "0.10" }
 digest = { default-features = false, version = "0.10" }
 rayon = "1.8.0"
-syslog = "6.1.0"
-thiserror = "1.0.63"
+syslog = "6.1.1"
+thiserror = "2.0.12"
 arc-swap = "1.7.1"
 
 config_file = { path = "config_file" }
@@ -46,7 +43,7 @@ rustls-pki-types = "1.11.0"
 socket2 = { version = "0.5.8", features = ["all"] }
 
 [dev-dependencies]
-hex-literal = "0.4.1"
+hex-literal = "1.0.0"
 once_cell = "1.19.0"
 pkcs11 = "0.5.0"
 tempfile = "3.12.0"
