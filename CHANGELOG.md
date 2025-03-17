@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.7.0][] (2025-03-17)
+
+- Support storing the certificates as DER on the Nethsm ([#234][])
+- Update dependencies, fixing possible crash when compiled in debug mode ([#235][])
+
+[#234]: https://github.com/Nitrokey/nethsm-pkcs11/pull/234
+[#235]: https://github.com/Nitrokey/nethsm-pkcs11/pull/235
+
+[1.7.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.7.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.6.0...v1.7.0)
 
 ## [1.6.0][] (2025-02-26)
 
