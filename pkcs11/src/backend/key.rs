@@ -10,6 +10,7 @@ use crate::{
     data::{DEVICE, KEY_ALIASES},
 };
 use base64ct::{Base64, Encoding};
+use config_file::CertificateFormat;
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
     CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
@@ -181,13 +182,21 @@ fn upload_certificate(
         }
     }
 
-    let body = pem_rfc7468::encode_string("CERTIFICATE", pem_rfc7468::LineEnding::default(), cert)
-        .map_err(Error::Pem)?;
+    let certificate_format = login_ctx.slot().certificate_format;
+    debug!("Uploading certificate, sending {certificate_format} encoding to the nethsm as per configuration");
+    let body = match certificate_format {
+        CertificateFormat::Pem => {
+            pem_rfc7468::encode_string("CERTIFICATE", pem_rfc7468::LineEnding::default(), cert)
+                .map_err(Error::Pem)?
+                .into_bytes()
+        }
+        CertificateFormat::Der => cert.clone(),
+    };
 
     let key_id = id.as_str();
 
     login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_put(api_config, key_id, body.into_bytes()),
+        |api_config| default_api::keys_key_id_cert_put(api_config, key_id, body),
         login::UserMode::Administrator,
     )?;
 
@@ -525,7 +534,12 @@ fn fetch_one_certificate(
         super::login::UserMode::OperatorOrAdministrator,
     )?;
 
-    let object = db::object::from_cert_data(cert_data.entity, key_id, raw_id)?;
+    let object = db::object::from_cert_data(
+        cert_data.entity,
+        key_id,
+        raw_id,
+        login_ctx.slot().certificate_format,
+    )?;
 
     Ok(object)
 }

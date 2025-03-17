@@ -1,4 +1,5 @@
 use base64ct::{Base64, Encoding};
+use config_file::CertificateFormat;
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
@@ -13,7 +14,7 @@ use cryptoki_sys::{
     CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_OBJECT_CLASS, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
-use der::{asn1::OctetString, DecodePem, Encode};
+use der::{asn1::OctetString, Decode, DecodePem, Encode};
 use log::{debug, trace};
 use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
@@ -415,11 +416,21 @@ pub fn from_cert_data(
     cert: Vec<u8>,
     key_id: &str,
     raw_id: Option<Vec<u8>>,
+    certificate_format: CertificateFormat,
 ) -> Result<Object, Error> {
-    let cert = x509_cert::Certificate::from_pem(cert).map_err(Error::Der)?;
-
-    let mut cert_der = Vec::new();
-    cert.encode_to_vec(&mut cert_der).map_err(Error::Der)?;
+    debug!("Loading certificate, expecting {certificate_format} encoding as per configuration");
+    let (cert, cert_der) = match certificate_format {
+        CertificateFormat::Der => (
+            x509_cert::Certificate::from_der(&cert).map_err(Error::Der)?,
+            cert,
+        ),
+        CertificateFormat::Pem => {
+            let mut buf = Vec::new();
+            let parsed_cert = x509_cert::Certificate::from_pem(&cert).map_err(Error::Der)?;
+            parsed_cert.encode_to_vec(&mut buf).map_err(Error::Der)?;
+            (parsed_cert, buf)
+        }
+    };
 
     let length = cert_der.len();
 

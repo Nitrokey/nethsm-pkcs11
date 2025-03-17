@@ -149,6 +149,10 @@ impl LoginCtx {
         }
     }
 
+    pub fn slot(&self) -> &Arc<Slot> {
+        &self.slot
+    }
+
     fn operator_config(&self) -> Option<&UserConfig> {
         if !self.operator_allowed {
             return None;

@@ -99,6 +99,7 @@ impl SessionManager {
                 label: "test".to_string(),
                 operator: None,
                 instance_balancer: Default::default(),
+                certificate_format: config_file::CertificateFormat::Der,
             }),
             0,
         )

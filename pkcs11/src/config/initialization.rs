@@ -330,12 +330,15 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
         retries: slot.retries,
         db: Arc::new((Mutex::new(crate::backend::db::Db::new()), Condvar::new())),
         instance_balancer: Default::default(),
+        certificate_format: slot.certificate_format,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use config_file::CertificateFormat;
 
     /// Test various good and bad configs for panics
     #[test]
@@ -355,6 +358,7 @@ slots:
         danger_insecure_cert: true  
         sha256_fingerprints: 
           - "31:92:8E:A4:5E:16:5C:A7:33:44:E8:E9:8E:64:C4:AE:7B:2A:57:E5:77:43:49:F3:69:C9:8F:C4:2F:3A:3B:6E"
+    certificate_format: DER
     retries: 
       count: 10
       delay_seconds: 1
@@ -363,7 +367,8 @@ slots:
         let config_path = "/path/to/config.conf";
         let configs = vec![(config_content.into(), config_path.into())];
 
-        assert!(initialize_with_configs(Ok(configs)).is_ok());
+        let device = initialize_with_configs(Ok(configs)).unwrap();
+        assert_eq!(device.slots[0].certificate_format, CertificateFormat::Der);
 
         let config_bad_fingerprint_content = r#"
 slots:
