@@ -6,7 +6,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use config_file::{InstanceConfig, P11Config, RetryConfig, SlotConfig, UserConfig};
+use config_file::{
+    CertificateFormat, InstanceConfig, P11Config, RetryConfig, SlotConfig, UserConfig,
+};
 use pkcs11::types::{
     CKA_MODULUS_BITS, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_TOKEN, CKA_VERIFY, CKM_RSA_PKCS,
     CK_ATTRIBUTE, CK_BBOOL, CK_FALSE, CK_MECHANISM, CK_TRUE, CK_ULONG,
@@ -79,6 +81,7 @@ fn basic() {
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
+                certificate_format: CertificateFormat::Pem,
                 retries: None,
                 timeout_seconds: Some(10),
                 connections_max_idle_duration: None,
@@ -138,6 +141,7 @@ fn multiple_instances() {
                         max_idle_connections: None,
                     },
                 ],
+                certificate_format: CertificateFormat::Pem,
                 retries: None,
                 timeout_seconds: Some(10),
                 connections_max_idle_duration: None,
@@ -191,6 +195,7 @@ fn timeout() {
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
+                certificate_format: CertificateFormat::Pem,
                 retries: None,
                 timeout_seconds: Some(10),
                 connections_max_idle_duration: None,
@@ -253,6 +258,7 @@ fn retries() {
                     sha256_fingerprints: Vec::new(),
                     max_idle_connections: None,
                 }],
+                certificate_format: CertificateFormat::Pem,
                 retries: Some(RetryConfig {
                     count: 2,
                     delay_seconds: 2,
@@ -332,6 +338,7 @@ fn multi_instance_retries() {
                         max_idle_connections: None,
                     },
                 ],
+                certificate_format: CertificateFormat::Pem,
                 retries: Some(RetryConfig {
                     count: 3,
                     delay_seconds: 1,
@@ -403,6 +410,7 @@ fn pool_not_reused() {
                         max_idle_connections: None,
                     },
                 ],
+                certificate_format: CertificateFormat::Pem,
                 retries: None,
                 timeout_seconds: Some(5),
                 connections_max_idle_duration: None,

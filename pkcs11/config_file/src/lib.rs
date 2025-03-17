@@ -1,4 +1,4 @@
-use std::{io::Read, mem, net::SocketAddr, path::PathBuf};
+use std::{fmt::Display, io::Read, mem, net::SocketAddr, path::PathBuf};
 
 use merge::Merge;
 use serde::{Deserialize, Serialize};
@@ -179,6 +179,23 @@ impl<'de> Deserialize<'de> for HexFingerprint {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Copy)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum CertificateFormat {
+    #[default]
+    Pem,
+    Der,
+}
+
+impl Display for CertificateFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pem => f.write_str("PEM"),
+            Self::Der => f.write_str("DER"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct InstanceConfig {
     pub url: String,
@@ -205,6 +222,8 @@ pub struct SlotConfig {
     pub timeout_seconds: Option<u64>,
     #[serde(default)]
     pub connections_max_idle_duration: Option<u64>,
+    #[serde(default)]
+    pub certificate_format: CertificateFormat,
 }
 
 // An user
@@ -398,7 +417,8 @@ password: ""
                         interval_seconds: 60,
                         retries: 3
                     }),
-                    connections_max_idle_duration: Some(60 * 30)
+                    connections_max_idle_duration: Some(60 * 30),
+                    certificate_format: CertificateFormat::Pem,
                 }]
             },
             serde_yaml::from_str(config).unwrap()

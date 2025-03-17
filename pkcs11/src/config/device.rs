@@ -10,6 +10,7 @@ use std::{
 };
 
 use arc_swap::ArcSwap;
+use config_file::CertificateFormat;
 use nethsm_sdk_rs::apis::{configuration::Configuration, default_api::health_ready_get};
 use ureq::unversioned::{
     resolver::{DefaultResolver, Resolver},
@@ -324,6 +325,7 @@ pub struct Slot {
     pub administrator: Option<UserConfig>,
     pub db: Arc<(Mutex<Db>, Condvar)>,
     pub instance_balancer: Arc<AtomicUsize>,
+    pub certificate_format: CertificateFormat,
 }
 
 impl Slot {
