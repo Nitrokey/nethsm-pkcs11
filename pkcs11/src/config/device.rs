@@ -1,15 +1,15 @@
 use std::{
     collections::BTreeMap,
     sync::{
-        atomic::{AtomicUsize, Ordering::Relaxed},
+        atomic::AtomicUsize,
         mpsc::{self, RecvError, RecvTimeoutError},
-        Arc, Condvar, LazyLock, Mutex, RwLock, Weak,
+        Arc, Condvar, Mutex, RwLock, Weak,
     },
     thread,
     time::{Duration, Instant},
 };
 
-use arc_swap::ArcSwap;
+use arc_swap::{ArcSwap, ArcSwapOption};
 use config_file::CertificateFormat;
 use nethsm_sdk_rs::apis::{configuration::Configuration, default_api::health_ready_get};
 use ureq::unversioned::{
@@ -19,7 +19,6 @@ use ureq::unversioned::{
 
 use crate::{
     backend::db::Db,
-    data::THREADS_ALLOWED,
     ureq::{rustls_connector::RustlsConnector, tcp_connector::TcpConnector},
 };
 
@@ -31,17 +30,22 @@ pub enum RetryThreadMessage {
         retry_in: Duration,
         instance: InstanceData,
     },
-    /// The device is being removed, clear all connections
-    Finalize,
 }
 
-pub static RETRY_THREAD: LazyLock<mpsc::Sender<RetryThreadMessage>> = LazyLock::new(|| {
+pub static RETRY_THREAD: ArcSwapOption<mpsc::Sender<RetryThreadMessage>> =
+    ArcSwapOption::const_empty();
+
+pub fn start_background_timer() {
     let (tx, rx) = mpsc::channel();
     let (tx_instance, rx_instance) = mpsc::channel();
     thread::spawn(background_thread(rx_instance));
     thread::spawn(background_timer(rx, tx_instance));
-    tx
-});
+    RETRY_THREAD.store(Some(Arc::new(tx)));
+}
+
+pub fn stop_background_timer() {
+    RETRY_THREAD.store(None);
+}
 
 fn background_timer(
     rx: mpsc::Receiver<RetryThreadMessage>,
@@ -54,7 +58,6 @@ fn background_timer(
             // No jobs in the queue, we can just run the next
             match rx.recv() {
                 Err(RecvError) => break,
-                Ok(RetryThreadMessage::Finalize) => continue,
                 Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
                     jobs.insert(Instant::now() + retry_in, instance.into());
                     continue;
@@ -75,10 +78,6 @@ fn background_timer(
 
         let timeout = next_job_deadline.duration_since(now);
         match rx.recv_timeout(timeout) {
-            Ok(RetryThreadMessage::Finalize) => {
-                jobs.clear();
-                continue;
-            }
             Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
                 jobs.insert(now + retry_in, instance.into());
                 continue;
@@ -291,13 +290,12 @@ impl InstanceData {
             }
         };
         drop(write);
-        if THREADS_ALLOWED.load(Relaxed) {
-            RETRY_THREAD
-                .send(RetryThreadMessage::FailedInstnace {
-                    retry_in: retry_duration_from_count(retry_count),
-                    instance: self.clone(),
-                })
-                .ok();
+        if let Some(t) = &*RETRY_THREAD.load() {
+            t.send(RetryThreadMessage::FailedInstnace {
+                retry_in: retry_duration_from_count(retry_count),
+                instance: self.clone(),
+            })
+            .ok();
         }
     }
 }
