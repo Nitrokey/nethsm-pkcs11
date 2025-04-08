@@ -1,15 +1,16 @@
 use std::{
     collections::BTreeMap,
+    mem,
     sync::{
         atomic::AtomicUsize,
         mpsc::{self, RecvError, RecvTimeoutError},
         Arc, Condvar, Mutex, RwLock, Weak,
     },
-    thread,
+    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
-use arc_swap::{ArcSwap, ArcSwapOption};
+use arc_swap::ArcSwap;
 use config_file::CertificateFormat;
 use nethsm_sdk_rs::apis::{configuration::Configuration, default_api::health_ready_get};
 use ureq::unversioned::{
@@ -32,19 +33,38 @@ pub enum RetryThreadMessage {
     },
 }
 
-pub static RETRY_THREAD: ArcSwapOption<mpsc::Sender<RetryThreadMessage>> =
-    ArcSwapOption::const_empty();
+pub struct RetryChannel {
+    tx: mpsc::Sender<RetryThreadMessage>,
+    background_thread: JoinHandle<()>,
+    background_timer: JoinHandle<()>,
+}
+pub static RETRY_THREAD: RwLock<Option<RetryChannel>> = RwLock::new(None);
 
 pub fn start_background_timer() {
     let (tx, rx) = mpsc::channel();
     let (tx_instance, rx_instance) = mpsc::channel();
-    thread::spawn(background_thread(rx_instance));
-    thread::spawn(background_timer(rx, tx_instance));
-    RETRY_THREAD.store(Some(Arc::new(tx)));
+    let background_thread = thread::spawn(background_thread(rx_instance));
+    let background_timer = thread::spawn(background_timer(rx, tx_instance));
+    *RETRY_THREAD.write().unwrap() = Some(RetryChannel {
+        tx,
+        background_thread,
+        background_timer,
+    });
 }
 
 pub fn stop_background_timer() {
-    RETRY_THREAD.store(None);
+    let res = mem::take(&mut *RETRY_THREAD.write().unwrap());
+    let Some(RetryChannel {
+        tx,
+        background_thread,
+        background_timer,
+    }) = res
+    else {
+        return;
+    };
+    drop(tx);
+    background_thread.join().unwrap();
+    background_timer.join().unwrap();
 }
 
 fn background_timer(
@@ -290,8 +310,8 @@ impl InstanceData {
             }
         };
         drop(write);
-        if let Some(t) = &*RETRY_THREAD.load() {
-            t.send(RetryThreadMessage::FailedInstnace {
+        if let Some(t) = &*RETRY_THREAD.read().unwrap() {
+            t.tx.send(RetryThreadMessage::FailedInstnace {
                 retry_in: retry_duration_from_count(retry_count),
                 instance: self.clone(),
             })
