@@ -109,7 +109,7 @@ fn background_timer(
 }
 
 fn background_thread(rx: mpsc::Receiver<InstanceData>) -> impl FnOnce() {
-    move || loop {
+    move || {
         while let Ok(instance) = rx.recv() {
             instance.clear_pool();
             match health_ready_get(&instance.config) {
