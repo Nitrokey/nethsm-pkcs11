@@ -1,11 +1,11 @@
 use std::{
     collections::BTreeMap,
     sync::{
-        atomic::{AtomicUsize, Ordering::Relaxed},
+        atomic::AtomicUsize,
         mpsc::{self, RecvError, RecvTimeoutError},
-        Arc, Condvar, LazyLock, Mutex, RwLock, Weak,
+        Arc, Condvar, Mutex, RwLock, Weak,
     },
-    thread,
+    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -19,7 +19,6 @@ use ureq::unversioned::{
 
 use crate::{
     backend::db::Db,
-    data::THREADS_ALLOWED,
     ureq::{rustls_connector::RustlsConnector, tcp_connector::TcpConnector},
 };
 
@@ -31,17 +30,63 @@ pub enum RetryThreadMessage {
         retry_in: Duration,
         instance: InstanceData,
     },
-    /// The device is being removed, clear all connections
-    Finalize,
 }
 
-pub static RETRY_THREAD: LazyLock<mpsc::Sender<RetryThreadMessage>> = LazyLock::new(|| {
+pub struct RetryChannel {
+    tx: mpsc::Sender<RetryThreadMessage>,
+    background_thread: JoinHandle<()>,
+    background_timer: JoinHandle<()>,
+}
+pub static RETRY_THREAD: RwLock<Option<RetryChannel>> = RwLock::new(None);
+
+pub fn start_background_timer() {
     let (tx, rx) = mpsc::channel();
     let (tx_instance, rx_instance) = mpsc::channel();
-    thread::spawn(background_thread(rx_instance));
-    thread::spawn(background_timer(rx, tx_instance));
-    tx
-});
+    let background_thread = thread::spawn(background_thread(rx_instance));
+    let background_timer = thread::spawn(background_timer(rx, tx_instance));
+    *RETRY_THREAD.write().unwrap() = Some(RetryChannel {
+        tx,
+        background_thread,
+        background_timer,
+    });
+}
+
+pub fn stop_background_timer() {
+    let res = RETRY_THREAD.write().unwrap().take();
+    let Some(RetryChannel {
+        tx,
+        background_thread,
+        background_timer,
+    }) = res
+    else {
+        return;
+    };
+    drop(tx);
+    background_thread
+        .join()
+        .inspect_err(|err| {
+            if let Some(err) = err.downcast_ref::<&'static str>() {
+                log::error!("Background thread panicked: {err}");
+            } else if let Some(err) = err.downcast_ref::<String>() {
+                log::error!("Background thread panicked: {err}");
+            } else {
+                log::error!("Background thread panicked: {err:?}");
+            }
+        })
+        .ok();
+    background_timer
+        .join()
+        .inspect_err(|err| {
+            if let Some(err) = err.downcast_ref::<&'static str>() {
+                log::error!("Background timer panicked: {err}");
+            } else if let Some(err) = err.downcast_ref::<String>() {
+                log::error!("Background timer panicked: {err}");
+            } else {
+                log::error!("Background timer panicked: {err:?}");
+            }
+        })
+        .ok();
+}
 
 fn background_timer(
     rx: mpsc::Receiver<RetryThreadMessage>,
@@ -54,7 +99,6 @@ fn background_timer(
             // No jobs in the queue, we can just run the next
             match rx.recv() {
                 Err(RecvError) => break,
-                Ok(RetryThreadMessage::Finalize) => continue,
                 Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
                     jobs.insert(Instant::now() + retry_in, instance.into());
                     continue;
@@ -75,10 +119,6 @@ fn background_timer(
 
         let timeout = next_job_deadline.duration_since(now);
         match rx.recv_timeout(timeout) {
-            Ok(RetryThreadMessage::Finalize) => {
-                jobs.clear();
-                continue;
-            }
             Ok(RetryThreadMessage::FailedInstnace { retry_in, instance }) => {
                 jobs.insert(now + retry_in, instance.into());
                 continue;
@@ -90,7 +130,7 @@ fn background_timer(
 }
 
 fn background_thread(rx: mpsc::Receiver<InstanceData>) -> impl FnOnce() {
-    move || loop {
+    move || {
         while let Ok(instance) = rx.recv() {
             instance.clear_pool();
             match health_ready_get(&instance.config) {
@@ -291,13 +331,12 @@ impl InstanceData {
             }
         };
         drop(write);
-        if THREADS_ALLOWED.load(Relaxed) {
-            RETRY_THREAD
-                .send(RetryThreadMessage::FailedInstnace {
-                    retry_in: retry_duration_from_count(retry_count),
-                    instance: self.clone(),
-                })
-                .ok();
+        if let Some(t) = &*RETRY_THREAD.read().unwrap() {
+            t.tx.send(RetryThreadMessage::FailedInstnace {
+                retry_in: retry_duration_from_count(retry_count),
+                instance: self.clone(),
+            })
+            .ok();
         }
     }
 }
