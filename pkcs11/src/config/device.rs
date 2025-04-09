@@ -1,6 +1,5 @@
 use std::{
     collections::BTreeMap,
-    mem,
     sync::{
         atomic::AtomicUsize,
         mpsc::{self, RecvError, RecvTimeoutError},
@@ -53,7 +52,7 @@ pub fn start_background_timer() {
 }
 
 pub fn stop_background_timer() {
-    let res = mem::take(&mut *RETRY_THREAD.write().unwrap());
+    let res = RETRY_THREAD.write().unwrap().take();
     let Some(RetryChannel {
         tx,
         background_thread,
