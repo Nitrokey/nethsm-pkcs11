@@ -62,8 +62,30 @@ pub fn stop_background_timer() {
         return;
     };
     drop(tx);
-    background_thread.join().unwrap();
-    background_timer.join().unwrap();
+    background_thread
+        .join()
+        .inspect_err(|err| {
+            if let Some(err) = err.downcast_ref::<&'static str>() {
+                log::error!("Background thread panicked: {err}");
+            } else if let Some(err) = err.downcast_ref::<String>() {
+                log::error!("Background thread panicked: {err}");
+            } else {
+                log::error!("Background thread panicked: {err:?}");
+            }
+        })
+        .ok();
+    background_timer
+        .join()
+        .inspect_err(|err| {
+            if let Some(err) = err.downcast_ref::<&'static str>() {
+                log::error!("Background timer panicked: {err}");
+            } else if let Some(err) = err.downcast_ref::<String>() {
+                log::error!("Background timer panicked: {err}");
+            } else {
+                log::error!("Background timer panicked: {err:?}");
+            }
+        })
+        .ok();
 }
 
 fn background_timer(
