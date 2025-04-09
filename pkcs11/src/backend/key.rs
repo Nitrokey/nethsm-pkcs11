@@ -562,7 +562,7 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
     let location_header = headers.get("location").ok_or(Error::InvalidData)?;
     let key_id = location_header
         .split('/')
-        .last()
+        .next_back()
         .ok_or(Error::InvalidData)?
         .split('?')
         .next()
