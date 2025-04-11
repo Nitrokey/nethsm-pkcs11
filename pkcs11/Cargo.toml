@@ -34,7 +34,7 @@ arc-swap = "1.7.1"
 config_file = { path = "config_file" }
 
 # Needed to prevent breaking change with rustls updates
-ureq = { version = "=3.0.6", default-features  = false }
+ureq = { version = "=3.0.10", default-features  = false }
 rustls-pki-types = "1.11.0"
 socket2 = { version = "0.5.8", features = ["all"] }
 
