@@ -230,12 +230,20 @@ fn slot_from_config(slot: &SlotConfig) -> Result<Slot, InitializationError> {
                 .with_no_client_auth()
         } else {
             let mut roots = rustls::RootCertStore::empty();
-            let native_certs = rustls_native_certs::load_native_certs().map_err(|err| {
-                error!("Failed to load certificates: {err}");
-                InitializationError::NoCerts
-            })?;
+            let native_certs = rustls_native_certs::load_native_certs();
+            if !native_certs.errors.is_empty() {
+                error!(
+                    "Failed to load certificates: {}",
+                    native_certs
+                        .errors
+                        .iter()
+                        .map(|e| e.to_string())
+                        .collect::<String>()
+                );
+                return Err(InitializationError::NoCerts);
+            }
 
-            let (added, failed) = roots.add_parsable_certificates(native_certs);
+            let (added, failed) = roots.add_parsable_certificates(native_certs.certs);
             // panic!("{:?}", (added, failed));
             debug!("Added {added} certifcates and failed to parse {failed} certificates");
 
