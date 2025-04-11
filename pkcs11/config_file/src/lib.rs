@@ -104,18 +104,27 @@ pub struct P11Config {
     #[merge(strategy = merge::bool::overwrite_false)]
     #[serde(default)]
     pub enable_set_attribute_value: bool,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub syslog_socket: Option<PathBuf>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub syslog_udp: Option<SyslogUdp>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub syslog_tcp: Option<SocketAddr>,
+    #[merge(strategy = merge::option::overwrite_none)]
     #[serde(default)]
     pub syslog_facility: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     #[serde(default)]
     pub syslog_hostname: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     #[serde(default)]
     pub syslog_process: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     #[serde(default)]
     pub syslog_pid: Option<u32>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub log_file: Option<PathBuf>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub log_level: Option<LogLevel>,
     #[merge(strategy = merge::vec::append)]
     pub slots: Vec<SlotConfig>,
