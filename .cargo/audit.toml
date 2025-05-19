@@ -1,0 +1,4 @@
+[advisories]
+ignore = [
+  "RUSTSEC-2022-0034", # pkcs11 is only used in tests
+]
