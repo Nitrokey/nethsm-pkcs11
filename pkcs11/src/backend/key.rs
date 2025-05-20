@@ -18,7 +18,7 @@ use cryptoki_sys::{
     CK_OBJECT_CLASS, CK_OBJECT_HANDLE, CK_ULONG,
 };
 use der::{oid::ObjectIdentifier, Decode};
-use log::{debug, error, trace};
+use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
     apis::default_api,
     models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType, PrivateKey},
@@ -215,6 +215,8 @@ pub fn create_key_from_template(
     let key_class = if let Some(ref key_class) = parsed.key_class {
         let key_class = *key_class;
         if key_class == ObjectKind::Other || key_class == ObjectKind::PublicKey {
+            // Supported object types are Certificates, Private keys and keypairs
+            warn!("Creating object of class {key_class:?} is not supported by the nethsm");
             return Err(Error::ObjectClassNotSupported);
         }
         key_class
