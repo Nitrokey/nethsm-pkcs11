@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 env_logger = { default-features = false, version = "0.11.7", features = ["auto-color", "humantime"] }
-cryptoki-sys = "0.3.0"
+cryptoki-sys = "0.4.0"
 log = "0.4.19"
 serde = { version = "1", features = ["derive"], default-features = false }
 serde_yaml = "0.9.22"
