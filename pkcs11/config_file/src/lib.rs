@@ -403,7 +403,7 @@ password: ""
                     }),
                     administrator: Some(UserConfig {
                         username: "admin".into(),
-                        password: None
+                        password: Some("adminpass".into())
                     }),
                     instances: vec![InstanceConfig {
                         url: "https://keyfender:8443/api/v1".into(),
