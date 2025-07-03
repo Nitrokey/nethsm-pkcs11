@@ -53,7 +53,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
                 Some(val) => {
                     parsed.key_class = match ObjectKind::from(val) {
                         ObjectKind::Other => {
-                            debug!("Class not supported: {:?}", val);
+                            debug!("Class not supported: {val:?}");
                             None
                         }
 
@@ -87,7 +87,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
                     .map(|val| String::from_utf8(val.to_vec()))
                     .transpose()
                     .map_err(Error::StringParse)?;
-                trace!("label: {:?}", label);
+                trace!("label: {label:?}");
                 if parsed.id.is_none() {
                     parsed.id = label;
                 }
@@ -438,7 +438,7 @@ pub fn generate_key_from_template(
         .as_ref()
         .and_then(|p| p.value_len.or(p.modulus_bits)));
 
-    trace!("length: {:?}", length);
+    trace!("length: {length:?}");
 
     let mut key_type = mechanism.to_key_type();
 
@@ -487,7 +487,7 @@ fn fetch_one_key(
     ) {
         Ok(key_data) => key_data.entity,
         Err(err) => {
-            debug!("Failed to fetch key {}: {:?}", key_id, err);
+            debug!("Failed to fetch key {key_id}: {err:?}");
             if matches!(
                 err,
                 Error::Api(ApiError::ResponseError(backend::ResponseContent {
@@ -594,7 +594,7 @@ pub fn fetch_one(
         match fetch_one_certificate(&key.id, None, login_ctx) {
             Ok(cert) => acc.push(cert),
             Err(err) => {
-                debug!("Failed to fetch certificate: {:?}", err);
+                debug!("Failed to fetch certificate: {err:?}");
             }
         }
     }

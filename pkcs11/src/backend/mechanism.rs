@@ -65,9 +65,9 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self {
-            Error::CkRaw(e) => write!(f, "CkRaw error: {:?}", e),
-            Error::UnknownMech(t) => write!(f, "Unknown mechanism {}", t),
-            Error::UnknownDigest(t) => write!(f, "Unknown digest {}", t),
+            Error::CkRaw(e) => write!(f, "CkRaw error: {e:?}"),
+            Error::UnknownMech(t) => write!(f, "Unknown mechanism {t}"),
+            Error::UnknownDigest(t) => write!(f, "Unknown digest {t}"),
         }
     }
 }
@@ -304,7 +304,7 @@ impl Mechanism {
 
                 let hash_alg = params.hashAlg;
 
-                trace!("params.hashAlg: {:?}", hash_alg);
+                trace!("params.hashAlg: {hash_alg:?}");
                 Self::RsaPkcsPss(
                     MechDigest::from_ck_mech(params.hashAlg)
                         .ok_or(Error::UnknownDigest(hash_alg))?,

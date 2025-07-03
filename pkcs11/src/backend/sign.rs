@@ -29,26 +29,23 @@ impl SignCtx {
         }
 
         let sign_name = mechanism.sign_name().ok_or_else(|| {
-            debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
+            debug!("Tried to sign with an invalid mechanism: {mechanism:?}");
             Error::InvalidMechanismMode(MechMode::Sign, mechanism.clone())
         })?;
 
         let api_mech = match mechanism.to_api_mech(MechMode::Sign) {
             Some(mech) => mech,
             None => {
-                debug!("Tried to sign with an invalid mechanism: {:?}", mechanism);
+                debug!("Tried to sign with an invalid mechanism: {mechanism:?}");
                 return Err(Error::InvalidMechanismMode(MechMode::Sign, mechanism));
             }
         };
 
-        trace!("Signing with mechanism: {:?}", mechanism);
+        trace!("Signing with mechanism: {mechanism:?}");
         trace!("key mechanisms: {:?}", key.mechanisms);
 
         if !key.mechanisms.contains(&api_mech) {
-            debug!(
-                "Tried to sign with an invalid mechanism for this key: {:?}",
-                mechanism
-            );
+            debug!("Tried to sign with an invalid mechanism for this key: {mechanism:?}");
             return Err(Error::InvalidMechanism((key.id, key.kind), mechanism));
         }
 
@@ -98,7 +95,7 @@ impl SignCtx {
         let b64_message = Base64::encode_string(data.as_slice());
 
         let mode = self.sign_name;
-        trace!("Signing with mode: {:?}", mode);
+        trace!("Signing with mode: {mode:?}");
 
         let signature = login_ctx.try_(
             |conf| {

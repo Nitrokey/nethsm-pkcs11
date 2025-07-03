@@ -172,7 +172,7 @@ impl LoginCtx {
     }
 
     pub fn login(&mut self, user_type: CK_USER_TYPE, pin: String) -> Result<(), LoginError> {
-        trace!("Login as {:?} with pin", user_type);
+        trace!("Login as {user_type:?} with pin");
 
         let (user_status, user_mode) = match user_type {
             CKU_CONTEXT_SPECIFIC => return Err(LoginError::InvalidUser),
@@ -478,7 +478,7 @@ impl LoginCtx {
         ) {
             Ok(_) => CKR_OK,
             Err(err) => {
-                error!("Failed to change pin: {:?}", err);
+                error!("Failed to change pin: {err:?}");
                 CKR_DEVICE_ERROR
             }
         }

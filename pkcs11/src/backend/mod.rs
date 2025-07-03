@@ -125,7 +125,7 @@ impl From<std::string::FromUtf8Error> for Error {
 impl From<Error> for CK_RV {
     fn from(err: Error) -> Self {
         // diplay the error when converting to CK_RV
-        error!("{}", err);
+        error!("{err}");
         match err {
             Error::Der(_) => CKR_DEVICE_ERROR,
             Error::Pem(_) => CKR_DEVICE_ERROR,
@@ -168,55 +168,54 @@ impl From<Error> for CK_RV {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
-            Error::Der(err) => format!("DER error: {:?}", err),
-            Error::Pem(err) => format!("PEM error: {:?}", err),
+            Error::Der(err) => format!("DER error: {err:?}"),
+            Error::Pem(err) => format!("PEM error: {err:?}"),
             Error::InvalidEncryptedDataLength => "Invalid encrypted data length".to_string(),
             Error::InvalidData => "Invalid input data".to_string(),
             Error::InvalidDataLength => "Invalid input data length".to_string(),
             Error::InvalidObjectHandle(handle) => {
-                format!("Object handle does not exist: {}", handle)
+                format!("Object handle does not exist: {handle}")
             }
             Error::OperationNotInitialized => "Operation not initialized".to_string(),
             Error::LibraryNotInitialized => "Library not initialized".to_string(),
             Error::DbLock => "Internal mutex lock error".to_string(),
             Error::KeyField(field) => {
-                format!("Key field {} received from the NetHSM is not valid", field)
+                format!("Key field {field} received from the NetHSM is not valid")
             }
             Error::OperationActive => "An operation is already active for this session".to_string(),
             Error::Login(err) => err.to_string(),
-            Error::NotLoggedIn(mode) => format!(
-                "The module needs to be logged in as {:?}, check the configuration",
-                mode
-            ),
+            Error::NotLoggedIn(mode) => {
+                format!("The module needs to be logged in as {mode:?}, check the configuration")
+            }
             Error::InvalidMechanism(obj, mech) => {
                 format!(
                     "The mechanism {:?} not supported for {:?} {}",
                     mech, obj.1, obj.0
                 )
             }
-            Error::InvalidAttribute(attr) => format!("Invalid attribute: {:?}", attr),
-            Error::MissingAttribute(attr) => format!("Missing attribute: {:?}", attr),
+            Error::InvalidAttribute(attr) => format!("Invalid attribute: {attr:?}"),
+            Error::MissingAttribute(attr) => format!("Missing attribute: {attr:?}"),
             Error::ObjectClassNotSupported => "Object class not supported".to_string(),
             Error::InvalidMechanismMode(mode, mechanism) => {
-                format!("Unable to use mechanim {:?} for {:?}", mechanism, mode)
+                format!("Unable to use mechanim {mechanism:?} for {mode:?}")
             }
             Error::Api(err) => match err {
                 ApiError::NoInstance => "No valid instance in the slot".to_string(),
-                ApiError::Ureq(err) => format!("Request error : {}", err),
-                ApiError::Serde(err) => format!("Serde error: {:?}", err),
-                ApiError::Io(err) => format!("IO error: {:?}", err),
+                ApiError::Ureq(err) => format!("Request error : {err}"),
+                ApiError::Serde(err) => format!("Serde error: {err:?}"),
+                ApiError::Io(err) => format!("IO error: {err:?}"),
                 ApiError::ResponseError(resp) => match resp.status {
                     404 => "Key not found".to_string(),
                     401 | 403 => "Invalid credentials".to_string(),
                     412 => "The NetHSM is not set up properly".to_string(),
-                    _ => format!("Api error: {:?}", resp),
+                    _ => format!("Api error: {resp:?}"),
                 },
-                ApiError::StringParse(err) => format!("String parse error: {:?}", err),
+                ApiError::StringParse(err) => format!("String parse error: {err:?}"),
                 ApiError::InstanceRemoved => "Failed to connect to instance".to_string(),
             },
-            Error::Base64(err) => format!("Base64 Decode error: {:?}", err),
-            Error::StringParse(err) => format!("String parse error: {:?}", err),
+            Error::Base64(err) => format!("Base64 Decode error: {err:?}"),
+            Error::StringParse(err) => format!("String parse error: {err:?}"),
         };
-        write!(f, "{}", msg)
+        write!(f, "{msg}")
     }
 }

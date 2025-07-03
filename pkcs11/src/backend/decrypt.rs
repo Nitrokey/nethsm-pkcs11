@@ -61,7 +61,7 @@ impl DecryptCtx {
                 MechMode::Decrypt,
                 self.mechanism.clone(),
             ))?;
-        trace!("Decrypt with mode: {:?}", mode);
+        trace!("Decrypt with mode: {mode:?}");
 
         let iv = self
             .mechanism

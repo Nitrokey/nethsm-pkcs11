@@ -28,13 +28,13 @@ pub fn config_files() -> Result<Vec<(Vec<u8>, PathBuf)>, ConfigError> {
     ];
 
     if let Ok(home) = std::env::var("HOME") {
-        config_folders.push(format!("{}/.config/nitrokey", home));
+        config_folders.push(format!("{home}/.config/nitrokey"));
     }
 
     let mut res = Vec::new();
     let mut buffer = Vec::new();
     for folder in config_folders {
-        let file_path = format!("{}/{}", folder, CONFIG_FILE_NAME);
+        let file_path = format!("{folder}/{CONFIG_FILE_NAME}");
         if let Ok(mut file) = std::fs::File::open(&file_path) {
             file.read_to_end(&mut buffer).map_err(ConfigError::Io)?;
             res.push((mem::take(&mut buffer), file_path.into()));
@@ -294,9 +294,9 @@ slots:
         let home = "/tmp/home/";
 
         // create a temporary "fake" home folder
-        fs::create_dir_all(format!("{}.config/nitrokey", home)).unwrap();
+        fs::create_dir_all(format!("{home}.config/nitrokey")).unwrap();
         fs::write(
-            format!("{}/.config/nitrokey/{}", home, CONFIG_FILE_NAME),
+            format!("{home}/.config/nitrokey/{CONFIG_FILE_NAME}"),
             config,
         )
         .unwrap();

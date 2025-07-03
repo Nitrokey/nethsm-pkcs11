@@ -56,7 +56,7 @@ impl<In: Transport> Connector<In> for RustlsConnector {
             .host()
             .try_into()
             .map_err(|e| {
-                debug!("rustls invalid dns name: {}", e);
+                debug!("rustls invalid dns name: {e}");
                 Error::Tls("Rustls invalid dns name error")
             })?;
 

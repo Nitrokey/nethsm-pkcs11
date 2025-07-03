@@ -186,8 +186,8 @@ impl Session {
             return Err(Error::OperationActive);
         }
 
-        trace!("sign_init() called with key handle {}", key_handle);
-        trace!("sign_init() called with mechanism {:?}", mechanism);
+        trace!("sign_init() called with key handle {key_handle}");
+        trace!("sign_init() called with mechanism {mechanism:?}");
 
         // get key id from the handle
 
@@ -446,11 +446,11 @@ impl Session {
                             &self.db.0,
                         ) {
                             Ok(cert) => {
-                                trace!("Fetched certificate: {:?}", cert);
+                                trace!("Fetched certificate: {cert:?}");
                                 results.push(cert);
                             }
                             Err(err) => {
-                                debug!("Failed to fetch certificate: {:?}", err);
+                                debug!("Failed to fetch certificate: {err:?}");
                             }
                         }
                     }
@@ -758,8 +758,7 @@ mod test {
                         Err(Error::Api(ApiError::Ureq(r))) => {
                             assert!(
                                 r.ends_with(": status code 404"),
-                                "expected 404 error, got {}",
-                                r
+                                "expected 404 error, got {r}"
                             );
                         }
                         // FIXME: check for error 404 here

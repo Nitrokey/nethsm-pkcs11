@@ -12,11 +12,7 @@ pub extern "C" fn C_OpenSession(
     _Notify: cryptoki_sys::CK_NOTIFY,
     phSession: cryptoki_sys::CK_SESSION_HANDLE_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!(
-        "C_OpenSession() called with slotID {}, flags {}",
-        slotID,
-        flags
-    );
+    trace!("C_OpenSession() called with slotID {slotID}, flags {flags}");
 
     if phSession.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -29,7 +25,7 @@ pub extern "C" fn C_OpenSession(
     let slot = match get_slot(slotID as usize) {
         Ok(slot) => slot,
         Err(_) => {
-            error!("C_OpenSession() called with invalid slotID {}.", slotID);
+            error!("C_OpenSession() called with invalid slotID {slotID}.");
             return cryptoki_sys::CKR_SLOT_ID_INVALID;
         }
     };
@@ -38,7 +34,7 @@ pub extern "C" fn C_OpenSession(
     let mut manager = SESSION_MANAGER.lock().unwrap();
     let session = manager.create_session(slotID, slot, flags);
 
-    trace!("C_OpenSession() created session: {:?}", session);
+    trace!("C_OpenSession() created session: {session:?}");
 
     unsafe {
         std::ptr::write(phSession, session);
@@ -49,16 +45,13 @@ pub extern "C" fn C_OpenSession(
 
 #[no_mangle]
 pub extern "C" fn C_CloseSession(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
-    trace!("C_CloseSession() called with session handle {}.", hSession);
+    trace!("C_CloseSession() called with session handle {hSession}.");
 
     let mut manager = SESSION_MANAGER.lock().unwrap();
     let result = manager.delete_session(hSession);
 
     if result.is_none() {
-        error!(
-            "C_CloseSession() called with invalid session handle {}.",
-            hSession
-        );
+        error!("C_CloseSession() called with invalid session handle {hSession}.");
         return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
     }
 
@@ -70,10 +63,7 @@ pub extern "C" fn C_CloseAllSessions(slotID: cryptoki_sys::CK_SLOT_ID) -> crypto
     trace!("C_CloseAllSessions() called");
 
     if get_slot(slotID as usize).is_err() {
-        error!(
-            "C_CloseAllSessions() called with invalid slotID {}.",
-            slotID
-        );
+        error!("C_CloseAllSessions() called with invalid slotID {slotID}.");
         return cryptoki_sys::CKR_SLOT_ID_INVALID;
     }
 
@@ -89,10 +79,7 @@ pub extern "C" fn C_GetSessionInfo(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pInfo: cryptoki_sys::CK_SESSION_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!(
-        "C_GetSessionInfo() called with session handle {}.",
-        hSession
-    );
+    trace!("C_GetSessionInfo() called with session handle {hSession}.");
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;

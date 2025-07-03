@@ -12,11 +12,7 @@ pub extern "C" fn C_SignInit(
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!(
-        "C_SignInit() called with hKey {} and session {}",
-        hKey,
-        hSession
-    );
+    trace!("C_SignInit() called with hKey {hKey} and session {hSession}");
 
     let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
         Some(mech) => mech,
@@ -28,7 +24,7 @@ pub extern "C" fn C_SignInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_SignInit() failed to convert mechanism: {}", e);
+            error!("C_SignInit() failed to convert mechanism: {e}");
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };

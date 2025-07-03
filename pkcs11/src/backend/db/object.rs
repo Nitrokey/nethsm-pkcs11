@@ -215,7 +215,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
 
     let size = key_size(&key_data.r#type).ok_or(Error::KeyField("type".to_string()))?;
 
-    trace!("EC key data: {:?}", ec_points);
+    trace!("EC key data: {ec_points:?}");
 
     let mut ec_point_bytes = Base64::decode_vec(ec_points)?;
 
@@ -226,7 +226,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         ec_point_bytes.insert(0, 0);
     }
 
-    trace!("EC key data bytes: {:?}", ec_point_bytes);
+    trace!("EC key data bytes: {ec_point_bytes:?}");
 
     let encoded_points = OctetString::new(ec_point_bytes).unwrap().to_der().unwrap();
 

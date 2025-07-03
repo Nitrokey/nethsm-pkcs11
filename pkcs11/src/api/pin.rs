@@ -56,10 +56,7 @@ pub extern "C" fn C_SetPIN(
         .login_ctx
         .can_run_mode(crate::backend::login::UserMode::OperatorOrAdministrator)
     {
-        error!(
-            "C_SetPIN() called with session not connected as operator {}.",
-            hSession
-        );
+        error!("C_SetPIN() called with session not connected as operator {hSession}.");
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
     session.login_ctx.change_pin(new_pin.to_string())
