@@ -32,19 +32,13 @@ impl EncryptCtx {
         let api_mech = match mechanism.to_api_mech(MechMode::Encrypt) {
             Some(mech) => mech,
             None => {
-                debug!(
-                    "Tried to encrypt with an invalid mechanism: {:?}",
-                    mechanism
-                );
+                debug!("Tried to encrypt with an invalid mechanism: {mechanism:?}");
                 return Err(Error::InvalidMechanismMode(MechMode::Encrypt, mechanism));
             }
         };
 
         if !key.mechanisms.contains(&api_mech) {
-            debug!(
-                "Tried to encrypt with an invalid mechanism: {:?}",
-                mechanism
-            );
+            debug!("Tried to encrypt with an invalid mechanism: {mechanism:?}");
             return Err(Error::InvalidMechanism(
                 (key.id.clone(), key.kind),
                 mechanism,
@@ -104,12 +98,12 @@ fn encrypt_data(
         MechMode::Encrypt,
         mechanism.clone(),
     ))?;
-    trace!("Signing with mode: {:?}", mode);
+    trace!("Signing with mode: {mode:?}");
 
     let iv = mechanism
         .iv()
         .map(|iv| Base64::encode_string(iv.as_slice()));
-    trace!("iv: {:?}", iv);
+    trace!("iv: {iv:?}");
 
     let output = login_ctx
         .try_(

@@ -13,7 +13,7 @@ pub extern "C" fn C_FindObjectsInit(
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_FindObjectsInit() called with session {}", hSession);
+    trace!("C_FindObjectsInit() called with session {hSession}");
 
     if ulCount > 0 && pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -22,7 +22,7 @@ pub extern "C" fn C_FindObjectsInit(
     let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) };
 
     lock_session!(hSession, session);
-    trace!("C_FindObjectsInit() template: {:?}", template);
+    trace!("C_FindObjectsInit() template: {template:?}");
     match session.enum_init(template) {
         Ok(_) => cryptoki_sys::CKR_OK,
         Err(err) => err.into(),
@@ -44,14 +44,14 @@ pub extern "C" fn C_FindObjects(
 
     lock_session!(hSession, session);
 
-    trace!("C_FindObjects() ulMaxObjectCount: {}", ulMaxObjectCount);
+    trace!("C_FindObjects() ulMaxObjectCount: {ulMaxObjectCount}");
     let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
         Ok(objects) => objects,
         Err(err) => {
             return err.into();
         }
     };
-    trace!("C_FindObjects() objects: {:?}", objects);
+    trace!("C_FindObjects() objects: {objects:?}");
 
     let returned_count = objects.len();
 
@@ -81,7 +81,7 @@ pub extern "C" fn C_GetAttributeValue(
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetAttributeValue() called for object {}.", hObject);
+    trace!("C_GetAttributeValue() called for object {hObject}.");
 
     if pTemplate.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -92,10 +92,7 @@ pub extern "C" fn C_GetAttributeValue(
     let object = match session.get_object(hObject) {
         Some(object) => object,
         None => {
-            error!(
-                "C_GetAttributeValue() called with invalid object handle {}.",
-                hObject
-            );
+            error!("C_GetAttributeValue() called with invalid object handle {hObject}.");
             return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
         }
     };
@@ -133,7 +130,7 @@ pub extern "C" fn C_GetObjectSize(
     let object = match session.get_object(hObject) {
         Some(object) => object,
         None => {
-            error!("function called with invalid object handle {}.", hObject);
+            error!("function called with invalid object handle {hObject}.");
             return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
         }
     };
@@ -206,7 +203,7 @@ pub extern "C" fn C_DestroyObject(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_DestroyObject() called : {}", hObject);
+    trace!("C_DestroyObject() called : {hObject}");
 
     lock_session!(hSession, session);
 
@@ -250,10 +247,7 @@ pub extern "C" fn C_SetAttributeValue(
         let object = match session.get_object(hObject) {
             Some(object) => object,
             None => {
-                error!(
-                    "C_SetAttributeValue() called with invalid object handle {}.",
-                    hObject
-                );
+                error!("C_SetAttributeValue() called with invalid object handle {hObject}.");
                 return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
             }
         };

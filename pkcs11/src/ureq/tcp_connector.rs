@@ -88,7 +88,7 @@ fn try_connect(
             Ok(v) => return Ok(v),
             // Intercept ConnectionRefused to try next addrs
             Err(Error::Io(e)) if e.kind() == io::ErrorKind::ConnectionRefused => {
-                trace!("{} connection refused", addr);
+                trace!("{addr} connection refused");
                 continue;
             }
             // Other errors bail
@@ -108,7 +108,7 @@ fn try_connect_single(
     timeout: NextTimeout,
     config: &Config,
 ) -> Result<TcpStream, Error> {
-    trace!("Try connect TcpStream to {}", addr);
+    trace!("Try connect TcpStream to {addr}");
 
     let maybe_stream = if let Some(when) = timeout_not_zero(&timeout) {
         TcpStream::connect_timeout(&addr, *when)
@@ -129,7 +129,7 @@ fn try_connect_single(
         stream.set_nodelay(true)?;
     }
 
-    debug!("Connected TcpStream to {}", addr);
+    debug!("Connected TcpStream to {addr}");
 
     Ok(stream)
 }

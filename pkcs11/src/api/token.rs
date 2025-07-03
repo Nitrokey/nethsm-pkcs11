@@ -77,7 +77,7 @@ pub extern "C" fn C_GetSlotInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetSlotInfo() called with slotID: {}", slotID);
+    trace!("C_GetSlotInfo() called with slotID: {slotID}");
 
     if pInfo.is_null() {
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -106,7 +106,7 @@ pub extern "C" fn C_GetSlotInfo(
     let info = match result {
         Ok(info) => info.entity,
         Err(e) => {
-            trace!("Error getting info: {:?}", e);
+            trace!("Error getting info: {e:?}");
             InfoData {
                 product: "unknown".to_string(),
                 vendor: "unknown".to_string(),
@@ -124,7 +124,7 @@ pub extern "C" fn C_GetSlotInfo(
     let system_state = match result {
         Ok(info) => info.entity,
         Err(e) => {
-            trace!("Error getting system state: {:?}", e);
+            trace!("Error getting system state: {e:?}");
             HealthStateData {
                 state: SystemState::Unprovisioned,
             }
@@ -155,7 +155,7 @@ pub extern "C" fn C_GetTokenInfo(
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
 ) -> cryptoki_sys::CK_RV {
-    trace!("C_GetTokenInfo() called with slotID: {}", slotID);
+    trace!("C_GetTokenInfo() called with slotID: {slotID}");
 
     // get the slot
     let slot = match get_slot(slotID as usize) {
@@ -181,7 +181,7 @@ pub extern "C" fn C_GetTokenInfo(
     let info = match result {
         Ok(info) => info,
         Err(e) => {
-            error!("Error getting info: {:?}", e);
+            error!("Error getting info: {e:?}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     };
@@ -195,7 +195,7 @@ pub extern "C" fn C_GetTokenInfo(
     if login_ctx.can_run_mode(crate::backend::login::UserMode::Administrator) {
         match login_ctx.try_(default_api::system_info_get, UserMode::Administrator) {
             Err(e) => {
-                warn!("Error getting system info: {:?}", e);
+                warn!("Error getting system info: {e:?}");
             }
             Ok(system_info) => {
                 serial_number = system_info.entity.device_id;
@@ -510,7 +510,7 @@ mod tests {
         let mut slot = 15;
         let result = C_WaitForSlotEvent(0, &mut slot, std::ptr::null_mut());
         handle.join().unwrap();
-        println!("slot: {}", slot);
+        println!("slot: {slot}");
         assert_eq!(result, cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
     }
 

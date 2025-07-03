@@ -44,7 +44,7 @@ pub extern "C" fn C_GetFunctionList(
 
 #[no_mangle]
 pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
-    trace!("C_Initialize() called with args: {:?}", pInitArgs);
+    trace!("C_Initialize() called with args: {pInitArgs:?}");
 
     let res = crate::config::initialization::initialize();
     let device = match res {
@@ -79,8 +79,8 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         let flags = args.flags;
         let CreateMutex = args.CreateMutex;
 
-        trace!("C_Initialize() called with flags: {:?}", flags);
-        trace!("C_Initialize() called with CreateMutex: {:?}", CreateMutex);
+        trace!("C_Initialize() called with flags: {flags:?}");
+        trace!("C_Initialize() called with CreateMutex: {CreateMutex:?}");
 
         // currently we don't support custom locking
         // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that

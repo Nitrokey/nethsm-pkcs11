@@ -39,7 +39,7 @@ pub extern "C" fn C_GenerateKey(
     let mech = match Mechanism::from_ckraw_mech(&mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_GenerateKey() failed to convert mechanism: {}", e);
+            error!("C_GenerateKey() failed to convert mechanism: {e}");
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
@@ -56,16 +56,13 @@ pub extern "C" fn C_GenerateKey(
     let key = match session.generate_key(&template, None, &mech) {
         Ok(key) => key,
         Err(e) => {
-            error!("C_GenerateKey() failed to generate key: {:?}", e);
+            error!("C_GenerateKey() failed to generate key: {e:?}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     };
 
     if key.is_empty() {
-        error!(
-            "C_GenerateKey() failed to generate key,invalid length: {:?}",
-            key
-        );
+        error!("C_GenerateKey() failed to generate key,invalid length: {key:?}");
         return cryptoki_sys::CKR_FUNCTION_FAILED;
     }
 
@@ -105,13 +102,13 @@ pub extern "C" fn C_GenerateKeyPair(
     trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
     trace!("C_GenerateKeyPair() mech param len: {:?}", mech.len());
 
-    trace!("Private count: {:?}", ulPrivateKeyAttributeCount);
-    trace!("Public count: {:?}", ulPublicKeyAttributeCount);
+    trace!("Private count: {ulPrivateKeyAttributeCount:?}");
+    trace!("Public count: {ulPublicKeyAttributeCount:?}");
 
     let mech = match Mechanism::from_ckraw_mech(&mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_GenerateKeyPair() failed to convert mechanism: {}", e);
+            error!("C_GenerateKeyPair() failed to convert mechanism: {e}");
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
@@ -138,16 +135,13 @@ pub extern "C" fn C_GenerateKeyPair(
     let keys = match session.generate_key(&private_template, Some(&public_template), &mech) {
         Ok(keys) => keys,
         Err(e) => {
-            error!("C_GenerateKeyPair() failed to generate key: {:?}", e);
+            error!("C_GenerateKeyPair() failed to generate key: {e:?}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     };
 
     if keys.len() < 2 {
-        error!(
-            "C_GenerateKeyPair() failed to generate key,invalid length: {:?}",
-            keys
-        );
+        error!("C_GenerateKeyPair() failed to generate key,invalid length: {keys:?}");
         return cryptoki_sys::CKR_FUNCTION_FAILED;
     }
 
@@ -233,8 +227,7 @@ pub extern "C" fn C_GenerateRandom(
 
     if ulRandomLen > 1024 {
         error!(
-            "C_GenerateRandom() called with invalid length {}, NetHSM supports up to 1024 bytes",
-            ulRandomLen
+            "C_GenerateRandom() called with invalid length {ulRandomLen}, NetHSM supports up to 1024 bytes"
         );
 
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
@@ -245,10 +238,7 @@ pub extern "C" fn C_GenerateRandom(
         .login_ctx
         .can_run_mode(crate::backend::login::UserMode::Operator)
     {
-        error!(
-            "C_GenerateRandom() called with session not connected as operator {}.",
-            hSession
-        );
+        error!("C_GenerateRandom() called with session not connected as operator {hSession}.");
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
 
@@ -265,7 +255,7 @@ pub extern "C" fn C_GenerateRandom(
     ) {
         Ok(data) => data,
         Err(e) => {
-            error!("C_GenerateRandom() failed to generate random data: {:?}", e);
+            error!("C_GenerateRandom() failed to generate random data: {e:?}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     };
@@ -275,7 +265,7 @@ pub extern "C" fn C_GenerateRandom(
     let raw_data = match Base64::decode_vec(&data.entity.random) {
         Ok(raw_data) => raw_data,
         Err(e) => {
-            error!("C_GenerateRandom() failed to decode random data: {:?}", e);
+            error!("C_GenerateRandom() failed to decode random data: {e:?}");
             return cryptoki_sys::CKR_FUNCTION_FAILED;
         }
     };

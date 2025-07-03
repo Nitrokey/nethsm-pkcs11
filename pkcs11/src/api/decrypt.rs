@@ -24,7 +24,7 @@ pub extern "C" fn C_DecryptInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_DecryptInit() failed to convert mechanism: {}", e);
+            error!("C_DecryptInit() failed to convert mechanism: {e}");
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };

@@ -27,7 +27,7 @@ pub extern "C" fn C_EncryptInit(
     let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
         Ok(mech) => mech,
         Err(e) => {
-            error!("C_EncryptInit() failed to convert mechanism: {}", e);
+            error!("C_EncryptInit() failed to convert mechanism: {e}");
             return cryptoki_sys::CKR_MECHANISM_INVALID;
         }
     };
@@ -126,7 +126,7 @@ pub extern "C" fn C_EncryptUpdate(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    trace!("C_EncryptUpdate() called with {} bytes", ulPartLen);
+    trace!("C_EncryptUpdate() called with {ulPartLen} bytes");
 
     let data = unsafe { std::slice::from_raw_parts(pPart, ulPartLen as usize) };
 
