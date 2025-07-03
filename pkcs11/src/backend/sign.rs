@@ -62,23 +62,23 @@ impl SignCtx {
 
     pub fn sign_final(&self, login_ctx: &LoginCtx) -> Result<Vec<u8>, Error> {
         // helper function to hash the data with the correct algorithm
-        fn hasher<D: Digest>(data: &[u8]) -> Vec<u8> {
+        fn hasher<D: Digest>(data: &[u8], prefix: &'static [u8]) -> Vec<u8> {
             let mut hasher = D::new();
             hasher.update(data);
-            hasher.finalize().to_vec()
+            let mut res = Vec::from(prefix);
+            res.extend_from_slice(&hasher.finalize());
+            res
         }
 
-        let mut data = if let Some(digest) = self.mechanism.internal_digest() {
-            let hasher_fn = match digest {
-                MechDigest::Sha1 => hasher::<sha1::Sha1>,
-                MechDigest::Sha224 => hasher::<sha2::Sha224>,
-                MechDigest::Sha256 => hasher::<sha2::Sha256>,
-                MechDigest::Sha384 => hasher::<sha2::Sha384>,
-                MechDigest::Sha512 => hasher::<sha2::Sha512>,
-                // should never happen
-                _ => hasher::<sha1::Sha1>,
-            };
-            hasher_fn(&self.data)
+        let mut data = if let Some((digest, prefix)) = self.mechanism.internal_digest_and_prefix() {
+            match digest {
+                MechDigest::Md5 => hasher::<md5::Md5>(&self.data, prefix),
+                MechDigest::Sha1 => hasher::<sha1::Sha1>(&self.data, prefix),
+                MechDigest::Sha224 => hasher::<sha2::Sha224>(&self.data, prefix),
+                MechDigest::Sha256 => hasher::<sha2::Sha256>(&self.data, prefix),
+                MechDigest::Sha384 => hasher::<sha2::Sha384>(&self.data, prefix),
+                MechDigest::Sha512 => hasher::<sha2::Sha512>(&self.data, prefix),
+            }
         } else {
             self.data.clone()
         };

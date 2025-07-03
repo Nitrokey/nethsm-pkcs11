@@ -2,7 +2,9 @@
 
 ## Unreleased
 
--
+### Breaking Changes
+
+- Update RSA signature generation for NetHSM v3.1. This change is not compatible with older NetHSM versions.
 
 ## [2.0.0-rc.2][] (2025-10-10)
 
