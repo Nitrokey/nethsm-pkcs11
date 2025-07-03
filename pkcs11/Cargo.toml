@@ -30,6 +30,8 @@ rayon = "1.8.0"
 syslog = "6.1.1"
 thiserror = "2.0.12"
 arc-swap = "1.7.1"
+hex-literal = "1.0.0"
+md-5 = "0.10.6"
 
 config_file = { path = "config_file" }
 
@@ -39,7 +41,6 @@ rustls-pki-types = "1.11.0"
 socket2 = { version = "0.5.8", features = ["all"] }
 
 [dev-dependencies]
-hex-literal = "1.0.0"
 once_cell = "1.19.0"
 pkcs11 = "0.5.0"
 tempfile = "3.12.0"

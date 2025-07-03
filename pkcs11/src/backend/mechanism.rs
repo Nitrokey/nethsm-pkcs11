@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE, CK_ULONG};
+use hex_literal::hex;
 use log::trace;
 use nethsm_sdk_rs::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
 
@@ -456,18 +457,46 @@ impl Mechanism {
             }
     }
 
-    // return the digest to apply to the data before signing if needed
-    pub fn internal_digest(&self) -> Option<MechDigest> {
+    /// return the digest to apply to the data before signing if needed
+    /// and the PKCS#1v1.5 DigestInfo prefix if relevant
+    ///
+    /// Perfixes can be found in RFC 8017: https://datatracker.ietf.org/doc/html/rfc8017#page-47
+    ///
+    pub fn internal_digest_and_prefix(&self) -> Option<(MechDigest, &'static [u8])> {
         match self {
-            Self::RsaPkcs(digest) => *digest,
+            Self::RsaPkcs(None) => None,
+            Self::RsaPkcs(Some(MechDigest::Md5)) => Some((
+                MechDigest::Md5,
+                &hex!("3020300c06082a864886f70d020505000410"),
+            )),
+            Self::RsaPkcs(Some(MechDigest::Sha1)) => {
+                Some((MechDigest::Sha1, &hex!("3021300906052b0e03021a05000414")))
+            }
+            Self::RsaPkcs(Some(MechDigest::Sha224)) => Some((
+                MechDigest::Sha224,
+                &hex!("302d300d06096086480165030402040500041c"),
+            )),
+            Self::RsaPkcs(Some(MechDigest::Sha256)) => Some((
+                MechDigest::Sha256,
+                &hex!("3031300d060960864801650304020105000420"),
+            )),
+            Self::RsaPkcs(Some(MechDigest::Sha384)) => Some((
+                MechDigest::Sha384,
+                &hex!("3041300d060960864801650304020205000430"),
+            )),
+            Self::RsaPkcs(Some(MechDigest::Sha512)) => Some((
+                MechDigest::Sha512,
+                &hex!("3051300d060960864801650304020305000440"),
+            )),
             Self::RsaPkcsPss(digest, pre_hash) => {
                 if *pre_hash {
-                    Some(*digest)
+                    Some((*digest, &[]))
                 } else {
                     None
                 }
             }
-            Self::Ecdsa(digest) => *digest,
+            Self::Ecdsa(Some(digest)) => Some((*digest, &[])),
+            Self::Ecdsa(None) => None,
             _ => None,
         }
     }
