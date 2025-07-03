@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1][] (2025-07-04)
+
+- Fix PKCS#1v1.5 RSA signature prefix ([#246][])
+
+[#246]: https://github.com/Nitrokey/nethsm-pkcs11/pull/246
+
+
 ## [1.7.0][] (2025-03-17)
 
 - Support storing the certificates as DER on the Nethsm ([#234][])
