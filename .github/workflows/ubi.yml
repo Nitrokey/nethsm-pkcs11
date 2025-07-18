@@ -1,0 +1,32 @@
+name: Build binaries with RHEL UBI
+
+on: [pull_request, push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ubi8-minimal
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: install dependencies
+        run: dnf install -y curl gcc
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust-version }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build project
+        run: cargo build --release
+
+      - name: Add artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libnethsm_pkcs11.so
+          path: target/release/libnethsm_pkcs11.so
