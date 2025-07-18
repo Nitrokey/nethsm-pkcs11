@@ -6,7 +6,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     container:
-      image: ubi8-minimal
+      image: redhat/ubi8-minimal
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
