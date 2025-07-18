@@ -97,12 +97,11 @@ jobs:
         include:
           - os: "alpine:3.18"
             name: musl
-          - os: "ubuntu:22.04"
+          - os: redhat/ubi8
             name: glibc
 
     env:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-${{ matrix.name }}.so
-      HOME: /root
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -110,13 +109,13 @@ jobs:
       - name: install dependencies
         run: |
           case ${{matrix.os}} in 
-            ubuntu*)
-              apt-get update
-              apt-get install -y curl gcc
+            redhat/ubi8*)
+              dnf install -y curl gcc
               ;;
             alpine*)
               apk add curl musl-dev gcc 
               echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
+              echo HOME=/root >> $GITHUB_ENV
               ;;
           esac
 

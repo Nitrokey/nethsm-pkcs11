@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Build Linux x86_64 binary against glibc v2.28
+
 ## [1.7.1][] (2025-07-04)
 
 - Fix PKCS#1v1.5 RSA signature prefix ([#246][])
