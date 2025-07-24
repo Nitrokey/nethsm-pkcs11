@@ -5,12 +5,15 @@ name: Build Rust project on multiple platforms when a new release is created
 on:
   release:
     types: [created]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-x86_64-windows.dll
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -29,7 +32,15 @@ jobs:
       - name: rename file
         run: mv target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
 
+      - name: Upload artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: ${{ env.FILE_NAME }}
+
       - name: Upload to the release
+        if: ${{ github.event_name == 'release' }}
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.FILE_NAME }}
@@ -37,8 +48,8 @@ jobs:
   build-macos:
     runs-on: macos-latest
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-x86_64-macos.dylib
-      FILE_NAME_ARM: nethsm-pkcs11-${{ github.event.release.tag_name }}-aarch64-macos.dylib
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-macos.dylib
+      FILE_NAME_ARM: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -59,7 +70,17 @@ jobs:
       - name: rename file arm
         run: mv target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
+      - name: Upload artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            ${{ env.FILE_NAME }}
+            ${{ env.FILE_NAME_ARM }}
+
       - name: Upload to the release
+        if: ${{ github.event_name == 'release' }}
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -80,7 +101,7 @@ jobs:
             name: glibc
 
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-x86_64-${{ matrix.name }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-${{ matrix.name }}.so
       HOME: /root
     steps:
       - name: Checkout code
@@ -113,7 +134,15 @@ jobs:
       - name: rename file
         run: mv target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
 
+      - name: Upload artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-${{ matrix.name }}
+          path: ${{ env.FILE_NAME }}
+
       - name: Upload to the release
+        if: ${{ github.event_name == 'release' }}
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.FILE_NAME }}
@@ -137,7 +166,7 @@ jobs:
           #   distro: ubuntu22.04
           #   target: riscv64gc-unknown-linux-gnu
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-${{ matrix.arch }}-${{ matrix.name }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-${{ matrix.name }}.so
 
     steps:
       - uses: actions/checkout@v3
@@ -174,7 +203,14 @@ jobs:
             . $HOME/.cargo/env
             cargo build --release --target ${{ matrix.target }}
             mv target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
+      - name: Upload artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}-${{ matrix.name }}
+          path: artifacts/${{ env.FILE_NAME }}
       - uses: softprops/action-gh-release@v1
+        if: ${{ github.event_name == 'release' }}
         with:
           files: artifacts/${{ env.FILE_NAME }}
 
@@ -199,7 +235,15 @@ jobs:
       - name: rename file
         run: mv _LICENSE LICENSE
 
+      - name: Upload artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: licenses
+          path: LICENSE
+
       - name: Upload to the release
+        if: ${{ github.event_name == 'release' }}
         uses: softprops/action-gh-release@v1
         with:
           files: LICENSE
