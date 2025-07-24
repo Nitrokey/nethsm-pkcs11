@@ -104,7 +104,7 @@ jobs:
 
     services:
       nethsm:
-        image: nitrokey/nethsm:testing
+        image: nitrokey/nethsm:3e45f2f3
         ports:
           - 8443:8443
     steps:
