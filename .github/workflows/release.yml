@@ -73,11 +73,14 @@ jobs:
 
     strategy:
       matrix:
-        os: ["alpine:3.18", "debian:12", "fedora:39", "fedora:40", "ubuntu:22.04", "ubuntu:24.04"]
-        rust-version: [stable]
+        include:
+          - os: "alpine:3.18"
+            name: musl
+          - os: "ubuntu:22.04"
+            name: glibc
 
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-x86_64-${{ matrix.os }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-x86_64-${{ matrix.name }}.so
       HOME: /root
     steps:
       - name: Checkout code
@@ -86,7 +89,7 @@ jobs:
       - name: install dependencies
         run: |
           case ${{matrix.os}} in 
-            ubuntu* | debian* )
+            ubuntu*)
               apt-get update
               apt-get install -y curl gcc
               ;;
@@ -94,16 +97,13 @@ jobs:
               apk add curl musl-dev gcc 
               echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
               ;;
-            fedora*)
-              dnf install -y curl gcc
-              ;;
           esac
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust-version }}
+          toolchain: stable
 
       - uses: Swatinem/rust-cache@v2
 
@@ -125,20 +125,19 @@ jobs:
       matrix:
         include:
           - arch: aarch64
-            distro: bullseye
-            target: aarch64-unknown-linux-gnu
-          - arch: aarch64
             distro: ubuntu22.04
             target: aarch64-unknown-linux-gnu
+            name: glibc
           - arch: aarch64
             distro: alpine_latest
             target: aarch64-unknown-linux-musl
+            name: musl
           # Not supported by ring
           # - arch: riscv64
           #   distro: ubuntu22.04
           #   target: riscv64gc-unknown-linux-gnu
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-${{ matrix.arch }}-${{ matrix.distro }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.event.release.tag_name }}-${{ matrix.arch }}-${{ matrix.name }}.so
 
     steps:
       - uses: actions/checkout@v3
@@ -160,7 +159,7 @@ jobs:
           shell: /bin/sh
           install: |
             case ${{matrix.distro}} in 
-              ubuntu* | bullseye )
+              ubuntu*)
                 apt-get update
                 apt-get install -y curl gcc
                 ;;
