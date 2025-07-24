@@ -30,7 +30,7 @@ jobs:
         run: cargo build --release
 
       - name: rename file
-        run: mv target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
+        run: mv -Verbose target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
@@ -66,9 +66,9 @@ jobs:
         run: cargo build --release --target x86_64-apple-darwin
 
       - name: rename file
-        run: mv target/x86_64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME }}
+        run: mv -v target/x86_64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME }}
       - name: rename file arm
-        run: mv target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
+        run: mv -v target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
@@ -132,7 +132,7 @@ jobs:
         run: cargo build --release
 
       - name: rename file
-        run: mv target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
+        run: mv --verbose target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
@@ -202,7 +202,7 @@ jobs:
           run: |
             . $HOME/.cargo/env
             cargo build --release --target ${{ matrix.target }}
-            mv target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
+            mv --verbose target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
@@ -233,7 +233,7 @@ jobs:
         run: ./tools/collect_licenses.sh
 
       - name: rename file
-        run: mv _LICENSE LICENSE
+        run: mv --verbose _LICENSE LICENSE
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
