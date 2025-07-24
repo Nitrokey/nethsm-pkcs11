@@ -157,7 +157,7 @@ pub enum MechMode {
 impl Mechanism {
     const RSA_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 1024;
     const RSA_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 8192;
-    const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 224;
+    const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const EC_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 521;
     const ED_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const ED_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
@@ -181,7 +181,7 @@ impl Mechanism {
                 Self::RsaPkcsPss(MechDigest::Sha512, false),
                 Self::RsaX509,
             ],
-            KeyType::EcP224 | KeyType::EcP256 | KeyType::EcP384 | KeyType::EcP521 => {
+            KeyType::EcP256 | KeyType::EcP384 | KeyType::EcP521 => {
                 vec![Self::Ecdsa(None)]
             }
             KeyType::Curve25519 => vec![Self::EdDsa],

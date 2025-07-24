@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Remove support for EC_P224 mechanism ([#249][])
+
+[#249]: https://github.com/Nitrokey/nethsm-pkcs11/pull/249
+
 ## [1.7.1][] (2025-07-04)
 
 - Fix PKCS#1v1.5 RSA signature prefix ([#246][])

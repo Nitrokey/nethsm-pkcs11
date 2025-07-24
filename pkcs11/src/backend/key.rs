@@ -371,7 +371,6 @@ pub fn create_key_from_template(
     Ok((id, key_class, parsed.raw_id))
 }
 
-const KEYTYPE_EC_P224: ObjectIdentifier = der::oid::db::rfc5912::SECP_224_R_1;
 const KEYTYPE_EC_P256: ObjectIdentifier = der::oid::db::rfc5912::SECP_256_R_1;
 const KEYTYPE_EC_P384: ObjectIdentifier = der::oid::db::rfc5912::SECP_384_R_1;
 const KEYTYPE_EC_P521: ObjectIdentifier = der::oid::db::rfc5912::SECP_521_R_1;
@@ -379,7 +378,6 @@ const KEYTYPE_CURVE25519: ObjectIdentifier = der::oid::db::rfc8410::ID_ED_25519;
 
 pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
     Some(match key_type {
-        KeyType::EcP224 => KEYTYPE_EC_P224,
         KeyType::EcP256 => KEYTYPE_EC_P256,
         KeyType::EcP384 => KEYTYPE_EC_P384,
         KeyType::EcP521 => KEYTYPE_EC_P521,
@@ -391,7 +389,6 @@ pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
 // returns the key size in bytes
 pub const fn key_size(t: &KeyType) -> Option<usize> {
     let size = match t {
-        KeyType::EcP224 => 224,
         KeyType::EcP256 => 256,
         KeyType::EcP384 => 384,
         KeyType::EcP521 => 521,
@@ -409,8 +406,6 @@ fn key_type_from_params(params: &[u8]) -> Option<KeyType> {
     // we can't do a match on vecs
     if oid == KEYTYPE_CURVE25519 {
         Some(KeyType::Curve25519)
-    } else if oid == KEYTYPE_EC_P224 {
-        Some(KeyType::EcP224)
     } else if oid == KEYTYPE_EC_P256 {
         Some(KeyType::EcP256)
     } else if oid == KEYTYPE_EC_P384 {
