@@ -2,13 +2,23 @@
 
 ## Unreleased
 
+-
+
+## [1.7.2][] (2025-07-25)
+
 - Build Linux x86_64 binary against glibc v2.28
+
+[1.7.2]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.7.2
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.7.1...v1.7.2)
 
 ## [1.7.1][] (2025-07-04)
 
 - Fix PKCS#1v1.5 RSA signature prefix ([#246][])
 
 [#246]: https://github.com/Nitrokey/nethsm-pkcs11/pull/246
+
+[1.7.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v1.7.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.7.0...v1.7.1)
 
 
 ## [1.7.0][] (2025-03-17)

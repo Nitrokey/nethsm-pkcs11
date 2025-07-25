@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "nethsm_pkcs11"
-version = "1.7.1"
+version = "1.7.2"
 dependencies = [
  "arc-swap",
  "base64ct",
