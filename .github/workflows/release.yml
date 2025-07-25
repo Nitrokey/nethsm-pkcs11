@@ -101,7 +101,7 @@ jobs:
             name: glibc
 
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-${{ matrix.name }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-linux-${{ matrix.name }}.so
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -168,7 +168,7 @@ jobs:
             name: glibc
 
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-${{ matrix.name }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-linux-${{ matrix.name }}.so
 
     services:
       nethsm:
@@ -221,7 +221,7 @@ jobs:
           #   distro: ubuntu22.04
           #   target: riscv64gc-unknown-linux-gnu
     env:
-      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-${{ matrix.name }}.so
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-linux-${{ matrix.name }}.so
 
     steps:
       - uses: actions/checkout@v3
