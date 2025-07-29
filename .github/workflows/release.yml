@@ -33,7 +33,6 @@ jobs:
         run: mv -Verbose target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
-        if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -71,7 +70,6 @@ jobs:
         run: mv -v target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
       - name: Upload artifacts
-        if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: macos
@@ -144,6 +142,50 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.FILE_NAME }}
+
+  test-windows:
+    runs-on: windows-latest
+    needs: build-windows
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows
+      - name: Install dependencies
+        run: choco install opensc
+      - name: Test pkcs11 module
+        run: |
+          & "C:\Program Files\Git\usr\bin\sed.exe" --in-place s/localhost:8443/nethsmdemo.nitrokey.com/g p11nethsm.conf
+          $env:P11NETHSM_CONFIG_FILE = "p11nethsm.conf"
+          & "C:\Program Files\OpenSC Project\OpenSC\tools\pkcs11-tool.exe" --module ./${{ env.FILE_NAME }} --list-slots
+          & "C:\Program Files\OpenSC Project\OpenSC\tools\pkcs11-tool.exe" --module ./${{ env.FILE_NAME }} --list-slots | Should -Contain "Slot 0 (0x0): NetHSM"
+
+  test-macos:
+    runs-on: macos-latest
+    needs: build-macos
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install opensc
+      - name: Test pkcs11 module
+        run: |
+          sed -i "" s/localhost:8443/nethsmdemo.nitrokey.com/g p11nethsm.conf
+          export P11NETHSM_CONFIG_FILE=p11nethsm.conf
+          pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots
+          pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots | grep NetHSM
 
   test-linux:
     runs-on: ubuntu-latest
