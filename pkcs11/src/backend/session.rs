@@ -5,7 +5,7 @@ use std::{
 
 use cryptoki_sys::{
     CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
-    CK_USER_TYPE,
+    CK_USER_TYPE, CKA_SUBJECT,
 };
 use log::{debug, error, trace};
 use nethsm_sdk_rs::apis::default_api;
@@ -465,7 +465,20 @@ impl Session {
             .into_iter()
             .filter(|(_, obj)| {
                 if let Some(kind) = requirements.kind {
-                    kind == obj.kind
+                    // kind must match
+                    if kind != obj.kind {
+                        false
+                    // extra checks if kind is Cerificate
+                    } else if kind == ObjectKind::Certificate {
+                        // When Subject is provided as requirement, it must match
+                        requirements.cka_subject.is_none() ||
+                            obj.attr(CKA_SUBJECT)
+                                .map(|attr| attr.as_bytes())
+                                    == requirements.cka_subject.as_deref()
+                    // On other kinds, no need for extra checks
+                    } else {
+                        true
+                    }
                 } else {
                     true
                 }
