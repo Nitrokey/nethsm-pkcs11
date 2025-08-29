@@ -15,7 +15,7 @@ use cryptoki_sys::{
     CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
-use log::{debug, trace};
+use log::{debug, info, trace};
 use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
 use std::collections::HashMap;
 use std::mem::size_of;
@@ -155,6 +155,18 @@ pub struct Object {
     pub id: String,
     pub size: Option<usize>, // the size of the object in bytes
     pub mechanisms: Vec<KeyMechanism>,
+}
+
+impl Object {
+    pub fn rename(&mut self, id: &str) {
+        let attr_id = self.attrs.get(&CKA_ID);
+        let attr_label = self.attrs.get(&CKA_LABEL);
+        info!("renaming {}/{attr_id:?}/{attr_label:?} to {}", self.id, id);
+        let id_bytes = Attr::Bytes(id.as_bytes().to_vec());
+        self.attrs.insert(CKA_LABEL, id_bytes.clone());
+        self.attrs.insert(CKA_ID, id_bytes);
+        self.id = id.to_owned();
+    }
 }
 
 struct KeyData {

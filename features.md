@@ -136,7 +136,7 @@ Verify is not supported by NetHSM
 | C_CreateObject      | :warning:          | Needs to be logged as Administrator (SO). Only private keys can be added.                                                       |
 | C_CopyObject        | :white_check_mark: | Always returns CKR_ACTION_PROHIBITED                                                                                            |
 | C_DestroyObject     | :warning:          | Needs to be logged as Administrator (SO). Only private keys can be deleted.                                                     |
-| C_SetAttributeValue | :white_check_mark: | Returns CRK_ATTRIBUTE_READ_ONLY.                                                                                                |
+| C_SetAttributeValue | :white_check_mark: | Needs to be logged as Administrator (SO). Only supports changing CKA_ID.                                                        |
 
 ## Pin management
 

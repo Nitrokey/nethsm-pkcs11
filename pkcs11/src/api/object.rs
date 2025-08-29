@@ -1,11 +1,9 @@
-use cryptoki_sys::CK_ULONG;
-use log::{error, trace};
+use std::{slice, str};
 
-use crate::{
-    backend::{db::attr::CkRawAttrTemplate, key},
-    data::DEVICE,
-    lock_session, read_session,
-};
+use cryptoki_sys::CK_ULONG;
+use log::{error, info, trace};
+
+use crate::{backend::db::attr::CkRawAttrTemplate, lock_session, read_session};
 
 #[no_mangle]
 pub extern "C" fn C_FindObjectsInit(
@@ -222,25 +220,70 @@ pub extern "C" fn C_SetAttributeValue(
 ) -> cryptoki_sys::CK_RV {
     trace!("C_SetAttributeValue() called");
 
-    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
-        Some(template) => template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
-    let parsed = match key::parse_attributes(&template) {
-        Ok(parsed) => parsed,
-        Err(err) => {
-            return err.into();
-        }
+    read_session!(hSession, session);
+
+    if pTemplate.is_null() || ulCount == 0 {
+        error!("C_SetAttributeValue called without attributes in the template");
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    }
+
+    let Some(object) = session.get_object(hObject) else {
+        error!("C_SetAttributeValue() called with invalid object handle {hObject}.");
+        return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
     };
 
-    let Some(device) = DEVICE.load_full() else {
-        error!("Initialization was not performed or failed");
-        return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
+    let Ok(n) = usize::try_from(ulCount) else {
+        error!("C_SetAttributeValue called with too many attributes in the template");
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
     };
+    // SAFETY: The caller must ensure that pTemplate points to an array of ulCount attributes.
+    // We already checked for null pointers and length zero above.
+    let attrs = unsafe { slice::from_raw_parts(pTemplate, n) };
 
-    cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
+    let mut id = None;
+    for attr in attrs {
+        if attr.type_ != cryptoki_sys::CKA_ID {
+            error!("C_SetAttributeValue() is supported only on CKA_ID");
+            return cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY;
+        }
+        if id.is_some() {
+            error!("CKA_ID cannot be set twice in C_SetAttributeValue");
+            return cryptoki_sys::CKR_TEMPLATE_INCONSISTENT;
+        }
+        if attr.ulValueLen == 0
+            || attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION
+            || attr.pValue.is_null()
+        {
+            error!("CKA_ID value may not be empty in C_SetAttributeValue");
+            return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+        }
+        let Ok(n) = usize::try_from(attr.ulValueLen) else {
+            error!("CKA_ID value is too long in C_SetAttributeValue");
+            return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+        };
+        // SAFETY: The caller must provide a byte slice of the correct size for CKA_ID attributes.
+        // We already checked for null pointers and length zero above.
+        id = Some(unsafe { slice::from_raw_parts(attr.pValue as *const u8, n) });
+    }
+    // We already checked before that there is at least one attribute. As CKA_ID is the only
+    // attribute we support, id cannot be None.
+    let Some(id) = id else {
+        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+    };
+    let Ok(id) = str::from_utf8(id) else {
+        error!("CKA_ID value is not a valid UTF-8 string in C_SetAttributeValue");
+        return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+    };
+    if !id.chars().all(char::is_alphanumeric) {
+        error!("CKA_ID value is not an alphanumeric string in C_SetAttributeValue");
+        return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+    }
+
+    info!("Changing ID to: {id}");
+    match session.rename_objects(&object.id, id) {
+        Ok(()) => cryptoki_sys::CKR_OK,
+        Err(err) => err.into(),
+    }
 }
 
 #[cfg(test)]

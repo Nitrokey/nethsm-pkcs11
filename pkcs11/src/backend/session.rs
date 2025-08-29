@@ -8,7 +8,7 @@ use cryptoki_sys::{
     CK_USER_TYPE,
 };
 use log::{debug, error, trace};
-use nethsm_sdk_rs::apis::default_api;
+use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
 
 use crate::{
     backend::{login::UserMode, Error},
@@ -393,6 +393,22 @@ impl Session {
 
     pub fn decrypt_clear(&mut self) {
         self.decrypt_ctx = None;
+    }
+
+    pub fn rename_objects(&self, old_id: &str, new_id: &str) -> Result<(), Error> {
+        self.login_ctx.try_(
+            |api_config| {
+                default_api::keys_key_id_move_post(
+                    api_config,
+                    old_id,
+                    MoveKeyRequest::new(new_id.to_owned()),
+                )
+            },
+            crate::backend::login::UserMode::Administrator,
+        )?;
+        let mut db = self.db.0.lock().unwrap();
+        db.rename(old_id, new_id);
+        Ok(())
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {

@@ -6,6 +6,7 @@
 pub mod attr;
 pub mod object;
 use cryptoki_sys::CK_OBJECT_HANDLE;
+use log::info;
 use std::{collections::HashMap, time::SystemTime};
 
 pub use object::Object;
@@ -98,6 +99,18 @@ impl Db {
 
     pub fn remove(&mut self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
         self.objects.remove(&handle)
+    }
+
+    pub fn rename(&mut self, old_id: &str, new_id: &str) {
+        for object in self.objects.values_mut() {
+            if object.id == old_id {
+                info!(
+                    "Renaming object {:?}:{} to {}",
+                    object.kind, object.id, new_id
+                );
+                object.rename(new_id);
+            }
+        }
     }
 }
 
