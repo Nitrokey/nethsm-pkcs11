@@ -62,10 +62,7 @@ pub fn initialize_with_configs(
     for slot in config.slots.iter() {
         slots.push(Arc::new(slot_from_config(slot)?));
     }
-    Ok(Device {
-        slots,
-        enable_set_attribute_value: config.enable_set_attribute_value,
-    })
+    Ok(Device { slots })
 }
 
 pub fn initialize() -> Result<Device, InitializationError> {

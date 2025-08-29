@@ -145,7 +145,6 @@ fn background_thread(rx: mpsc::Receiver<InstanceData>) -> impl FnOnce() {
 #[derive(Debug, Clone)]
 pub struct Device {
     pub slots: Vec<Arc<Slot>>,
-    pub enable_set_attribute_value: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

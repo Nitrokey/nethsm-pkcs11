@@ -3,7 +3,7 @@ use log::{error, trace};
 
 use crate::{
     backend::{db::attr::CkRawAttrTemplate, key},
-    data::{DEVICE, KEY_ALIASES},
+    data::DEVICE,
     lock_session, read_session,
 };
 
@@ -240,34 +240,7 @@ pub extern "C" fn C_SetAttributeValue(
         return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
     };
 
-    // if the hack is enabled, we update the key alias map
-    if device.enable_set_attribute_value {
-        read_session!(hSession, session);
-
-        let object = match session.get_object(hObject) {
-            Some(object) => object,
-            None => {
-                error!("C_SetAttributeValue() called with invalid object handle {hObject}.");
-                return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
-            }
-        };
-
-        if let Some(new_name) = parsed.id {
-            KEY_ALIASES.lock().unwrap().insert(new_name, object.id);
-            cryptoki_sys::CKR_OK
-        } else {
-            error!("C_SetAttributeValue() is supported only on CKA_ID");
-
-            // We only support changing the ID
-            cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
-        }
-    } else {
-        if parsed.id.is_some() {
-            error!("The application tried to change the CKA_ID attribute of a key. If you are using the Sun PKCS11 provider for Java KeyStore (or EJBCA), you can set enable_set_attribute_value option to true in the configuration file. See our documentation to understand its implications.")
-        }
-
-        cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
-    }
+    cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY
 }
 
 #[cfg(test)]

@@ -101,9 +101,6 @@ pub struct SyslogUdp {
 // representation of the config file to parse
 #[derive(Debug, Clone, Serialize, Deserialize, Merge, Default, PartialEq)]
 pub struct P11Config {
-    #[merge(strategy = merge::bool::overwrite_false)]
-    #[serde(default)]
-    pub enable_set_attribute_value: bool,
     #[merge(strategy = merge::option::overwrite_none)]
     pub syslog_socket: Option<PathBuf>,
     #[merge(strategy = merge::option::overwrite_none)]
@@ -279,7 +276,6 @@ mod tests {
     #[ignore]
     fn test_read_home_config() {
         let config = r#"
-enable_set_attribute_value: true
 log_file: /tmp/p11nethsm.log
 log_level: Trace
 slots:
@@ -306,7 +302,6 @@ slots:
         std::env::set_var("HOME", home);
 
         let config = read_configuration().unwrap();
-        assert!(config.enable_set_attribute_value);
         assert_eq!(config.log_file, Some("/tmp/p11nethsm.log".into()));
         assert!(matches!(config.log_level, Some(LogLevel::Trace)));
         assert_eq!(config.slots.len(), 1);
@@ -384,7 +379,6 @@ password: ""
         let config = include_str!("../../../p11nethsm.example.conf");
         assert_eq!(
             P11Config {
-                enable_set_attribute_value: false,
                 syslog_socket: Some("/var/nethsm/log".into()),
                 syslog_facility: Some("user".into()),
                 syslog_hostname: None,

@@ -5,10 +5,7 @@ use super::{
     login::{self, LoginCtx},
     Error,
 };
-use crate::{
-    backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError},
-    data::{DEVICE, KEY_ALIASES},
-};
+use crate::backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError};
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
 use cryptoki_sys::{
@@ -162,25 +159,10 @@ fn upload_certificate(
         .as_ref()
         .ok_or(Error::MissingAttribute(CKA_VALUE))?;
 
-    let mut id = match parsed_template.id {
-        Some(ref id) => id.clone(),
-        None => {
-            error!("A key ID is required");
-            return Err(Error::MissingAttribute(CKA_ID));
-        }
-    };
-
-    let Some(device) = DEVICE.load_full() else {
-        error!("Initialization was not performed or failed");
-        return Err(Error::LibraryNotInitialized);
-    };
-
-    // Check if an alias is defined for this key
-    if device.enable_set_attribute_value {
-        if let Some(real_name) = KEY_ALIASES.lock()?.get(&id).cloned() {
-            id = real_name;
-        }
-    }
+    let id = parsed_template.id.clone().ok_or_else(|| {
+        error!("A key ID is required");
+        Error::MissingAttribute(CKA_ID)
+    })?;
 
     let certificate_format = login_ctx.slot().certificate_format;
     debug!("Uploading certificate, sending {certificate_format} encoding to the nethsm as per configuration");

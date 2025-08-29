@@ -136,7 +136,7 @@ Verify is not supported by NetHSM
 | C_CreateObject      | :warning:          | Needs to be logged as Administrator (SO). Only private keys can be added.                                                       |
 | C_CopyObject        | :white_check_mark: | Always returns CKR_ACTION_PROHIBITED                                                                                            |
 | C_DestroyObject     | :warning:          | Needs to be logged as Administrator (SO). Only private keys can be deleted.                                                     |
-| C_SetAttributeValue | :white_check_mark: | Returns CKR_ACTION_PROHIBITED. A compatibility option is available for Java Sun PKCS11 (e.g. EJBCA): enable_set_attribute_value |
+| C_SetAttributeValue | :white_check_mark: | Returns CRK_ATTRIBUTE_READ_ONLY.                                                                                                |
 
 ## Pin management
 
