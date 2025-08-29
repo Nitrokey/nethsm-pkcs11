@@ -332,10 +332,13 @@ pub fn from_key_data(
     let key_attrs = match key_data.r#type {
         KeyType::Rsa => configure_rsa(&key_data)?,
         KeyType::Curve25519
-        | KeyType::EcP224
         | KeyType::EcP256
         | KeyType::EcP384
-        | KeyType::EcP521 => configure_ec(&key_data)?,
+        | KeyType::EcP521
+        | KeyType::EcP256K1
+        | KeyType::BrainpoolP256
+        | KeyType::BrainpoolP384
+        | KeyType::BrainpoolP512 => configure_ec(&key_data)?,
         KeyType::Generic => configure_generic()?,
     };
     attrs.extend(key_attrs.attrs);
@@ -343,7 +346,7 @@ pub fn from_key_data(
     let ck_mech_list: Vec<CK_MECHANISM_TYPE> = key_data
         .mechanisms
         .iter()
-        .map(|mech| Mechanism::from(*mech))
+        .flat_map(|mech| Mechanism::try_from(*mech).ok())
         .map(|m: Mechanism| m.ck_type())
         .collect();
 

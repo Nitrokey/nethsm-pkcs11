@@ -115,9 +115,13 @@ pub enum Mechanism {
     GenerateEd,
 }
 
-impl From<KeyMechanism> for Mechanism {
-    fn from(value: KeyMechanism) -> Self {
-        match value {
+pub struct UnsupportedMechanismError;
+
+impl TryFrom<KeyMechanism> for Mechanism {
+    type Error = UnsupportedMechanismError;
+
+    fn try_from(value: KeyMechanism) -> Result<Self, Self::Error> {
+        Ok(match value {
             KeyMechanism::AesDecryptionCbc => Self::AesCbc(None),
             KeyMechanism::AesEncryptionCbc => Self::AesCbc(None),
             KeyMechanism::EcdsaSignature => Self::Ecdsa(None),
@@ -137,7 +141,10 @@ impl From<KeyMechanism> for Mechanism {
             KeyMechanism::RsaDecryptionPkcs1 => Self::RsaPkcs(None),
             KeyMechanism::RsaDecryptionRaw => Self::RsaX509,
             KeyMechanism::RsaSignaturePkcs1 => Self::RsaPkcs(None),
-        }
+            KeyMechanism::Bip340Signature => {
+                return Err(UnsupportedMechanismError);
+            }
+        })
     }
 }
 
@@ -157,7 +164,7 @@ pub enum MechMode {
 impl Mechanism {
     const RSA_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 1024;
     const RSA_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 8192;
-    const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 224;
+    const EC_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const EC_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 521;
     const ED_MIN_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
     const ED_MAX_KEY_BITS: cryptoki_sys::CK_ULONG = 256;
@@ -181,7 +188,13 @@ impl Mechanism {
                 Self::RsaPkcsPss(MechDigest::Sha512, false),
                 Self::RsaX509,
             ],
-            KeyType::EcP224 | KeyType::EcP256 | KeyType::EcP384 | KeyType::EcP521 => {
+            KeyType::EcP256
+            | KeyType::EcP384
+            | KeyType::EcP521
+            | KeyType::EcP256K1
+            | KeyType::BrainpoolP256
+            | KeyType::BrainpoolP384
+            | KeyType::BrainpoolP512 => {
                 vec![Self::Ecdsa(None)]
             }
             KeyType::Curve25519 => vec![Self::EdDsa],

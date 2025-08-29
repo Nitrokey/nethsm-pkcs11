@@ -2,7 +2,8 @@
 
 ## Unreleased
 
--
+- Remove support for EC_P224 keys
+- Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys
 
 ## [1.7.2][] (2025-07-25)
 
