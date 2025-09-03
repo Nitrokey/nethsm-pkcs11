@@ -449,6 +449,7 @@ impl Mechanism {
                 Self::RsaPkcs(_) | Self::GenerateRsa => {
                     cryptoki_sys::CKF_SIGN
                         | cryptoki_sys::CKF_DECRYPT
+                        | cryptoki_sys::CKF_ENCRYPT
                         | cryptoki_sys::CKF_GENERATE_KEY_PAIR
                 }
                 // Multi-part CKM_RSA_PKCS has sign only
