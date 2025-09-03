@@ -6,6 +6,7 @@
 - Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys
 - Remove `enable_set_attribute_value` config option
 - Implement `C_SetAttributeValue` for `CKA_ID` to support renaming keys
+- Remove corresponding certificate and public key objects from the cache if a private key is deleted ([#260](https://github.com/Nitrokey/nethsm-pkcs11/issues/260))
 
 ## [1.7.2][] (2025-07-25)
 

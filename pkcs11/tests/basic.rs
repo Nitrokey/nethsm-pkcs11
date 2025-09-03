@@ -209,6 +209,88 @@ fn set_attribute_value() {
 }
 
 #[test_log::test]
+fn delete() {
+    tools::run_tests(
+        &[],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![InstanceConfig {
+                    url: "https://localhost:8443/api/v1".into(),
+                    danger_insecure_cert: true,
+                    sha256_fingerprints: Vec::new(),
+                    max_idle_connections: None,
+                }],
+                certificate_format: CertificateFormat::Pem,
+                retries: None,
+                timeout_seconds: Some(10),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
+            }],
+            ..Default::default()
+        },
+        |_test_ctx, ctx| {
+            fn assert_objects(
+                ctx: &Ctx,
+                session: CK_SESSION_HANDLE,
+                expected: &[CK_OBJECT_HANDLE],
+            ) {
+                ctx.find_objects_init(session, &[]).unwrap();
+                let mut objects = ctx.find_objects(session, 10).unwrap();
+                ctx.find_objects_final(session).unwrap();
+
+                let mut expected_objects = expected.to_vec();
+                objects.sort();
+                expected_objects.sort();
+                assert_eq!(objects, expected_objects);
+            }
+
+            let slot = 0;
+            let session = ctx.open_session(slot, 0x04, None, None).unwrap();
+            let (public_key1, private_key1) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+            let (public_key2, private_key2) = ctx
+                .generate_key_pair(
+                    session,
+                    &RSA_MECHANISM,
+                    RSA_PUBLIC_KEY_ATTRIBUTES,
+                    RSA_PRIVATE_KEY_ATTRIBUTES,
+                )
+                .unwrap();
+
+            assert_objects(
+                ctx,
+                session,
+                &[public_key1, public_key2, private_key1, private_key2],
+            );
+
+            ctx.destroy_object(session, private_key1).unwrap();
+
+            assert_objects(ctx, session, &[public_key2, private_key2]);
+
+            ctx.destroy_object(session, private_key2).unwrap();
+
+            assert_objects(ctx, session, &[]);
+        },
+    )
+}
+
+#[test_log::test]
 fn multiple_instances() {
     tools::run_tests(
         &[(8444, 8443)],

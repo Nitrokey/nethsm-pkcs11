@@ -636,6 +636,7 @@ impl Session {
 
         debug!("Deleting key {} {:?}", key.id, key.kind);
 
+        let mut delete_related_objects = false;
         match key.kind {
             ObjectKind::Certificate => {
                 self.login_ctx.try_(
@@ -648,20 +649,22 @@ impl Session {
                     |api_config| default_api::keys_key_id_delete(api_config, &key.id),
                     crate::backend::login::UserMode::Administrator,
                 )?;
+                delete_related_objects = true;
             }
             _ => {
                 // we don't support deleting other objects
             }
         }
 
-        {
-            let mut db = self.db.0.lock()?;
-            match db.remove(handle) {
-                Some(object) => Ok(object),
-
-                None => Err(Error::InvalidObjectHandle(handle)),
-            }
-        }?;
+        let mut db = self.db.0.lock()?;
+        let object = db
+            .remove(handle)
+            .ok_or(Error::InvalidObjectHandle(handle))?;
+        if delete_related_objects {
+            // certificate and public key objects for this key are no longer valid so we need to
+            // manually remove them
+            db.remove_objects_by_id(&object.id);
+        }
 
         Ok(())
     }

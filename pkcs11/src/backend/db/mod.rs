@@ -112,6 +112,10 @@ impl Db {
             }
         }
     }
+
+    pub fn remove_objects_by_id(&mut self, id: &str) {
+        self.objects.retain(|_, object| object.id != id)
+    }
 }
 
 #[cfg(test)]
