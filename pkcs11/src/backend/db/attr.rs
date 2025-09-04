@@ -117,7 +117,7 @@ impl CkRawAttrTemplate {
         self.count
     }
 
-    pub fn iter(&self) -> CkRawAttrTemplateIter {
+    pub fn iter(&self) -> CkRawAttrTemplateIter<'_> {
         CkRawAttrTemplateIter {
             tpl: self,
             index: 0,
