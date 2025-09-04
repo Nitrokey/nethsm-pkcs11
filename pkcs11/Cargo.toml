@@ -38,7 +38,7 @@ config_file = { path = "config_file" }
 # Needed to prevent breaking change with rustls updates
 ureq = { version = "=3.0.12", default-features  = false }
 rustls-pki-types = "1.11.0"
-socket2 = { version = "0.5.8", features = ["all"] }
+socket2 = { version = "0.6", features = ["all"] }
 
 [dev-dependencies]
 once_cell = "1.19.0"
