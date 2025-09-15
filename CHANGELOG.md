@@ -2,12 +2,27 @@
 
 ## Unreleased
 
+-
+
+## [2.0.0-rc.1][] (2025-09-16)
+
+### Breaking Changes
+
 - Remove support for EC_P224 keys
-- Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys
 - Remove `enable_set_attribute_value` config option
+
+### Features
+
+- Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys
 - Implement `C_SetAttributeValue` for `CKA_ID` to support renaming keys
-- Remove corresponding certificate and public key objects from the cache if a private key is deleted ([#260](https://github.com/Nitrokey/nethsm-pkcs11/issues/260))
 - Add `CKF_ENCRYPT` flag for `CKM_RSA_PKCS`
+
+### Bugfixes
+
+- Remove corresponding certificate and public key objects from the cache if a private key is deleted ([#260](https://github.com/Nitrokey/nethsm-pkcs11/issues/260))
+
+[2.0.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.7.2...v2.0.0-rc.1)
 
 ## [1.7.2][] (2025-07-25)
 
