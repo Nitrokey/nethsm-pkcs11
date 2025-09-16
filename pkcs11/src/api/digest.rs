@@ -2,103 +2,135 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use log::trace;
+use crate::{api::api_function, backend::Pkcs11Error};
 
-#[no_mangle]
-pub extern "C" fn C_DigestInit(
+api_function!(
+    C_DigestInit = digest_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DigestInit() called");
+);
 
+fn digest_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: *mut cryptoki_sys::CK_MECHANISM,
+) -> Result<(), Pkcs11Error> {
     if pMechanism.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_Digest(
+api_function!(
+    C_Digest = digest;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: *mut cryptoki_sys::CK_BYTE,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pDigest: *mut cryptoki_sys::CK_BYTE,
     pulDigestLen: *mut cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_Digest() called");
+);
 
+fn digest(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pData: *mut cryptoki_sys::CK_BYTE,
+    ulDataLen: cryptoki_sys::CK_ULONG,
+    pDigest: *mut cryptoki_sys::CK_BYTE,
+    pulDigestLen: *mut cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if pData.is_null() || pDigest.is_null() || pulDigestLen.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DigestUpdate(
+api_function!(
+    C_DigestUpdate = digest_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: *mut cryptoki_sys::CK_BYTE,
     ulPartLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DigestUpdate() called");
+);
 
+fn digest_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pPart: *mut cryptoki_sys::CK_BYTE,
+    ulPartLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if pPart.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DigestFinal(
+api_function!(
+    C_DigestFinal = digest_final;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pDigest: *mut cryptoki_sys::CK_BYTE,
     pulDigestLen: *mut cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DigestFinal() called");
+);
 
+fn digest_final(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pDigest: *mut cryptoki_sys::CK_BYTE,
+    pulDigestLen: *mut cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if pDigest.is_null() || pulDigestLen.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DigestKey(
+api_function!(
+    C_DigestKey = digest_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DigestKey() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn digest_key(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DigestEncryptUpdate(
+api_function!(
+    C_DigestEncryptUpdate = digest_encrypt_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DigestEncryptUpdate() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn digest_encrypt_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    ulPartLen: cryptoki_sys::CK_ULONG,
+    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DecryptDigestUpdate(
+api_function!(
+    C_DecryptDigestUpdate = decrypt_digest_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DecryptDigestUpdate() called ");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn decrypt_digest_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    pulPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
 #[cfg(test)]

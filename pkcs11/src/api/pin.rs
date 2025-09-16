@@ -1,36 +1,43 @@
-/*
-    We won't implement these function as it is not a feature of NetHSM.
-*/
+use log::error;
 
-use log::{error, trace};
+use crate::{api::api_function, backend::Pkcs11Error, data};
 
-use crate::lock_session;
-
-#[no_mangle]
-pub extern "C" fn C_InitPIN(
+api_function!(
+    C_InitPIN = init_pin;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     uPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulPinLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_InitPIN() called ");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn init_pin(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    uPin: cryptoki_sys::CK_UTF8CHAR_PTR,
+    ulPinLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_SetPIN(
+api_function!(
+    C_SetPIN = set_pin;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pOldPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulOldLen: cryptoki_sys::CK_ULONG,
     pNewPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulNewLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_SetPIN() called ");
+);
 
-    lock_session!(hSession, session);
+fn set_pin(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pOldPin: cryptoki_sys::CK_UTF8CHAR_PTR,
+    ulOldLen: cryptoki_sys::CK_ULONG,
+    pNewPin: cryptoki_sys::CK_UTF8CHAR_PTR,
+    ulNewLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pOldPin.is_null() || pNewPin.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let old_pin = unsafe { std::slice::from_raw_parts(pOldPin, ulOldLen as usize) };
@@ -38,31 +45,19 @@ pub extern "C" fn C_SetPIN(
 
     // parse string to utf8
 
-    let old_pin = match std::str::from_utf8(old_pin) {
-        Ok(pin) => pin,
-        Err(_) => return cryptoki_sys::CKR_ARGUMENTS_BAD,
-    };
+    let old_pin = std::str::from_utf8(old_pin).map_err(|_| Pkcs11Error::ArgumentsBad)?;
+    let new_pin = std::str::from_utf8(new_pin).map_err(|_| Pkcs11Error::ArgumentsBad)?;
 
-    let new_pin = match std::str::from_utf8(new_pin) {
-        Ok(pin) => pin,
-        Err(_) => return cryptoki_sys::CKR_ARGUMENTS_BAD,
-    };
-
-    if let Err(err) = session.login(cryptoki_sys::CKU_USER, old_pin.to_string()) {
-        return err.into();
-    }
+    session.login(cryptoki_sys::CKU_USER, old_pin.to_string())?;
 
     if !session
         .login_ctx
         .can_run_mode(crate::backend::login::UserMode::OperatorOrAdministrator)
     {
         error!("C_SetPIN() called with session not connected as operator {hSession}.");
-        return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
+        return Err(Pkcs11Error::UserNotLoggedIn);
     }
-    match session.login_ctx.change_pin(new_pin.to_string()) {
-        Ok(()) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
+    session.login_ctx.change_pin(new_pin.to_string())
 }
 
 #[cfg(test)]

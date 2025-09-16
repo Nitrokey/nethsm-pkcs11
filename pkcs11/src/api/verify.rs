@@ -2,76 +2,104 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use log::trace;
+use crate::{api::api_function, backend::Pkcs11Error};
 
-#[no_mangle]
-pub extern "C" fn C_VerifyInit(
+api_function!(
+    C_VerifyInit = verify_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyInit() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_Verify(
+api_function!(
+    C_Verify = verify;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: cryptoki_sys::CK_BYTE_PTR,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pSignature: cryptoki_sys::CK_BYTE_PTR,
     ulSignatureLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_Verify() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pData: cryptoki_sys::CK_BYTE_PTR,
+    ulDataLen: cryptoki_sys::CK_ULONG,
+    pSignature: cryptoki_sys::CK_BYTE_PTR,
+    ulSignatureLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_VerifyUpdate(
+api_function!(
+    C_VerifyUpdate = verify_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyUpdate() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    ulPartLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_VerifyFinal(
+api_function!(
+    C_VerifyFinal = verify_final;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSignature: cryptoki_sys::CK_BYTE_PTR,
     ulSignatureLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyFinal() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify_final(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pSignature: cryptoki_sys::CK_BYTE_PTR,
+    ulSignatureLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_VerifyRecoverInit(
+api_function!(
+    C_VerifyRecoverInit = verify_recover_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyRecoverInit() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify_recover_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_VerifyRecover(
+api_function!(
+    C_VerifyRecover = verify_recover;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSignature: cryptoki_sys::CK_BYTE_PTR,
     ulSignatureLen: cryptoki_sys::CK_ULONG,
     pData: cryptoki_sys::CK_BYTE_PTR,
     pulDataLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_VerifyRecover() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn verify_recover(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pSignature: cryptoki_sys::CK_BYTE_PTR,
+    ulSignatureLen: cryptoki_sys::CK_ULONG,
+    pData: cryptoki_sys::CK_BYTE_PTR,
+    pulDataLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
 // just test that the functions return CKR_FUNCTION_NOT_SUPPORTED

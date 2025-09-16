@@ -2,59 +2,63 @@ use cryptoki_sys::CK_ULONG;
 use log::{error, trace};
 
 use crate::{
+    api::api_function,
     backend::{
         encrypt::ENCRYPT_BLOCK_SIZE,
         mechanism::{CkRawMechanism, Mechanism},
+        Pkcs11Error,
     },
-    lock_session,
+    data,
 };
 
-#[no_mangle]
-pub extern "C" fn C_EncryptInit(
+api_function!(
+    C_EncryptInit = encrypt_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_EncryptInit() called");
+);
 
-    let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
-        Some(mech) => mech,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+fn encrypt_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    let raw_mech =
+        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
-        Ok(mech) => mech,
-        Err(e) => {
-            error!("C_EncryptInit() failed to convert mechanism: {e}");
-            return cryptoki_sys::CKR_MECHANISM_INVALID;
-        }
-    };
+    let mech = Mechanism::from_ckraw_mech(&raw_mech).map_err(|err| {
+        error!("C_EncryptInit() failed to convert mechanism: {err}");
+        Pkcs11Error::MechanismInvalid
+    })?;
 
-    lock_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
-    match session.encrypt_init(&mech, hKey) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(e) => e.into(),
-    }
+    session.encrypt_init(&mech, hKey).map_err(From::from)
 }
 
-#[no_mangle]
-pub extern "C" fn C_Encrypt(
+api_function!(
+    C_Encrypt = encrypt;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pData: cryptoki_sys::CK_BYTE_PTR,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
     pulEncryptedDataLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_Encrypt() called");
+);
 
-    lock_session!(hSession, session);
+fn encrypt(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pData: cryptoki_sys::CK_BYTE_PTR,
+    ulDataLen: cryptoki_sys::CK_ULONG,
+    pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
+    pulEncryptedDataLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pData.is_null() || pulEncryptedDataLen.is_null() {
         session.encrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
@@ -65,7 +69,7 @@ pub extern "C" fn C_Encrypt(
         unsafe {
             std::ptr::write(pulEncryptedDataLen, data.len() as CK_ULONG);
         }
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
     let buffer_len = unsafe { *pulEncryptedDataLen } as usize;
@@ -75,16 +79,12 @@ pub extern "C" fn C_Encrypt(
     }
 
     if data.len() > buffer_len {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = match session.encrypt(data) {
-        Ok(data) => data,
-        Err(e) => {
-            session.encrypt_clear();
-            return e.into();
-        }
-    };
+    let encrypted_data = session
+        .encrypt(data)
+        .inspect_err(|_| session.encrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulEncryptedDataLen, encrypted_data.len() as CK_ULONG);
@@ -93,7 +93,7 @@ pub extern "C" fn C_Encrypt(
     // this shouldn't happen as it's checked above, but it's safe to keep it if encrypted_data.len() != data.len()
 
     if encrypted_data.len() > buffer_len {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     unsafe {
@@ -105,25 +105,31 @@ pub extern "C" fn C_Encrypt(
     }
 
     session.encrypt_clear();
-
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_EncryptUpdate(
+api_function!(
+    C_EncryptUpdate = encrypt_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_EncryptUpdate() called");
+);
 
-    lock_session!(hSession, session);
+fn encrypt_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    ulPartLen: cryptoki_sys::CK_ULONG,
+    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pPart.is_null() || pulEncryptedPartLen.is_null() {
         session.encrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     trace!("C_EncryptUpdate() called with {ulPartLen} bytes");
@@ -140,27 +146,23 @@ pub extern "C" fn C_EncryptUpdate(
         std::ptr::write(pulEncryptedPartLen, theoretical_size as CK_ULONG);
     }
     if pEncryptedPart.is_null() {
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
     if buffer_len < theoretical_size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = match session.encrypt_update(data) {
-        Ok(data) => data,
-        Err(e) => {
-            session.encrypt_clear();
-            return e.into();
-        }
-    };
+    let encrypted_data = session
+        .encrypt_update(data)
+        .inspect_err(|_| session.encrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulEncryptedPartLen, encrypted_data.len() as CK_ULONG);
     }
     // shouldn't happen
     if encrypted_data.len() > buffer_len {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     unsafe {
@@ -171,22 +173,27 @@ pub extern "C" fn C_EncryptUpdate(
         );
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_EncryptFinal(
+api_function!(
+    C_EncryptFinal = encrypt_final;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pLastEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_EncryptFinal() called");
+);
 
-    lock_session!(hSession, session);
+fn encrypt_final(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pLastEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pulLastEncryptedPartLen.is_null() {
         session.encrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     // enverything should be encrypted at this point, so we just need to return the last block
@@ -197,28 +204,20 @@ pub extern "C" fn C_EncryptFinal(
     }
 
     if pLastEncryptedPart.is_null() {
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
-    let size = match session.encrypt_get_theoretical_final_size() {
-        Ok(size) => size,
-        Err(e) => {
-            session.encrypt_clear();
-            return e.into();
-        }
-    };
+    let size = session
+        .encrypt_get_theoretical_final_size()
+        .inspect_err(|_| session.encrypt_clear())?;
 
     if buffer_len < size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = match session.encrypt_final() {
-        Ok(data) => data,
-        Err(e) => {
-            session.encrypt_clear();
-            return e.into();
-        }
-    };
+    let encrypted_data = session
+        .encrypt_final()
+        .inspect_err(|_| session.encrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulLastEncryptedPartLen, encrypted_data.len() as CK_ULONG);
@@ -227,7 +226,7 @@ pub extern "C" fn C_EncryptFinal(
     // shouldn't happen
 
     if encrypted_data.len() > buffer_len {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     unsafe {
@@ -240,7 +239,7 @@ pub extern "C" fn C_EncryptFinal(
 
     session.encrypt_clear();
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
 #[cfg(test)]

@@ -18,46 +18,77 @@ use std::{ptr::addr_of_mut, sync::Arc};
 
 use crate::config::device::{start_background_timer, stop_background_timer};
 use crate::{
-    backend::events::{fetch_slots_state, EventsManager},
+    backend::{
+        events::{fetch_slots_state, EventsManager},
+        Pkcs11Error,
+    },
     data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
     defs,
     utils::padded_str,
 };
-use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_RV, CK_VOID_PTR};
+use cryptoki_sys::{CK_INFO, CK_INFO_PTR, CK_VOID_PTR};
 use log::{debug, error, trace};
 
-#[no_mangle]
-pub extern "C" fn C_GetFunctionList(
+macro_rules! api_function {
+    (
+        $c_fn:ident = $rust_fn:ident;
+        $(
+            $arg:ident: $ty:ty,
+        )+
+        $(,)?
+    ) => {
+        #[no_mangle]
+        pub extern "C" fn $c_fn($($arg: $ty,)*) -> ::cryptoki_sys::CK_RV {
+            ::log::trace!("{} called", stringify!($c_fn));
+            let result = $rust_fn($($arg,)*);
+            match result {
+                Ok(()) => {
+                    ::log::trace!("{} was successful", stringify!($c_fn));
+                    ::cryptoki_sys::CKR_OK
+                }
+                Err(err) => {
+                    ::log::warn!("{} failed with error {err:?}", stringify!($c_fn));
+                    ::std::convert::From::from(err)
+                }
+            }
+        }
+    }
+}
+
+use api_function;
+
+api_function!(
+    C_GetFunctionList = get_function_list;
     pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
-) -> cryptoki_sys::CK_RV {
+);
+
+fn get_function_list(
+    pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
+) -> Result<(), Pkcs11Error> {
     trace!("C_GetFunctionList() called");
 
     if pp_fn_list.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     unsafe {
         std::ptr::write(pp_fn_list, addr_of_mut!(data::FN_LIST));
     }
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
-    trace!("C_Initialize() called with args: {pInitArgs:?}");
+api_function!(
+    C_Initialize = initialize;
+    pInitArgs: CK_VOID_PTR,
+);
 
-    let res = crate::config::initialization::initialize();
-    let device = match res {
-        Ok(device) => {
-            let arced = Arc::new(device);
-            DEVICE.store(Some(arced.clone()));
-            arced
-        }
-        Err(err) => {
-            error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+fn initialize(pInitArgs: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
+    let device = crate::config::initialization::initialize().map_err(|err| {
+        error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
+        Pkcs11Error::FunctionFailed
+    })?;
+    let device = Arc::new(device);
+    DEVICE.store(Some(device.clone()));
 
     // we force the initialization of the lazy static here
     if device.slots.is_empty() {
@@ -73,7 +104,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
 
         // for cryptoki 2.40 this should always be null
         if !(args).pReserved.is_null() {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
+            return Err(Pkcs11Error::ArgumentsBad);
         }
 
         let flags = args.flags;
@@ -85,7 +116,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
         // currently we don't support custom locking
         // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that
         if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && CreateMutex.is_some() {
-            return cryptoki_sys::CKR_CANT_LOCK;
+            return Err(Pkcs11Error::CantLock);
         }
 
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
@@ -100,32 +131,32 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
     *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
 
-    match fetch_slots_state() {
-        Ok(()) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
+    fetch_slots_state()
 }
 
-#[no_mangle]
-pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
-    trace!("C_Finalize() called");
+api_function!(
+    C_Finalize = finalize;
+    pReserved: CK_VOID_PTR,
+);
 
+fn finalize(pReserved: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
     if !pReserved.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
     DEVICE.store(None);
     stop_background_timer();
     EVENTS_MANAGER.write().unwrap().finalized = true;
-
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
-    trace!("C_GetInfo() called");
+api_function!(
+    C_GetInfo = get_info;
+    pInfo: CK_INFO_PTR,
+);
 
+fn get_info(pInfo: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
     if pInfo.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let infos = CK_INFO {
@@ -139,7 +170,7 @@ pub extern "C" fn C_GetInfo(pInfo: CK_INFO_PTR) -> CK_RV {
     unsafe {
         std::ptr::write(pInfo, infos);
     }
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
 #[cfg(test)]

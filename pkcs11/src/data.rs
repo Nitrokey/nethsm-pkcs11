@@ -1,12 +1,17 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Mutex, RwLock};
+use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard, RwLock};
 
-use crate::backend::events::EventsManager;
+use crate::backend::{events::EventsManager, Pkcs11Error};
 
-use crate::{api, backend::session::SessionManager, config::device::Device};
+use crate::{
+    api,
+    backend::session::{Session, SessionManager},
+    config::device::Device,
+};
 use arc_swap::ArcSwapOption;
-use cryptoki_sys::{CK_FUNCTION_LIST, CK_SLOT_ID, CK_VERSION};
+use cryptoki_sys::{CK_FUNCTION_LIST, CK_SESSION_HANDLE, CK_SLOT_ID, CK_VERSION};
 use lazy_static::lazy_static;
+use log::error;
 
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
     major: 2,
@@ -99,3 +104,21 @@ pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     C_CancelFunction: Some(api::session::C_CancelFunction),
     C_WaitForSlotEvent: Some(api::token::C_WaitForSlotEvent),
 };
+
+pub fn get_session(handle: CK_SESSION_HANDLE) -> Result<Arc<Mutex<Session>>, Pkcs11Error> {
+    let session_manager = SESSION_MANAGER.lock().map_err(|e| {
+        error!("Failed to lock session manager: {e:?}");
+        Pkcs11Error::FunctionFailed
+    })?;
+    session_manager.get_session(handle).ok_or_else(|| {
+        error!("Function called with invalid session handle {handle}");
+        Pkcs11Error::SessionHandleInvalid
+    })
+}
+
+pub fn lock_session(session: &Arc<Mutex<Session>>) -> Result<MutexGuard<'_, Session>, Pkcs11Error> {
+    session.lock().map_err(|e| {
+        error!("Failed to lock session: {e:?}");
+        Pkcs11Error::FunctionFailed
+    })
+}
