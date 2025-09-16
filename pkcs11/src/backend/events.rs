@@ -1,8 +1,7 @@
 use cryptoki_sys::CK_SLOT_ID;
-use log::error;
 use nethsm_sdk_rs::{apis::default_api, models::SystemState};
 
-use crate::data::{DEVICE, EVENTS_MANAGER, TOKENS_STATE};
+use crate::data::{self, EVENTS_MANAGER, TOKENS_STATE};
 
 use super::{login::LoginCtx, Pkcs11Error};
 
@@ -36,11 +35,7 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
 }
 
 pub fn fetch_slots_state() -> Result<(), Pkcs11Error> {
-    let Some(device) = DEVICE.load_full() else {
-        error!("Initialization was not performed or failed");
-        return Err(Pkcs11Error::CryptokiNotInitialized);
-    };
-
+    let device = data::load_device()?;
     for (index, slot) in device.slots.iter().enumerate() {
         let login_ctx = LoginCtx::new(slot.clone(), false, false);
         let status = login_ctx

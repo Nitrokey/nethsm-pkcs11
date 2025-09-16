@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use crate::{backend::Pkcs11Error, config::device::Slot, data::DEVICE};
-use log::error;
+use cryptoki_sys::CK_SLOT_ID;
 
-pub fn get_slot(slot_id: usize) -> Result<Arc<Slot>, Pkcs11Error> {
-    let Some(device) = DEVICE.load_full() else {
-        error!("Initialization was not performed or failed");
-        return Err(Pkcs11Error::CryptokiNotInitialized);
-    };
+use crate::{backend::Pkcs11Error, config::device::Slot, data};
 
+pub fn get_slot(slot_id: CK_SLOT_ID) -> Result<Arc<Slot>, Pkcs11Error> {
+    let device = data::load_device()?;
+    let slot_id = usize::try_from(slot_id).map_err(|_| Pkcs11Error::SlotIdInvalid)?;
     let slot = device
         .slots
         .get(slot_id)
@@ -20,7 +18,7 @@ pub fn get_slot(slot_id: usize) -> Result<Arc<Slot>, Pkcs11Error> {
 pub fn init_for_tests() {
     use std::ptr;
 
-    use crate::api::C_Initialize;
+    use crate::{api::C_Initialize, data::DEVICE};
 
     if DEVICE.load().is_none() {
         std::env::set_var("P11NETHSM_CONFIG_FILE", "../p11nethsm.conf");

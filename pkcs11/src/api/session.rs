@@ -32,7 +32,7 @@ fn open_session(
         return Err(Pkcs11Error::SessionParallelNotSupported);
     }
 
-    let slot = get_slot(slotID as usize).map_err(|_| {
+    let slot = get_slot(slotID).map_err(|_| {
         error!("C_OpenSession() called with invalid slotID {slotID}.");
         Pkcs11Error::SlotIdInvalid
     })?;
@@ -75,7 +75,7 @@ api_function!(
 );
 
 fn close_all_sessions(slotID: cryptoki_sys::CK_SLOT_ID) -> Result<(), Pkcs11Error> {
-    if get_slot(slotID as usize).is_err() {
+    if get_slot(slotID).is_err() {
         error!("C_CloseAllSessions() called with invalid slotID {slotID}.");
         return Err(Pkcs11Error::SlotIdInvalid);
     }

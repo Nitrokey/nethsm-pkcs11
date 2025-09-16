@@ -16,7 +16,7 @@ use crate::{
         slot::get_slot,
         Pkcs11Error,
     },
-    data::{self, DEVICE, EVENTS_MANAGER},
+    data::{self, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     utils::{padded_str, version_struct_from_str},
 };
@@ -37,10 +37,7 @@ fn get_slot_list(
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let Some(device) = DEVICE.load_full() else {
-        error!("Initialization was not performed or failed");
-        return Err(Pkcs11Error::CryptokiNotInitialized);
-    };
+    let device = data::load_device()?;
 
     let count = device.slots.len() as CK_ULONG;
 
@@ -93,7 +90,7 @@ fn get_slot_info(
     }
 
     // get the slot
-    let slot = get_slot(slotID as usize)?;
+    let slot = get_slot(slotID)?;
 
     let mut flags = 0;
 
@@ -166,7 +163,7 @@ fn get_token_info(
     trace!("C_GetTokenInfo() called with slotID: {slotID}");
 
     // get the slot
-    let slot = get_slot(slotID as usize)?;
+    let slot = get_slot(slotID)?;
 
     if pInfo.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
@@ -264,7 +261,7 @@ fn get_mechanism_list(
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    get_slot(slotID as usize)?;
+    get_slot(slotID)?;
 
     let count = MECHANISM_LIST.len() as CK_ULONG;
 
@@ -312,7 +309,7 @@ fn get_mechanism_info(
     type_: cryptoki_sys::CK_MECHANISM_TYPE,
     pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
-    get_slot(slotID as usize)?;
+    get_slot(slotID)?;
 
     if pInfo.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);

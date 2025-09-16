@@ -122,3 +122,10 @@ pub fn lock_session(session: &Arc<Mutex<Session>>) -> Result<MutexGuard<'_, Sess
         Pkcs11Error::FunctionFailed
     })
 }
+
+pub fn load_device() -> Result<Arc<Device>, Pkcs11Error> {
+    DEVICE.load_full().ok_or_else(|| {
+        error!("Initialization was not performed or failed");
+        Pkcs11Error::CryptokiNotInitialized
+    })
+}
