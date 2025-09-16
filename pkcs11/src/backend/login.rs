@@ -1,7 +1,6 @@
 use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_DEVICE_ERROR, CKR_OK, CKR_PIN_INCORRECT, CKR_USER_NOT_LOGGED_IN,
-    CKR_USER_TYPE_INVALID, CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS,
-    CKU_CONTEXT_SPECIFIC, CKU_SO, CKU_USER, CK_RV, CK_STATE, CK_USER_TYPE,
+    CKS_RO_PUBLIC_SESSION, CKS_RW_SO_FUNCTIONS, CKS_RW_USER_FUNCTIONS, CKU_CONTEXT_SPECIFIC,
+    CKU_SO, CKU_USER, CK_STATE, CK_USER_TYPE,
 };
 use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
@@ -23,7 +22,7 @@ use crate::{
     data::THREADS_ALLOWED,
 };
 
-use super::{ApiError, Error};
+use super::{ApiError, Error, Pkcs11Error};
 
 #[derive(Debug)]
 enum ShouldHealthCheck {
@@ -66,13 +65,13 @@ pub enum LoginError {
     IncorrectPin,
 }
 
-impl From<LoginError> for CK_RV {
+impl From<LoginError> for Pkcs11Error {
     fn from(val: LoginError) -> Self {
         match val {
-            LoginError::InvalidUser => CKR_USER_TYPE_INVALID,
-            LoginError::UserNotPresent => CKR_USER_TYPE_INVALID,
-            LoginError::BadArgument => CKR_ARGUMENTS_BAD,
-            LoginError::IncorrectPin => CKR_PIN_INCORRECT,
+            LoginError::InvalidUser => Self::UserTypeInvalid,
+            LoginError::UserNotPresent => Self::UserTypeInvalid,
+            LoginError::BadArgument => Self::ArgumentsBad,
+            LoginError::IncorrectPin => Self::PinIncorrect,
         }
     }
 }
@@ -445,12 +444,13 @@ impl LoginCtx {
     pub fn ck_state(&self) -> CK_STATE {
         self.ck_state
     }
-    pub fn change_pin(&mut self, pin: String) -> CK_RV {
+
+    pub fn change_pin(&mut self, pin: String) -> Result<(), Pkcs11Error> {
         let options = match self.ck_state {
             CKS_RW_SO_FUNCTIONS => {
                 let username = match self.admin_config() {
                     Some(user) => user.username.clone(),
-                    None => return CKR_USER_NOT_LOGGED_IN,
+                    None => return Err(Pkcs11Error::UserNotLoggedIn),
                 };
 
                 (username, UserMode::Administrator)
@@ -458,15 +458,15 @@ impl LoginCtx {
             CKS_RW_USER_FUNCTIONS => {
                 let username = match self.operator_config() {
                     Some(user) => user.username.clone(),
-                    None => return CKR_USER_NOT_LOGGED_IN,
+                    None => return Err(Pkcs11Error::UserNotLoggedIn),
                 };
 
                 (username, UserMode::Operator)
             }
-            _ => return CKR_USER_NOT_LOGGED_IN,
+            _ => return Err(Pkcs11Error::UserNotLoggedIn),
         };
 
-        match self.try_(
+        self.try_(
             |config| {
                 default_api::users_user_id_passphrase_post(
                     config,
@@ -475,13 +475,12 @@ impl LoginCtx {
                 )
             },
             options.1,
-        ) {
-            Ok(_) => CKR_OK,
-            Err(err) => {
-                error!("Failed to change pin: {err:?}");
-                CKR_DEVICE_ERROR
-            }
-        }
+        )
+        .map_err(|err| {
+            error!("Failed to change pin: {err:?}");
+            Pkcs11Error::DeviceError
+        })?;
+        Ok(())
     }
 }
 

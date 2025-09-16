@@ -109,7 +109,10 @@ pub extern "C" fn C_GetAttributeValue(
         }
     };
 
-    object.fill_attr_template(&mut template)
+    match object.fill_attr_template(&mut template) {
+        Ok(()) => cryptoki_sys::CKR_OK,
+        Err(err) => err.into(),
+    }
 }
 #[no_mangle]
 pub extern "C" fn C_GetObjectSize(
@@ -430,7 +433,7 @@ mod tests {
             decrypt_ctx: None,
             encrypt_ctx: None,
             sign_ctx: None,
-            device_error: 0,
+            device_error: None,
             enum_ctx: None,
             flags: 0,
             login_ctx: LoginCtx::new(slot, false, false),

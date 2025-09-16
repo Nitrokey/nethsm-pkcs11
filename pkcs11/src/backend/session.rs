@@ -4,14 +4,14 @@ use std::{
 };
 
 use cryptoki_sys::{
-    CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_RV, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
+    CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
     CK_USER_TYPE,
 };
 use log::{debug, error, trace};
 use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
 
 use crate::{
-    backend::{login::UserMode, Error},
+    backend::{login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
     data::THREADS_ALLOWED,
 };
@@ -111,7 +111,7 @@ pub struct Session {
     pub slot_id: CK_SLOT_ID,
     pub login_ctx: LoginCtx,
     pub flags: CK_FLAGS,
-    pub device_error: CK_RV,
+    pub device_error: Option<Pkcs11Error>,
     pub db: Arc<(Mutex<Db>, Condvar)>,
     pub sign_ctx: Option<SignCtx>,
     pub encrypt_ctx: Option<EncryptCtx>,
@@ -129,13 +129,14 @@ impl Session {
             slot_id,
             flags,
             db,
-            device_error: CKR_OK,
+            device_error: None,
             sign_ctx: None,
             encrypt_ctx: None,
             decrypt_ctx: None,
             enum_ctx: None,
         }
     }
+
     pub fn get_ck_info(&self) -> CK_SESSION_INFO {
         let state = self.login_ctx.ck_state();
 
@@ -143,7 +144,7 @@ impl Session {
             slotID: self.slot_id,
             state,
             flags: self.flags,
-            ulDeviceError: self.device_error,
+            ulDeviceError: self.device_error.map(From::from).unwrap_or(CKR_OK),
         }
     }
 
@@ -718,7 +719,7 @@ mod test {
                 decrypt_ctx: None,
                 encrypt_ctx: None,
                 sign_ctx: None,
-                device_error: 0,
+                device_error: None,
                 enum_ctx: None,
                 flags: 0,
                 login_ctx: LoginCtx::new(slot.clone(), false, true),
@@ -761,7 +762,7 @@ mod test {
                 decrypt_ctx: None,
                 encrypt_ctx: None,
                 sign_ctx: None,
-                device_error: 0,
+                device_error: None,
                 enum_ctx: None,
                 flags: 0,
                 login_ctx: LoginCtx::new(slot.clone(), false, true),

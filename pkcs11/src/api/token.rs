@@ -88,7 +88,7 @@ pub extern "C" fn C_GetSlotInfo(
     let slot = match get_slot(slotID as usize) {
         Ok(client) => client,
         Err(e) => {
-            return e;
+            return e.into();
         }
     };
 
@@ -161,7 +161,7 @@ pub extern "C" fn C_GetTokenInfo(
     let slot = match get_slot(slotID as usize) {
         Ok(slot) => slot,
         Err(e) => {
-            return e;
+            return e.into();
         }
     };
 
@@ -257,7 +257,7 @@ pub extern "C" fn C_GetMechanismList(
     }
 
     if let Err(e) = get_slot(slotID as usize) {
-        return e;
+        return e.into();
     }
 
     let count = MECHANISM_LIST.len() as CK_ULONG;
@@ -304,7 +304,7 @@ pub extern "C" fn C_GetMechanismInfo(
     trace!("C_GetMechanismInfo() called");
 
     if let Err(e) = get_slot(slotID as usize) {
-        return e;
+        return e.into();
     }
 
     if pInfo.is_null() {
@@ -378,9 +378,8 @@ pub extern "C" fn C_WaitForSlotEvent(
         return cryptoki_sys::CKR_ARGUMENTS_BAD;
     }
 
-    match fetch_slots_state() {
-        Ok(()) => {}
-        Err(err) => return err,
+    if let Err(err) = fetch_slots_state() {
+        return err.into();
     }
 
     loop {
@@ -409,9 +408,8 @@ pub extern "C" fn C_WaitForSlotEvent(
             std::thread::sleep(std::time::Duration::from_secs(1));
 
             // fetch the slots state so we get the latest events in the next iteration
-            match fetch_slots_state() {
-                Ok(()) => {}
-                Err(err) => return err,
+            if let Err(err) = fetch_slots_state() {
+                return err.into();
             }
         }
     }

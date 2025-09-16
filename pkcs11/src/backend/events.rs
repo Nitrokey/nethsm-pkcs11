@@ -4,7 +4,7 @@ use nethsm_sdk_rs::{apis::default_api, models::SystemState};
 
 use crate::data::{DEVICE, EVENTS_MANAGER, TOKENS_STATE};
 
-use super::login::LoginCtx;
+use super::{login::LoginCtx, Pkcs11Error};
 
 pub struct EventsManager {
     pub events: Vec<CK_SLOT_ID>, // list of slots that changed
@@ -35,10 +35,10 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
     tokens_state.insert(slot_id, present);
 }
 
-pub fn fetch_slots_state() -> Result<(), cryptoki_sys::CK_RV> {
+pub fn fetch_slots_state() -> Result<(), Pkcs11Error> {
     let Some(device) = DEVICE.load_full() else {
         error!("Initialization was not performed or failed");
-        return Err(cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
+        return Err(Pkcs11Error::CryptokiNotInitialized);
     };
 
     for (index, slot) in device.slots.iter().enumerate() {

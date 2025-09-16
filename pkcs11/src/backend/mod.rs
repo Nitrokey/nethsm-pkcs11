@@ -5,13 +5,7 @@ use self::{
     login::{LoginError, UserMode},
     mechanism::{MechMode, Mechanism},
 };
-use cryptoki_sys::{
-    CKR_ARGUMENTS_BAD, CKR_ATTRIBUTE_VALUE_INVALID, CKR_CRYPTOKI_NOT_INITIALIZED, CKR_DATA_INVALID,
-    CKR_DATA_LEN_RANGE, CKR_DEVICE_ERROR, CKR_DEVICE_REMOVED, CKR_ENCRYPTED_DATA_LEN_RANGE,
-    CKR_KEY_HANDLE_INVALID, CKR_MECHANISM_INVALID, CKR_OPERATION_ACTIVE,
-    CKR_OPERATION_NOT_INITIALIZED, CKR_TOKEN_NOT_PRESENT, CKR_USER_NOT_LOGGED_IN,
-    CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV,
-};
+use cryptoki_sys::{CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV};
 use log::error;
 use nethsm_sdk_rs::apis;
 
@@ -26,6 +20,58 @@ pub mod object;
 pub mod session;
 pub mod sign;
 pub mod slot;
+
+macro_rules! pkcs11_error {
+    (
+        $(#[$outer:meta])*
+        $vis:vis enum $name:ident {
+            $($var:ident = $val:expr),+
+            $(,)?
+        }
+    ) => {
+        $(#[$outer])*
+        $vis enum $name {
+            $(
+                $var,
+            )*
+        }
+
+        impl From<$name> for ::cryptoki_sys::CK_RV {
+            fn from(error: $name) -> Self {
+                match error {
+                    $(
+                        $name::$var => $val,
+                    )*
+                }
+            }
+        }
+    }
+}
+
+pkcs11_error! {
+    #[derive(Clone, Copy, Debug)]
+    pub enum Pkcs11Error {
+        ArgumentsBad = cryptoki_sys::CKR_ARGUMENTS_BAD,
+        AttributeSensitive = cryptoki_sys::CKR_ATTRIBUTE_SENSITIVE,
+        AttributeValueInvalid = cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID,
+        BufferTooSmall = cryptoki_sys::CKR_BUFFER_TOO_SMALL,
+        CryptokiNotInitialized = cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED,
+        DataInvalid = cryptoki_sys::CKR_DATA_INVALID,
+        DataLenRange = cryptoki_sys::CKR_DATA_LEN_RANGE,
+        DeviceError = cryptoki_sys::CKR_DEVICE_ERROR,
+        DeviceRemoved = cryptoki_sys::CKR_DEVICE_REMOVED,
+        EncryptedDataLenRange = cryptoki_sys::CKR_ENCRYPTED_DATA_LEN_RANGE,
+        KeyHandleInvalid = cryptoki_sys::CKR_KEY_HANDLE_INVALID,
+        MechanismInvalid = cryptoki_sys::CKR_MECHANISM_INVALID,
+        OperationActive = cryptoki_sys::CKR_OPERATION_ACTIVE,
+        OperationNotInitialized = cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED,
+        PinIncorrect = cryptoki_sys::CKR_PIN_INCORRECT,
+        SlotIdInvalid = cryptoki_sys::CKR_SLOT_ID_INVALID,
+        TokenNotPresent = cryptoki_sys::CKR_TOKEN_NOT_PRESENT,
+        UserNotLoggedIn = cryptoki_sys::CKR_USER_NOT_LOGGED_IN,
+        UserTypeInvalid = cryptoki_sys::CKR_USER_TYPE_INVALID,
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ResponseContent {
@@ -124,41 +170,47 @@ impl From<std::string::FromUtf8Error> for Error {
 
 impl From<Error> for CK_RV {
     fn from(err: Error) -> Self {
+        Pkcs11Error::from(err).into()
+    }
+}
+
+impl From<Error> for Pkcs11Error {
+    fn from(err: Error) -> Self {
         // diplay the error when converting to CK_RV
         error!("{err}");
         match err {
-            Error::Der(_) => CKR_DEVICE_ERROR,
-            Error::Pem(_) => CKR_DEVICE_ERROR,
-            Error::InvalidEncryptedDataLength => CKR_ENCRYPTED_DATA_LEN_RANGE,
-            Error::InvalidData => CKR_DATA_INVALID,
-            Error::InvalidDataLength => CKR_DATA_LEN_RANGE,
-            Error::InvalidObjectHandle(_) => CKR_KEY_HANDLE_INVALID,
-            Error::OperationNotInitialized => CKR_OPERATION_NOT_INITIALIZED,
-            Error::LibraryNotInitialized => CKR_CRYPTOKI_NOT_INITIALIZED,
-            Error::DbLock => CKR_DEVICE_ERROR,
-            Error::KeyField(_) => CKR_DEVICE_ERROR,
-            Error::OperationActive => CKR_OPERATION_ACTIVE,
+            Error::Der(_) => Self::DeviceError,
+            Error::Pem(_) => Self::DeviceError,
+            Error::InvalidEncryptedDataLength => Self::EncryptedDataLenRange,
+            Error::InvalidData => Self::DataInvalid,
+            Error::InvalidDataLength => Self::DataLenRange,
+            Error::InvalidObjectHandle(_) => Self::KeyHandleInvalid,
+            Error::OperationNotInitialized => Self::OperationNotInitialized,
+            Error::LibraryNotInitialized => Self::CryptokiNotInitialized,
+            Error::DbLock => Self::DeviceError,
+            Error::KeyField(_) => Self::DeviceError,
+            Error::OperationActive => Self::OperationActive,
             Error::Login(e) => e.into(),
-            Error::InvalidAttribute(_) => CKR_ATTRIBUTE_VALUE_INVALID,
-            Error::ObjectClassNotSupported => CKR_ATTRIBUTE_VALUE_INVALID,
-            Error::MissingAttribute(_) => CKR_ARGUMENTS_BAD,
-            Error::NotLoggedIn(_) => CKR_USER_NOT_LOGGED_IN,
-            Error::InvalidMechanism(_, _) => CKR_MECHANISM_INVALID,
-            Error::InvalidMechanismMode(_, _) => CKR_MECHANISM_INVALID,
-            Error::Base64(_) | Error::StringParse(_) => CKR_DEVICE_ERROR,
+            Error::InvalidAttribute(_) => Self::AttributeValueInvalid,
+            Error::ObjectClassNotSupported => Self::AttributeValueInvalid,
+            Error::MissingAttribute(_) => Self::ArgumentsBad,
+            Error::NotLoggedIn(_) => Self::UserNotLoggedIn,
+            Error::InvalidMechanism(_, _) => Self::MechanismInvalid,
+            Error::InvalidMechanismMode(_, _) => Self::MechanismInvalid,
+            Error::Base64(_) | Error::StringParse(_) => Self::DeviceError,
             Error::Api(err) => match err {
-                ApiError::NoInstance => CKR_TOKEN_NOT_PRESENT,
-                ApiError::Ureq(_) => CKR_DEVICE_ERROR,
-                ApiError::Io(_) => CKR_DEVICE_ERROR,
-                ApiError::Serde(_) => CKR_DEVICE_ERROR,
+                ApiError::NoInstance => Self::TokenNotPresent,
+                ApiError::Ureq(_) => Self::DeviceError,
+                ApiError::Io(_) => Self::DeviceError,
+                ApiError::Serde(_) => Self::DeviceError,
                 ApiError::ResponseError(resp) => match resp.status {
-                    404 => CKR_KEY_HANDLE_INVALID,
-                    401 | 403 => CKR_USER_NOT_LOGGED_IN,
-                    412 => CKR_TOKEN_NOT_PRESENT,
-                    _ => CKR_DEVICE_ERROR,
+                    404 => Self::KeyHandleInvalid,
+                    401 | 403 => Self::UserNotLoggedIn,
+                    412 => Self::TokenNotPresent,
+                    _ => Self::DeviceError,
                 },
-                ApiError::StringParse(_) => CKR_DEVICE_ERROR,
-                ApiError::InstanceRemoved => CKR_DEVICE_REMOVED,
+                ApiError::StringParse(_) => Self::DeviceError,
+                ApiError::InstanceRemoved => Self::DeviceRemoved,
             },
         }
     }

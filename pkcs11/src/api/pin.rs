@@ -59,7 +59,10 @@ pub extern "C" fn C_SetPIN(
         error!("C_SetPIN() called with session not connected as operator {hSession}.");
         return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
     }
-    session.login_ctx.change_pin(new_pin.to_string())
+    match session.login_ctx.change_pin(new_pin.to_string()) {
+        Ok(()) => cryptoki_sys::CKR_OK,
+        Err(err) => err.into(),
+    }
 }
 
 #[cfg(test)]

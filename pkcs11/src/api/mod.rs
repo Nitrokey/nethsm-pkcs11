@@ -102,7 +102,7 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
 
     match fetch_slots_state() {
         Ok(()) => cryptoki_sys::CKR_OK,
-        Err(err) => err,
+        Err(err) => err.into(),
     }
 }
 

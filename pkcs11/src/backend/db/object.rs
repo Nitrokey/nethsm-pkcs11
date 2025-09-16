@@ -23,7 +23,7 @@ use std::mem::size_of;
 use crate::backend::{
     key::{key_size, key_type_to_asn1},
     mechanism::Mechanism,
-    Error,
+    Error, Pkcs11Error,
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -514,22 +514,22 @@ impl Object {
         self.attrs.get(&attr_type)
     }
 
-    pub fn fill_attr_template(&self, tpl: &mut CkRawAttrTemplate) -> cryptoki_sys::CK_RV {
-        let mut rcode = cryptoki_sys::CKR_OK;
+    pub fn fill_attr_template(&self, tpl: &mut CkRawAttrTemplate) -> Result<(), Pkcs11Error> {
+        let mut result = Ok(());
 
         for mut raw_attr in tpl.iter() {
             match self.attr(raw_attr.type_()) {
                 Some(attr) => {
                     let sres = match attr {
                         Attr::Sensitive => {
-                            rcode = cryptoki_sys::CKR_ATTRIBUTE_SENSITIVE;
+                            result = Err(Pkcs11Error::AttributeSensitive);
                             raw_attr.set_unavailable();
                             continue;
                         }
                         a => raw_attr.set_val_bytes(a.as_bytes()),
                     };
                     if matches!(sres, Err(attr::Error::BufTooSmall)) {
-                        rcode = cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+                        result = Err(Pkcs11Error::BufferTooSmall);
                         raw_attr.set_unavailable();
                     }
                 }
@@ -539,11 +539,12 @@ impl Object {
                 }
             };
             debug!(
-                "fill_attr_template: {:?} | code : {:?}",
+                "fill_attr_template: {:?} | result: {:?}",
                 raw_attr.type_(),
-                rcode
+                result
             );
         }
-        rcode
+
+        result
     }
 }
