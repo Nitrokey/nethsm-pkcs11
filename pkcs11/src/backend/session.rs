@@ -56,6 +56,7 @@ impl SessionManager {
     }
 
     pub fn get_session(&self, handle: CK_SESSION_HANDLE) -> Option<Arc<Mutex<Session>>> {
+        trace!("Opening session {handle}");
         self.sessions.get(&handle).cloned()
     }
 
@@ -413,6 +414,7 @@ impl Session {
     }
 
     pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
+        trace!("Accessing object {handle}");
         let db = self.db.0.lock().unwrap();
 
         db.object(handle).cloned()
@@ -620,6 +622,7 @@ impl Session {
     }
 
     pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), Error> {
+        trace!("Deleting object {handle}");
         if !self.login_ctx.can_run_mode(UserMode::Administrator) {
             return Err(Error::NotLoggedIn(UserMode::Administrator));
         }

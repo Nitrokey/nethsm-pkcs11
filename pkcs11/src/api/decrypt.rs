@@ -1,57 +1,63 @@
-use cryptoki_sys::{CKR_ARGUMENTS_BAD, CK_ULONG};
-use log::{error, trace};
+use cryptoki_sys::CK_ULONG;
+use log::error;
 
 use crate::{
-    backend::mechanism::{CkRawMechanism, Mechanism},
-    lock_session,
+    api::api_function,
+    backend::{
+        mechanism::{CkRawMechanism, Mechanism},
+        Pkcs11Error,
+    },
+    data,
 };
 
-#[no_mangle]
-pub extern "C" fn C_DecryptInit(
+api_function!(
+    C_DecryptInit = decrypt_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DecryptInit() called");
+);
 
-    let raw_mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
-        Some(mech) => mech,
-        None => {
-            return CKR_ARGUMENTS_BAD;
-        }
-    };
+fn decrypt_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    let raw_mech =
+        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    let mech = match Mechanism::from_ckraw_mech(&raw_mech) {
-        Ok(mech) => mech,
-        Err(e) => {
-            error!("C_DecryptInit() failed to convert mechanism: {e}");
-            return cryptoki_sys::CKR_MECHANISM_INVALID;
-        }
-    };
+    let mech = Mechanism::from_ckraw_mech(&raw_mech).map_err(|err| {
+        error!("C_DecryptInit() failed to convert mechanism: {err}");
+        Pkcs11Error::MechanismInvalid
+    })?;
 
-    lock_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
-    match session.decrypt_init(&mech, hKey) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(e) => e.into(),
-    }
+    session.decrypt_init(&mech, hKey).map_err(From::from)
 }
 
-#[no_mangle]
-pub extern "C" fn C_Decrypt(
+api_function!(
+    C_Decrypt = decrypt;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedDataLen: cryptoki_sys::CK_ULONG,
     pData: cryptoki_sys::CK_BYTE_PTR,
     pulDataLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_Decrypt() called");
+);
 
-    lock_session!(hSession, session);
+fn decrypt(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
+    ulEncryptedDataLen: cryptoki_sys::CK_ULONG,
+    pData: cryptoki_sys::CK_BYTE_PTR,
+    pulDataLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pulDataLen.is_null() || pEncryptedData.is_null() {
         session.decrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let buffer_size = unsafe { *pulDataLen } as usize;
@@ -63,22 +69,18 @@ pub extern "C" fn C_Decrypt(
     }
 
     if pData.is_null() {
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
     if theoretical_size > buffer_size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     let data = unsafe { std::slice::from_raw_parts(pEncryptedData, ulEncryptedDataLen as usize) };
 
-    let decrypted_data = match session.decrypt(data) {
-        Ok(data) => data,
-        Err(e) => {
-            session.decrypt_clear();
-            return e.into();
-        }
-    };
+    let decrypted_data = session
+        .decrypt(data)
+        .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulDataLen, decrypted_data.len() as CK_ULONG);
@@ -86,7 +88,7 @@ pub extern "C" fn C_Decrypt(
 
     // we double-check the buffer size here, in case the theoretical size was wrong
     if decrypted_data.len() > buffer_size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     unsafe {
@@ -95,24 +97,31 @@ pub extern "C" fn C_Decrypt(
 
     session.decrypt_clear();
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_DecryptUpdate(
+api_function!(
+    C_DecryptUpdate = decrypt_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DecryptUpdate() called");
+);
 
-    lock_session!(hSession, session);
+fn decrypt_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    pulPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pulPartLen.is_null() || pEncryptedPart.is_null() {
         session.decrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let data = unsafe { std::slice::from_raw_parts(pEncryptedPart, ulEncryptedPartLen as usize) };
@@ -121,59 +130,53 @@ pub extern "C" fn C_DecryptUpdate(
     unsafe {
         std::ptr::write(pulPartLen, 0 as CK_ULONG);
     }
-    match session.decrypt_update(data) {
-        Ok(()) => cryptoki_sys::CKR_OK,
-        Err(e) => {
-            session.decrypt_clear();
-            e.into()
-        }
-    }
+    session.decrypt_update(data).map_err(|err| {
+        session.decrypt_clear();
+        err.into()
+    })
 }
 
-#[no_mangle]
-pub extern "C" fn C_DecryptFinal(
+api_function!(
+    C_DecryptFinal = decrypt_final;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pLastPart: cryptoki_sys::CK_BYTE_PTR,
     pulLastPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DecryptFinal() called");
+);
 
-    lock_session!(hSession, session);
+fn decrypt_final(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pLastPart: cryptoki_sys::CK_BYTE_PTR,
+    pulLastPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     if pulLastPartLen.is_null() {
         session.decrypt_clear();
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let buffer_size = unsafe { *pulLastPartLen } as usize;
 
-    let theoretical_size = match session.decrypt_theoretical_final_size() {
-        Ok(size) => size,
-        Err(e) => {
-            session.decrypt_clear();
-            return e.into();
-        }
-    };
+    let theoretical_size = session
+        .decrypt_theoretical_final_size()
+        .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulLastPartLen, theoretical_size as CK_ULONG);
     }
 
     if pLastPart.is_null() {
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
     if theoretical_size > buffer_size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let decrypted_data = match session.decrypt_final() {
-        Ok(data) => data,
-        Err(e) => {
-            session.decrypt_clear();
-            return e.into();
-        }
-    };
+    let decrypted_data = session
+        .decrypt_final()
+        .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
         std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
@@ -181,7 +184,7 @@ pub extern "C" fn C_DecryptFinal(
 
     // we double-check the buffer size here, in case the theoretical size was wrong
     if decrypted_data.len() > buffer_size {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     unsafe {
@@ -190,20 +193,26 @@ pub extern "C" fn C_DecryptFinal(
 
     session.decrypt_clear();
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_DecryptVerifyUpdate(
+api_function!(
+    C_DecryptVerifyUpdate = decrypt_verify_update;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     pulPartLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DecryptVerifyUpdate() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn decrypt_verify_update(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
+    ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
+    pPart: cryptoki_sys::CK_BYTE_PTR,
+    pulPartLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
 #[cfg(test)]

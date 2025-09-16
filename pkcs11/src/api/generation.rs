@@ -1,80 +1,76 @@
 use base64ct::{Base64, Encoding};
-use cryptoki_sys::CKR_OK;
 use log::{error, trace};
 use nethsm_sdk_rs::apis::default_api;
 
 use crate::{
+    api::api_function,
     backend::{
         db::attr::CkRawAttrTemplate,
         mechanism::{CkRawMechanism, Mechanism},
+        Pkcs11Error,
     },
-    read_session,
+    data,
 };
 
-#[no_mangle]
-pub extern "C" fn C_GenerateKey(
+api_function!(
+    C_GenerateKey = generate_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GenerateKey() called");
+);
 
+fn generate_key(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+    phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
     // pTemplate and pMechanism are checked for null with `from_raw_ptr`
 
     if phKey.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
-        Some(mech) => mech,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    let mech =
+        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
     trace!("C_GenerateKey() mech: {:?}", mech.type_());
     trace!("C_GenerateKey() mech param len: {:?}", mech.len());
-    let mech = match Mechanism::from_ckraw_mech(&mech) {
-        Ok(mech) => mech,
-        Err(e) => {
-            error!("C_GenerateKey() failed to convert mechanism: {e}");
-            return cryptoki_sys::CKR_MECHANISM_INVALID;
-        }
-    };
+    let mech = Mechanism::from_ckraw_mech(&mech).map_err(|err| {
+        error!("C_GenerateKey() failed to convert mechanism: {err}");
+        Pkcs11Error::MechanismInvalid
+    })?;
 
-    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
-        Some(template) => template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+        .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    read_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
-    let key = match session.generate_key(&template, None, &mech) {
-        Ok(key) => key,
-        Err(e) => {
-            error!("C_GenerateKey() failed to generate key: {e:?}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+    let key = session
+        .generate_key(&template, None, &mech)
+        .map_err(|err| {
+            error!("C_GenerateKey() failed to generate key: {err:?}");
+            Pkcs11Error::FunctionFailed
+        })?;
 
     if key.is_empty() {
         error!("C_GenerateKey() failed to generate key,invalid length: {key:?}");
-        return cryptoki_sys::CKR_FUNCTION_FAILED;
+        return Err(Pkcs11Error::FunctionFailed);
     }
 
     unsafe {
         std::ptr::write(phKey, key[0].0);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GenerateKeyPair(
+api_function!(
+    C_GenerateKeyPair = generate_key_pair;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     pPublicKeyTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -83,21 +79,27 @@ pub extern "C" fn C_GenerateKeyPair(
     ulPrivateKeyAttributeCount: cryptoki_sys::CK_ULONG,
     phPublicKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
     phPrivateKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GenerateKeyPair() called");
+);
 
+#[allow(clippy::too_many_arguments)]
+fn generate_key_pair(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    pPublicKeyTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulPublicKeyAttributeCount: cryptoki_sys::CK_ULONG,
+    pPrivateKeyTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulPrivateKeyAttributeCount: cryptoki_sys::CK_ULONG,
+    phPublicKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    phPrivateKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
     // pMechanism, pPrivateKeyTemplate, pPublicKeyTemplate  checked for null with `from_raw_ptr`
 
     if phPublicKey.is_null() || phPrivateKey.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let mech = match unsafe { CkRawMechanism::from_raw_ptr(pMechanism) } {
-        Some(mech) => mech,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    let mech =
+        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
     trace!("C_GenerateKeyPair() mech: {:?}", mech.type_());
     trace!("C_GenerateKeyPair() mech param len: {:?}", mech.len());
@@ -105,44 +107,33 @@ pub extern "C" fn C_GenerateKeyPair(
     trace!("Private count: {ulPrivateKeyAttributeCount:?}");
     trace!("Public count: {ulPublicKeyAttributeCount:?}");
 
-    let mech = match Mechanism::from_ckraw_mech(&mech) {
-        Ok(mech) => mech,
-        Err(e) => {
-            error!("C_GenerateKeyPair() failed to convert mechanism: {e}");
-            return cryptoki_sys::CKR_MECHANISM_INVALID;
-        }
-    };
-    let public_template = match unsafe {
+    let mech = Mechanism::from_ckraw_mech(&mech).map_err(|err| {
+        error!("C_GenerateKeyPair() failed to convert mechanism: {err}");
+        Pkcs11Error::MechanismInvalid
+    })?;
+    let public_template = unsafe {
         CkRawAttrTemplate::from_raw_ptr(pPublicKeyTemplate, ulPublicKeyAttributeCount as usize)
-    } {
-        Some(public_template) => public_template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    }
+    .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    let private_template = match unsafe {
+    let private_template = unsafe {
         CkRawAttrTemplate::from_raw_ptr(pPrivateKeyTemplate, ulPrivateKeyAttributeCount as usize)
-    } {
-        Some(private_template) => private_template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    }
+    .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    read_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
-    let keys = match session.generate_key(&private_template, Some(&public_template), &mech) {
-        Ok(keys) => keys,
-        Err(e) => {
-            error!("C_GenerateKeyPair() failed to generate key: {e:?}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+    let keys = session
+        .generate_key(&private_template, Some(&public_template), &mech)
+        .map_err(|err| {
+            error!("C_GenerateKeyPair() failed to generate key: {err:?}");
+            Pkcs11Error::FunctionFailed
+        })?;
 
     if keys.len() < 2 {
         error!("C_GenerateKeyPair() failed to generate key,invalid length: {keys:?}");
-        return cryptoki_sys::CKR_FUNCTION_FAILED;
+        return Err(Pkcs11Error::FunctionFailed);
     }
 
     unsafe {
@@ -150,25 +141,32 @@ pub extern "C" fn C_GenerateKeyPair(
         std::ptr::write(phPrivateKey, keys[1].0);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_WrapKey(
+api_function!(
+    C_WrapKey = wrap_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hWrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
     pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
     pulWrappedKeyLen: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_WrapKey() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn wrap_key(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hWrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
+    pulWrappedKeyLen: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_UnwrapKey(
+api_function!(
+    C_UnwrapKey = unwrap_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hUnwrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -177,104 +175,127 @@ pub extern "C" fn C_UnwrapKey(
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulAttributeCount: cryptoki_sys::CK_ULONG,
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_UnwrapKey() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+#[allow(clippy::too_many_arguments)]
+fn unwrap_key(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hUnwrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
+    ulWrappedKeyLen: cryptoki_sys::CK_ULONG,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulAttributeCount: cryptoki_sys::CK_ULONG,
+    phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_DeriveKey(
+api_function!(
+    C_DeriveKey = derive_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hBaseKey: cryptoki_sys::CK_OBJECT_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulAttributeCount: cryptoki_sys::CK_ULONG,
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DeriveKey() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn derive_key(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
+    hBaseKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulAttributeCount: cryptoki_sys::CK_ULONG,
+    phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-// we silently ignore this function as NetHSM handles the random number generation
-#[no_mangle]
-pub extern "C" fn C_SeedRandom(
+api_function!(
+    C_SeedRandom = seed_random;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pSeed: cryptoki_sys::CK_BYTE_PTR,
     ulSeedLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_SeedRandom() called");
+);
 
-    cryptoki_sys::CKR_OK
+// we silently ignore this function as NetHSM handles the random number generation
+fn seed_random(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pSeed: cryptoki_sys::CK_BYTE_PTR,
+    ulSeedLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GenerateRandom(
+api_function!(
+    C_GenerateRandom = generate_random;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     RandomData: cryptoki_sys::CK_BYTE_PTR,
     ulRandomLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GenerateRandom() called");
+);
 
+fn generate_random(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    RandomData: cryptoki_sys::CK_BYTE_PTR,
+    ulRandomLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if RandomData.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     if ulRandomLen == 0 {
-        return CKR_OK;
+        return Ok(());
     }
 
     if ulRandomLen > 1024 {
         error!(
             "C_GenerateRandom() called with invalid length {ulRandomLen}, NetHSM supports up to 1024 bytes"
         );
-
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
-    read_session!(hSession, session);
+
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
     if !session
         .login_ctx
         .can_run_mode(crate::backend::login::UserMode::Operator)
     {
         error!("C_GenerateRandom() called with session not connected as operator {hSession}.");
-        return cryptoki_sys::CKR_USER_NOT_LOGGED_IN;
+        return Err(Pkcs11Error::UserNotLoggedIn);
     }
 
-    let data = match session.login_ctx.try_(
-        |api_config| {
-            default_api::random_post(
-                api_config,
-                nethsm_sdk_rs::models::RandomRequestData {
-                    length: ulRandomLen as i32,
-                },
-            )
-        },
-        crate::backend::login::UserMode::Operator,
-    ) {
-        Ok(data) => data,
-        Err(e) => {
-            error!("C_GenerateRandom() failed to generate random data: {e:?}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+    let data = session
+        .login_ctx
+        .try_(
+            |api_config| {
+                default_api::random_post(
+                    api_config,
+                    nethsm_sdk_rs::models::RandomRequestData {
+                        length: ulRandomLen as i32,
+                    },
+                )
+            },
+            crate::backend::login::UserMode::Operator,
+        )
+        .map_err(|err| {
+            error!("C_GenerateRandom() failed to generate random data: {err:?}");
+            Pkcs11Error::FunctionFailed
+        })?;
 
     // parse base64 string to bytes
 
-    let raw_data = match Base64::decode_vec(&data.entity.random) {
-        Ok(raw_data) => raw_data,
-        Err(e) => {
-            error!("C_GenerateRandom() failed to decode random data: {e:?}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+    let raw_data = Base64::decode_vec(&data.entity.random).map_err(|err| {
+        error!("C_GenerateRandom() failed to decode random data: {err:?}");
+        Pkcs11Error::FunctionFailed
+    })?;
 
     unsafe {
         std::ptr::copy_nonoverlapping(raw_data.as_ptr(), RandomData, ulRandomLen as usize);
     }
 
-    CKR_OK
+    Ok(())
 }
 
 #[cfg(test)]

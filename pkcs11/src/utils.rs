@@ -1,17 +1,3 @@
-// lock a mutex and returns the guard, returns CKR_FUNCTION_FAILED if the lock fails
-#[macro_export]
-macro_rules! lock_mutex {
-    ($mutex:expr) => {
-        match $mutex.lock() {
-            Ok(guard) => guard,
-            Err(e) => {
-                error!("Failed to lock : {:?}", e);
-                return cryptoki_sys::CKR_FUNCTION_FAILED;
-            }
-        }
-    };
-}
-
 // makes a CK_VERSION struct from a string like "1.2"
 pub fn version_struct_from_str(version_str: String) -> cryptoki_sys::CK_VERSION {
     let parts: Vec<&str> = version_str.split('.').collect();
@@ -28,36 +14,6 @@ pub fn version_struct_from_str(version_str: String) -> cryptoki_sys::CK_VERSION 
         major: major as ::std::os::raw::c_uchar,
         minor: minor as ::std::os::raw::c_uchar,
     }
-}
-
-#[macro_export]
-macro_rules! lock_session {
-    ($hSession:expr, $session:ident) => {
-        let $session =
-            match $crate::lock_mutex!($crate::data::SESSION_MANAGER).get_session($hSession) {
-                Some(session) => session,
-                None => {
-                    error!("function called with invalid session handle {}.", $hSession);
-                    return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-                }
-            };
-        let mut $session = $crate::lock_mutex!($session);
-    };
-}
-
-#[macro_export]
-macro_rules! read_session {
-    ($hSession:expr, $session:ident) => {
-        let $session =
-            match $crate::lock_mutex!($crate::data::SESSION_MANAGER).get_session($hSession) {
-                Some(session) => session,
-                None => {
-                    error!("function called with invalid session handle {}.", $hSession);
-                    return cryptoki_sys::CKR_SESSION_HANDLE_INVALID;
-                }
-            };
-        let $session = $crate::lock_mutex!($session);
-    };
 }
 
 // Modified from the ACM project : https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/util/mod.rs

@@ -1,5 +1,5 @@
 use cryptoki_sys::{
-    CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CKR_OK, CK_SLOT_ID, CK_SLOT_INFO,
+    CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CK_SLOT_ID, CK_SLOT_INFO,
     CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{debug, error, trace, warn};
@@ -9,32 +9,37 @@ use nethsm_sdk_rs::{
 };
 
 use crate::{
+    api::api_function,
     backend::{
         events::fetch_slots_state,
         login::{LoginCtx, UserMode},
         slot::get_slot,
+        Pkcs11Error,
     },
-    data::{DEVICE, EVENTS_MANAGER},
+    data::{self, DEVICE, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
-    lock_session,
     utils::{padded_str, version_struct_from_str},
 };
 
-#[no_mangle]
-pub extern "C" fn C_GetSlotList(
+api_function!(
+    C_GetSlotList = get_slot_list;
     tokenPresent: cryptoki_sys::CK_BBOOL,
     pSlotList: cryptoki_sys::CK_SLOT_ID_PTR,
     pulCount: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GetSlotList() called");
+);
 
+fn get_slot_list(
+    tokenPresent: cryptoki_sys::CK_BBOOL,
+    pSlotList: cryptoki_sys::CK_SLOT_ID_PTR,
+    pulCount: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
     if pulCount.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let Some(device) = DEVICE.load_full() else {
         error!("Initialization was not performed or failed");
-        return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
+        return Err(Pkcs11Error::CryptokiNotInitialized);
     };
 
     let count = device.slots.len() as CK_ULONG;
@@ -44,19 +49,18 @@ pub extern "C" fn C_GetSlotList(
         unsafe {
             std::ptr::write(pulCount, count);
         }
-        return cryptoki_sys::CKR_OK;
-    } else {
-        // check if the buffer is large enough
-        if unsafe { *pulCount } < count {
-            unsafe {
-                std::ptr::write(pulCount, count);
-            }
-            return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Ok(());
+    }
+
+    // check if the buffer is large enough
+    if unsafe { *pulCount } < count {
+        unsafe {
+            std::ptr::write(pulCount, count);
         }
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     // list the ids
-
     let id_list: Vec<CK_SLOT_ID> = device
         .slots
         .iter()
@@ -69,28 +73,27 @@ pub extern "C" fn C_GetSlotList(
         std::ptr::write(pulCount, count as CK_ULONG);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GetSlotInfo(
+api_function!(
+    C_GetSlotInfo = get_slot_info;
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
-) -> cryptoki_sys::CK_RV {
+);
+
+fn get_slot_info(
+    slotID: cryptoki_sys::CK_SLOT_ID,
+    pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
+) -> Result<(), Pkcs11Error> {
     trace!("C_GetSlotInfo() called with slotID: {slotID}");
 
     if pInfo.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     // get the slot
-
-    let slot = match get_slot(slotID as usize) {
-        Ok(client) => client,
-        Err(e) => {
-            return e.into();
-        }
-    };
+    let slot = get_slot(slotID as usize)?;
 
     let mut flags = 0;
 
@@ -147,44 +150,40 @@ pub extern "C" fn C_GetSlotInfo(
         std::ptr::write(pInfo, info);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GetTokenInfo(
+api_function!(
+    C_GetTokenInfo = get_token_info;
     slotID: cryptoki_sys::CK_SLOT_ID,
     pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
-) -> cryptoki_sys::CK_RV {
+);
+
+fn get_token_info(
+    slotID: cryptoki_sys::CK_SLOT_ID,
+    pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
+) -> Result<(), Pkcs11Error> {
     trace!("C_GetTokenInfo() called with slotID: {slotID}");
 
     // get the slot
-    let slot = match get_slot(slotID as usize) {
-        Ok(slot) => slot,
-        Err(e) => {
-            return e.into();
-        }
-    };
+    let slot = get_slot(slotID as usize)?;
 
     if pInfo.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let login_ctx = LoginCtx::new(slot.clone(), true, false);
 
-    let result = login_ctx.try_(
-        default_api::info_get,
-        crate::backend::login::UserMode::Guest,
-    );
-
     // fetch info from the device
-
-    let info = match result {
-        Ok(info) => info,
-        Err(e) => {
-            error!("Error getting info: {e:?}");
-            return cryptoki_sys::CKR_FUNCTION_FAILED;
-        }
-    };
+    let info = login_ctx
+        .try_(
+            default_api::info_get,
+            crate::backend::login::UserMode::Guest,
+        )
+        .map_err(|err| {
+            error!("Error getting info: {err:?}");
+            Pkcs11Error::FunctionFailed
+        })?;
 
     let mut serial_number = "unknown".to_string();
     let mut hardware_version = DEFAULT_HARDWARE_VERSION;
@@ -229,36 +228,43 @@ pub extern "C" fn C_GetTokenInfo(
         std::ptr::write(pInfo, token_info);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_InitToken(
+api_function!(
+    C_InitToken = init_token;
     slotID: cryptoki_sys::CK_SLOT_ID,
     pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulPinLen: cryptoki_sys::CK_ULONG,
     pLabel: cryptoki_sys::CK_UTF8CHAR_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_InitToken() called");
+);
 
-    cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+fn init_token(
+    slotID: cryptoki_sys::CK_SLOT_ID,
+    pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
+    ulPinLen: cryptoki_sys::CK_ULONG,
+    pLabel: cryptoki_sys::CK_UTF8CHAR_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::FunctionNotSupported)
 }
 
-#[no_mangle]
-pub extern "C" fn C_GetMechanismList(
+api_function!(
+    C_GetMechanismList = get_mechanism_list;
     slotID: cryptoki_sys::CK_SLOT_ID,
     pMechanismList: cryptoki_sys::CK_MECHANISM_TYPE_PTR,
     pulCount: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GetMechanismList() called");
+);
 
+fn get_mechanism_list(
+    slotID: cryptoki_sys::CK_SLOT_ID,
+    pMechanismList: cryptoki_sys::CK_MECHANISM_TYPE_PTR,
+    pulCount: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
     if pulCount.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    if let Err(e) = get_slot(slotID as usize) {
-        return e.into();
-    }
+    get_slot(slotID as usize)?;
 
     let count = MECHANISM_LIST.len() as CK_ULONG;
 
@@ -267,7 +273,7 @@ pub extern "C" fn C_GetMechanismList(
         unsafe {
             std::ptr::write(pulCount, count);
         }
-        return cryptoki_sys::CKR_OK;
+        return Ok(());
     }
 
     let buffer_size = unsafe { std::ptr::read(pulCount) };
@@ -278,11 +284,10 @@ pub extern "C" fn C_GetMechanismList(
     }
     // check if the buffer is large enough
     if buffer_size < count {
-        return cryptoki_sys::CKR_BUFFER_TOO_SMALL;
+        return Err(Pkcs11Error::BufferTooSmall);
     }
 
     // list the ids
-
     let id_list: Vec<cryptoki_sys::CK_MECHANISM_TYPE> = MECHANISM_LIST
         .iter()
         .map(|mechanism| mechanism.ck_type())
@@ -292,95 +297,99 @@ pub extern "C" fn C_GetMechanismList(
         std::ptr::copy_nonoverlapping(id_list.as_ptr(), pMechanismList, id_list.len());
     }
 
-    CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_GetMechanismInfo(
+api_function!(
+    C_GetMechanismInfo = get_mechanism_info;
     slotID: cryptoki_sys::CK_SLOT_ID,
     type_: cryptoki_sys::CK_MECHANISM_TYPE,
     pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GetMechanismInfo() called");
+);
 
-    if let Err(e) = get_slot(slotID as usize) {
-        return e.into();
-    }
+fn get_mechanism_info(
+    slotID: cryptoki_sys::CK_SLOT_ID,
+    type_: cryptoki_sys::CK_MECHANISM_TYPE,
+    pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
+) -> Result<(), Pkcs11Error> {
+    get_slot(slotID as usize)?;
 
     if pInfo.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     // find the mechanism in the list
 
-    let mechanism = match MECHANISM_LIST.iter().find(|m| m.ck_type() == type_) {
-        Some(mechanism) => mechanism,
-        None => return cryptoki_sys::CKR_MECHANISM_INVALID,
-    };
+    let mechanism = MECHANISM_LIST
+        .iter()
+        .find(|m| m.ck_type() == type_)
+        .ok_or(Pkcs11Error::MechanismInvalid)?;
 
     unsafe {
         std::ptr::write(pInfo, mechanism.ck_info());
     }
 
-    CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_Login(
+api_function!(
+    C_Login = login;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     userType: cryptoki_sys::CK_USER_TYPE,
     pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulPinLen: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_Login() called");
+);
 
+fn login(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    userType: cryptoki_sys::CK_USER_TYPE,
+    pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
+    ulPinLen: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if pPin.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let pin = unsafe { std::slice::from_raw_parts(pPin, ulPinLen as usize) };
 
     // parse string to utf8
+    let pin = std::str::from_utf8(pin).map_err(|_| Pkcs11Error::ArgumentsBad)?;
 
-    let pin = match std::str::from_utf8(pin) {
-        Ok(pin) => pin,
-        Err(_) => return cryptoki_sys::CKR_ARGUMENTS_BAD,
-    };
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
-    lock_session!(hSession, session);
-
-    match session.login(userType, pin.to_string()) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(e) => e.into(),
-    }
-}
-#[no_mangle]
-pub extern "C" fn C_Logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> cryptoki_sys::CK_RV {
-    trace!("C_Logout() called");
-
-    lock_session!(hSession, session);
-
-    match session.logout() {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(e) => e.into(),
-    }
+    session.login(userType, pin.to_string()).map_err(From::from)
 }
 
-#[no_mangle]
-pub extern "C" fn C_WaitForSlotEvent(
+api_function!(
+    C_Logout = logout;
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+);
+
+fn logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
+
+    session.logout().map_err(From::from)
+}
+
+api_function!(
+    C_WaitForSlotEvent = wait_for_slot_event;
     flags: cryptoki_sys::CK_FLAGS,
     pSlot: cryptoki_sys::CK_SLOT_ID_PTR,
     pReserved: cryptoki_sys::CK_VOID_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_WaitForSlotEvent() called");
+);
 
+fn wait_for_slot_event(
+    flags: cryptoki_sys::CK_FLAGS,
+    pSlot: cryptoki_sys::CK_SLOT_ID_PTR,
+    pReserved: cryptoki_sys::CK_VOID_PTR,
+) -> Result<(), Pkcs11Error> {
     if pSlot.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    if let Err(err) = fetch_slots_state() {
-        return err.into();
-    }
+    fetch_slots_state()?;
 
     loop {
         // check if there is an event in the queue
@@ -390,27 +399,25 @@ pub extern "C" fn C_WaitForSlotEvent(
             unsafe {
                 std::ptr::write(pSlot, slot);
             }
-            return cryptoki_sys::CKR_OK;
+            return Ok(());
         }
 
         // if the dont block flag is set, return no event
         if flags & cryptoki_sys::CKF_DONT_BLOCK == 1 {
-            return cryptoki_sys::CKR_NO_EVENT;
+            return Err(Pkcs11Error::NoEvent);
         } else {
             // Otherwise, wait for an event
 
             // If C_Finalize() has been called, return an error
             if EVENTS_MANAGER.read().unwrap().finalized {
-                return cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED;
+                return Err(Pkcs11Error::CryptokiNotInitialized);
             }
 
             // sleep for 1 second
             std::thread::sleep(std::time::Duration::from_secs(1));
 
             // fetch the slots state so we get the latest events in the next iteration
-            if let Err(err) = fetch_slots_state() {
-                return err.into();
-            }
+            fetch_slots_state()?;
         }
     }
 }

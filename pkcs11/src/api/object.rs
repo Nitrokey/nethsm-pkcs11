@@ -3,52 +3,59 @@ use std::{slice, str};
 use cryptoki_sys::CK_ULONG;
 use log::{error, info, trace};
 
-use crate::{backend::db::attr::CkRawAttrTemplate, lock_session, read_session};
+use crate::{
+    api::api_function,
+    backend::{db::attr::CkRawAttrTemplate, Pkcs11Error},
+    data,
+};
 
-#[no_mangle]
-pub extern "C" fn C_FindObjectsInit(
+api_function!(
+    C_FindObjectsInit = find_objects_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_FindObjectsInit() called with session {hSession}");
+);
 
+fn find_objects_init(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if ulCount > 0 && pTemplate.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) };
 
-    lock_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
     trace!("C_FindObjectsInit() template: {template:?}");
-    match session.enum_init(template) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
+    session.enum_init(template).map_err(From::from)
 }
 
-#[no_mangle]
-pub extern "C" fn C_FindObjects(
+api_function!(
+    C_FindObjects = find_objects;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
     ulMaxObjectCount: cryptoki_sys::CK_ULONG,
     pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_FindObjects() called");
+);
 
+fn find_objects(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    ulMaxObjectCount: cryptoki_sys::CK_ULONG,
+    pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
     if phObject.is_null() || pulObjectCount.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    lock_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     trace!("C_FindObjects() ulMaxObjectCount: {ulMaxObjectCount}");
-    let objects = match session.enum_next_chunk(ulMaxObjectCount as usize) {
-        Ok(objects) => objects,
-        Err(err) => {
-            return err.into();
-        }
-    };
+    let objects = session.enum_next_chunk(ulMaxObjectCount as usize)?;
     trace!("C_FindObjects() objects: {objects:?}");
 
     let returned_count = objects.len();
@@ -58,42 +65,48 @@ pub extern "C" fn C_FindObjects(
         std::ptr::write(pulObjectCount, returned_count as CK_ULONG);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
-#[no_mangle]
-pub extern "C" fn C_FindObjectsFinal(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_FindObjectsFinal() called");
 
-    lock_session!(hSession, session);
+api_function!(
+    C_FindObjectsFinal = find_objects_final;
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+);
+
+fn find_objects_final(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
     session.enum_final();
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
-#[no_mangle]
-pub extern "C" fn C_GetAttributeValue(
+
+api_function!(
+    C_GetAttributeValue = get_attribute_value;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GetAttributeValue() called for object {hObject}.");
+);
 
+fn get_attribute_value(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
     if pTemplate.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    read_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
-    let object = match session.get_object(hObject) {
-        Some(object) => object,
-        None => {
-            error!("C_GetAttributeValue() called with invalid object handle {hObject}.");
-            return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
-        }
-    };
+    let object = session.get_object(hObject).ok_or_else(|| {
+        error!("C_GetAttributeValue() called with invalid object handle {hObject}.");
+        Pkcs11Error::ObjectHandleInvalid
+    })?;
 
     trace!(
         "C_GetAttributeValue() object id : {} {:?}",
@@ -101,144 +114,148 @@ pub extern "C" fn C_GetAttributeValue(
         object.kind
     );
 
-    let mut template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
-    {
-        Some(template) => template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    let mut template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+        .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    match object.fill_attr_template(&mut template) {
-        Ok(()) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
+    object.fill_attr_template(&mut template)
 }
-#[no_mangle]
-pub extern "C" fn C_GetObjectSize(
+
+api_function!(
+    C_GetObjectSize = get_object_size;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
     pulSize: cryptoki_sys::CK_ULONG_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_GetObjectSize() called");
+);
 
+fn get_object_size(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    pulSize: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
     if pulSize.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    read_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
-    let object = match session.get_object(hObject) {
-        Some(object) => object,
-        None => {
-            error!("function called with invalid object handle {hObject}.");
-            return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
-        }
-    };
+    let object = session.get_object(hObject).ok_or_else(|| {
+        error!("function called with invalid object handle {hObject}.");
+        Pkcs11Error::ObjectHandleInvalid
+    })?;
 
     unsafe {
         std::ptr::write(pulSize, object.size.unwrap_or(0) as CK_ULONG);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_CreateObject(
+api_function!(
+    C_CreateObject = create_object;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_CreateObject() called ");
+);
 
+fn create_object(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+    phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
     // pTemplate checked with from_raw_ptr
-
     if phObject.is_null() {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let template = match unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) } {
-        Some(template) => template,
-        None => {
-            return cryptoki_sys::CKR_ARGUMENTS_BAD;
-        }
-    };
+    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+        .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    lock_session!(hSession, session);
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
 
-    let objects = match session.create_object(template) {
-        Ok(object) => object,
-        Err(err) => {
-            return err.into();
-        }
-    };
+    let objects = session.create_object(template)?;
 
     if objects.is_empty() {
         error!("C_CreateObject() failed: no object created");
-        return cryptoki_sys::CKR_GENERAL_ERROR;
+        return Err(Pkcs11Error::GeneralError);
     }
 
     unsafe {
         std::ptr::write(phObject, objects[0].0);
     }
 
-    cryptoki_sys::CKR_OK
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn C_CopyObject(
+api_function!(
+    C_CopyObject = copy_object;
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_CopyObject() called");
+);
 
-    cryptoki_sys::CKR_ACTION_PROHIBITED
-}
-
-#[no_mangle]
-pub extern "C" fn C_DestroyObject(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_DestroyObject() called : {hObject}");
-
-    lock_session!(hSession, session);
-
-    match session.delete_object(hObject) {
-        Ok(_) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn C_SetAttributeValue(
+fn copy_object(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
     hObject: cryptoki_sys::CK_OBJECT_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
-) -> cryptoki_sys::CK_RV {
-    trace!("C_SetAttributeValue() called");
+    phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+) -> Result<(), Pkcs11Error> {
+    Err(Pkcs11Error::ActionProhibited)
+}
 
-    read_session!(hSession, session);
+api_function!(
+    C_DestroyObject = destroy_object;
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+);
+
+fn destroy_object(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let mut session = data::lock_session(&session)?;
+
+    session.delete_object(hObject).map_err(From::from)
+}
+
+api_function!(
+    C_SetAttributeValue = set_attribute_value;
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+);
+
+fn set_attribute_value(
+    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    ulCount: cryptoki_sys::CK_ULONG,
+) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(hSession)?;
+    let session = data::lock_session(&session)?;
 
     if pTemplate.is_null() || ulCount == 0 {
         error!("C_SetAttributeValue called without attributes in the template");
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
+        return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let Some(object) = session.get_object(hObject) else {
+    let object = session.get_object(hObject).ok_or_else(|| {
         error!("C_SetAttributeValue() called with invalid object handle {hObject}.");
-        return cryptoki_sys::CKR_OBJECT_HANDLE_INVALID;
-    };
+        Pkcs11Error::ObjectHandleInvalid
+    })?;
 
-    let Ok(n) = usize::try_from(ulCount) else {
+    let n = usize::try_from(ulCount).map_err(|_| {
         error!("C_SetAttributeValue called with too many attributes in the template");
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    };
+        Pkcs11Error::ArgumentsBad
+    })?;
     // SAFETY: The caller must ensure that pTemplate points to an array of ulCount attributes.
     // We already checked for null pointers and length zero above.
     let attrs = unsafe { slice::from_raw_parts(pTemplate, n) };
@@ -247,22 +264,22 @@ pub extern "C" fn C_SetAttributeValue(
     for attr in attrs {
         if attr.type_ != cryptoki_sys::CKA_ID {
             error!("C_SetAttributeValue() is supported only on CKA_ID");
-            return cryptoki_sys::CKR_ATTRIBUTE_READ_ONLY;
+            return Err(Pkcs11Error::AttributeReadOnly);
         }
         if id.is_some() {
             error!("CKA_ID cannot be set twice in C_SetAttributeValue");
-            return cryptoki_sys::CKR_TEMPLATE_INCONSISTENT;
+            return Err(Pkcs11Error::TemplateInconsistent);
         }
         if attr.ulValueLen == 0
             || attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION
             || attr.pValue.is_null()
         {
             error!("CKA_ID value may not be empty in C_SetAttributeValue");
-            return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+            return Err(Pkcs11Error::AttributeValueInvalid);
         }
         let Ok(n) = usize::try_from(attr.ulValueLen) else {
             error!("CKA_ID value is too long in C_SetAttributeValue");
-            return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+            return Err(Pkcs11Error::AttributeValueInvalid);
         };
         // SAFETY: The caller must provide a byte slice of the correct size for CKA_ID attributes.
         // We already checked for null pointers and length zero above.
@@ -270,23 +287,18 @@ pub extern "C" fn C_SetAttributeValue(
     }
     // We already checked before that there is at least one attribute. As CKA_ID is the only
     // attribute we support, id cannot be None.
-    let Some(id) = id else {
-        return cryptoki_sys::CKR_ARGUMENTS_BAD;
-    };
-    let Ok(id) = str::from_utf8(id) else {
+    let id = id.ok_or(Pkcs11Error::ArgumentsBad)?;
+    let id = str::from_utf8(id).map_err(|_| {
         error!("CKA_ID value is not a valid UTF-8 string in C_SetAttributeValue");
-        return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
-    };
+        Pkcs11Error::AttributeValueInvalid
+    })?;
     if !id.chars().all(char::is_alphanumeric) {
         error!("CKA_ID value is not an alphanumeric string in C_SetAttributeValue");
-        return cryptoki_sys::CKR_ATTRIBUTE_VALUE_INVALID;
+        return Err(Pkcs11Error::AttributeValueInvalid);
     }
 
     info!("Changing ID to: {id}");
-    match session.rename_objects(&object.id, id) {
-        Ok(()) => cryptoki_sys::CKR_OK,
-        Err(err) => err.into(),
-    }
+    session.rename_objects(&object.id, id).map_err(From::from)
 }
 
 #[cfg(test)]
