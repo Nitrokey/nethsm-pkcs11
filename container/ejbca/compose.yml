@@ -1,0 +1,53 @@
+services:
+  nethsm:
+    image: nitrokey/nethsm:4241c247
+    platform: linux/amd64
+    ports:
+      - "8443:8443"
+    networks:
+      - nethsm-network
+
+  nethsm-provisioner:
+    image: curlimages/curl:latest
+    depends_on:
+      - nethsm
+    volumes:
+      - ./provision.sh:/provision.sh:ro
+    command: ["/bin/sh", "/provision.sh"]
+    networks:
+      - nethsm-network
+    environment:
+      NETHSM_URL: https://nethsm:8443
+
+  ejbca:
+    hostname: ejbca
+    image: ejbca_test
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: container/ejbca/Dockerfile
+    depends_on:
+      nethsm-provisioner:
+        condition: service_completed_successfully
+    volumes:
+      - ./logs:/logs
+      - ./p11nethsm.conf:/etc/nitrokey/p11nethsm.conf:ro
+      - ./web.properties:/etc/ejbca/conf/web.properties:ro
+#      - ./nethsm_attributes.conf:/etc/nitrokey/nethsm_attributes.conf:ro
+    ports:
+      - "9080:8080"
+      - "9443:8443"
+    networks:
+      - nethsm-network
+    environment:
+      TLS_SETUP_ENABLED: simple
+#      LOG_LEVEL_APP: DEBUG
+#      LOG_LEVEL_SERVER: DEBUG
+#      LOG_LEVEL_SERVER_SUBSYSTEMS: DEBUG
+      JAVA_OPTS_CUSTOM: "-Xms128m -Xmx13904m -Xss256k -XX:MetaspaceSize=160m -XX:MaxMetaspaceSize=2048m -Djava.security.debug=sunpkcs11,pkcs11keystore"
+      LOG_STORAGE_LOCATION: /logs/
+      PKCS11SPY: /usr/lib/nitrokey/libnethsm_pkcs11.so
+      PKCS11SPY_OUTPUT: /logs/pkcs11spy.log
+
+networks:
+  nethsm-network:
