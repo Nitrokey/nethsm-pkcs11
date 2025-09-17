@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 // for now we allow unused variables, but we should remove this when we have implemented all the functions we need
 #![allow(unused_variables)]
 
@@ -38,6 +37,7 @@ macro_rules! api_function {
         $(,)?
     ) => {
         #[no_mangle]
+        #[allow(non_snake_case)]
         pub extern "C" fn $c_fn($($arg: $ty,)*) -> ::cryptoki_sys::CK_RV {
             ::log::trace!("{} called", stringify!($c_fn));
             let result = $rust_fn($($arg,)*);
@@ -59,20 +59,18 @@ use api_function;
 
 api_function!(
     C_GetFunctionList = get_function_list;
-    pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
+    ppFunctionList: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
 );
 
 fn get_function_list(
-    pp_fn_list: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
+    fn_list_ptr: *mut *mut cryptoki_sys::CK_FUNCTION_LIST,
 ) -> Result<(), Pkcs11Error> {
-    trace!("C_GetFunctionList() called");
-
-    if pp_fn_list.is_null() {
+    if fn_list_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
     unsafe {
-        std::ptr::write(pp_fn_list, addr_of_mut!(data::FN_LIST));
+        std::ptr::write(fn_list_ptr, addr_of_mut!(data::FN_LIST));
     }
     Ok(())
 }
@@ -82,7 +80,7 @@ api_function!(
     pInitArgs: CK_VOID_PTR,
 );
 
-fn initialize(pInitArgs: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
+fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
     let device = crate::config::initialization::initialize().map_err(|err| {
         error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
         Pkcs11Error::FunctionFailed
@@ -97,9 +95,9 @@ fn initialize(pInitArgs: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
 
     if defs::CRYPTOKI_VERSION.major == 2
         && defs::CRYPTOKI_VERSION.minor == 40
-        && !pInitArgs.is_null()
+        && !init_args_ptr.is_null()
     {
-        let args = pInitArgs as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
+        let args = init_args_ptr as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
         let args = unsafe { std::ptr::read(args) };
 
         // for cryptoki 2.40 this should always be null
@@ -108,14 +106,14 @@ fn initialize(pInitArgs: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         }
 
         let flags = args.flags;
-        let CreateMutex = args.CreateMutex;
+        let create_mutex = args.CreateMutex;
 
         trace!("C_Initialize() called with flags: {flags:?}");
-        trace!("C_Initialize() called with CreateMutex: {CreateMutex:?}");
+        trace!("C_Initialize() called with CreateMutex: {create_mutex:?}");
 
         // currently we don't support custom locking
         // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that
-        if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && CreateMutex.is_some() {
+        if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && create_mutex.is_some() {
             return Err(Pkcs11Error::CantLock);
         }
 
@@ -139,8 +137,8 @@ api_function!(
     pReserved: CK_VOID_PTR,
 );
 
-fn finalize(pReserved: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
-    if !pReserved.is_null() {
+fn finalize(reserved_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
+    if !reserved_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
     DEVICE.store(None);
@@ -154,8 +152,8 @@ api_function!(
     pInfo: CK_INFO_PTR,
 );
 
-fn get_info(pInfo: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
-    if pInfo.is_null() {
+fn get_info(info_ptr: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
+    if info_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -168,7 +166,7 @@ fn get_info(pInfo: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
     };
 
     unsafe {
-        std::ptr::write(pInfo, infos);
+        std::ptr::write(info_ptr, infos);
     }
     Ok(())
 }

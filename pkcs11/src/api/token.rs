@@ -29,11 +29,11 @@ api_function!(
 );
 
 fn get_slot_list(
-    tokenPresent: cryptoki_sys::CK_BBOOL,
-    pSlotList: cryptoki_sys::CK_SLOT_ID_PTR,
-    pulCount: cryptoki_sys::CK_ULONG_PTR,
+    token_present: cryptoki_sys::CK_BBOOL,
+    slot_list_ptr: cryptoki_sys::CK_SLOT_ID_PTR,
+    count_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if pulCount.is_null() {
+    if count_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -42,17 +42,17 @@ fn get_slot_list(
     let count = device.slots.len() as CK_ULONG;
 
     // only the count is requested
-    if pSlotList.is_null() {
+    if slot_list_ptr.is_null() {
         unsafe {
-            std::ptr::write(pulCount, count);
+            std::ptr::write(count_ptr, count);
         }
         return Ok(());
     }
 
     // check if the buffer is large enough
-    if unsafe { *pulCount } < count {
+    if unsafe { *count_ptr } < count {
         unsafe {
-            std::ptr::write(pulCount, count);
+            std::ptr::write(count_ptr, count);
         }
         return Err(Pkcs11Error::BufferTooSmall);
     }
@@ -66,8 +66,8 @@ fn get_slot_list(
         .collect();
 
     unsafe {
-        std::ptr::copy_nonoverlapping(id_list.as_ptr(), pSlotList, id_list.len());
-        std::ptr::write(pulCount, count as CK_ULONG);
+        std::ptr::copy_nonoverlapping(id_list.as_ptr(), slot_list_ptr, id_list.len());
+        std::ptr::write(count_ptr, count as CK_ULONG);
     }
 
     Ok(())
@@ -80,17 +80,17 @@ api_function!(
 );
 
 fn get_slot_info(
-    slotID: cryptoki_sys::CK_SLOT_ID,
-    pInfo: cryptoki_sys::CK_SLOT_INFO_PTR,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
+    info_ptr: cryptoki_sys::CK_SLOT_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
-    trace!("C_GetSlotInfo() called with slotID: {slotID}");
+    trace!("C_GetSlotInfo() called with slotID: {slot_id}");
 
-    if pInfo.is_null() {
+    if info_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
     // get the slot
-    let slot = get_slot(slotID)?;
+    let slot = get_slot(slot_id)?;
 
     let mut flags = 0;
 
@@ -144,7 +144,7 @@ fn get_slot_info(
     };
 
     unsafe {
-        std::ptr::write(pInfo, info);
+        std::ptr::write(info_ptr, info);
     }
 
     Ok(())
@@ -157,15 +157,15 @@ api_function!(
 );
 
 fn get_token_info(
-    slotID: cryptoki_sys::CK_SLOT_ID,
-    pInfo: cryptoki_sys::CK_TOKEN_INFO_PTR,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
+    info_ptr: cryptoki_sys::CK_TOKEN_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
-    trace!("C_GetTokenInfo() called with slotID: {slotID}");
+    trace!("C_GetTokenInfo() called with slotID: {slot_id}");
 
     // get the slot
-    let slot = get_slot(slotID)?;
+    let slot = get_slot(slot_id)?;
 
-    if pInfo.is_null() {
+    if info_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -222,7 +222,7 @@ fn get_token_info(
     };
 
     unsafe {
-        std::ptr::write(pInfo, token_info);
+        std::ptr::write(info_ptr, token_info);
     }
 
     Ok(())
@@ -237,10 +237,10 @@ api_function!(
 );
 
 fn init_token(
-    slotID: cryptoki_sys::CK_SLOT_ID,
-    pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
-    ulPinLen: cryptoki_sys::CK_ULONG,
-    pLabel: cryptoki_sys::CK_UTF8CHAR_PTR,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
+    pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
+    pin_len: cryptoki_sys::CK_ULONG,
+    label_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -253,31 +253,31 @@ api_function!(
 );
 
 fn get_mechanism_list(
-    slotID: cryptoki_sys::CK_SLOT_ID,
-    pMechanismList: cryptoki_sys::CK_MECHANISM_TYPE_PTR,
-    pulCount: cryptoki_sys::CK_ULONG_PTR,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
+    mechanism_list_ptr: cryptoki_sys::CK_MECHANISM_TYPE_PTR,
+    count_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if pulCount.is_null() {
+    if count_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    get_slot(slotID)?;
+    get_slot(slot_id)?;
 
     let count = MECHANISM_LIST.len() as CK_ULONG;
 
     // only the count is requested
-    if pMechanismList.is_null() {
+    if mechanism_list_ptr.is_null() {
         unsafe {
-            std::ptr::write(pulCount, count);
+            std::ptr::write(count_ptr, count);
         }
         return Ok(());
     }
 
-    let buffer_size = unsafe { std::ptr::read(pulCount) };
+    let buffer_size = unsafe { std::ptr::read(count_ptr) };
 
     // set the buffer size
     unsafe {
-        std::ptr::write(pulCount, count);
+        std::ptr::write(count_ptr, count);
     }
     // check if the buffer is large enough
     if buffer_size < count {
@@ -291,7 +291,7 @@ fn get_mechanism_list(
         .collect();
 
     unsafe {
-        std::ptr::copy_nonoverlapping(id_list.as_ptr(), pMechanismList, id_list.len());
+        std::ptr::copy_nonoverlapping(id_list.as_ptr(), mechanism_list_ptr, id_list.len());
     }
 
     Ok(())
@@ -305,13 +305,13 @@ api_function!(
 );
 
 fn get_mechanism_info(
-    slotID: cryptoki_sys::CK_SLOT_ID,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
     type_: cryptoki_sys::CK_MECHANISM_TYPE,
-    pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
+    info_ptr: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
-    get_slot(slotID)?;
+    get_slot(slot_id)?;
 
-    if pInfo.is_null() {
+    if info_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -323,7 +323,7 @@ fn get_mechanism_info(
         .ok_or(Pkcs11Error::MechanismInvalid)?;
 
     unsafe {
-        std::ptr::write(pInfo, mechanism.ck_info());
+        std::ptr::write(info_ptr, mechanism.ck_info());
     }
 
     Ok(())
@@ -338,24 +338,26 @@ api_function!(
 );
 
 fn login(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    userType: cryptoki_sys::CK_USER_TYPE,
-    pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
-    ulPinLen: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    user_type: cryptoki_sys::CK_USER_TYPE,
+    pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
+    pin_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    if pPin.is_null() {
+    if pin_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let pin = unsafe { std::slice::from_raw_parts(pPin, ulPinLen as usize) };
+    let pin = unsafe { std::slice::from_raw_parts(pin_ptr, pin_len as usize) };
 
     // parse string to utf8
     let pin = std::str::from_utf8(pin).map_err(|_| Pkcs11Error::ArgumentsBad)?;
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    session.login(userType, pin.to_string()).map_err(From::from)
+    session
+        .login(user_type, pin.to_string())
+        .map_err(From::from)
 }
 
 api_function!(
@@ -363,8 +365,8 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn logout(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+fn logout(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
     session.logout().map_err(From::from)
@@ -379,10 +381,10 @@ api_function!(
 
 fn wait_for_slot_event(
     flags: cryptoki_sys::CK_FLAGS,
-    pSlot: cryptoki_sys::CK_SLOT_ID_PTR,
-    pReserved: cryptoki_sys::CK_VOID_PTR,
+    slot_ptr: cryptoki_sys::CK_SLOT_ID_PTR,
+    reserved_ptr: cryptoki_sys::CK_VOID_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if pSlot.is_null() {
+    if slot_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -394,7 +396,7 @@ fn wait_for_slot_event(
         let slot = EVENTS_MANAGER.write().unwrap().events.pop();
         if let Some(slot) = slot {
             unsafe {
-                std::ptr::write(pSlot, slot);
+                std::ptr::write(slot_ptr, slot);
             }
             return Ok(());
         }

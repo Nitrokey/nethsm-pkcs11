@@ -16,15 +16,15 @@ api_function!(
 );
 
 fn open_session(
-    slotID: cryptoki_sys::CK_SLOT_ID,
+    slot_id: cryptoki_sys::CK_SLOT_ID,
     flags: cryptoki_sys::CK_FLAGS,
-    _pApplication: cryptoki_sys::CK_VOID_PTR,
-    _Notify: cryptoki_sys::CK_NOTIFY,
-    phSession: cryptoki_sys::CK_SESSION_HANDLE_PTR,
+    _application_ptr: cryptoki_sys::CK_VOID_PTR,
+    _notify: cryptoki_sys::CK_NOTIFY,
+    session_ptr: cryptoki_sys::CK_SESSION_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
-    trace!("C_OpenSession() called with slotID {slotID}, flags {flags}");
+    trace!("C_OpenSession() called with slotID {slot_id}, flags {flags}");
 
-    if phSession.is_null() {
+    if session_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
     // Serial should always be set
@@ -32,19 +32,19 @@ fn open_session(
         return Err(Pkcs11Error::SessionParallelNotSupported);
     }
 
-    let slot = get_slot(slotID).map_err(|_| {
-        error!("C_OpenSession() called with invalid slotID {slotID}.");
+    let slot = get_slot(slot_id).map_err(|_| {
+        error!("C_OpenSession() called with invalid slotID {slot_id}.");
         Pkcs11Error::SlotIdInvalid
     })?;
 
     // create the session in memory
     let mut manager = SESSION_MANAGER.lock().unwrap();
-    let session = manager.create_session(slotID, slot, flags);
+    let session = manager.create_session(slot_id, slot, flags);
 
     trace!("C_OpenSession() created session: {session:?}");
 
     unsafe {
-        std::ptr::write(phSession, session);
+        std::ptr::write(session_ptr, session);
     }
 
     Ok(())
@@ -55,14 +55,14 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn close_session(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
-    trace!("C_CloseSession() called with session handle {hSession}.");
+fn close_session(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+    trace!("C_CloseSession() called with session handle {session}.");
 
     let mut manager = SESSION_MANAGER.lock().unwrap();
-    let result = manager.delete_session(hSession);
+    let result = manager.delete_session(session);
 
     if result.is_none() {
-        error!("C_CloseSession() called with invalid session handle {hSession}.");
+        error!("C_CloseSession() called with invalid session handle {session}.");
         return Err(Pkcs11Error::SessionHandleInvalid);
     }
 
@@ -74,14 +74,14 @@ api_function!(
     slotID: cryptoki_sys::CK_SLOT_ID,
 );
 
-fn close_all_sessions(slotID: cryptoki_sys::CK_SLOT_ID) -> Result<(), Pkcs11Error> {
-    if get_slot(slotID).is_err() {
-        error!("C_CloseAllSessions() called with invalid slotID {slotID}.");
+fn close_all_sessions(slot_id: cryptoki_sys::CK_SLOT_ID) -> Result<(), Pkcs11Error> {
+    if get_slot(slot_id).is_err() {
+        error!("C_CloseAllSessions() called with invalid slotID {slot_id}.");
         return Err(Pkcs11Error::SlotIdInvalid);
     }
 
     let mut manager = SESSION_MANAGER.lock().unwrap();
-    manager.delete_all_slot_sessions(slotID);
+    manager.delete_all_slot_sessions(slot_id);
     Ok(())
 }
 
@@ -92,18 +92,18 @@ api_function!(
 );
 
 fn get_session_info(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pInfo: cryptoki_sys::CK_SESSION_INFO_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    info_ptr: cryptoki_sys::CK_SESSION_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if pInfo.is_null() {
+    if info_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let session = data::lock_session(&session)?;
 
     unsafe {
-        std::ptr::write(pInfo, session.get_ck_info());
+        std::ptr::write(info_ptr, session.get_ck_info());
     }
 
     Ok(())
@@ -117,9 +117,9 @@ api_function!(
 );
 
 fn get_operation_state(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pOperationState: cryptoki_sys::CK_BYTE_PTR,
-    pulOperationStateLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
+    operation_state_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -134,11 +134,11 @@ api_function!(
 );
 
 fn set_operation_state(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pOperationState: cryptoki_sys::CK_BYTE_PTR,
-    ulOperationStateLen: cryptoki_sys::CK_ULONG,
-    hEncryptionKey: cryptoki_sys::CK_OBJECT_HANDLE,
-    hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
+    operation_state_len: cryptoki_sys::CK_ULONG,
+    encryption_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    authentication_key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -148,7 +148,7 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn get_function_status(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn get_function_status(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotParallel)
 }
 
@@ -157,7 +157,7 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn cancel_function(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn cancel_function(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotParallel)
 }
 

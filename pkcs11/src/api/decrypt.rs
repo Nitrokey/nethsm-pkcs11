@@ -18,22 +18,22 @@ api_function!(
 );
 
 fn decrypt_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     let raw_mech =
-        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
+        unsafe { CkRawMechanism::from_raw_ptr(mechanism_ptr) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
     let mech = Mechanism::from_ckraw_mech(&raw_mech).map_err(|err| {
         error!("C_DecryptInit() failed to convert mechanism: {err}");
         Pkcs11Error::MechanismInvalid
     })?;
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    session.decrypt_init(&mech, hKey).map_err(From::from)
+    session.decrypt_init(&mech, key).map_err(From::from)
 }
 
 api_function!(
@@ -46,29 +46,29 @@ api_function!(
 );
 
 fn decrypt(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
-    ulEncryptedDataLen: cryptoki_sys::CK_ULONG,
-    pData: cryptoki_sys::CK_BYTE_PTR,
-    pulDataLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    encrypted_data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_data_len: cryptoki_sys::CK_ULONG,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    if pulDataLen.is_null() || pEncryptedData.is_null() {
+    if data_len_ptr.is_null() || encrypted_data_ptr.is_null() {
         session.decrypt_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let buffer_size = unsafe { *pulDataLen } as usize;
+    let buffer_size = unsafe { *data_len_ptr } as usize;
 
-    let theoretical_size = session.decrypt_theoretical_size(ulEncryptedDataLen as usize);
+    let theoretical_size = session.decrypt_theoretical_size(encrypted_data_len as usize);
 
     unsafe {
-        std::ptr::write(pulDataLen, theoretical_size as CK_ULONG);
+        std::ptr::write(data_len_ptr, theoretical_size as CK_ULONG);
     }
 
-    if pData.is_null() {
+    if data_ptr.is_null() {
         return Ok(());
     }
 
@@ -76,14 +76,15 @@ fn decrypt(
         return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let data = unsafe { std::slice::from_raw_parts(pEncryptedData, ulEncryptedDataLen as usize) };
+    let data =
+        unsafe { std::slice::from_raw_parts(encrypted_data_ptr, encrypted_data_len as usize) };
 
     let decrypted_data = session
         .decrypt(data)
         .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
-        std::ptr::write(pulDataLen, decrypted_data.len() as CK_ULONG);
+        std::ptr::write(data_len_ptr, decrypted_data.len() as CK_ULONG);
     }
 
     // we double-check the buffer size here, in case the theoretical size was wrong
@@ -92,7 +93,7 @@ fn decrypt(
     }
 
     unsafe {
-        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pData, decrypted_data.len());
+        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), data_ptr, decrypted_data.len());
     }
 
     session.decrypt_clear();
@@ -110,25 +111,26 @@ api_function!(
 );
 
 fn decrypt_update(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
-    ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
-    pPart: cryptoki_sys::CK_BYTE_PTR,
-    pulPartLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_part_len: cryptoki_sys::CK_ULONG,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    if pulPartLen.is_null() || pEncryptedPart.is_null() {
+    if part_len_ptr.is_null() || encrypted_part_ptr.is_null() {
         session.decrypt_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let data = unsafe { std::slice::from_raw_parts(pEncryptedPart, ulEncryptedPartLen as usize) };
+    let data =
+        unsafe { std::slice::from_raw_parts(encrypted_part_ptr, encrypted_part_len as usize) };
 
     // we only add to the buffer, so we don't need to check the size
     unsafe {
-        std::ptr::write(pulPartLen, 0 as CK_ULONG);
+        std::ptr::write(part_len_ptr, 0 as CK_ULONG);
     }
     session.decrypt_update(data).map_err(|err| {
         session.decrypt_clear();
@@ -144,29 +146,29 @@ api_function!(
 );
 
 fn decrypt_final(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pLastPart: cryptoki_sys::CK_BYTE_PTR,
-    pulLastPartLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    last_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    last_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    if pulLastPartLen.is_null() {
+    if last_part_len_ptr.is_null() {
         session.decrypt_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let buffer_size = unsafe { *pulLastPartLen } as usize;
+    let buffer_size = unsafe { *last_part_len_ptr } as usize;
 
     let theoretical_size = session
         .decrypt_theoretical_final_size()
         .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
-        std::ptr::write(pulLastPartLen, theoretical_size as CK_ULONG);
+        std::ptr::write(last_part_len_ptr, theoretical_size as CK_ULONG);
     }
 
-    if pLastPart.is_null() {
+    if last_part_ptr.is_null() {
         return Ok(());
     }
 
@@ -179,7 +181,7 @@ fn decrypt_final(
         .inspect_err(|_| session.decrypt_clear())?;
 
     unsafe {
-        std::ptr::write(pulLastPartLen, decrypted_data.len() as CK_ULONG);
+        std::ptr::write(last_part_len_ptr, decrypted_data.len() as CK_ULONG);
     }
 
     // we double-check the buffer size here, in case the theoretical size was wrong
@@ -188,7 +190,7 @@ fn decrypt_final(
     }
 
     unsafe {
-        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), pLastPart, decrypted_data.len());
+        std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), last_part_ptr, decrypted_data.len());
     }
 
     session.decrypt_clear();
@@ -206,11 +208,11 @@ api_function!(
 );
 
 fn decrypt_verify_update(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
-    ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
-    pPart: cryptoki_sys::CK_BYTE_PTR,
-    pulPartLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_part_len: cryptoki_sys::CK_ULONG,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -278,13 +280,13 @@ mod tests {
     #[test]
     fn test_decrypt_null_data_len() {
         init_for_tests();
-        let mut pEncryptedData = [0u8; 32];
+        let mut encrypted_data = [0u8; 32];
 
         let session_handle = setup_session();
 
         let rv = C_Decrypt(
             session_handle,
-            pEncryptedData.as_mut_ptr(),
+            encrypted_data.as_mut_ptr(),
             0,
             std::ptr::null_mut(),
             std::ptr::null_mut(),
@@ -295,7 +297,7 @@ mod tests {
     #[test]
     fn test_decrypt_null_encrypted_data() {
         init_for_tests();
-        let mut pulDataLen = 0;
+        let mut data_len = 0;
 
         let session_handle = setup_session();
 
@@ -304,7 +306,7 @@ mod tests {
             std::ptr::null_mut(),
             32,
             std::ptr::null_mut(),
-            &mut pulDataLen,
+            &mut data_len,
         );
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
@@ -312,18 +314,18 @@ mod tests {
     #[test]
     fn test_decrypt_null_data() {
         init_for_tests();
-        let mut pulDataLen = 0;
+        let mut data_len = 0;
 
         let session_handle = setup_session();
 
-        let mut pEncryptedData = [0u8; 32];
+        let mut encrypted_data = [0u8; 32];
 
         let rv = C_Decrypt(
             session_handle,
-            pEncryptedData.as_mut_ptr(),
+            encrypted_data.as_mut_ptr(),
             32,
             std::ptr::null_mut(),
-            &mut pulDataLen,
+            &mut data_len,
         );
         assert_eq!(rv, cryptoki_sys::CKR_OK);
     }
@@ -348,15 +350,15 @@ mod tests {
         init_for_tests();
         let session_handle = setup_session();
 
-        let mut pulPartLen = 0;
-        let mut pPart = [0u8; 32];
+        let mut part_len = 0;
+        let mut part = [0u8; 32];
 
         let rv = C_DecryptUpdate(
             session_handle,
             std::ptr::null_mut(),
             0,
-            pPart.as_mut_ptr(),
-            &mut pulPartLen,
+            part.as_mut_ptr(),
+            &mut part_len,
         );
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
@@ -366,14 +368,14 @@ mod tests {
         init_for_tests();
         let session_handle = setup_session();
 
-        let mut pEncryptedPart = [0u8; 32];
-        let mut pPart = [0u8; 32];
+        let mut encrypted_part = [0u8; 32];
+        let mut part = [0u8; 32];
 
         let rv = C_DecryptUpdate(
             session_handle,
-            pEncryptedPart.as_mut_ptr(),
+            encrypted_part.as_mut_ptr(),
             0,
-            pPart.as_mut_ptr(),
+            part.as_mut_ptr(),
             std::ptr::null_mut(),
         );
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
@@ -384,16 +386,16 @@ mod tests {
         init_for_tests();
         let session_handle = setup_session();
 
-        let mut pEncryptedPart = [0u8; 32];
-        let mut pPart = [0u8; 32];
-        let mut pulPartLen = 0;
+        let mut encrypted_part = [0u8; 32];
+        let mut part = [0u8; 32];
+        let mut part_len = 0;
 
         let rv = C_DecryptUpdate(
             session_handle,
-            pEncryptedPart.as_mut_ptr(),
+            encrypted_part.as_mut_ptr(),
             0,
-            pPart.as_mut_ptr(),
-            &mut pulPartLen,
+            part.as_mut_ptr(),
+            &mut part_len,
         );
         assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
     }
@@ -403,9 +405,9 @@ mod tests {
         init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
-        let mut pulLastPartLen = 0;
+        let mut last_part_len = 0;
 
-        let rv = C_DecryptFinal(0, std::ptr::null_mut(), &mut pulLastPartLen);
+        let rv = C_DecryptFinal(0, std::ptr::null_mut(), &mut last_part_len);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
     }
 
@@ -414,9 +416,9 @@ mod tests {
         init_for_tests();
         let session_handle = setup_session();
 
-        let mut lastPart = [0u8; 32];
+        let mut last_part = [0u8; 32];
 
-        let rv = C_DecryptFinal(session_handle, lastPart.as_mut_ptr(), std::ptr::null_mut());
+        let rv = C_DecryptFinal(session_handle, last_part.as_mut_ptr(), std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
@@ -425,10 +427,10 @@ mod tests {
         init_for_tests();
         let session_handle = setup_session();
 
-        let mut lastPart = [0u8; 32];
-        let mut pulLastPartLen = 0;
+        let mut last_part = [0u8; 32];
+        let mut last_part_len = 0;
 
-        let rv = C_DecryptFinal(session_handle, lastPart.as_mut_ptr(), &mut pulLastPartLen);
+        let rv = C_DecryptFinal(session_handle, last_part.as_mut_ptr(), &mut last_part_len);
         assert_eq!(rv, cryptoki_sys::CKR_OPERATION_NOT_INITIALIZED);
     }
 
