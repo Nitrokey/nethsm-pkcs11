@@ -149,11 +149,26 @@ api_function!(
     pInfo: CK_INFO_PTR,
 );
 
-fn get_info(info_ptr: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
-    if info_ptr.is_null() {
-        return Err(Pkcs11Error::ArgumentsBad);
+struct OutputPointer<T>(*mut T);
+
+impl<T> OutputPointer<T> {
+    unsafe fn new(ptr: *mut T) -> Result<Self, Pkcs11Error> {
+        if ptr.is_null() {
+            Err(Pkcs11Error::ArgumentsBad)
+        } else {
+            Ok(Self(ptr))
+        }
     }
 
+    fn write(&mut self, value: T) {
+        unsafe {
+            std::ptr::write(self.0, value);
+        }
+    }
+}
+
+fn get_info(info_ptr: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
+    let mut info_ptr = unsafe { OutputPointer::new(info_ptr)? };
     let infos = CK_INFO {
         cryptokiVersion: defs::CRYPTOKI_VERSION,
         manufacturerID: padded_str(defs::LIB_MANUFACTURER),
@@ -161,10 +176,7 @@ fn get_info(info_ptr: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
         libraryDescription: padded_str(defs::LIB_DESCRIPTION),
         libraryVersion: defs::LIB_VERSION,
     };
-
-    unsafe {
-        std::ptr::write(info_ptr, infos);
-    }
+    info_ptr.write(infos);
     Ok(())
 }
 
