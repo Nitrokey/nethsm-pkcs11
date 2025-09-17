@@ -10,9 +10,9 @@ api_function!(
 );
 
 fn init_pin(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
-    pin_len: cryptoki_sys::CK_ULONG,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
+    _pin_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

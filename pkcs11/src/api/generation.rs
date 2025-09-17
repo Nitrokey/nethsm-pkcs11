@@ -161,12 +161,12 @@ api_function!(
 );
 
 fn wrap_key(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    wrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
-    wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
-    wrapped_key_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    _wrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _wrapped_key_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -185,14 +185,14 @@ api_function!(
 
 #[allow(clippy::too_many_arguments)]
 fn unwrap_key(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    unwrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
-    wrapped_key_len: cryptoki_sys::CK_ULONG,
-    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    attribute_count: cryptoki_sys::CK_ULONG,
-    key_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    _unwrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _wrapped_key_len: cryptoki_sys::CK_ULONG,
+    _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    _attribute_count: cryptoki_sys::CK_ULONG,
+    _key_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -208,12 +208,12 @@ api_function!(
 );
 
 fn derive_key(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    base_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    attribute_count: cryptoki_sys::CK_ULONG,
-    key_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    _base_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    _attribute_count: cryptoki_sys::CK_ULONG,
+    _key_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -227,9 +227,9 @@ api_function!(
 
 // we silently ignore this function as NetHSM handles the random number generation
 fn seed_random(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    seed_ptr: cryptoki_sys::CK_BYTE_PTR,
-    seed_len: cryptoki_sys::CK_ULONG,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _seed_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _seed_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     Ok(())
 }

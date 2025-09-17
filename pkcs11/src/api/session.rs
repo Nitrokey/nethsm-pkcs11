@@ -117,9 +117,9 @@ api_function!(
 );
 
 fn get_operation_state(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
-    operation_state_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _operation_state_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -134,11 +134,11 @@ api_function!(
 );
 
 fn set_operation_state(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
-    operation_state_len: cryptoki_sys::CK_ULONG,
-    encryption_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    authentication_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _operation_state_len: cryptoki_sys::CK_ULONG,
+    _encryption_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _authentication_key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -148,7 +148,7 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn get_function_status(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn get_function_status(_session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 
@@ -157,7 +157,7 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn cancel_function(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn cancel_function(_session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 

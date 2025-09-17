@@ -11,7 +11,7 @@ api_function!(
 );
 
 fn digest_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
     mechanism_ptr: *mut cryptoki_sys::CK_MECHANISM,
 ) -> Result<(), Pkcs11Error> {
     if mechanism_ptr.is_null() {
@@ -31,9 +31,9 @@ api_function!(
 );
 
 fn digest(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
     data_ptr: *mut cryptoki_sys::CK_BYTE,
-    data_len: cryptoki_sys::CK_ULONG,
+    _data_len: cryptoki_sys::CK_ULONG,
     digest_ptr: *mut cryptoki_sys::CK_BYTE,
     digest_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -52,9 +52,9 @@ api_function!(
 );
 
 fn digest_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
     part_ptr: *mut cryptoki_sys::CK_BYTE,
-    part_len: cryptoki_sys::CK_ULONG,
+    _part_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     if part_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
@@ -71,7 +71,7 @@ api_function!(
 );
 
 fn digest_final(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
     digest_ptr: *mut cryptoki_sys::CK_BYTE,
     digest_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -89,8 +89,8 @@ api_function!(
 );
 
 fn digest_key(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -105,11 +105,11 @@ api_function!(
 );
 
 fn digest_encrypt_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    part_len: cryptoki_sys::CK_ULONG,
-    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _part_len: cryptoki_sys::CK_ULONG,
+    _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -124,11 +124,11 @@ api_function!(
 );
 
 fn decrypt_digest_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    encrypted_part_len: cryptoki_sys::CK_ULONG,
-    part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _encrypted_part_len: cryptoki_sys::CK_ULONG,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
