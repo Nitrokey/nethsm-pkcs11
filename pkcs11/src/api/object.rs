@@ -17,17 +17,17 @@ api_function!(
 );
 
 fn find_objects_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    ulCount: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    if ulCount > 0 && pTemplate.is_null() {
+    if count > 0 && template_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) };
+    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(template_ptr, count as usize) };
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
     trace!("C_FindObjectsInit() template: {template:?}");
     session.enum_init(template).map_err(From::from)
@@ -42,27 +42,27 @@ api_function!(
 );
 
 fn find_objects(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
-    ulMaxObjectCount: cryptoki_sys::CK_ULONG,
-    pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    max_object_count: cryptoki_sys::CK_ULONG,
+    object_count_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if phObject.is_null() || pulObjectCount.is_null() {
+    if object_ptr.is_null() || object_count_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    trace!("C_FindObjects() ulMaxObjectCount: {ulMaxObjectCount}");
-    let objects = session.enum_next_chunk(ulMaxObjectCount as usize)?;
+    trace!("C_FindObjects() ulMaxObjectCount: {max_object_count}");
+    let objects = session.enum_next_chunk(max_object_count as usize)?;
     trace!("C_FindObjects() objects: {objects:?}");
 
     let returned_count = objects.len();
 
     unsafe {
-        std::ptr::copy_nonoverlapping(objects.as_ptr(), phObject, returned_count);
-        std::ptr::write(pulObjectCount, returned_count as CK_ULONG);
+        std::ptr::copy_nonoverlapping(objects.as_ptr(), object_ptr, returned_count);
+        std::ptr::write(object_count_ptr, returned_count as CK_ULONG);
     }
 
     Ok(())
@@ -73,8 +73,8 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE,
 );
 
-fn find_objects_final(hSession: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+fn find_objects_final(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
     session.enum_final();
@@ -91,20 +91,20 @@ api_function!(
 );
 
 fn get_attribute_value(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
-    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    ulCount: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    if pTemplate.is_null() {
+    if template_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let session = data::lock_session(&session)?;
 
-    let object = session.get_object(hObject).ok_or_else(|| {
-        error!("C_GetAttributeValue() called with invalid object handle {hObject}.");
+    let object = session.get_object(object).ok_or_else(|| {
+        error!("C_GetAttributeValue() called with invalid object handle {object}.");
         Pkcs11Error::ObjectHandleInvalid
     })?;
 
@@ -114,7 +114,7 @@ fn get_attribute_value(
         object.kind
     );
 
-    let mut template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+    let mut template = unsafe { CkRawAttrTemplate::from_raw_ptr(template_ptr, count as usize) }
         .ok_or(Pkcs11Error::ArgumentsBad)?;
 
     object.fill_attr_template(&mut template)
@@ -128,24 +128,24 @@ api_function!(
 );
 
 fn get_object_size(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
-    pulSize: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    size_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
-    if pulSize.is_null() {
+    if size_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let session = data::lock_session(&session)?;
 
-    let object = session.get_object(hObject).ok_or_else(|| {
-        error!("function called with invalid object handle {hObject}.");
+    let object = session.get_object(object).ok_or_else(|| {
+        error!("function called with invalid object handle {object}.");
         Pkcs11Error::ObjectHandleInvalid
     })?;
 
     unsafe {
-        std::ptr::write(pulSize, object.size.unwrap_or(0) as CK_ULONG);
+        std::ptr::write(size_ptr, object.size.unwrap_or(0) as CK_ULONG);
     }
 
     Ok(())
@@ -160,20 +160,20 @@ api_function!(
 );
 
 fn create_object(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    ulCount: cryptoki_sys::CK_ULONG,
-    phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    count: cryptoki_sys::CK_ULONG,
+    object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
-    // pTemplate checked with from_raw_ptr
-    if phObject.is_null() {
+    // template_ptr checked with from_raw_ptr
+    if object_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(pTemplate, ulCount as usize) }
+    let template = unsafe { CkRawAttrTemplate::from_raw_ptr(template_ptr, count as usize) }
         .ok_or(Pkcs11Error::ArgumentsBad)?;
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
     let objects = session.create_object(template)?;
@@ -184,7 +184,7 @@ fn create_object(
     }
 
     unsafe {
-        std::ptr::write(phObject, objects[0].0);
+        std::ptr::write(object_ptr, objects[0].0);
     }
 
     Ok(())
@@ -200,11 +200,11 @@ api_function!(
 );
 
 fn copy_object(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
-    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    ulCount: cryptoki_sys::CK_ULONG,
-    phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    count: cryptoki_sys::CK_ULONG,
+    new_object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::ActionProhibited)
 }
@@ -216,13 +216,13 @@ api_function!(
 );
 
 fn destroy_object(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    session.delete_object(hObject).map_err(From::from)
+    session.delete_object(object).map_err(From::from)
 }
 
 api_function!(
@@ -234,31 +234,31 @@ api_function!(
 );
 
 fn set_attribute_value(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
-    pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    ulCount: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let session = data::lock_session(&session)?;
 
-    if pTemplate.is_null() || ulCount == 0 {
+    if template_ptr.is_null() || count == 0 {
         error!("C_SetAttributeValue called without attributes in the template");
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let object = session.get_object(hObject).ok_or_else(|| {
-        error!("C_SetAttributeValue() called with invalid object handle {hObject}.");
+    let object = session.get_object(object).ok_or_else(|| {
+        error!("C_SetAttributeValue() called with invalid object handle {object}.");
         Pkcs11Error::ObjectHandleInvalid
     })?;
 
-    let n = usize::try_from(ulCount).map_err(|_| {
+    let n = usize::try_from(count).map_err(|_| {
         error!("C_SetAttributeValue called with too many attributes in the template");
         Pkcs11Error::ArgumentsBad
     })?;
     // SAFETY: The caller must ensure that pTemplate points to an array of ulCount attributes.
     // We already checked for null pointers and length zero above.
-    let attrs = unsafe { slice::from_raw_parts(pTemplate, n) };
+    let attrs = unsafe { slice::from_raw_parts(template_ptr, n) };
 
     let mut id = None;
     for attr in attrs {
@@ -329,32 +329,32 @@ mod tests {
         init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
-        let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
-        let mut pulObjectCount: cryptoki_sys::CK_ULONG = 0;
+        let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
+        let mut object_count: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_FindObjects(0, &mut phObject, 1, &mut pulObjectCount);
+        let rv = C_FindObjects(0, &mut object, 1, &mut object_count);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
     }
 
     #[test]
     fn test_find_objects_null_object() {
         init_for_tests();
-        let mut pulObjectCount: cryptoki_sys::CK_ULONG = 0;
+        let mut object_count: cryptoki_sys::CK_ULONG = 0;
 
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
-        let rv = C_FindObjects(session, std::ptr::null_mut(), 1, &mut pulObjectCount);
+        let rv = C_FindObjects(session, std::ptr::null_mut(), 1, &mut object_count);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_find_objects_null_object_count() {
         init_for_tests();
-        let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
+        let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
-        let rv = C_FindObjects(session, &mut phObject, 1, std::ptr::null_mut());
+        let rv = C_FindObjects(session, &mut object, 1, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
@@ -403,9 +403,9 @@ mod tests {
         init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
-        let mut pulSize: cryptoki_sys::CK_ULONG = 0;
+        let mut size: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_GetObjectSize(0, 0, &mut pulSize);
+        let rv = C_GetObjectSize(0, 0, &mut size);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
     }
 
@@ -423,9 +423,9 @@ mod tests {
         init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
-        let mut pulSize: cryptoki_sys::CK_ULONG = 0;
+        let mut size: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_GetObjectSize(session, 0, &mut pulSize);
+        let rv = C_GetObjectSize(session, 0, &mut size);
         assert_eq!(rv, cryptoki_sys::CKR_OBJECT_HANDLE_INVALID);
     }
 
@@ -457,11 +457,11 @@ mod tests {
             .unwrap()
             .set_session(session_handle, session);
 
-        let mut pulSize: cryptoki_sys::CK_ULONG = 0;
+        let mut object_size: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_GetObjectSize(session_handle, object_handle, &mut pulSize);
+        let rv = C_GetObjectSize(session_handle, object_handle, &mut object_size);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
-        assert_eq!(pulSize, size as CK_ULONG);
+        assert_eq!(object_size, size as CK_ULONG);
     }
 
     #[test]
@@ -469,9 +469,9 @@ mod tests {
         init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
         let mut template = vec![];
-        let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
+        let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
-        let rv = C_CreateObject(0, template.as_mut_ptr(), 0, &mut phObject);
+        let rv = C_CreateObject(0, template.as_mut_ptr(), 0, &mut object);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
     }
 
@@ -491,9 +491,9 @@ mod tests {
         init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
-        let mut phObject: cryptoki_sys::CK_OBJECT_HANDLE = 0;
+        let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
-        let rv = C_CreateObject(session, std::ptr::null_mut(), 0, &mut phObject);
+        let rv = C_CreateObject(session, std::ptr::null_mut(), 0, &mut object);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 

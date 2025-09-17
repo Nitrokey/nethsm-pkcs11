@@ -12,9 +12,9 @@ api_function!(
 );
 
 fn verify_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -29,11 +29,11 @@ api_function!(
 );
 
 fn verify(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pData: cryptoki_sys::CK_BYTE_PTR,
-    ulDataLen: cryptoki_sys::CK_ULONG,
-    pSignature: cryptoki_sys::CK_BYTE_PTR,
-    ulSignatureLen: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len: cryptoki_sys::CK_ULONG,
+    signature_ptr: cryptoki_sys::CK_BYTE_PTR,
+    signature_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -46,9 +46,9 @@ api_function!(
 );
 
 fn verify_update(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pPart: cryptoki_sys::CK_BYTE_PTR,
-    ulPartLen: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -61,9 +61,9 @@ api_function!(
 );
 
 fn verify_final(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pSignature: cryptoki_sys::CK_BYTE_PTR,
-    ulSignatureLen: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    signature_ptr: cryptoki_sys::CK_BYTE_PTR,
+    signature_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -76,9 +76,9 @@ api_function!(
 );
 
 fn verify_recover_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -93,11 +93,11 @@ api_function!(
 );
 
 fn verify_recover(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pSignature: cryptoki_sys::CK_BYTE_PTR,
-    ulSignatureLen: cryptoki_sys::CK_ULONG,
-    pData: cryptoki_sys::CK_BYTE_PTR,
-    pulDataLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    signature_ptr: cryptoki_sys::CK_BYTE_PTR,
+    signature_len: cryptoki_sys::CK_ULONG,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

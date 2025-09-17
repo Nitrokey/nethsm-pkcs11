@@ -18,24 +18,24 @@ api_function!(
 );
 
 fn sign_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pMechanism: *mut cryptoki_sys::CK_MECHANISM,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    mechanism_ptr: *mut cryptoki_sys::CK_MECHANISM,
+    key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
-    trace!("C_SignInit() called with hKey {hKey} and session {hSession}");
+    trace!("C_SignInit() called with hKey {key} and session {session}");
 
     let raw_mech =
-        unsafe { CkRawMechanism::from_raw_ptr(pMechanism) }.ok_or(Pkcs11Error::ArgumentsBad)?;
+        unsafe { CkRawMechanism::from_raw_ptr(mechanism_ptr) }.ok_or(Pkcs11Error::ArgumentsBad)?;
 
     let mech = Mechanism::from_ckraw_mech(&raw_mech).map_err(|e| {
         error!("C_SignInit() failed to convert mechanism: {e}");
         Pkcs11Error::MechanismInvalid
     })?;
 
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    session.sign_init(&mech, hKey).map_err(From::from)
+    session.sign_init(&mech, key).map_err(From::from)
 }
 
 api_function!(
@@ -48,37 +48,37 @@ api_function!(
 );
 
 fn sign(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pData: *mut cryptoki_sys::CK_BYTE,
-    ulDataLen: cryptoki_sys::CK_ULONG,
-    pSignature: *mut cryptoki_sys::CK_BYTE,
-    pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    data_ptr: *mut cryptoki_sys::CK_BYTE,
+    data_len: cryptoki_sys::CK_ULONG,
+    signature_ptr: *mut cryptoki_sys::CK_BYTE,
+    signature_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    trace!("pData null {}", pData.is_null());
-    trace!("pulSignatureLen null {}", pulSignatureLen.is_null());
+    trace!("pData null {}", data_ptr.is_null());
+    trace!("pulSignatureLen null {}", signature_len_ptr.is_null());
 
-    if pData.is_null() || pulSignatureLen.is_null() {
+    if data_ptr.is_null() || signature_len_ptr.is_null() {
         trace!("aborting sign due to null");
         session.sign_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let data = unsafe { std::slice::from_raw_parts(pData, ulDataLen as usize) };
+    let data = unsafe { std::slice::from_raw_parts(data_ptr, data_len as usize) };
 
-    let buffer_size = unsafe { *pulSignatureLen } as usize;
+    let buffer_size = unsafe { *signature_len_ptr } as usize;
 
     let theoretical_size = session
         .sign_theoretical_size()
         .inspect_err(|_| session.sign_clear())?;
 
     unsafe {
-        std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
+        std::ptr::write(signature_len_ptr, theoretical_size as CK_ULONG);
     }
 
-    if pSignature.is_null() {
+    if signature_ptr.is_null() {
         trace!("sending only the size");
         // only the size was requested
         return Ok(());
@@ -91,7 +91,7 @@ fn sign(
 
     let signature = session.sign(data).inspect_err(|_| session.sign_clear())?;
     unsafe {
-        std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
+        std::ptr::write(signature_len_ptr, signature.len() as CK_ULONG);
     }
 
     // double check the buffer size
@@ -101,7 +101,7 @@ fn sign(
     }
 
     unsafe {
-        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
+        std::ptr::copy_nonoverlapping(signature.as_ptr(), signature_ptr, signature.len());
     }
 
     session.sign_clear();
@@ -117,19 +117,19 @@ api_function!(
 );
 
 fn sign_update(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pPart: *mut cryptoki_sys::CK_BYTE,
-    ulPartLen: cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    part_ptr: *mut cryptoki_sys::CK_BYTE,
+    part_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    if pPart.is_null() {
+    if part_ptr.is_null() {
         session.sign_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let part = unsafe { std::slice::from_raw_parts(pPart, ulPartLen as usize) };
+    let part = unsafe { std::slice::from_raw_parts(part_ptr, part_len as usize) };
 
     session.sign_update(part).map_err(|err| {
         session.sign_clear();
@@ -145,29 +145,29 @@ api_function!(
 );
 
 fn sign_final(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pSignature: *mut cryptoki_sys::CK_BYTE,
-    pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    signature_ptr: *mut cryptoki_sys::CK_BYTE,
+    signature_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
-    let session = data::get_session(hSession)?;
+    let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
-    if pulSignatureLen.is_null() {
+    if signature_len_ptr.is_null() {
         session.sign_clear();
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
-    let buffer_size = unsafe { *pulSignatureLen } as usize;
+    let buffer_size = unsafe { *signature_len_ptr } as usize;
 
     let theoretical_size = session
         .sign_theoretical_size()
         .inspect_err(|_| session.sign_clear())?;
 
     unsafe {
-        std::ptr::write(pulSignatureLen, theoretical_size as CK_ULONG);
+        std::ptr::write(signature_len_ptr, theoretical_size as CK_ULONG);
     }
 
-    if pSignature.is_null() {
+    if signature_ptr.is_null() {
         // only the size was requested
         return Ok(());
     }
@@ -179,7 +179,7 @@ fn sign_final(
     let signature = session.sign_final().inspect_err(|_| session.sign_clear())?;
 
     unsafe {
-        std::ptr::write(pulSignatureLen, signature.len() as CK_ULONG);
+        std::ptr::write(signature_len_ptr, signature.len() as CK_ULONG);
     }
 
     // double check the buffer size
@@ -189,7 +189,7 @@ fn sign_final(
     }
 
     unsafe {
-        std::ptr::copy_nonoverlapping(signature.as_ptr(), pSignature, signature.len());
+        std::ptr::copy_nonoverlapping(signature.as_ptr(), signature_ptr, signature.len());
     }
     session.sign_clear();
 
@@ -204,9 +204,9 @@ api_function!(
 );
 
 fn sign_recover_init(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -221,11 +221,11 @@ api_function!(
 );
 
 fn sign_recover(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pData: cryptoki_sys::CK_BYTE_PTR,
-    ulDataLen: cryptoki_sys::CK_ULONG,
-    pSignature: cryptoki_sys::CK_BYTE_PTR,
-    pulSignatureLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len: cryptoki_sys::CK_ULONG,
+    signature_ptr: cryptoki_sys::CK_BYTE_PTR,
+    signature_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -240,11 +240,11 @@ api_function!(
 );
 
 fn sign_encrypt_update(
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    pPart: cryptoki_sys::CK_BYTE_PTR,
-    ulPartLen: cryptoki_sys::CK_ULONG,
-    pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
-    pulEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
+    session: cryptoki_sys::CK_SESSION_HANDLE,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len: cryptoki_sys::CK_ULONG,
+    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
