@@ -114,7 +114,7 @@ fn decrypt_update(
     session: cryptoki_sys::CK_SESSION_HANDLE,
     encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     encrypted_part_len: cryptoki_sys::CK_ULONG,
-    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
     part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
@@ -208,11 +208,11 @@ api_function!(
 );
 
 fn decrypt_verify_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    encrypted_part_len: cryptoki_sys::CK_ULONG,
-    part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _encrypted_part_len: cryptoki_sys::CK_ULONG,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

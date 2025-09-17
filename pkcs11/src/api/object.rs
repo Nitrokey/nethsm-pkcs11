@@ -200,11 +200,11 @@ api_function!(
 );
 
 fn copy_object(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
-    template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
-    count: cryptoki_sys::CK_ULONG,
-    new_object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _object: cryptoki_sys::CK_OBJECT_HANDLE,
+    _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
+    _count: cryptoki_sys::CK_ULONG,
+    _new_object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::ActionProhibited)
 }

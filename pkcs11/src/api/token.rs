@@ -29,7 +29,7 @@ api_function!(
 );
 
 fn get_slot_list(
-    token_present: cryptoki_sys::CK_BBOOL,
+    _token_present: cryptoki_sys::CK_BBOOL,
     slot_list_ptr: cryptoki_sys::CK_SLOT_ID_PTR,
     count_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
@@ -62,7 +62,7 @@ fn get_slot_list(
         .slots
         .iter()
         .enumerate()
-        .map(|(i, client)| i as CK_SLOT_ID)
+        .map(|(i, _)| i as CK_SLOT_ID)
         .collect();
 
     unsafe {
@@ -237,10 +237,10 @@ api_function!(
 );
 
 fn init_token(
-    slot_id: cryptoki_sys::CK_SLOT_ID,
-    pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
-    pin_len: cryptoki_sys::CK_ULONG,
-    label_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
+    _slot_id: cryptoki_sys::CK_SLOT_ID,
+    _pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
+    _pin_len: cryptoki_sys::CK_ULONG,
+    _label_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -382,7 +382,7 @@ api_function!(
 fn wait_for_slot_event(
     flags: cryptoki_sys::CK_FLAGS,
     slot_ptr: cryptoki_sys::CK_SLOT_ID_PTR,
-    reserved_ptr: cryptoki_sys::CK_VOID_PTR,
+    _reserved_ptr: cryptoki_sys::CK_VOID_PTR,
 ) -> Result<(), Pkcs11Error> {
     if slot_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);

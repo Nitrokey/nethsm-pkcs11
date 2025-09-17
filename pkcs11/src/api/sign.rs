@@ -204,9 +204,9 @@ api_function!(
 );
 
 fn sign_recover_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
+    _key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -221,11 +221,11 @@ api_function!(
 );
 
 fn sign_recover(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    data_ptr: cryptoki_sys::CK_BYTE_PTR,
-    data_len: cryptoki_sys::CK_ULONG,
-    signature_ptr: cryptoki_sys::CK_BYTE_PTR,
-    signature_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _data_len: cryptoki_sys::CK_ULONG,
+    _signature_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _signature_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -240,11 +240,11 @@ api_function!(
 );
 
 fn sign_encrypt_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    part_len: cryptoki_sys::CK_ULONG,
-    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
-    encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _part_len: cryptoki_sys::CK_ULONG,
+    _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    _encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

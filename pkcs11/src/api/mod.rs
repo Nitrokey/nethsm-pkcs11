@@ -1,6 +1,3 @@
-// for now we allow unused variables, but we should remove this when we have implemented all the functions we need
-#![allow(unused_variables)]
-
 pub mod decrypt;
 pub mod digest;
 pub mod encrypt;
