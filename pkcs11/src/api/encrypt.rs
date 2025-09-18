@@ -6,6 +6,7 @@ use crate::{
     backend::{
         encrypt::ENCRYPT_BLOCK_SIZE,
         mechanism::{CkRawMechanism, Mechanism},
+        session::Session,
         Pkcs11Error,
     },
     data,
@@ -55,9 +56,34 @@ fn encrypt(
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = encrypt_impl(
+        &mut session,
+        data_ptr,
+        data_len,
+        encrypted_data_ptr,
+        encrypted_data_len_ptr,
+    );
 
-    if data_ptr.is_null() || encrypted_data_len_ptr.is_null() {
+    // A call to C_Encrypt always terminates the active encryption operation unless it returns
+    // CKR_BUFFER_TOO_SMALL or is a successful call (i.e., one which returns CKR_OK) to determine
+    // the length of the buffer needed to hold the ciphertext.
+    let is_buffer_too_small = result == Err(Pkcs11Error::BufferTooSmall);
+    let is_buffer_size_query = result.is_ok() && encrypted_data_ptr.is_null();
+    if !(is_buffer_too_small || is_buffer_size_query) {
         session.encrypt_clear();
+    }
+
+    result
+}
+
+fn encrypt_impl(
+    session: &mut Session,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len: cryptoki_sys::CK_ULONG,
+    encrypted_data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_data_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    if data_ptr.is_null() || encrypted_data_len_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -82,9 +108,7 @@ fn encrypt(
         return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = session
-        .encrypt(data)
-        .inspect_err(|_| session.encrypt_clear())?;
+    let encrypted_data = session.encrypt(data)?;
 
     unsafe {
         std::ptr::write(encrypted_data_len_ptr, encrypted_data.len() as CK_ULONG);
@@ -104,7 +128,6 @@ fn encrypt(
         );
     }
 
-    session.encrypt_clear();
     Ok(())
 }
 
@@ -126,13 +149,35 @@ fn encrypt_update(
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = encrypt_update_impl(
+        &mut session,
+        part_ptr,
+        part_len,
+        encrypted_part_ptr,
+        encrypted_part_len_ptr,
+    );
 
-    if part_ptr.is_null() || encrypted_part_len_ptr.is_null() {
+    // A call to C_EncryptUpdate which results in an error other than CKR_BUFFER_TOO_SMALL
+    // terminates the current encryption operation.
+    if result.is_err() && result != Err(Pkcs11Error::BufferTooSmall) {
         session.encrypt_clear();
-        return Err(Pkcs11Error::ArgumentsBad);
     }
 
+    result
+}
+
+fn encrypt_update_impl(
+    session: &mut Session,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len: cryptoki_sys::CK_ULONG,
+    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
     trace!("C_EncryptUpdate() called with {part_len} bytes");
+
+    if part_ptr.is_null() || encrypted_part_len_ptr.is_null() {
+        return Err(Pkcs11Error::ArgumentsBad);
+    }
 
     let data = unsafe { std::slice::from_raw_parts(part_ptr, part_len as usize) };
 
@@ -153,9 +198,7 @@ fn encrypt_update(
         return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = session
-        .encrypt_update(data)
-        .inspect_err(|_| session.encrypt_clear())?;
+    let encrypted_data = session.encrypt_update(data)?;
 
     unsafe {
         std::ptr::write(encrypted_part_len_ptr, encrypted_data.len() as CK_ULONG);
@@ -190,9 +233,30 @@ fn encrypt_final(
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = encrypt_final_impl(
+        &mut session,
+        last_encrypted_part_ptr,
+        last_encrypted_part_len_ptr,
+    );
 
-    if last_encrypted_part_len_ptr.is_null() {
+    // A call to C_EncryptFinal always terminates the active encryption operation unless it returns
+    // CKR_BUFFER_TOO_SMALL or is a successful call (i.e., one which returns CKR_OK) to determine
+    // the length of the buffer needed to hold the ciphertext.
+    let is_buffer_too_small = result == Err(Pkcs11Error::BufferTooSmall);
+    let is_buffer_size_query = result.is_ok() && last_encrypted_part_ptr.is_null();
+    if !(is_buffer_too_small || is_buffer_size_query) {
         session.encrypt_clear();
+    }
+
+    result
+}
+
+fn encrypt_final_impl(
+    session: &mut Session,
+    last_encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    last_encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    if last_encrypted_part_len_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -207,17 +271,13 @@ fn encrypt_final(
         return Ok(());
     }
 
-    let size = session
-        .encrypt_get_theoretical_final_size()
-        .inspect_err(|_| session.encrypt_clear())?;
+    let size = session.encrypt_get_theoretical_final_size()?;
 
     if buffer_len < size {
         return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let encrypted_data = session
-        .encrypt_final()
-        .inspect_err(|_| session.encrypt_clear())?;
+    let encrypted_data = session.encrypt_final()?;
 
     unsafe {
         std::ptr::write(
@@ -239,8 +299,6 @@ fn encrypt_final(
             encrypted_data.len(),
         );
     }
-
-    session.encrypt_clear();
 
     Ok(())
 }

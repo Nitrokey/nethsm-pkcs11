@@ -49,7 +49,7 @@ macro_rules! pkcs11_error {
 }
 
 pkcs11_error! {
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, PartialEq)]
     pub enum Pkcs11Error {
         ActionProhibited = cryptoki_sys::CKR_ACTION_PROHIBITED,
         ArgumentsBad = cryptoki_sys::CKR_ARGUMENTS_BAD,
