@@ -5,6 +5,7 @@ use crate::{
     api::api_function,
     backend::{
         mechanism::{CkRawMechanism, Mechanism},
+        session::Session,
         Pkcs11Error,
     },
     data,
@@ -54,9 +55,34 @@ fn decrypt(
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = decrypt_impl(
+        &mut session,
+        encrypted_data_ptr,
+        encrypted_data_len,
+        data_ptr,
+        data_len_ptr,
+    );
 
-    if data_len_ptr.is_null() || encrypted_data_ptr.is_null() {
+    // A call to C_Decrypt always terminates the active decryption operation unless it returns
+    // CKR_BUFFER_TOO_SMALL or is a successful call (i.e., one which returns CKR_OK) to determine
+    // the length of the buffer needed to hold the plaintext.
+    let is_buffer_too_small = result == Err(Pkcs11Error::BufferTooSmall);
+    let is_buffer_size_query = result.is_ok() && data_ptr.is_null();
+    if !(is_buffer_too_small || is_buffer_size_query) {
         session.decrypt_clear();
+    }
+
+    result
+}
+
+fn decrypt_impl(
+    session: &mut Session,
+    encrypted_data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_data_len: cryptoki_sys::CK_ULONG,
+    data_ptr: cryptoki_sys::CK_BYTE_PTR,
+    data_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    if data_len_ptr.is_null() || encrypted_data_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -79,9 +105,7 @@ fn decrypt(
     let data =
         unsafe { std::slice::from_raw_parts(encrypted_data_ptr, encrypted_data_len as usize) };
 
-    let decrypted_data = session
-        .decrypt(data)
-        .inspect_err(|_| session.decrypt_clear())?;
+    let decrypted_data = session.decrypt(data)?;
 
     unsafe {
         std::ptr::write(data_len_ptr, decrypted_data.len() as CK_ULONG);
@@ -95,8 +119,6 @@ fn decrypt(
     unsafe {
         std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), data_ptr, decrypted_data.len());
     }
-
-    session.decrypt_clear();
 
     Ok(())
 }
@@ -114,14 +136,36 @@ fn decrypt_update(
     session: cryptoki_sys::CK_SESSION_HANDLE,
     encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     encrypted_part_len: cryptoki_sys::CK_ULONG,
-    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_ptr: cryptoki_sys::CK_BYTE_PTR,
     part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = decrypt_update_impl(
+        &mut session,
+        encrypted_part_ptr,
+        encrypted_part_len,
+        part_ptr,
+        part_len_ptr,
+    );
 
-    if part_len_ptr.is_null() || encrypted_part_ptr.is_null() {
+    // A call to C_DecryptUpdate which results in an error other than CKR_BUFFER_TOO_SMALL
+    // terminates the current decryption operation.
+    if result.is_err() && result != Err(Pkcs11Error::BufferTooSmall) {
         session.decrypt_clear();
+    }
+
+    result
+}
+
+fn decrypt_update_impl(
+    session: &mut Session,
+    encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    encrypted_part_len: cryptoki_sys::CK_ULONG,
+    _part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    if part_len_ptr.is_null() || encrypted_part_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
@@ -132,10 +176,7 @@ fn decrypt_update(
     unsafe {
         std::ptr::write(part_len_ptr, 0 as CK_ULONG);
     }
-    session.decrypt_update(data).map_err(|err| {
-        session.decrypt_clear();
-        err.into()
-    })
+    session.decrypt_update(data).map_err(From::from)
 }
 
 api_function!(
@@ -152,17 +193,32 @@ fn decrypt_final(
 ) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
+    let result = decrypt_final_impl(&mut session, last_part_ptr, last_part_len_ptr);
 
-    if last_part_len_ptr.is_null() {
+    // A call to C_DecryptFinal always terminates the active decryption operation unless it returns
+    // CKR_BUFFER_TOO_SMALL or is a successful call (i.e., one which returns CKR_OK) to determine
+    // the length of the buffer needed to hold the plaintext.
+    let is_buffer_too_small = result == Err(Pkcs11Error::BufferTooSmall);
+    let is_buffer_size_query = result.is_ok() && last_part_ptr.is_null();
+    if !(is_buffer_too_small || is_buffer_size_query) {
         session.decrypt_clear();
+    }
+
+    result
+}
+
+fn decrypt_final_impl(
+    session: &mut Session,
+    last_part_ptr: cryptoki_sys::CK_BYTE_PTR,
+    last_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
+) -> Result<(), Pkcs11Error> {
+    if last_part_len_ptr.is_null() {
         return Err(Pkcs11Error::ArgumentsBad);
     }
 
     let buffer_size = unsafe { *last_part_len_ptr } as usize;
 
-    let theoretical_size = session
-        .decrypt_theoretical_final_size()
-        .inspect_err(|_| session.decrypt_clear())?;
+    let theoretical_size = session.decrypt_theoretical_final_size()?;
 
     unsafe {
         std::ptr::write(last_part_len_ptr, theoretical_size as CK_ULONG);
@@ -176,9 +232,7 @@ fn decrypt_final(
         return Err(Pkcs11Error::BufferTooSmall);
     }
 
-    let decrypted_data = session
-        .decrypt_final()
-        .inspect_err(|_| session.decrypt_clear())?;
+    let decrypted_data = session.decrypt_final()?;
 
     unsafe {
         std::ptr::write(last_part_len_ptr, decrypted_data.len() as CK_ULONG);
@@ -192,8 +246,6 @@ fn decrypt_final(
     unsafe {
         std::ptr::copy_nonoverlapping(decrypted_data.as_ptr(), last_part_ptr, decrypted_data.len());
     }
-
-    session.decrypt_clear();
 
     Ok(())
 }
