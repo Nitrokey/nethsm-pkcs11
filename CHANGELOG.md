@@ -6,6 +6,13 @@
 
 - Reject invalid IDs when creating or changing objects
 
+## Bugfixes
+
+- Fix ID validation. The new requirements are:
+  - The ID must not be empty and not be longer than 128 characters.
+  - The first character must be in the range `a`-`z`, `A-Z` or `0`-`9`.
+  - The remaining characters must be in the range `a`-`z`, `A-Z` or `0`-`9` or one of the characters `.`, `-`, `_`.
+
 ## [2.0.0-rc.1][] (2025-09-16)
 
 ### Breaking Changes

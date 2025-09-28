@@ -26,12 +26,32 @@ pub struct Id(String);
 
 impl Id {
     pub fn new(s: String) -> Result<Self, InvalidIdError> {
-        if s.chars().all(|c| c.is_alphanumeric()) {
-            Ok(Self(s))
-        } else {
-            warn!("ID '{s}' is invalid: only alphanumeric characters are allowed");
-            Err(InvalidIdError)
+        // See https://github.com/Nitrokey/nethsm/blob/60b9b2c0caa609f53e50870451731c5803c4b724/src/keyfender/json.ml#L459-L472
+        const ALLOWED_CHARS: &[u8] = b"-_.";
+        const MAX_LEN: usize = 128;
+        if s.len() > MAX_LEN {
+            warn!(
+                "ID '{s}' is invalid: length is {} bytes (maximum: {MAX_LEN} bytes)",
+                s.len(),
+            );
+            return Err(InvalidIdError);
         }
+        let (first, rest) = s.as_bytes().split_first().ok_or_else(|| {
+            warn!("Empty IDs are invalid");
+            InvalidIdError
+        })?;
+        if !first.is_ascii_alphanumeric() {
+            warn!("ID '{s}' is invalid: first character must be alphanumeric");
+            return Err(InvalidIdError);
+        }
+        if let Some(c) = rest
+            .iter()
+            .find(|c| !c.is_ascii_alphanumeric() && !ALLOWED_CHARS.contains(c))
+        {
+            warn!("ID '{s}' is invalid: invalid character '{c}'");
+            return Err(InvalidIdError);
+        }
+        Ok(Self(s))
     }
 }
 
@@ -631,8 +651,7 @@ mod tests {
 
     #[test]
     fn test_id_valid() {
-        // not all of these are actually valid, but our logic does not match the NetHSM logic yet
-        let valid_ids = ["", "keyID", "mykeyid", "schlüssel", "¾藏"];
+        let valid_ids = ["keyID", "mykeyid", "test-key", "test_key", "test.key"];
         for id in valid_ids {
             assert_eq!(Id::new(id.to_owned()), Ok(Id(id.to_owned())));
         }
@@ -640,9 +659,16 @@ mod tests {
 
     #[test]
     fn test_id_invalid() {
-        // not all of these are actually invalid, but our logic does not match the NetHSM logic yet
         let invalid_ids = [
-            "test-key", "test_key", "test.key", "&*&*&*", "-key", ".key", "--",
+            "",
+            "&*&*&*",
+            "-key",
+            ".key",
+            "_key",
+            "--",
+            "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890",
+            "schlüssel",
+            "¾藏",
         ];
         for id in invalid_ids {
             assert_eq!(
