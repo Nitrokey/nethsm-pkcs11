@@ -21,6 +21,56 @@ use nethsm_sdk_rs::{
     models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType, PrivateKey},
 };
 
+#[derive(Debug, PartialEq)]
+pub struct Id(String);
+
+impl Id {
+    pub fn new(s: String) -> Result<Self, InvalidIdError> {
+        if s.chars().all(|c| c.is_alphanumeric()) {
+            Ok(Self(s))
+        } else {
+            warn!("ID '{s}' is invalid: only alphanumeric characters are allowed");
+            Err(InvalidIdError)
+        }
+    }
+}
+
+impl AsRef<str> for Id {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<Id> for String {
+    fn from(id: Id) -> String {
+        id.0
+    }
+}
+
+impl TryFrom<String> for Id {
+    type Error = InvalidIdError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::new(s)
+    }
+}
+
+impl TryFrom<Vec<u8>> for Id {
+    type Error = InvalidIdError;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        String::from_utf8(bytes)
+            .map_err(|err| {
+                warn!("ID {:?} is invalid: not a UTF-8 string", err.into_bytes());
+                InvalidIdError
+            })
+            .and_then(Id::try_from)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct InvalidIdError;
+
 #[derive(Debug, Default)]
 pub struct ParsedAttributes {
     pub id: Option<String>,
@@ -36,7 +86,6 @@ pub struct ParsedAttributes {
     pub prime_q: Option<Vec<u8>>,
     pub value_len: Option<CK_ULONG>,
     pub modulus_bits: Option<CK_ULONG>,
-    pub raw_id: Option<Vec<u8>>,
 }
 
 pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes, Error> {
@@ -61,32 +110,19 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             },
             CKA_ID => {
                 if let Some(bytes) = attr.val_bytes() {
-                    let str_result = String::from_utf8(bytes.to_vec());
-                    let mut output = None;
-                    if let Ok(str) = str_result {
-                        // check if the string contains only alphanumeric characters
-                        if str.chars().all(|c| c.is_alphanumeric()) {
-                            output = Some(str);
-                        }
-                    }
-
-                    if output.is_none() {
-                        // store as hex value string
-                        output = Some(hex::encode(bytes));
-                        parsed.raw_id = Some(bytes.to_vec());
-                    }
-                    parsed.id = output;
+                    let id = Id::try_from(bytes.to_owned())
+                        .map_err(|_| Error::InvalidAttribute(CKA_ID))?;
+                    parsed.id = Some(id.0);
                 }
             }
             CKA_LABEL => {
-                let label = attr
-                    .val_bytes()
-                    .map(|val| String::from_utf8(val.to_vec()))
-                    .transpose()
-                    .map_err(Error::StringParse)?;
-                trace!("label: {label:?}");
-                if parsed.id.is_none() {
-                    parsed.id = label;
+                if let Some(bytes) = attr.val_bytes() {
+                    let id = Id::try_from(bytes.to_owned())
+                        .map_err(|_| Error::InvalidAttribute(CKA_LABEL))?;
+                    trace!("label: {id:?}");
+                    if parsed.id.is_none() {
+                        parsed.id = Some(id.0);
+                    }
                 }
             }
 
@@ -153,7 +189,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
     login_ctx: &LoginCtx,
-) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
+) -> Result<(String, ObjectKind), Error> {
     let cert = parsed_template
         .value
         .as_ref()
@@ -182,13 +218,13 @@ fn upload_certificate(
         login::UserMode::Administrator,
     )?;
 
-    Ok((id, ObjectKind::Certificate, parsed_template.raw_id.clone()))
+    Ok((id, ObjectKind::Certificate))
 }
 
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     login_ctx: &LoginCtx,
-) -> Result<(String, ObjectKind, Option<Vec<u8>>), Error> {
+) -> Result<(String, ObjectKind), Error> {
     let parsed = parse_attributes(&template)?;
 
     debug!("key_class: {:?}", parsed.key_class);
@@ -350,7 +386,7 @@ pub fn create_key_from_template(
         }
     }?;
 
-    Ok((id, key_class, parsed.raw_id))
+    Ok((id, key_class))
 }
 
 const KEYTYPE_EC_P256: ObjectIdentifier = der::oid::db::rfc5912::SECP_256_R_1;
@@ -467,14 +503,10 @@ pub fn generate_key_from_template(
 
     let id = extract_key_id_location_header(id.headers)?;
 
-    fetch_key(&id, parsed.raw_id, login_ctx, db)
+    fetch_key(&id, login_ctx, db)
 }
 
-fn fetch_one_key(
-    key_id: &str,
-    raw_id: Option<Vec<u8>>,
-    login_ctx: &LoginCtx,
-) -> Result<Vec<Object>, Error> {
+fn fetch_one_key(key_id: &str, login_ctx: &LoginCtx) -> Result<Vec<Object>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -501,30 +533,24 @@ fn fetch_one_key(
         }
     };
 
-    let objects = db::object::from_key_data(key_data, key_id, raw_id)?;
+    let objects = db::object::from_key_data(key_data, key_id)?;
 
     Ok(objects)
 }
 
-// we need the raw id when the CKA_KEY_ID doesn't parse to an alphanumeric string
 pub fn fetch_key(
     key_id: &str,
-    raw_id: Option<Vec<u8>>,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
-    let objects = fetch_one_key(key_id, raw_id, login_ctx)?;
+    let objects = fetch_one_key(key_id, login_ctx)?;
 
     let mut db = db.lock()?;
 
     Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
 }
 
-fn fetch_one_certificate(
-    key_id: &str,
-    raw_id: Option<Vec<u8>>,
-    login_ctx: &LoginCtx,
-) -> Result<Object, Error> {
+fn fetch_one_certificate(key_id: &str, login_ctx: &LoginCtx) -> Result<Object, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -539,7 +565,6 @@ fn fetch_one_certificate(
     let object = db::object::from_cert_data(
         cert_data.entity,
         key_id,
-        raw_id,
         login_ctx.slot().certificate_format,
     )?;
 
@@ -548,11 +573,10 @@ fn fetch_one_certificate(
 
 pub fn fetch_certificate(
     key_id: &str,
-    raw_id: Option<Vec<u8>>,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<(CK_OBJECT_HANDLE, Object), Error> {
-    let object = fetch_one_certificate(key_id, raw_id, login_ctx)?;
+    let object = fetch_one_certificate(key_id, login_ctx)?;
     let r = db.lock()?.add_object(object);
 
     Ok(r)
@@ -587,11 +611,11 @@ pub fn fetch_one(
             | Some(ObjectKind::PublicKey)
             | Some(ObjectKind::SecretKey)
     ) {
-        acc = fetch_one_key(&key.id, None, login_ctx)?;
+        acc = fetch_one_key(&key.id, login_ctx)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
-        match fetch_one_certificate(&key.id, None, login_ctx) {
+        match fetch_one_certificate(&key.id, login_ctx) {
             Ok(cert) => acc.push(cert),
             Err(err) => {
                 debug!("Failed to fetch certificate: {err:?}");
@@ -599,4 +623,33 @@ pub fn fetch_one(
         }
     }
     Ok(acc)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Id, InvalidIdError};
+
+    #[test]
+    fn test_id_valid() {
+        // not all of these are actually valid, but our logic does not match the NetHSM logic yet
+        let valid_ids = ["", "keyID", "mykeyid", "schlüssel", "¾藏"];
+        for id in valid_ids {
+            assert_eq!(Id::new(id.to_owned()), Ok(Id(id.to_owned())));
+        }
+    }
+
+    #[test]
+    fn test_id_invalid() {
+        // not all of these are actually invalid, but our logic does not match the NetHSM logic yet
+        let invalid_ids = [
+            "test-key", "test_key", "test.key", "&*&*&*", "-key", ".key", "--",
+        ];
+        for id in invalid_ids {
+            assert_eq!(
+                Id::new(id.to_owned()),
+                Err(InvalidIdError),
+                "'{id}' should be rejected"
+            );
+        }
+    }
 }

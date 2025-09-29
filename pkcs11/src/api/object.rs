@@ -1,11 +1,11 @@
-use std::{slice, str};
+use std::slice;
 
 use cryptoki_sys::CK_ULONG;
 use log::{error, info, trace};
 
 use crate::{
     api::api_function,
-    backend::{db::attr::CkRawAttrTemplate, Pkcs11Error},
+    backend::{db::attr::CkRawAttrTemplate, key::Id, Pkcs11Error},
     data,
 };
 
@@ -288,17 +288,15 @@ fn set_attribute_value(
     // We already checked before that there is at least one attribute. As CKA_ID is the only
     // attribute we support, id cannot be None.
     let id = id.ok_or(Pkcs11Error::ArgumentsBad)?;
-    let id = str::from_utf8(id).map_err(|_| {
-        error!("CKA_ID value is not a valid UTF-8 string in C_SetAttributeValue");
+    let id = Id::try_from(id.to_owned()).map_err(|_| {
+        error!("CKA_ID value is not a valid NetHSM ID: {id:?}");
         Pkcs11Error::AttributeValueInvalid
     })?;
-    if !id.chars().all(char::is_alphanumeric) {
-        error!("CKA_ID value is not an alphanumeric string in C_SetAttributeValue");
-        return Err(Pkcs11Error::AttributeValueInvalid);
-    }
 
-    info!("Changing ID to: {id}");
-    session.rename_objects(&object.id, id).map_err(From::from)
+    info!("Changing ID to: {}", id.as_ref());
+    session
+        .rename_objects(&object.id, id.as_ref())
+        .map_err(From::from)
 }
 
 #[cfg(test)]
