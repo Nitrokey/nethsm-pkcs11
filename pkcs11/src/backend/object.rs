@@ -1,11 +1,12 @@
 use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 
 use super::{
     db::{
         attr::{CkRawAttr, CkRawAttrTemplate},
         object::ObjectKind,
     },
+    key::Id,
     session::Session,
     Error,
 };
@@ -21,7 +22,7 @@ pub struct EnumCtx {
 pub struct KeyRequirements {
     pub kind: Option<ObjectKind>,
     pub id: Option<String>,
-    pub raw_id: Option<Vec<u8>>,
+    pub invalid_id: bool,
 }
 
 fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
@@ -29,7 +30,7 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
         Some(template) => {
             let mut key_id = None;
             let mut kind = None;
-            let mut raw_id = None;
+            let mut invalid_id = false;
             for attr in template.iter() {
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
@@ -39,21 +40,12 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
 
                 if attr.type_() == CKA_ID {
                     if let Some(bytes) = attr.val_bytes() {
-                        let str_result = String::from_utf8(bytes.to_vec());
-                        let mut output = None;
-                        if let Ok(str) = str_result {
-                            // check if the string contains only alphanumeric characters
-                            if str.chars().all(|c| c.is_alphanumeric()) {
-                                output = Some(str);
-                            }
+                        if let Ok(id) = Id::try_from(bytes.to_owned()) {
+                            key_id = Some(id.into());
+                        } else {
+                            warn!("Invalid ID in key requirements");
+                            invalid_id = true;
                         }
-
-                        if output.is_none() {
-                            // store as hex value string
-                            output = Some(hex::encode(bytes));
-                            raw_id = Some(bytes.to_vec());
-                        }
-                        key_id = output;
                     }
                 }
                 if attr.type_() == CKA_LABEL && key_id.is_none() {
@@ -63,13 +55,13 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
             Ok(KeyRequirements {
                 kind,
                 id: key_id,
-                raw_id,
+                invalid_id,
             })
         }
         None => Ok(KeyRequirements {
             kind: None,
             id: None,
-            raw_id: None,
+            invalid_id: false,
         }),
     }
 }
@@ -88,7 +80,12 @@ impl EnumCtx {
     ) -> Result<Self, Error> {
         let key_req = parse_key_requirements(template)?;
 
-        let handles = session.find_key(key_req)?;
+        // Elements with a non-compliant ID are no longer supported
+        let handles = if key_req.invalid_id {
+            vec![]
+        } else {
+            session.find_key(key_req.id.as_deref(), key_req.kind)?
+        };
         Ok(EnumCtx::new(handles))
     }
 
@@ -124,7 +121,7 @@ mod tests {
 
         assert_eq!(res.kind, None);
         assert_eq!(res.id, None);
-        assert_eq!(res.raw_id, None);
+        assert!(!res.invalid_id);
 
         Ok(())
     }
@@ -147,8 +144,8 @@ mod tests {
         let res = parse_key_requirements(template)?;
 
         assert_eq!(res.kind, None);
-        assert_eq!(res.id, Some("00ff00ff".to_string()));
-        assert_eq!(res.raw_id, Some(vec![0x00, 0xFF, 0x00, 0xFF]));
+        assert_eq!(res.id, None);
+        assert!(res.invalid_id);
 
         Ok(())
     }
@@ -172,7 +169,7 @@ mod tests {
 
         assert_eq!(res.kind, None);
         assert_eq!(res.id, Some("test".to_string()));
-        assert_eq!(res.raw_id, None);
+        assert!(!res.invalid_id);
 
         Ok(())
     }

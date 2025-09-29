@@ -23,7 +23,7 @@ use super::{
     key::{create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template},
     login::LoginCtx,
     mechanism::Mechanism,
-    object::{EnumCtx, KeyRequirements},
+    object::EnumCtx,
     sign::SignCtx,
 };
 
@@ -422,17 +422,17 @@ impl Session {
 
     pub(super) fn find_key(
         &mut self,
-        requirements: KeyRequirements,
+        id: Option<&str>,
+        kind: Option<ObjectKind>,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
-        let result = match requirements.id {
+        let result = match id {
             Some(key_id) => {
                 // try to search in the db first
                 let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
                     let db = self.db.0.lock()?;
                     db.iter()
                         .filter(|(_, obj)| {
-                            obj.id == key_id
-                                && requirements.kind.map(|k| k == obj.kind).unwrap_or(true)
+                            obj.id == key_id && kind.map(|k| k == obj.kind).unwrap_or(true)
                         })
                         .map(|(handle, obj)| (handle, obj.clone()))
                         .collect()
@@ -441,29 +441,19 @@ impl Session {
                 // then try to fetch from the server
                 if results.is_empty() {
                     if matches!(
-                        requirements.kind,
+                        kind,
                         None | Some(ObjectKind::Other)
                             | Some(ObjectKind::PrivateKey)
                             | Some(ObjectKind::PublicKey)
                             | Some(ObjectKind::SecretKey)
                     ) {
-                        results = fetch_key(
-                            &key_id,
-                            requirements.raw_id.clone(),
-                            &self.login_ctx,
-                            &self.db.0,
-                        )?;
+                        results = fetch_key(key_id, &self.login_ctx, &self.db.0)?;
                     }
 
-                    if (requirements.kind.is_none() && !results.is_empty())
-                        || matches!(requirements.kind, Some(ObjectKind::Certificate))
+                    if (kind.is_none() && !results.is_empty())
+                        || matches!(kind, Some(ObjectKind::Certificate))
                     {
-                        match fetch_certificate(
-                            &key_id,
-                            requirements.raw_id,
-                            &self.login_ctx,
-                            &self.db.0,
-                        ) {
+                        match fetch_certificate(key_id, &self.login_ctx, &self.db.0) {
                             Ok(cert) => {
                                 trace!("Fetched certificate: {cert:?}");
                                 results.push(cert);
@@ -483,7 +473,7 @@ impl Session {
         Ok(result
             .into_iter()
             .filter(|(_, obj)| {
-                if let Some(kind) = requirements.kind {
+                if let Some(kind) = kind {
                     kind == obj.kind
                 } else {
                     true
@@ -613,11 +603,10 @@ impl Session {
         match key_info.1 {
             ObjectKind::Certificate => Ok(vec![fetch_certificate(
                 &key_info.0,
-                None,
                 &self.login_ctx,
                 &db.0,
             )?]),
-            _ => fetch_key(&key_info.0, None, &self.login_ctx, &db.0),
+            _ => fetch_key(&key_info.0, &self.login_ctx, &db.0),
         }
     }
 

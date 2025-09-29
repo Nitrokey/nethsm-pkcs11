@@ -2,7 +2,9 @@
 
 ## Unreleased
 
--
+## Breaking Changes
+
+- Reject invalid IDs when creating or changing objects
 
 ## [2.0.0-rc.1][] (2025-09-16)
 

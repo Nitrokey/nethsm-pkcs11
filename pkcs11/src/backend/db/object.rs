@@ -305,23 +305,14 @@ fn configure_generic() -> Result<KeyData, Error> {
     })
 }
 
-pub fn from_key_data(
-    key_data: PublicKey,
-    id: &str,
-    raw_id: Option<Vec<u8>>,
-) -> Result<Vec<Object>, Error> {
+pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error> {
     let mut attrs = HashMap::new();
-
-    if let Some(raw_id) = raw_id {
-        attrs.insert(CKA_ID, Attr::Bytes(raw_id));
-    } else {
-        attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
-    }
 
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
     );
+    attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
     attrs.insert(CKA_LABEL, Attr::Bytes(id.as_bytes().to_vec()));
     attrs.insert(
         CKA_KEY_GEN_MECHANISM,
@@ -430,7 +421,6 @@ pub fn from_key_data(
 pub fn from_cert_data(
     cert: Vec<u8>,
     key_id: &str,
-    raw_id: Option<Vec<u8>>,
     certificate_format: CertificateFormat,
 ) -> Result<Object, Error> {
     debug!("Loading certificate, expecting {certificate_format} encoding as per configuration");
@@ -450,15 +440,11 @@ pub fn from_cert_data(
     let length = cert_der.len();
 
     let mut attrs = HashMap::new();
-    if let Some(raw_id) = raw_id {
-        attrs.insert(CKA_ID, Attr::Bytes(raw_id));
-    } else {
-        attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
-    }
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),
     );
+    attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
     attrs.insert(CKA_LABEL, Attr::Bytes(key_id.as_bytes().to_vec()));
     attrs.insert(
         CKA_KEY_GEN_MECHANISM,
