@@ -71,14 +71,14 @@ mod tests {
 
     #[test]
     fn test_init_pin() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_InitPIN(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_set_pin_null_old_pin() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let new_pin = "12345678";
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_null_new_pin() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let old_pin = "12345678";
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let old_pin = "12345678";
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_old_pin() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         // random bytes
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_utf8_new_pin() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let old_pin = "12345678";
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_set_pin_no_user() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let old_pin = "12345678";

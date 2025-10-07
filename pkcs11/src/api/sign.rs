@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_null_mechanism() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_SignInit(session, std::ptr::null_mut(), 0);
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_mechanism() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_sign_init_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_sign_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_sign_null_signature_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -397,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_sign_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut data = [0u8; 32];
@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_null_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let rv = C_SignUpdate(session, std::ptr::null_mut(), 0);
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_sign_update_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data = [0u8; 32];
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut signature = [0u8; 32];
@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_null_signature_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -488,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_sign_final_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut signature = [0u8; 32];
@@ -500,14 +500,14 @@ mod tests {
 
     #[test]
     fn test_sign_recover_init() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_SignRecoverInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_sign_recover() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_SignRecover(
             0,
             std::ptr::null_mut(),
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn test_sign_encrypt_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_SignEncryptUpdate(
             0,
             std::ptr::null_mut(),

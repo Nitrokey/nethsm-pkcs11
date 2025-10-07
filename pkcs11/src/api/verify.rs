@@ -113,14 +113,14 @@ mod tests {
 
     #[test]
     fn test_verify_init() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_VerifyInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_verify() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut data = [0u8; 1];
         let mut sig = [0u8; 1];
         let rv = C_Verify(
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_verify_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut data = [0u8; 1];
         let rv = C_VerifyUpdate(0, data.as_mut_ptr(), data.len() as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_verify_final() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut sig = [0u8; 1];
         let rv = C_VerifyFinal(0, sig.as_mut_ptr(), sig.len() as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
@@ -151,14 +151,14 @@ mod tests {
 
     #[test]
     fn test_verify_recover_init() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_VerifyRecoverInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_verify_recover() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut sig = [0u8; 1];
         let mut data = [0u8; 1];
         let mut data_len = 0;

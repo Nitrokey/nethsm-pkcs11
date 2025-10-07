@@ -15,13 +15,19 @@ pub fn get_slot(slot_id: CK_SLOT_ID) -> Result<Arc<Slot>, Pkcs11Error> {
 }
 
 #[cfg(test)]
-pub fn init_for_tests() {
-    use std::ptr;
+pub fn init_for_tests() -> std::sync::MutexGuard<'static, ()> {
+    use std::{ptr, sync::Mutex};
 
     use crate::{api::C_Initialize, data::DEVICE};
+
+    static MUTEX: Mutex<()> = Mutex::new(());
+
+    let guard = MUTEX.lock().expect("failed to lock test mutex");
 
     if DEVICE.load().is_none() {
         std::env::set_var("P11NETHSM_CONFIG_FILE", "../p11nethsm.conf");
         assert_eq!(C_Initialize(ptr::null_mut()), cryptoki_sys::CKR_OK);
     }
+
+    guard
 }

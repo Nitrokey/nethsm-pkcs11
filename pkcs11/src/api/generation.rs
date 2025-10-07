@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_null_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_null_template() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut key = 0;
 
         let mut mech = cryptoki_sys::CK_MECHANISM {
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_null_phkey() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_unknown_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_public_template() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut public_key = 0;
         let mut private_key = 0;
 
@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_private_template() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut public_key = 0;
         let mut private_key = 0;
 
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_ph_public_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
             pParameter: std::ptr::null_mut(),
@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_null_ph_private_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
             pParameter: std::ptr::null_mut(),
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_pair_unknown_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut public_template = vec![cryptoki_sys::CK_ATTRIBUTE {
             type_: 0,
             pValue: std::ptr::null_mut(),
@@ -572,14 +572,14 @@ mod tests {
 
     #[test]
     fn test_generate_random_null_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_GenerateRandom(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_generate_random_invalid_length() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut random_data = vec![0; 1500];
 
         let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 1500);
@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_generate_random_zero_length() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut random_data = vec![0; 1500];
 
         let rv = C_GenerateRandom(0, random_data.as_mut_ptr(), 0);
@@ -597,7 +597,7 @@ mod tests {
 
     #[test]
     fn test_wrap_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_WrapKey(
             0,
             std::ptr::null_mut(),
@@ -611,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_unwrap_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_UnwrapKey(
             0,
             std::ptr::null_mut(),
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_derive_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DeriveKey(
             0,
             std::ptr::null_mut(),
@@ -641,7 +641,7 @@ mod tests {
 
     #[test]
     fn test_seed_random() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_SeedRandom(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
     }

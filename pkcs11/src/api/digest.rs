@@ -142,7 +142,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_digest_init() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DigestInit(0, std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_digest() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_Digest(
             0,
             std::ptr::null_mut(),
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_digest_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DigestUpdate(0, std::ptr::null_mut(), 0 as CK_ULONG);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_digest_final() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DigestFinal(0, std::ptr::null_mut(), std::ptr::null_mut());
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
 
@@ -209,14 +209,14 @@ mod tests {
 
     #[test]
     fn test_digest_key() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DigestKey(0, 0);
         assert_eq!(rv, cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED);
     }
 
     #[test]
     fn test_digest_encrypt_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut encrypted_part_len: CK_ULONG = 0;
         let mut encrypted_part: Vec<u8> = Vec::new();
         let mut part: Vec<u8> = Vec::new();
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_digest_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut encrypted_part_len: CK_ULONG = 0;
         let mut encrypted_part: Vec<u8> = Vec::new();
         let mut part: Vec<u8> = Vec::new();

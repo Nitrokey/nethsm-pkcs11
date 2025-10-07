@@ -711,7 +711,7 @@ mod test {
     #[test]
     #[ignore]
     fn parrallel_fetch_all_keys() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let slot = get_slot(0).unwrap();
 
         let db = Arc::new((Mutex::new(Db::new()), Condvar::new()));
@@ -744,7 +744,7 @@ mod test {
     #[ignore]
     fn parrallel_fetch_all_keys_fail() {
         THREADS_ALLOWED.store(false, Ordering::Relaxed);
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut slot = get_slot(0).unwrap();
         let mut sessions = Vec::new();
         for _ in 0..10 {

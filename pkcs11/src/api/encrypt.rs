@@ -311,14 +311,14 @@ mod tests {
 
     #[test]
     fn test_encrypt_init_null_mechanism() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_EncryptInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_encrypt_init_invalid_mechanism() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 15000,
             pParameter: std::ptr::null_mut(),
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_init_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut data: Vec<u8> = Vec::new();
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut data: Vec<u8> = Vec::new();
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(1);
 
         let mut encrypted_data: Vec<u8> = Vec::new();
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut encrypted_data_len: CK_ULONG = 0;
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_encrypted_data_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_null_encrypted_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_part() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut encrypted_part_len: CK_ULONG = 0;
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_encrypted_part_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_null_encrypted_part() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = Vec::new();
@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_buffer_too_small() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = vec![0; 100];
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_update_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut data: Vec<u8> = vec![0; 100];
@@ -561,7 +561,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_null_encrypted_part() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut encrypted_part_len: CK_ULONG = 0;
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_null_encrypted_part_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut encrypted_part: Vec<u8> = Vec::new();
@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_final_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = SESSION_MANAGER.lock().unwrap().setup_dummy_session();
 
         let mut encrypted_part: Vec<u8> = Vec::new();

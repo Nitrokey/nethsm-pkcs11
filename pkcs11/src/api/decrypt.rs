@@ -281,14 +281,14 @@ mod tests {
 
     #[test]
     fn test_decrypt_init_null_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DecryptInit(0, std::ptr::null_mut(), 0);
         assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
     }
 
     #[test]
     fn test_decrypt_init_unknown_mech() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: 15000, // doesn't exist
             pParameter: std::ptr::null_mut(),
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_init_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut mech = cryptoki_sys::CK_MECHANISM {
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let rv = C_Decrypt(
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_null_data_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut encrypted_data = [0u8; 32];
 
         let session_handle = setup_session();
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_null_encrypted_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut data_len = 0;
 
         let session_handle = setup_session();
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_null_data() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let mut data_len = 0;
 
         let session_handle = setup_session();
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_update_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let rv = C_DecryptUpdate(
@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_update_null_encrypted_part() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = setup_session();
 
         let mut part_len = 0;
@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_update_null_part_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = setup_session();
 
         let mut encrypted_part = [0u8; 32];
@@ -435,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_update_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = setup_session();
 
         let mut encrypted_part = [0u8; 32];
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_final_invalid_session() {
-        init_for_tests();
+        let _guard = init_for_tests();
         SESSION_MANAGER.lock().unwrap().delete_session(0);
 
         let mut last_part_len = 0;
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_final_null_last_part_len() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = setup_session();
 
         let mut last_part = [0u8; 32];
@@ -476,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_final_operation_not_initialized() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let session_handle = setup_session();
 
         let mut last_part = [0u8; 32];
@@ -500,7 +500,7 @@ mod tests {
     // unsupported function
     #[test]
     fn test_decrypt_verify_update() {
-        init_for_tests();
+        let _guard = init_for_tests();
         let rv = C_DecryptVerifyUpdate(
             0,
             std::ptr::null_mut(),
