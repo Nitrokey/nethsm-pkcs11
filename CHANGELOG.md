@@ -2,11 +2,12 @@
 
 ## Unreleased
 
-## Breaking Changes
+### Breaking Changes
 
 - Reject invalid IDs when creating or changing objects
+- Update RSA signature generation for NetHSM v3.0. This change is not compatible with older NetHSM versions.
 
-## Bugfixes
+### Bugfixes
 
 - Fix ID validation. The new requirements are:
   - The ID must not be empty and not be longer than 128 characters.
