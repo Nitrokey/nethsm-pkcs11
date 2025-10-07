@@ -22,7 +22,7 @@ pub fn init_for_tests() -> std::sync::MutexGuard<'static, ()> {
 
     static MUTEX: Mutex<()> = Mutex::new(());
 
-    let guard = MUTEX.lock().expect("failed to lock test mutex");
+    let guard = MUTEX.lock().unwrap_or_else(|err| err.into_inner());
 
     if DEVICE.load().is_none() {
         std::env::set_var("P11NETHSM_CONFIG_FILE", "../p11nethsm.conf");
