@@ -70,18 +70,10 @@ impl DecryptCtx {
 
         let key_id = self.key_id.as_str();
 
+        let mut request = nethsm_sdk_rs::models::DecryptRequestData::new(mode, b64_message);
+        request.iv = iv;
         let output = login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_decrypt_post(
-                    api_config,
-                    key_id,
-                    nethsm_sdk_rs::models::DecryptRequestData {
-                        mode,
-                        encrypted: b64_message,
-                        iv,
-                    },
-                )
-            },
+            |api_config| default_api::keys_key_id_decrypt_post(api_config, key_id, request),
             login::UserMode::Operator,
         )?;
 

@@ -471,7 +471,7 @@ impl LoginCtx {
                 default_api::users_user_id_passphrase_post(
                     config,
                     &options.0,
-                    nethsm_sdk_rs::models::UserPassphrasePostData { passphrase: pin },
+                    nethsm_sdk_rs::models::UserPassphrasePostData::new(pin),
                 )
             },
             options.1,

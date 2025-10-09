@@ -278,9 +278,7 @@ fn generate_random(
             |api_config| {
                 default_api::random_post(
                     api_config,
-                    nethsm_sdk_rs::models::RandomRequestData {
-                        length: random_len as i32,
-                    },
+                    nethsm_sdk_rs::models::RandomRequestData::new(random_len as i32),
                 )
             },
             crate::backend::login::UserMode::Operator,

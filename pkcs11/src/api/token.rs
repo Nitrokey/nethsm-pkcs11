@@ -107,10 +107,7 @@ fn get_slot_info(
         Ok(info) => info.entity,
         Err(e) => {
             trace!("Error getting info: {e:?}");
-            InfoData {
-                product: "unknown".to_string(),
-                vendor: "unknown".to_string(),
-            }
+            InfoData::new("unknown".to_owned(), "unknown".to_owned())
         }
     };
 
@@ -125,9 +122,7 @@ fn get_slot_info(
         Ok(info) => info.entity,
         Err(e) => {
             trace!("Error getting system state: {e:?}");
-            HealthStateData {
-                state: SystemState::Unprovisioned,
-            }
+            HealthStateData::new(SystemState::Unprovisioned)
         }
     };
 

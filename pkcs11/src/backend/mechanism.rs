@@ -4,7 +4,94 @@
 
 use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE, CK_ULONG};
 use log::trace;
-use nethsm_sdk_rs::models::{DecryptMode, EncryptMode, KeyMechanism, KeyType, SignMode};
+use nethsm_sdk_rs::models::{DecryptMode, EncryptMode, KeyMechanism as RawKeyMechanism, SignMode};
+
+use super::key::{EcKeyType, KeyType};
+
+// Exhaustive version of nethsm_sdk_rs::models::KeyMechanism
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum KeyMechanism {
+    RsaDecryptionRaw,
+    RsaDecryptionPkcs1,
+    RsaDecryptionOaepMd5,
+    RsaDecryptionOaepSha1,
+    RsaDecryptionOaepSha224,
+    RsaDecryptionOaepSha256,
+    RsaDecryptionOaepSha384,
+    RsaDecryptionOaepSha512,
+    RsaSignaturePkcs1,
+    RsaSignaturePssMd5,
+    RsaSignaturePssSha1,
+    RsaSignaturePssSha224,
+    RsaSignaturePssSha256,
+    RsaSignaturePssSha384,
+    RsaSignaturePssSha512,
+    EdDsaSignature,
+    EcdsaSignature,
+    Bip340Signature,
+    AesEncryptionCbc,
+    AesDecryptionCbc,
+}
+
+impl From<KeyMechanism> for RawKeyMechanism {
+    fn from(mechanism: KeyMechanism) -> Self {
+        match mechanism {
+            KeyMechanism::RsaDecryptionRaw => Self::RsaDecryptionRaw,
+            KeyMechanism::RsaDecryptionPkcs1 => Self::RsaDecryptionPkcs1,
+            KeyMechanism::RsaDecryptionOaepMd5 => Self::RsaDecryptionOaepMd5,
+            KeyMechanism::RsaDecryptionOaepSha1 => Self::RsaDecryptionOaepSha1,
+            KeyMechanism::RsaDecryptionOaepSha224 => Self::RsaDecryptionOaepSha224,
+            KeyMechanism::RsaDecryptionOaepSha256 => Self::RsaDecryptionOaepSha256,
+            KeyMechanism::RsaDecryptionOaepSha384 => Self::RsaDecryptionOaepSha384,
+            KeyMechanism::RsaDecryptionOaepSha512 => Self::RsaDecryptionOaepSha512,
+            KeyMechanism::RsaSignaturePkcs1 => Self::RsaSignaturePkcs1,
+            KeyMechanism::RsaSignaturePssMd5 => Self::RsaSignaturePssMd5,
+            KeyMechanism::RsaSignaturePssSha1 => Self::RsaSignaturePssSha1,
+            KeyMechanism::RsaSignaturePssSha224 => Self::RsaSignaturePssSha224,
+            KeyMechanism::RsaSignaturePssSha256 => Self::RsaSignaturePssSha256,
+            KeyMechanism::RsaSignaturePssSha384 => Self::RsaSignaturePssSha384,
+            KeyMechanism::RsaSignaturePssSha512 => Self::RsaSignaturePssSha512,
+            KeyMechanism::EdDsaSignature => Self::EdDsaSignature,
+            KeyMechanism::EcdsaSignature => Self::EcdsaSignature,
+            KeyMechanism::Bip340Signature => Self::Bip340Signature,
+            KeyMechanism::AesEncryptionCbc => Self::AesEncryptionCbc,
+            KeyMechanism::AesDecryptionCbc => Self::AesDecryptionCbc,
+        }
+    }
+}
+
+impl TryFrom<RawKeyMechanism> for KeyMechanism {
+    type Error = UnsupportedMechanismError;
+
+    fn try_from(mechanism: RawKeyMechanism) -> Result<Self, Self::Error> {
+        let mechanism = match mechanism {
+            RawKeyMechanism::RsaDecryptionRaw => Self::RsaDecryptionRaw,
+            RawKeyMechanism::RsaDecryptionPkcs1 => Self::RsaDecryptionPkcs1,
+            RawKeyMechanism::RsaDecryptionOaepMd5 => Self::RsaDecryptionOaepMd5,
+            RawKeyMechanism::RsaDecryptionOaepSha1 => Self::RsaDecryptionOaepSha1,
+            RawKeyMechanism::RsaDecryptionOaepSha224 => Self::RsaDecryptionOaepSha224,
+            RawKeyMechanism::RsaDecryptionOaepSha256 => Self::RsaDecryptionOaepSha256,
+            RawKeyMechanism::RsaDecryptionOaepSha384 => Self::RsaDecryptionOaepSha384,
+            RawKeyMechanism::RsaDecryptionOaepSha512 => Self::RsaDecryptionOaepSha512,
+            RawKeyMechanism::RsaSignaturePkcs1 => Self::RsaSignaturePkcs1,
+            RawKeyMechanism::RsaSignaturePssMd5 => Self::RsaSignaturePssMd5,
+            RawKeyMechanism::RsaSignaturePssSha1 => Self::RsaSignaturePssSha1,
+            RawKeyMechanism::RsaSignaturePssSha224 => Self::RsaSignaturePssSha224,
+            RawKeyMechanism::RsaSignaturePssSha256 => Self::RsaSignaturePssSha256,
+            RawKeyMechanism::RsaSignaturePssSha384 => Self::RsaSignaturePssSha384,
+            RawKeyMechanism::RsaSignaturePssSha512 => Self::RsaSignaturePssSha512,
+            RawKeyMechanism::EdDsaSignature => Self::EdDsaSignature,
+            RawKeyMechanism::EcdsaSignature => Self::EcdsaSignature,
+            RawKeyMechanism::Bip340Signature => Self::Bip340Signature,
+            RawKeyMechanism::AesEncryptionCbc => Self::AesEncryptionCbc,
+            RawKeyMechanism::AesDecryptionCbc => Self::AesDecryptionCbc,
+            _ => {
+                return Err(UnsupportedMechanismError);
+            }
+        };
+        Ok(mechanism)
+    }
+}
 
 // from https://github.com/aws/aws-nitro-enclaves-acm/blob/main/src/vtok_p11/src/backend/mech.rs
 #[derive(Debug)]
@@ -187,16 +274,22 @@ impl Mechanism {
                 Self::RsaPkcsPss(MechDigest::Sha512, false),
                 Self::RsaX509,
             ],
-            KeyType::EcP256
-            | KeyType::EcP384
-            | KeyType::EcP521
-            | KeyType::EcP256K1
-            | KeyType::BrainpoolP256
-            | KeyType::BrainpoolP384
-            | KeyType::BrainpoolP512 => {
+            KeyType::Ec(ty) => Self::from_ec_key_type(ty),
+        }
+    }
+
+    pub fn from_ec_key_type(key_type: EcKeyType) -> Vec<Self> {
+        match key_type {
+            EcKeyType::EcP256
+            | EcKeyType::EcP384
+            | EcKeyType::EcP521
+            | EcKeyType::EcP256K1
+            | EcKeyType::BrainpoolP256
+            | EcKeyType::BrainpoolP384
+            | EcKeyType::BrainpoolP512 => {
                 vec![Self::Ecdsa(None)]
             }
-            KeyType::Curve25519 => vec![Self::EdDsa],
+            EcKeyType::Curve25519 => vec![Self::EdDsa],
         }
     }
 
@@ -209,8 +302,8 @@ impl Mechanism {
             | Self::RsaX509
             | Self::GenerateRsa => KeyType::Rsa,
             // return a default one, the right size will be obtained from the OID in the template
-            Self::Ecdsa(_) | Self::GenerateEc => KeyType::EcP256,
-            Self::EdDsa | Self::GenerateEd => KeyType::Curve25519,
+            Self::Ecdsa(_) | Self::GenerateEc => KeyType::Ec(EcKeyType::EcP256),
+            Self::EdDsa | Self::GenerateEd => KeyType::Ec(EcKeyType::Curve25519),
         }
     }
 

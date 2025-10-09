@@ -828,9 +828,9 @@ dependencies = [
 
 [[package]]
 name = "nethsm-sdk-rs"
-version = "3.0.0-rc.2"
+version = "3.0.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24b1b700326ce607eaad9b3ffb2789f8e50cfb4ad3cf6b1b30de23de6092dc70"
+checksum = "ad90319c2283a961d01f90eabfada6c51544262fba8799d7e4ef17c389d3e510"
 dependencies = [
  "base64 0.21.7",
  "http",

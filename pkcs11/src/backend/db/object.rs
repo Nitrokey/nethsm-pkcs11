@@ -15,14 +15,14 @@ use cryptoki_sys::{
     CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
-use log::{debug, info, trace};
-use nethsm_sdk_rs::models::{KeyMechanism, KeyType, PublicKey};
+use log::{debug, error, info, trace};
+use nethsm_sdk_rs::models::PublicKey;
 use std::collections::HashMap;
 use std::mem::size_of;
 
 use crate::backend::{
-    key::{key_size, key_type_to_asn1},
-    mechanism::Mechanism,
+    key::{EcKeyType, KeyType},
+    mechanism::{KeyMechanism, Mechanism},
     Error, Pkcs11Error,
 };
 
@@ -216,7 +216,7 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     })
 }
 
-fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
+fn configure_ec(key_data: &PublicKey, key_type: EcKeyType) -> Result<KeyData, Error> {
     let ec_points = key_data
         .public
         .as_ref()
@@ -225,7 +225,7 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
         .as_ref()
         .ok_or(Error::KeyField("data".to_string()))?;
 
-    let size = key_size(&key_data.r#type).ok_or(Error::KeyField("type".to_string()))?;
+    let size = key_type.key_size();
 
     trace!("EC key data: {ec_points:?}");
 
@@ -244,15 +244,11 @@ fn configure_ec(key_data: &PublicKey) -> Result<KeyData, Error> {
 
     trace!("EC key data encoded len : {}", encoded_points.len());
 
-    let key_params = key_type_to_asn1(key_data.r#type).ok_or(Error::KeyField(format!(
-        "Unsupported key type: {:?}",
-        key_data.r#type
-    )))?;
-
+    let key_params = key_type.to_asn1();
     let ec_params = key_params.to_der().map_err(Error::Der)?;
 
-    let key_type = match key_data.r#type {
-        KeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
+    let key_type = match key_type {
+        EcKeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
         _ => cryptoki_sys::CKK_EC,
     };
 
@@ -306,6 +302,14 @@ fn configure_generic() -> Result<KeyData, Error> {
 }
 
 pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error> {
+    let key_type = KeyType::try_from(key_data.r#type).map_err(|_| {
+        error!(
+            "Failed to create key with unsupported type {}",
+            key_data.r#type
+        );
+        Error::KeyField(format!("Unsupported key type: {:?}", key_data.r#type))
+    })?;
+
     let mut attrs = HashMap::new();
 
     attrs.insert(
@@ -332,22 +336,21 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
     attrs.insert(CKA_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_WRAP, Attr::CK_FALSE);
 
-    let key_attrs = match key_data.r#type {
+    let key_attrs = match key_type {
         KeyType::Rsa => configure_rsa(&key_data)?,
-        KeyType::Curve25519
-        | KeyType::EcP256
-        | KeyType::EcP384
-        | KeyType::EcP521
-        | KeyType::EcP256K1
-        | KeyType::BrainpoolP256
-        | KeyType::BrainpoolP384
-        | KeyType::BrainpoolP512 => configure_ec(&key_data)?,
+        KeyType::Ec(ty) => configure_ec(&key_data, ty)?,
         KeyType::Generic => configure_generic()?,
     };
     attrs.extend(key_attrs.attrs);
 
-    let ck_mech_list: Vec<CK_MECHANISM_TYPE> = key_data
+    let mechanisms: Vec<_> = key_data
         .mechanisms
+        .iter()
+        .copied()
+        .flat_map(TryFrom::try_from)
+        .collect();
+
+    let ck_mech_list: Vec<CK_MECHANISM_TYPE> = mechanisms
         .iter()
         .flat_map(|mech| Mechanism::try_from(*mech).ok())
         .map(|m: Mechanism| m.ck_type())
@@ -363,10 +366,10 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
         kind: ObjectKind::PrivateKey,
         id: id.to_string(),
         size: key_attrs.key_size,
-        mechanisms: key_data.mechanisms.clone(),
+        mechanisms,
     };
 
-    if key_data.r#type == KeyType::Generic {
+    if key_type == KeyType::Generic {
         let secret = Object {
             kind: ObjectKind::SecretKey,
             ..private_key

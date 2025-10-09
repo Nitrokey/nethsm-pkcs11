@@ -102,10 +102,7 @@ impl SignCtx {
                 default_api::keys_key_id_sign_post(
                     conf,
                     &self.key.id.clone(),
-                    nethsm_sdk_rs::models::SignRequestData {
-                        mode,
-                        message: b64_message,
-                    },
+                    nethsm_sdk_rs::models::SignRequestData::new(mode, b64_message),
                 )
             },
             login::UserMode::Operator,
