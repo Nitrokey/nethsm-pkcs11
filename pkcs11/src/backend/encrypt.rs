@@ -105,19 +105,11 @@ fn encrypt_data(
         .map(|iv| Base64::encode_string(iv.as_slice()));
     trace!("iv: {iv:?}");
 
+    let mut request = nethsm_sdk_rs::models::EncryptRequestData::new(mode, b64_message);
+    request.iv = iv;
     let output = login_ctx
         .try_(
-            |api_config| {
-                default_api::keys_key_id_encrypt_post(
-                    api_config,
-                    key_id,
-                    nethsm_sdk_rs::models::EncryptRequestData {
-                        mode,
-                        message: b64_message,
-                        iv,
-                    },
-                )
-            },
+            |api_config| default_api::keys_key_id_encrypt_post(api_config, key_id, request),
             login::UserMode::Operator,
         )
         .map_err(|err| {
