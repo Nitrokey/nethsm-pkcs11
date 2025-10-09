@@ -18,8 +18,131 @@ use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
     apis::default_api,
-    models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType, PrivateKey},
+    models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType as RawKeyType, PrivateKey},
 };
+
+// Exhaustive version of nethsm_sdk_rs::models::KeyType
+#[derive(Clone, Copy, PartialEq)]
+pub enum KeyType {
+    Rsa,
+    Ec(EcKeyType),
+    Generic,
+}
+
+impl From<KeyType> for RawKeyType {
+    fn from(ty: KeyType) -> Self {
+        match ty {
+            KeyType::Rsa => Self::Rsa,
+            KeyType::Ec(ty) => ty.into(),
+            KeyType::Generic => Self::Generic,
+        }
+    }
+}
+
+pub struct UnsupportedKeyTypeError;
+
+impl TryFrom<RawKeyType> for KeyType {
+    type Error = UnsupportedKeyTypeError;
+
+    fn try_from(ty: RawKeyType) -> Result<Self, Self::Error> {
+        let ty = match ty {
+            RawKeyType::Rsa => Self::Rsa,
+            RawKeyType::Curve25519 => Self::Ec(EcKeyType::Curve25519),
+            RawKeyType::EcP256 => Self::Ec(EcKeyType::EcP256),
+            RawKeyType::EcP384 => Self::Ec(EcKeyType::EcP384),
+            RawKeyType::EcP521 => Self::Ec(EcKeyType::EcP521),
+            RawKeyType::EcP256K1 => Self::Ec(EcKeyType::EcP256K1),
+            RawKeyType::BrainpoolP256 => Self::Ec(EcKeyType::BrainpoolP256),
+            RawKeyType::BrainpoolP384 => Self::Ec(EcKeyType::BrainpoolP384),
+            RawKeyType::BrainpoolP512 => Self::Ec(EcKeyType::BrainpoolP512),
+            RawKeyType::Generic => Self::Generic,
+            _ => {
+                warn!("Unsupported key type: {ty:?}");
+                return Err(UnsupportedKeyTypeError);
+            }
+        };
+        Ok(ty)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum EcKeyType {
+    Curve25519,
+    EcP256,
+    EcP384,
+    EcP521,
+    EcP256K1,
+    BrainpoolP256,
+    BrainpoolP384,
+    BrainpoolP512,
+}
+
+impl EcKeyType {
+    pub fn to_asn1(self) -> ObjectIdentifier {
+        match self {
+            Self::EcP256 => KEYTYPE_EC_P256,
+            Self::EcP384 => KEYTYPE_EC_P384,
+            Self::EcP521 => KEYTYPE_EC_P521,
+            Self::Curve25519 => KEYTYPE_CURVE25519,
+            Self::EcP256K1 => KEYTYPE_EC_P256_K1,
+            Self::BrainpoolP256 => KEYTYPE_BRAINPOOL_P256,
+            Self::BrainpoolP384 => KEYTYPE_BRAINPOOL_P384,
+            Self::BrainpoolP512 => KEYTYPE_BRAINPOOL_P512,
+        }
+    }
+
+    pub fn key_size(&self) -> usize {
+        let size = match self {
+            Self::EcP256 => 256,
+            Self::EcP384 => 384,
+            Self::EcP521 => 521,
+            Self::Curve25519 => 255,
+            Self::EcP256K1 => 256,
+            Self::BrainpoolP256 => 256,
+            Self::BrainpoolP384 => 384,
+            Self::BrainpoolP512 => 512,
+        };
+
+        size / 8
+    }
+}
+
+impl From<EcKeyType> for RawKeyType {
+    fn from(ty: EcKeyType) -> Self {
+        match ty {
+            EcKeyType::Curve25519 => Self::Curve25519,
+            EcKeyType::EcP256 => Self::EcP256,
+            EcKeyType::EcP384 => Self::EcP384,
+            EcKeyType::EcP521 => Self::EcP521,
+            EcKeyType::EcP256K1 => Self::EcP256K1,
+            EcKeyType::BrainpoolP256 => Self::BrainpoolP256,
+            EcKeyType::BrainpoolP384 => Self::BrainpoolP384,
+            EcKeyType::BrainpoolP512 => Self::BrainpoolP512,
+        }
+    }
+}
+
+impl TryFrom<ObjectIdentifier> for EcKeyType {
+    type Error = UnsupportedKeyTypeError;
+
+    fn try_from(oid: ObjectIdentifier) -> Result<Self, Self::Error> {
+        let ty = match oid {
+            KEYTYPE_CURVE25519 => Self::Curve25519,
+            KEYTYPE_EC_P256 => Self::EcP256,
+            KEYTYPE_EC_P384 => Self::EcP384,
+            KEYTYPE_EC_P521 => Self::EcP521,
+            KEYTYPE_EC_P256_K1 => Self::EcP256K1,
+            KEYTYPE_BRAINPOOL_P256 => Self::BrainpoolP256,
+            KEYTYPE_BRAINPOOL_P384 => Self::BrainpoolP384,
+            KEYTYPE_BRAINPOOL_P512 => Self::BrainpoolP512,
+            _ => {
+                warn!("Unsupported EC key type OID {oid}");
+                return Err(UnsupportedKeyTypeError);
+            }
+        };
+        Ok(ty)
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Id(String);
@@ -285,23 +408,22 @@ pub fn create_key_from_template(
                     .ok_or(Error::MissingAttribute(CKA_PUBLIC_EXPONENT))?,
             );
 
-            let key = Box::new(KeyPrivateData {
-                data: None,
-                prime_p: Some(prime_p),
-                prime_q: Some(prime_q),
-                public_exponent: Some(public_exponent),
-            });
+            let mut key = KeyPrivateData::new();
+            key.prime_p = Some(prime_p);
+            key.prime_q = Some(prime_q);
+            key.public_exponent = Some(public_exponent);
             (KeyType::Rsa, key)
         }
         CKK_EC | CKK_EC_EDWARDS => {
-            let ec_type = key_type_from_params(
-                &parsed
-                    .ec_params
-                    .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?,
-            )
-            .ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
+            let ec_params = parsed
+                .ec_params
+                .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?;
+            let oid: der::oid::ObjectIdentifier = der::oid::ObjectIdentifier::from_der(&ec_params)
+                .map_err(|_| Error::InvalidAttribute(CKA_EC_PARAMS))?;
+            let ec_type =
+                EcKeyType::try_from(oid).map_err(|_| Error::InvalidAttribute(CKA_EC_PARAMS))?;
 
-            let size = key_size(&ec_type).ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
+            let size = ec_type.key_size();
             let mut value = parsed.value.ok_or(Error::MissingAttribute(CKA_VALUE))?;
 
             // add padding
@@ -311,14 +433,9 @@ pub fn create_key_from_template(
 
             let b64_private = Base64::encode_string(value.as_slice());
 
-            let key = Box::new(KeyPrivateData {
-                data: Some(b64_private),
-                prime_p: None,
-                prime_q: None,
-                public_exponent: None,
-            });
-
-            (ec_type, key)
+            let mut key = KeyPrivateData::new();
+            key.data = Some(b64_private);
+            (KeyType::Ec(ec_type), key)
         }
         CKK_GENERIC_SECRET => {
             let b64_private = Base64::encode_string(
@@ -329,12 +446,8 @@ pub fn create_key_from_template(
                     .as_slice(),
             );
 
-            let key = Box::new(KeyPrivateData {
-                data: Some(b64_private),
-                prime_p: None,
-                prime_q: None,
-                public_exponent: None,
-            });
+            let mut key = KeyPrivateData::new();
+            key.data = Some(b64_private);
             (KeyType::Generic, key)
         }
 
@@ -348,27 +461,22 @@ pub fn create_key_from_template(
     for mech in mechs {
         if parsed.sign {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Sign) {
-                mechanisms.push(m);
+                mechanisms.push(m.into());
             }
         }
         if parsed.encrypt {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Encrypt) {
-                mechanisms.push(m);
+                mechanisms.push(m.into());
             }
         }
         if parsed.decrypt {
             if let Some(m) = mech.to_api_mech(super::mechanism::MechMode::Decrypt) {
-                mechanisms.push(m);
+                mechanisms.push(m.into());
             }
         }
     }
 
-    let private_key = PrivateKey {
-        mechanisms,
-        r#type,
-        private: key,
-        restrictions: None,
-    };
+    let private_key = PrivateKey::new(mechanisms, r#type.into(), key);
 
     let id = if let Some(id) = parsed.id {
         let key_id = id.as_str();
@@ -421,61 +529,10 @@ const KEYTYPE_BRAINPOOL_P384: ObjectIdentifier =
 const KEYTYPE_BRAINPOOL_P512: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.3.36.3.3.2.8.1.1.13");
 
-pub fn key_type_to_asn1(key_type: KeyType) -> Option<ObjectIdentifier> {
-    Some(match key_type {
-        KeyType::EcP256 => KEYTYPE_EC_P256,
-        KeyType::EcP384 => KEYTYPE_EC_P384,
-        KeyType::EcP521 => KEYTYPE_EC_P521,
-        KeyType::Curve25519 => KEYTYPE_CURVE25519,
-        KeyType::EcP256K1 => KEYTYPE_EC_P256_K1,
-        KeyType::BrainpoolP256 => KEYTYPE_BRAINPOOL_P256,
-        KeyType::BrainpoolP384 => KEYTYPE_BRAINPOOL_P384,
-        KeyType::BrainpoolP512 => KEYTYPE_BRAINPOOL_P512,
-        _ => return None,
-    })
-}
-
-// returns the key size in bytes
-pub const fn key_size(t: &KeyType) -> Option<usize> {
-    let size = match t {
-        KeyType::EcP256 => 256,
-        KeyType::EcP384 => 384,
-        KeyType::EcP521 => 521,
-        KeyType::Curve25519 => 255,
-        KeyType::EcP256K1 => 256,
-        KeyType::BrainpoolP256 => 256,
-        KeyType::BrainpoolP384 => 384,
-        KeyType::BrainpoolP512 => 512,
-        _ => return None,
-    };
-
-    Some(size / 8)
-}
-
 fn key_type_from_params(params: &[u8]) -> Option<KeyType> {
     // decode der to ObjectIdentifier
     let oid: der::oid::ObjectIdentifier = der::oid::ObjectIdentifier::from_der(params).ok()?;
-
-    // we can't do a match on vecs
-    if oid == KEYTYPE_CURVE25519 {
-        Some(KeyType::Curve25519)
-    } else if oid == KEYTYPE_EC_P256 {
-        Some(KeyType::EcP256)
-    } else if oid == KEYTYPE_EC_P384 {
-        Some(KeyType::EcP384)
-    } else if oid == KEYTYPE_EC_P521 {
-        Some(KeyType::EcP521)
-    } else if oid == KEYTYPE_EC_P256_K1 {
-        Some(KeyType::EcP256K1)
-    } else if oid == KEYTYPE_BRAINPOOL_P256 {
-        Some(KeyType::BrainpoolP256)
-    } else if oid == KEYTYPE_BRAINPOOL_P384 {
-        Some(KeyType::BrainpoolP384)
-    } else if oid == KEYTYPE_BRAINPOOL_P512 {
-        Some(KeyType::BrainpoolP512)
-    } else {
-        None
-    }
+    EcKeyType::try_from(oid).ok().map(KeyType::Ec)
 }
 
 pub fn generate_key_from_template(
@@ -505,19 +562,12 @@ pub fn generate_key_from_template(
         }
     }
 
+    let api_mechs = api_mechs.into_iter().map(From::from).collect();
+    let mut request = KeyGenerateRequestData::new(api_mechs, key_type.into());
+    request.id = parsed.id;
+    request.length = length.map(|length| length as i32);
     let id = login_ctx.try_(
-        |api_config| {
-            default_api::keys_generate_post(
-                api_config,
-                KeyGenerateRequestData {
-                    mechanisms: api_mechs,
-                    r#type: key_type,
-                    restrictions: None,
-                    id: parsed.id,
-                    length: length.map(|len| len as i32),
-                },
-            )
-        },
+        |api_config| default_api::keys_generate_post(api_config, request),
         login::UserMode::Administrator,
     )?;
 

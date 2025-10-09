@@ -292,10 +292,10 @@ pub fn run_tests(
 
         provision_post(
             &sdk_config,
-            ProvisionRequestData {
-                unlock_passphrase: "1234567890".into(),
-                admin_passphrase: "Administrator".into(),
-                system_time: time::OffsetDateTime::now_utc()
+            ProvisionRequestData::new(
+                "1234567890".into(),
+                "Administrator".into(),
+                time::OffsetDateTime::now_utc()
                     .format(
                         &format_description::parse(
                             "[year]-[month]-[day]T[hour]:[minute]:[second]Z",
@@ -303,17 +303,13 @@ pub fn run_tests(
                         .unwrap(),
                     )
                     .unwrap(),
-            },
+            ),
         )
         .unwrap();
         users_user_id_put(
             &sdk_config,
             "operator",
-            UserPostData {
-                real_name: "Operator".into(),
-                role: UserRole::Operator,
-                passphrase: "opPassphrase".into(),
-            },
+            UserPostData::new("Operator".into(), UserRole::Operator, "opPassphrase".into()),
         )
         .unwrap();
     } else {
