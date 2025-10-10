@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+-
+
+## [2.0.0-rc.2][] (2025-10-10)
+
 ### Breaking Changes
 
 - Reject invalid IDs when creating or changing objects
@@ -13,6 +17,9 @@
   - The ID must not be empty and not be longer than 128 characters.
   - The first character must be in the range `a`-`z`, `A-Z` or `0`-`9`.
   - The remaining characters must be in the range `a`-`z`, `A-Z` or `0`-`9` or one of the characters `.`, `-`, `_`.
+
+[2.0.0-rc.2]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.2
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0-rc.1...v2.0.0-rc.2)
 
 ## [2.0.0-rc.1][] (2025-09-16)
 
