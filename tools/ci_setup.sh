@@ -7,6 +7,7 @@ echo "Provisioning the HSM"
 ./tools/provision.sh
 ./tools/create_operator.sh
 ./tools/create_aes_key.sh
+./tools/create_brainpool_keys.sh
 ./tools/create_ec_p256_key.sh
 ./tools/create_ec_p384_key.sh
 ./tools/create_ec_p521_key.sh
