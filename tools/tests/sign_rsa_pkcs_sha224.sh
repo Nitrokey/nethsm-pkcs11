@@ -13,4 +13,4 @@ curl -s --fail-with-body -k -u operator:opPassphrase -v -X GET \
 echo 'NetHSM rulez!' | pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so  -v \
   --sign --mechanism SHA224-RSA-PKCS --output-file _data.sig --id $HEXID --signature-format openssl
 
-echo 'NetHSM rulez!' | openssl dgst -sha224 -binary | openssl pkeyutl -verify -inkey _public.pem -sigfile _data.sig -pubin -pkeyopt digest:sha224
+echo 'NetHSM rulez!' | openssl pkeyutl -verify -rawin -digest sha224 -inkey _public.pem -sigfile _data.sig -pubin
