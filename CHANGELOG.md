@@ -26,6 +26,7 @@
   - The ID must not be empty and not be longer than 128 characters.
   - The first character must be in the range `a`-`z`, `A-Z` or `0`-`9`.
   - The remaining characters must be in the range `a`-`z`, `A-Z` or `0`-`9` or one of the characters `.`, `-`, `_`.
+  - The characters `.`, `-` and `_` can only be used with NetHSM v3.0 or later.
 
 [2.0.0-rc.2]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.2
 [Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0-rc.1...v2.0.0-rc.2)
@@ -39,8 +40,8 @@
 
 ### Features
 
-- Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys
-- Implement `C_SetAttributeValue` for `CKA_ID` to support renaming keys
+- Add support for EC_P256K1, BrainpoolP256, BrainpoolP384 and BrainpoolP512 keys (requires NetHSM v3.0 or later)
+- Implement `C_SetAttributeValue` for `CKA_ID` to support renaming keys (requires NetHSM v3.0 or later)
 - Add `CKF_ENCRYPT` flag for `CKM_RSA_PKCS`
 
 ### Bugfixes

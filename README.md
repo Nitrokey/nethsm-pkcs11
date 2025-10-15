@@ -17,6 +17,30 @@ Download the latest binary from the [release page](https://github.com/Nitrokey/n
 
 Follow the [documentation](https://docs.nitrokey.com/nethsm/pkcs11-setup.html) for usage instructions.
 
+## Compatibility
+
+nethsm-pkcs11 is compatible with these NetHSM versions:
+
+| NetHSM Version | Compatibility | Notes |
+| :------------: | :-----------: | ----- |
+| [v1.0][nethsm-v1.0] | limited | |
+| [v2.0][nethsm-v2.0] | limited | |
+| [v2.1][nethsm-v2.1] | limited | |
+| [v2.2][nethsm-v2.2] | limited | |
+| [v3.0][nethsm-v3.0] | limited | RSA signatures using PKCS1 mechanisms do not work. |
+| [v3.1][nethsm-v3.1] | full | |
+
+[nethsm-v1.0]: https://github.com/Nitrokey/nethsm/releases/tag/v1.0
+[nethsm-v2.0]: https://github.com/Nitrokey/nethsm/releases/tag/v2.0
+[nethsm-v2.1]: https://github.com/Nitrokey/nethsm/releases/tag/v2.1
+[nethsm-v2.2]: https://github.com/Nitrokey/nethsm/releases/tag/v2.2
+[nethsm-v3.0]: https://github.com/Nitrokey/nethsm/releases/tag/v3.0
+[nethsm-v3.1]: https://github.com/Nitrokey/nethsm/releases/tag/v3.1
+
+Full compatibility means that all features of the NetHSM PKCS#11 module can be used with this version.
+Limited compatibility means that only some features are available for this version.
+See the [changelog](./CHANGELOG.md) for more detailed information on the version requirements for new features.
+
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
