@@ -93,6 +93,22 @@ jobs:
           name: nethsm-pkcs11-aarch64-apple.dylib
           path: target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib
           if-no-files-found: error
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - name: build release
+        run: cargo build --release
+      - name: Archive Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethsm-pkcs11-x86_64-linux-gnu.so
+          path:  target/release/libnethsm_pkcs11.so
+          if-no-files-found: error
       
 
   tests:
@@ -148,17 +164,34 @@ jobs:
           files: ./coverage.txt
           verbose: true
 
-      - name: build release
-        run: cargo build --release
-      - name: run fork tests
-        run: cd fork-tests && make
+  fork-tests:
+    runs-on: ubuntu-latest
+    container: debian:12
+    needs: build
+    env:
+      RUST_BACKTRACE: full
+      RUST_LOG: trace
 
-      - name: Archive Artifact
-        uses: actions/upload-artifact@v4
+    services:
+      nethsm:
+        image: nitrokey/nethsm:testing
+        ports:
+          - 8443:8443
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install dependencies
+        run: apt-get update && apt-get install -y gcc make
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v5
         with:
           name: nethsm-pkcs11-x86_64-linux-gnu.so
-          path:  target/release/libnethsm_pkcs11.so
-          if-no-files-found: error
+          path: target/release
+
+      - name: run fork tests
+        run: cd fork-tests && make
       
   test_network:
     runs-on: ubuntu-latest
