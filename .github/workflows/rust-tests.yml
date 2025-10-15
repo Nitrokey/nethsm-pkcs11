@@ -192,6 +192,47 @@ jobs:
 
       - name: run fork tests
         run: cd fork-tests && make
+
+  compatibility-tests:
+    runs-on: ubuntu-latest
+    container: debian:12
+    needs: build
+
+    strategy:
+      matrix:
+        nethsm: [v1.0, v2.0, v2.1, v2.2, v3.0, v3.1]
+
+    services:
+      nethsm:
+        image: nitrokey/nethsm:testing-${{ matrix.nethsm }}
+        ports:
+          - 8443:8443
+
+    env:
+      RUST_BACKTRACE: full
+      RUST_LOG: info,nethsm_pkcs11=trace,ureq::run=trace,ureq::util=trace
+      NETHSM_VERSION: ${{ matrix.nethsm }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install dependencies
+        run: apt-get update && apt-get install -y curl opensc openssl xxd jq gnutls-bin
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: nethsm-pkcs11-x86_64-linux-gnu.so
+          path: target/debug
+
+      - name: replace localhost with nethsm
+        run: sed -i 's/localhost/nethsm/g' ./tools/*.sh ./tools/tests/*.sh ./p11nethsm.conf ./tools/*.conf
+
+      - name: setup NetHSM
+        run: ./tools/ci_setup.sh
+
+      - name: Run integration tests
+        run: ./tools/ci_integration_tests.sh
       
   test_network:
     runs-on: ubuntu-latest

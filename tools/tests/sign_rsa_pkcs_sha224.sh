@@ -1,6 +1,12 @@
-#!/bin/sh -x
+#!/bin/bash -x
 
 set -e 
+
+if [[ $NETHSM_VERSION == v3.0 ]]
+then
+  exit
+fi
+
 KEYID=rsakey
 
 HEXID=$(echo -n ${KEYID} | xxd -ps)

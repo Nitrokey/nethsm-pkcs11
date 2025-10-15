@@ -1,5 +1,10 @@
-#!/bin/sh -x
+#!/bin/bash -x
 set -e
+
+if [[ $NETHSM_VERSION == v1.* ]] || [[ $NETHSM_VERSION == v2.* ]]
+then
+  exit
+fi
 
 KEYID=tempkey
 KEYID_NEW=tempkey2

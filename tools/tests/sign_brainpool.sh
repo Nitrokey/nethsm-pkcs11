@@ -1,6 +1,11 @@
-#!/bin/sh -x
+#!/bin/bash -x
 
 set -e
+
+if [[ $NETHSM_VERSION == v1.* ]] || [[ $NETHSM_VERSION == v2.* ]]
+then
+  exit
+fi
 
 for type in 256 384 512
 do
