@@ -4,39 +4,15 @@
 
 -
 
-## [2.0.0-rc.3][] (2025-10-14)
+## [2.0.0][] (2025-10-15)
 
-### Breaking Changes
-
-- Update RSA signature generation for NetHSM v3.1. This change is not compatible with older NetHSM versions.
-
-[2.0.0-rc.3]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.3
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0-rc.2...v2.0.0-rc.3)
-
-## [2.0.0-rc.2][] (2025-10-10)
-
-### Breaking Changes
-
-- Reject invalid IDs when creating or changing objects
-- Update RSA signature generation for NetHSM v3.0. This change is not compatible with older NetHSM versions.
-
-### Bugfixes
-
-- Fix ID validation. The new requirements are:
-  - The ID must not be empty and not be longer than 128 characters.
-  - The first character must be in the range `a`-`z`, `A-Z` or `0`-`9`.
-  - The remaining characters must be in the range `a`-`z`, `A-Z` or `0`-`9` or one of the characters `.`, `-`, `_`.
-  - The characters `.`, `-` and `_` can only be used with NetHSM v3.0 or later.
-
-[2.0.0-rc.2]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.2
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0-rc.1...v2.0.0-rc.2)
-
-## [2.0.0-rc.1][] (2025-09-16)
+This release adds support for the new features introduced in [NetHSM v3.0](https://github.com/Nitrokey/nethsm/releases/tag/v3.0) and improves the key ID handling.
 
 ### Breaking Changes
 
 - Remove support for EC_P224 keys
 - Remove `enable_set_attribute_value` config option
+- Reject invalid IDs when creating or changing objects
 
 ### Features
 
@@ -46,10 +22,24 @@
 
 ### Bugfixes
 
+- Fix ID validation. The new requirements are:
+  - The ID must not be empty and not be longer than 128 characters.
+  - The first character must be in the range `a`-`z`, `A-Z` or `0`-`9`.
+  - The remaining characters must be in the range `a`-`z`, `A-Z` or `0`-`9` or one of the characters `.`, `-`, `_`.
+  - The characters `.`, `-` and `_` can only be used with NetHSM v3.0 or later.
+
+### Bugfixes
+
 - Remove corresponding certificate and public key objects from the cache if a private key is deleted ([#260](https://github.com/Nitrokey/nethsm-pkcs11/issues/260))
 
-[2.0.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0-rc.1
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.7.2...v2.0.0-rc.1)
+### Compatibility
+
+- This release is fully compatible with NetHSM v3.1.
+- This release is generally compatible with NetHSM v1.0, v2.0, v2.1, v2.2 and v3.0 but not all features are available on these versions (as indicated in the changelog entries).
+- RSA signatures using the PKCS1 mechanisms do not work with NetHSM v3.0.
+
+[2.0.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.0.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v1.7.2...v2.0.0)
 
 ## [1.7.2][] (2025-07-25)
 
