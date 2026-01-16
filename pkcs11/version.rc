@@ -1,0 +1,35 @@
+#include <windows.h>
+
+#define VER_FILEVERSION 	2,0,0,0
+#define VER_FILEVERSION_STR 	"2.0.0.0\0"
+#define VER_PRODUCTVERSION 	2,0,0,0
+#define VER_PRODUCTVERSION_STR	"2.0.0.0\0"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VER_FILEVERSION
+PRODUCTVERSION  VER_PRODUCTVERSION
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0x0L
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_DLL
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"  // US English, ANSI Latin 1; Western European (Windows)
+        BEGIN
+            VALUE "CompanyName",      "Nitrokey GmbH"
+            VALUE "FileDescription",  "PKCS#11 module for the Nitrokey NetHSM"
+            VALUE "FileVersion",      VER_FILEVERSION_STR
+            VALUE "ProductVersion",   VER_PRODUCTVERSION_STR
+            VALUE "InternalName",     "nethsm_pkcs11"
+            VALUE "LegalCopyright",   "Nitrokey GmbH and contributors"
+            VALUE "OriginalFilename", "nethsm_pkcs11.dll"
+            VALUE "ProductName",      "NetHSM PKCS#11 module"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252  // US English, ANSI Latin 1; Western European (Windows)
+    END
+END
