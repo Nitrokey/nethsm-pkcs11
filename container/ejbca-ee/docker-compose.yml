@@ -1,0 +1,50 @@
+networks:
+  security-zone:
+    driver: bridge
+services:
+  ejbca:
+    image: repo.keyfactor.com/ejbca/ejbca-ee:9.3.6
+    depends_on:
+      - hsm-driver
+    networks:
+      - security-zone
+    environment:
+      - P11SERVER=hsm-driver
+      - PKCS11_PROXY_SOCKET=tcp://hsm:7121
+    ports:
+      - 20443:8443
+      - 10443:443
+    volumes:
+      - hsm-driver:/opt/primekey/p11proxy-client
+  hsm-driver:
+    build: .
+    hostname: hsm
+    networks:
+      - security-zone
+    environment:
+      - P11NETHSM_CONFIG_FILE=/etc/nitrokey/p11nethsm.conf
+    volumes:
+      - ./logs:/logs
+      - hsm-driver:/opt/primekey/p11proxy-client
+      - ./configuration:/etc/nitrokey/
+  nethsm:
+    image: nitrokey/nethsm:4241c247
+    platform: linux/amd64
+    ports:
+      - "30443:8443"
+    networks:
+      - security-zone
+  nethsm-provisioner:
+    image: curlimages/curl:latest
+    depends_on:
+      - nethsm
+    volumes:
+      - ../ejbca/provision.sh:/provision.sh:ro
+    command: ["/bin/sh", "/provision.sh"]
+    networks:
+      - security-zone
+    environment:
+      NETHSM_URL: https://nethsm:8443
+
+volumes:
+  hsm-driver:
