@@ -15,7 +15,7 @@ services:
       - 20443:8443
       - 10443:443
     volumes:
-      - hsm-driver:/opt/primekey/p11proxy-client
+      - hsm-driver:/opt/keyfactor/p11proxy-client
   hsm-driver:
     build: .
     hostname: hsm
@@ -25,7 +25,7 @@ services:
       - P11NETHSM_CONFIG_FILE=/etc/nitrokey/p11nethsm.conf
     volumes:
       - ./logs:/logs
-      - hsm-driver:/opt/primekey/p11proxy-client
+      - hsm-driver:/opt/keyfactor/p11proxy-client
       - ./configuration:/etc/nitrokey/
   nethsm:
     image: nitrokey/nethsm:4241c247
