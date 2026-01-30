@@ -46,8 +46,8 @@ services:
 #      LOG_LEVEL_SERVER_SUBSYSTEMS: DEBUG
       JAVA_OPTS_CUSTOM: "-Xms128m -Xmx13904m -Xss256k -XX:MetaspaceSize=160m -XX:MaxMetaspaceSize=2048m -Djava.security.debug=sunpkcs11,pkcs11keystore"
       LOG_STORAGE_LOCATION: /logs/
-      PKCS11SPY: /usr/lib/nitrokey/libnethsm_pkcs11.so
-      PKCS11SPY_OUTPUT: /logs/pkcs11spy.log
+      #PKCS11SPY: /usr/lib/nitrokey/libnethsm_pkcs11.so
+      #PKCS11SPY_OUTPUT: /logs/pkcs11spy.log
 
 networks:
   nethsm-network:
