@@ -121,19 +121,14 @@ impl PartialEq<Attr> for Attr {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ObjectKind {
     PrivateKey,
     PublicKey,
     SecretKey,
     Certificate,
+    #[default]
     Other,
-}
-
-impl Default for ObjectKind {
-    fn default() -> Self {
-        Self::Other
-    }
 }
 
 impl From<CK_OBJECT_CLASS> for ObjectKind {
