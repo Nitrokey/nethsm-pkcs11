@@ -19,10 +19,13 @@ EJBCA Example
 * If `logs/` is used via `LOG_STORAGE_LOCATION` (it is by default),
   make sure it is world-writable: `chmod a+w logs`
 * The attributes file is currently not needed/used
-* `pkcs11spy` is configured to trace the pkcs11 calls, to only use `libnethsm_pkcs11.so` make
-  sure to remove the `PKCS11SPY*` environment variables and update `web.properties` like that:
+* You can use `pkcs11spy` to trace the pkcs11 calls. To wrap calls to `libnethsm_pkcs11.so`
+  with `pkcs11-spy.so` make sure to comment out the `PKCS11SPY*` environment variables in
+  `docker-compose.yml` and update `web.properties` like that:
     ```diff
-    - cryptotoken.p11.lib.245.file=/usr/lib64/pkcs11-spy.so
-    + cryptotoken.p11.lib.245.file=/usr/lib/nitrokey/libnethsm_pkcs11.so
+    -#cryptotoken.p11.lib.245.file=/usr/lib64/pkcs11-spy.so
+    -cryptotoken.p11.lib.245.file=/usr/lib/nitrokey/libnethsm_pkcs11.so
+    +cryptotoken.p11.lib.245.file=/usr/lib64/pkcs11-spy.so
+    +#cryptotoken.p11.lib.245.file=/usr/lib/nitrokey/libnethsm_pkcs11.so
     ```
 
