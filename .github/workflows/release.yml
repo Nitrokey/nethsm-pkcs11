@@ -35,12 +35,53 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: windows-unsigned
           path: ${{ env.FILE_NAME }}
-
-      - name: Upload to the release
-        if: ${{ github.event_name == 'release' }}
-        uses: softprops/action-gh-release@v1
+  sign-windows:
+    runs-on:
+      group: "Windows Software Signing"
+      labels: ["self-hosted", "Linux", "ARM64"]
+    needs: [build-windows]
+    if: ${{ github.event_name == 'release' }}
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
+      FILE_NAME_UNSIGNED: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows-unsigned.dll
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-unsigned
+      - name: Sign artifact
+        run: |
+          mv ${{ env.FILE_NAME }} ${{ env.FILE_NAME_UNSIGNED }}
+          osslsigncode \
+            sign \
+            -provider /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so \
+            -pkcs11module /usr/lib/aarch64-linux-gnu/opensc-pkcs11.so \
+            -pkcs11cert "${{ secrets.PKCS11_CERT_URI_WINDOWS }}" \
+            -key "${{ secrets.PKCS11_KEY_URI_WINDOWS }}" \
+            -h sha256 \
+            -ts "http://ts.ssl.com" \
+            -in ${{ env.FILE_NAME_UNSIGNED }} \
+            -out ${{ env.FILE_NAME }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-signed
+          path: ${{ env.FILE_NAME }}
+  publish-windows:
+    runs-on: windows-latest
+    needs: [sign-windows]
+    if: ${{ github.event_name == 'release' }}
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-signed
+      - name: Publish artifact
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.FILE_NAME }}
 
