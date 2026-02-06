@@ -195,7 +195,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows
+          name: windows-unsigned
       - name: Install dependencies
         run: choco install opensc
       - name: Test pkcs11 module
