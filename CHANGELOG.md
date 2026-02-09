@@ -4,6 +4,21 @@
 
 -
 
+## [2.1.0-rc.1] (2026-02-17)
+
+### Features
+
+- Add signing for Windows binary.
+
+### Other changes
+
+- Updated CI pipeline to test with Fedora `42`, `43`, and Debian `13`.
+- Add default derive for ObjectKind enum.
+- Update `bytes`, `time`, `cryptoki-sys`, and `ureq` dependencies.
+
+[2.1.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0-rc.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0...v2.1.0-rc.1)
+
 ## [2.0.0][] (2025-10-15)
 
 This release adds support for the new features introduced in [NetHSM v3.0](https://github.com/Nitrokey/nethsm/releases/tag/v3.0) and improves the key ID handling.
