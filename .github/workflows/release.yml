@@ -241,9 +241,9 @@ jobs:
             name: musl
           - os: "debian:12"
             name: glibc
-          - os: "fedora:39"
+          - os: "fedora:42"
             name: glibc
-          - os: "fedora:40"
+          - os: "fedora:43"
             name: glibc
           - os: "ubuntu:22.04"
             name: glibc
