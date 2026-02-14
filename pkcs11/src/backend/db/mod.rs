@@ -9,6 +9,8 @@ use cryptoki_sys::CK_OBJECT_HANDLE;
 use log::info;
 use std::{collections::HashMap, time::SystemTime};
 
+use super::key::NetHSMId;
+
 pub use object::Object;
 
 #[derive(Debug)]
@@ -101,33 +103,33 @@ impl Db {
         self.objects.remove(&handle)
     }
 
-    pub fn rename(&mut self, old_id: &str, new_id: &str) {
+    pub fn rename(&mut self, old_id: &NetHSMId, new_id: &NetHSMId) {
         for object in self.objects.values_mut() {
-            if object.id == old_id {
+            if &object.id == old_id {
                 info!(
                     "Renaming object {:?}:{} to {}",
                     object.kind, object.id, new_id
                 );
-                object.rename(new_id);
+                object.rename(new_id.clone());
             }
         }
     }
 
-    pub fn remove_objects_by_id(&mut self, id: &str) {
-        self.objects.retain(|_, object| object.id != id)
+    pub fn remove_objects_by_id(&mut self, id: &NetHSMId) {
+        self.objects.retain(|_, object| &object.id != id)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::key::NetHSMId;
 
     #[test]
     fn test_adding_same_object() {
+        let id = NetHSMId::try_from("id".to_owned()).unwrap();
         let mut db = Db::new();
-        let mut object = Object::default();
-
-        object.id = "id".to_string();
+        let object = Object::new(id);
 
         let (handle1, object1) = db.add_object(object.clone());
         let (handle2, object2) = db.add_object(object.clone());

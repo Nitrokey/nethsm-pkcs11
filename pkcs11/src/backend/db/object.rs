@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::mem::size_of;
 
 use crate::backend::{
-    key::{EcKeyType, KeyType},
+    key::{EcKeyType, KeyType, NetHSMId, Pkcs11Id},
     mechanism::{KeyMechanism, Mechanism},
     Error, Pkcs11Error,
 };
@@ -143,24 +143,35 @@ impl From<CK_OBJECT_CLASS> for ObjectKind {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     pub kind: ObjectKind,
-    pub id: String,
+    pub id: NetHSMId,
     pub size: Option<usize>, // the size of the object in bytes
     pub mechanisms: Vec<KeyMechanism>,
 }
 
 impl Object {
-    pub fn rename(&mut self, id: &str) {
+    #[cfg(test)]
+    pub fn new(id: NetHSMId) -> Self {
+        Self {
+            id,
+            attrs: Default::default(),
+            kind: Default::default(),
+            size: Default::default(),
+            mechanisms: Default::default(),
+        }
+    }
+
+    pub fn rename(&mut self, id: NetHSMId) {
         let attr_id = self.attrs.get(&CKA_ID);
         let attr_label = self.attrs.get(&CKA_LABEL);
         info!("renaming {}/{attr_id:?}/{attr_label:?} to {}", self.id, id);
-        let id_bytes = Attr::Bytes(id.as_bytes().to_vec());
+        let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
         self.attrs.insert(CKA_LABEL, id_bytes.clone());
         self.attrs.insert(CKA_ID, id_bytes);
-        self.id = id.to_owned();
+        self.id = id;
     }
 }
 
@@ -296,7 +307,7 @@ fn configure_generic() -> Result<KeyData, Error> {
     })
 }
 
-pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error> {
+pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, Error> {
     let key_type = KeyType::try_from(key_data.r#type).map_err(|_| {
         error!(
             "Failed to create key with unsupported type {}",
@@ -306,13 +317,13 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
     })?;
 
     let mut attrs = HashMap::new();
-
     attrs.insert(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
     );
-    attrs.insert(CKA_ID, Attr::Bytes(id.as_bytes().to_vec()));
-    attrs.insert(CKA_LABEL, Attr::Bytes(id.as_bytes().to_vec()));
+    let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
+    attrs.insert(CKA_ID, id_bytes.clone());
+    attrs.insert(CKA_LABEL, id_bytes);
     attrs.insert(
         CKA_KEY_GEN_MECHANISM,
         Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
@@ -359,7 +370,7 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
     let private_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::PrivateKey,
-        id: id.to_string(),
+        id: id.clone(),
         size: key_attrs.key_size,
         mechanisms,
     };
@@ -376,7 +387,7 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
     let mut public_key = Object {
         attrs: attrs.clone(),
         kind: ObjectKind::PublicKey,
-        id: id.to_string(),
+        id,
         size: key_attrs.key_size,
         mechanisms: vec![],
     };
@@ -418,7 +429,7 @@ pub fn from_key_data(key_data: PublicKey, id: &str) -> Result<Vec<Object>, Error
 
 pub fn from_cert_data(
     cert: Vec<u8>,
-    key_id: &str,
+    key_id: NetHSMId,
     certificate_format: CertificateFormat,
 ) -> Result<Object, Error> {
     debug!("Loading certificate, expecting {certificate_format} encoding as per configuration");
@@ -442,8 +453,9 @@ pub fn from_cert_data(
         CKA_CLASS,
         Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),
     );
-    attrs.insert(CKA_ID, Attr::Bytes(key_id.as_bytes().to_vec()));
-    attrs.insert(CKA_LABEL, Attr::Bytes(key_id.as_bytes().to_vec()));
+    let id_bytes = Attr::Bytes(Pkcs11Id::from(&key_id).into_bytes());
+    attrs.insert(CKA_ID, id_bytes.clone());
+    attrs.insert(CKA_LABEL, id_bytes);
     attrs.insert(
         CKA_KEY_GEN_MECHANISM,
         Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
@@ -487,7 +499,7 @@ pub fn from_cert_data(
     Ok(Object {
         attrs,
         kind: ObjectKind::Certificate,
-        id: key_id.to_owned(),
+        id: key_id,
         size: Some(length),
         mechanisms: vec![],
     })

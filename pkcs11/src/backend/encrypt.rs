@@ -9,6 +9,7 @@ use super::Error;
 
 use super::{
     db::Object,
+    key::NetHSMId,
     login::{self, LoginCtx},
     mechanism::Mechanism,
 };
@@ -19,7 +20,7 @@ pub const ENCRYPT_BLOCK_SIZE: usize = 16;
 #[derive(Clone, Debug)]
 pub struct EncryptCtx {
     pub mechanism: Mechanism,
-    pub key_id: String,
+    pub key_id: NetHSMId,
     pub data: Vec<u8>,
 }
 
@@ -87,7 +88,7 @@ impl EncryptCtx {
 }
 
 fn encrypt_data(
-    key_id: &str,
+    key_id: &NetHSMId,
     login_ctx: &LoginCtx,
     data: &[u8],
     mechanism: &Mechanism,
@@ -109,7 +110,9 @@ fn encrypt_data(
     request.iv = iv;
     let output = login_ctx
         .try_(
-            |api_config| default_api::keys_key_id_encrypt_post(api_config, key_id, request),
+            |api_config| {
+                default_api::keys_key_id_encrypt_post(api_config, key_id.as_str(), request)
+            },
             login::UserMode::Operator,
         )
         .map_err(|err| {
