@@ -11,7 +11,7 @@ use log::{debug, error, trace};
 use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
 
 use crate::{
-    backend::{login::UserMode, Error, Pkcs11Error},
+    backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
     data::THREADS_ALLOWED,
 };
@@ -397,13 +397,13 @@ impl Session {
         self.decrypt_ctx = None;
     }
 
-    pub fn rename_objects(&self, old_id: &str, new_id: &str) -> Result<(), Error> {
+    pub fn rename_objects(&self, old_id: &NetHSMId, new_id: &NetHSMId) -> Result<(), Error> {
         self.login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_move_post(
                     api_config,
-                    old_id,
-                    MoveKeyRequest::new(new_id.to_owned()),
+                    old_id.as_str(),
+                    MoveKeyRequest::new(new_id.clone().into_string()),
                 )
             },
             crate::backend::login::UserMode::Administrator,
@@ -422,7 +422,7 @@ impl Session {
 
     pub(super) fn find_key(
         &mut self,
-        id: Option<&str>,
+        id: Option<&NetHSMId>,
         kind: Option<ObjectKind>,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
         let result = match id {
@@ -432,7 +432,7 @@ impl Session {
                     let db = self.db.0.lock()?;
                     db.iter()
                         .filter(|(_, obj)| {
-                            obj.id == key_id && kind.map(|k| k == obj.kind).unwrap_or(true)
+                            &obj.id == key_id && kind.map(|k| k == obj.kind).unwrap_or(true)
                         })
                         .map(|(handle, obj)| (handle, obj.clone()))
                         .collect()
@@ -633,13 +633,13 @@ impl Session {
         match key.kind {
             ObjectKind::Certificate => {
                 self.login_ctx.try_(
-                    |api_config| default_api::keys_key_id_cert_delete(api_config, &key.id),
+                    |api_config| default_api::keys_key_id_cert_delete(api_config, key.id.as_str()),
                     crate::backend::login::UserMode::Administrator,
                 )?;
             }
             ObjectKind::SecretKey | ObjectKind::PrivateKey => {
                 self.login_ctx.try_(
-                    |api_config| default_api::keys_key_id_delete(api_config, &key.id),
+                    |api_config| default_api::keys_key_id_delete(api_config, key.id.as_str()),
                     crate::backend::login::UserMode::Administrator,
                 )?;
                 delete_related_objects = true;

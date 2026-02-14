@@ -2,7 +2,11 @@
 
 ## Unreleased
 
--
+## Features
+
+- Encode PKCS11 IDs that are not valid NetHSM IDs ([#294](https://github.com/Nitrokey/nethsm-pkcs11/issues/294), requires NetHSM v3.0 or later).
+  These key IDs are representend on the NetHSM using the prefix `0---` and the hex-encoded PKCS11 ID.
+  Previously, using such key IDs caused an error.
 
 ## [2.1.0-rc.1] (2026-02-17)
 

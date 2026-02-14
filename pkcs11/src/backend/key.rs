@@ -1,4 +1,9 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    fmt::{self, Display, Formatter},
+    sync::Mutex,
+};
 
 use super::{
     db::{self, attr::CkRawAttrTemplate, Object},
@@ -144,79 +149,235 @@ impl TryFrom<ObjectIdentifier> for EcKeyType {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Id(String);
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pkcs11Id<'a>(Cow<'a, [u8]>);
 
-impl Id {
-    pub fn new(s: String) -> Result<Self, InvalidIdError> {
+impl Pkcs11Id<'_> {
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.0.into_owned()
+    }
+}
+
+impl<'a> From<&'a NetHSMId> for Pkcs11Id<'a> {
+    fn from(id: &'a NetHSMId) -> Self {
+        if let Some(bytes) = id.decode() {
+            Self(bytes.into())
+        } else {
+            Self(id.0.as_bytes().into())
+        }
+    }
+}
+
+impl<'a> From<&'a [u8]> for Pkcs11Id<'a> {
+    fn from(bytes: &'a [u8]) -> Self {
+        Self(bytes.into())
+    }
+}
+
+/// An ID used by the NetHSM.
+///
+/// As we need to support arbitrary [`Pkcs11Id`][] values (byte sequences), an encoding scheme is
+/// used:
+/// - PKCS11 IDs that are also valid NetHSM IDs are used as-is (see [`NetHSMId::validate`][] and
+///   [`NetHSMId::from_bytes`][]).
+/// - PKCS11 IDs that are not valid NetHSM IDs are encoded by adding a prefix and using the hex
+///   encoding of the PKCS11 ID (see [`NetHSMId::encode`]).
+///
+/// When mapping NetHSM IDs to PKCS11 IDs, we only perform the decoding step if the decoded PKCS11
+/// ID would map to the same NetHSM ID.  Otherwise, the ID is used as-is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct NetHSMId(String);
+
+impl NetHSMId {
+    const MAX_LEN: usize = 128;
+    const ENCODING_PREFIX: &str = "0---";
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn into_string(self) -> String {
+        self.0
+    }
+
+    /// Checks if the given bytes are a valid NetHSM ID (without encoding).
+    fn validate(bytes: &[u8]) -> Result<(), InvalidIdError> {
         // See https://github.com/Nitrokey/nethsm/blob/60b9b2c0caa609f53e50870451731c5803c4b724/src/keyfender/json.ml#L459-L472
-        const ALLOWED_CHARS: &[u8] = b"-_.";
-        const MAX_LEN: usize = 128;
-        if s.len() > MAX_LEN {
-            warn!(
-                "ID '{s}' is invalid: length is {} bytes (maximum: {MAX_LEN} bytes)",
-                s.len(),
-            );
-            return Err(InvalidIdError);
+
+        fn is_valid_first_character(c: u8) -> bool {
+            c.is_ascii_alphanumeric()
         }
-        let (first, rest) = s.as_bytes().split_first().ok_or_else(|| {
-            warn!("Empty IDs are invalid");
-            InvalidIdError
-        })?;
-        if !first.is_ascii_alphanumeric() {
-            warn!("ID '{s}' is invalid: first character must be alphanumeric");
-            return Err(InvalidIdError);
+
+        fn is_valid_rest_character(c: u8) -> bool {
+            const EXTRA_CHARS: &[u8] = b"-_.";
+            c.is_ascii_alphanumeric() || EXTRA_CHARS.contains(&c)
         }
-        if let Some(c) = rest
+
+        if bytes.len() > Self::MAX_LEN {
+            return Err(InvalidIdError::TooLong {
+                length: bytes.len(),
+                max_length: Self::MAX_LEN,
+                encoded: false,
+            });
+        }
+
+        let (first, rest) = bytes.split_first().ok_or(InvalidIdError::Empty)?;
+        if !is_valid_first_character(*first) {
+            return Err(InvalidIdError::InvalidCharacter {
+                position: 0,
+                character: *first,
+            });
+        }
+        if let Some((i, c)) = rest
             .iter()
-            .find(|c| !c.is_ascii_alphanumeric() && !ALLOWED_CHARS.contains(c))
+            .enumerate()
+            .find(|(_i, c)| !is_valid_rest_character(**c))
         {
-            warn!("ID '{s}' is invalid: invalid character '{c}'");
-            return Err(InvalidIdError);
+            return Err(InvalidIdError::InvalidCharacter {
+                position: i + 1,
+                character: *c,
+            });
         }
+        Ok(())
+    }
+
+    /// Creates a `NetHSMId` from the given bytes without encoding.
+    ///
+    /// This only works if the unencoded bytes are a valid NetHSM ID, see [`Self::validate`][].
+    fn from_bytes(bytes: &[u8]) -> Result<Self, InvalidIdError> {
+        Self::validate(bytes)?;
+        let s = str::from_utf8(bytes).map_err(|err| {
+            let i = err.error_len().unwrap_or_else(|| err.valid_up_to() + 1);
+            InvalidIdError::InvalidCharacter {
+                position: i,
+                character: bytes[i],
+            }
+        })?;
+        Ok(Self(s.to_owned()))
+    }
+
+    /// Encodes the given bytes as a `NetHSMId`.
+    ///
+    /// The encoding uses a prefix ([`Self::ENCODING_PREFIX`][]) and the hex-encoding of the given
+    /// bytes.  This works with arbitrary bytes but should only be used if the unencoded bytes are
+    /// not a valid NetHSM ID, see [`Self::validate`][].
+    fn encode(bytes: &[u8]) -> Result<Self, InvalidIdError> {
+        let max_length = (Self::MAX_LEN - Self::ENCODING_PREFIX.len()) / 2;
+        if bytes.len() > max_length {
+            Err(InvalidIdError::TooLong {
+                length: bytes.len(),
+                max_length,
+                encoded: true,
+            })
+        } else {
+            let mut s = Self::ENCODING_PREFIX.to_owned();
+            s += &hex::encode_upper(bytes);
+            Ok(Self(s))
+        }
+    }
+
+    /// Returns the unencoded bytes
+    fn decode(&self) -> Option<Vec<u8>> {
+        let rest = self.0.strip_prefix(Self::ENCODING_PREFIX)?;
+        let decoded_bytes = hex::decode(rest).ok()?;
+        let decoded_pkcs11_id = Pkcs11Id::from(decoded_bytes.as_slice());
+        let encoded = Self::try_from(&decoded_pkcs11_id);
+        if encoded.as_ref() == Ok(self) {
+            Some(decoded_bytes)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for NetHSMId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl TryFrom<String> for NetHSMId {
+    type Error = InvalidIdError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let bytes = s.as_bytes();
+        Self::validate(bytes).inspect_err(|err| err.log(bytes))?;
         Ok(Self(s))
     }
 }
 
-impl AsRef<str> for Id {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<Id> for String {
-    fn from(id: Id) -> String {
-        id.0
-    }
-}
-
-impl TryFrom<String> for Id {
+impl TryFrom<&Pkcs11Id<'_>> for NetHSMId {
     type Error = InvalidIdError;
 
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        Self::new(s)
-    }
-}
-
-impl TryFrom<Vec<u8>> for Id {
-    type Error = InvalidIdError;
-
-    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        String::from_utf8(bytes)
-            .map_err(|err| {
-                warn!("ID {:?} is invalid: not a UTF-8 string", err.into_bytes());
-                InvalidIdError
+    fn try_from(id: &Pkcs11Id<'_>) -> Result<Self, Self::Error> {
+        let id = id.0.as_ref();
+        Self::from_bytes(id)
+            .or_else(|err| {
+                if matches!(err, InvalidIdError::InvalidCharacter { .. }) {
+                    Self::encode(id)
+                } else {
+                    Err(err)
+                }
             })
-            .and_then(Id::try_from)
+            .inspect_err(|err| err.log(id))
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct InvalidIdError;
+pub enum InvalidIdError {
+    Empty,
+    TooLong {
+        length: usize,
+        max_length: usize,
+        encoded: bool,
+    },
+    InvalidCharacter {
+        position: usize,
+        character: u8,
+    },
+}
+
+impl InvalidIdError {
+    fn log(&self, id: &[u8]) {
+        let encoded = hex::encode(id);
+        let id = str::from_utf8(id)
+            .map(|s| format!("'{s}' ({encoded})"))
+            .unwrap_or_else(|_| encoded);
+        match self {
+            Self::Empty => warn!("IDs must not be empty"),
+            Self::TooLong {
+                length,
+                max_length,
+                encoded,
+            } => {
+                if *encoded {
+                    warn!("ID {id} is too long (length: {length}, maximum: {max_length})");
+                } else {
+                    warn!("ID {id} is too long (length: {length}, maximum for encoded IDs: {max_length})");
+                }
+            }
+            Self::InvalidCharacter {
+                position,
+                character,
+            } => {
+                let character = if character.is_ascii() {
+                    format!("'{}' ({character:x})", char::from(*character))
+                } else {
+                    format!("{character:x}")
+                };
+                warn!("ID {id} contains invalid character {character} at position {position}");
+            }
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct ParsedAttributes {
-    pub id: Option<String>,
+    pub id: Option<NetHSMId>,
     pub key_type: Option<CK_KEY_TYPE>,
     pub sign: bool,
     pub encrypt: bool,
@@ -253,18 +414,20 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             },
             CKA_ID => {
                 if let Some(bytes) = attr.val_bytes() {
-                    let id = Id::try_from(bytes.to_owned())
+                    let pkcs11_id = Pkcs11Id::from(bytes);
+                    let id = NetHSMId::try_from(&pkcs11_id)
                         .map_err(|_| Error::InvalidAttribute(CKA_ID))?;
-                    parsed.id = Some(id.0);
+                    parsed.id = Some(id);
                 }
             }
             CKA_LABEL => {
                 if let Some(bytes) = attr.val_bytes() {
-                    let id = Id::try_from(bytes.to_owned())
+                    let pkcs11_id = Pkcs11Id::from(bytes);
+                    let id = NetHSMId::try_from(&pkcs11_id)
                         .map_err(|_| Error::InvalidAttribute(CKA_LABEL))?;
                     trace!("label: {id:?}");
                     if parsed.id.is_none() {
-                        parsed.id = Some(id.0);
+                        parsed.id = Some(id);
                     }
                 }
             }
@@ -332,7 +495,7 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
 fn upload_certificate(
     parsed_template: &ParsedAttributes,
     login_ctx: &LoginCtx,
-) -> Result<(String, ObjectKind), Error> {
+) -> Result<(NetHSMId, ObjectKind), Error> {
     let cert = parsed_template
         .value
         .as_ref()
@@ -354,10 +517,8 @@ fn upload_certificate(
         CertificateFormat::Der => cert.clone(),
     };
 
-    let key_id = id.as_str();
-
     login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_put(api_config, key_id, body),
+        |api_config| default_api::keys_key_id_cert_put(api_config, id.as_str(), body),
         login::UserMode::Administrator,
     )?;
 
@@ -367,7 +528,7 @@ fn upload_certificate(
 pub fn create_key_from_template(
     template: CkRawAttrTemplate,
     login_ctx: &LoginCtx,
-) -> Result<(String, ObjectKind), Error> {
+) -> Result<(NetHSMId, ObjectKind), Error> {
     let parsed = parse_attributes(&template)?;
 
     debug!("key_class: {:?}", parsed.key_class);
@@ -479,12 +640,11 @@ pub fn create_key_from_template(
     let private_key = PrivateKey::new(mechanisms, r#type.into(), key);
 
     let id = if let Some(id) = parsed.id {
-        let key_id = id.as_str();
         if let Err(err) = login_ctx.try_(
             |api_config| {
                 default_api::keys_key_id_put(
                     api_config,
-                    key_id,
+                    id.as_str(),
                     default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
                 )
             },
@@ -564,7 +724,7 @@ pub fn generate_key_from_template(
 
     let api_mechs = api_mechs.into_iter().map(From::from).collect();
     let mut request = KeyGenerateRequestData::new(api_mechs, key_type.into());
-    request.id = parsed.id;
+    request.id = parsed.id.map(NetHSMId::into_string);
     request.length = length.map(|length| length as i32);
     let id = login_ctx.try_(
         |api_config| default_api::keys_generate_post(api_config, request),
@@ -576,7 +736,7 @@ pub fn generate_key_from_template(
     fetch_key(&id, login_ctx, db)
 }
 
-fn fetch_one_key(key_id: &str, login_ctx: &LoginCtx) -> Result<Vec<Object>, Error> {
+fn fetch_one_key(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Vec<Object>, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -584,7 +744,7 @@ fn fetch_one_key(key_id: &str, login_ctx: &LoginCtx) -> Result<Vec<Object>, Erro
     }
 
     let key_data = match login_ctx.try_(
-        |api_config| default_api::keys_key_id_get(api_config, key_id),
+        |api_config| default_api::keys_key_id_get(api_config, key_id.as_str()),
         super::login::UserMode::OperatorOrAdministrator,
     ) {
         Ok(key_data) => key_data.entity,
@@ -603,13 +763,13 @@ fn fetch_one_key(key_id: &str, login_ctx: &LoginCtx) -> Result<Vec<Object>, Erro
         }
     };
 
-    let objects = db::object::from_key_data(key_data, key_id)?;
+    let objects = db::object::from_key_data(key_data, key_id.clone())?;
 
     Ok(objects)
 }
 
 pub fn fetch_key(
-    key_id: &str,
+    key_id: &NetHSMId,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
@@ -620,7 +780,7 @@ pub fn fetch_key(
     Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
 }
 
-fn fetch_one_certificate(key_id: &str, login_ctx: &LoginCtx) -> Result<Object, Error> {
+fn fetch_one_certificate(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Object, Error> {
     if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
         return Err(Error::NotLoggedIn(
             super::login::UserMode::OperatorOrAdministrator,
@@ -628,13 +788,13 @@ fn fetch_one_certificate(key_id: &str, login_ctx: &LoginCtx) -> Result<Object, E
     }
 
     let cert_data = login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_get(api_config, key_id),
+        |api_config| default_api::keys_key_id_cert_get(api_config, key_id.as_str()),
         super::login::UserMode::OperatorOrAdministrator,
     )?;
 
     let object = db::object::from_cert_data(
         cert_data.entity,
-        key_id,
+        key_id.clone(),
         login_ctx.slot().certificate_format,
     )?;
 
@@ -642,7 +802,7 @@ fn fetch_one_certificate(key_id: &str, login_ctx: &LoginCtx) -> Result<Object, E
 }
 
 pub fn fetch_certificate(
-    key_id: &str,
+    key_id: &NetHSMId,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
 ) -> Result<(CK_OBJECT_HANDLE, Object), Error> {
@@ -654,7 +814,7 @@ pub fn fetch_certificate(
 
 // get the id from the logation header value :
 // location: /api/v1/keys/<id>?mechanisms=ECDSA_Signature
-fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<String, Error> {
+fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<NetHSMId, Error> {
     let location_header = headers.get("location").ok_or(Error::InvalidData)?;
     let key_id = location_header
         .split('/')
@@ -664,7 +824,11 @@ fn extract_key_id_location_header(headers: HashMap<String, String>) -> Result<St
         .next()
         .ok_or(Error::InvalidData)?
         .to_string();
-    Ok(key_id)
+    NetHSMId::try_from(key_id)
+        .inspect_err(|err| {
+            error!("NetHSM returned invalid key ID: {err:?}");
+        })
+        .map_err(|_| Error::InvalidData)
 }
 
 pub fn fetch_one(
@@ -672,6 +836,11 @@ pub fn fetch_one(
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
 ) -> Result<Vec<Object>, Error> {
+    let key_id = NetHSMId::try_from(key.id.clone())
+        .inspect_err(|err| {
+            error!("NetHSM returned invalid key ID: {err:?}");
+        })
+        .map_err(|_| Error::InvalidData)?;
     let mut acc = Vec::new();
 
     if matches!(
@@ -681,11 +850,11 @@ pub fn fetch_one(
             | Some(ObjectKind::PublicKey)
             | Some(ObjectKind::SecretKey)
     ) {
-        acc = fetch_one_key(&key.id, login_ctx)?;
+        acc = fetch_one_key(&key_id, login_ctx)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
-        match fetch_one_certificate(&key.id, login_ctx) {
+        match fetch_one_certificate(&key_id, login_ctx) {
             Ok(cert) => acc.push(cert),
             Err(err) => {
                 debug!("Failed to fetch certificate: {err:?}");
@@ -697,34 +866,74 @@ pub fn fetch_one(
 
 #[cfg(test)]
 mod tests {
-    use super::{Id, InvalidIdError};
+    use super::{InvalidIdError, NetHSMId, Pkcs11Id};
 
     #[test]
-    fn test_id_valid() {
-        let valid_ids = ["keyID", "mykeyid", "test-key", "test_key", "test.key"];
-        for id in valid_ids {
-            assert_eq!(Id::new(id.to_owned()), Ok(Id(id.to_owned())));
+    fn test_nethsm_id_valid() {
+        let valid_ids: [(&[u8], &str); _] = [
+            (b"keyID", "keyID"),
+            (b"mykeyid", "mykeyid"),
+            (b"test-key", "test-key"),
+            (b"test_key", "test_key"),
+            (b"test.key", "test.key"),
+            (b"12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678", "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678"),
+            (b"test~key", "0---746573747E6B6579"),
+            (b"-key", "0---2D6B6579"),
+            (b".key", "0---2E6B6579"),
+            (b"_key", "0---5F6B6579"),
+            (b"&*&*&*", "0---262A262A262A"),
+            (b"--", "0---2D2D"),
+            (b".2345678901234567890123456789012345678901234567890123456789012", "0---2E32333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132"),
+            (&[0], "0---00"),
+            ("schlüssel".as_bytes(), "0---7363686CC3BC7373656C"),
+            ("¾藏".as_bytes(), "0---C2BEE8978F"),
+        ];
+        for (bytes, s) in valid_ids {
+            let pkcs11_id = Pkcs11Id(bytes.into());
+            let nethsm_id = NetHSMId(s.to_owned());
+            assert_eq!(NetHSMId::try_from(&pkcs11_id).as_ref(), Ok(&nethsm_id));
+            assert_eq!(Pkcs11Id::from(&nethsm_id), pkcs11_id);
         }
     }
 
     #[test]
-    fn test_id_invalid() {
-        let invalid_ids = [
-            "",
-            "&*&*&*",
-            "-key",
-            ".key",
-            "_key",
-            "--",
-            "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890",
-            "schlüssel",
-            "¾藏",
+    fn test_pkcs11_id_invalid() {
+        let ids = [
+            // invalid hex (odd number of characters)
+            "0---2D6B657",
+            // invalid hex (bad value)
+            "0---2D6B657K",
+            // encoding not necessary
+            "0---6B6579",
         ];
-        for id in invalid_ids {
+        for id in ids {
+            let nethsm_id = NetHSMId(id.to_owned());
+            let pkcs11_id = Pkcs11Id::from(&nethsm_id);
+            assert_eq!(pkcs11_id, Pkcs11Id(id.as_bytes().to_owned().into()));
+        }
+    }
+
+    #[test]
+    fn test_nethsm_id_invalid() {
+        let invalid_ids: [(InvalidIdError, &[u8]); _] = [
+            (InvalidIdError::Empty, b""),
+            (InvalidIdError::TooLong {
+                length: 129,
+                max_length: 128,
+                encoded: false,
+            }, b"123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"),
+            (InvalidIdError::TooLong {
+                length: 63,
+                max_length: 62,
+                encoded: true,
+            }, b".23456789012345678901234567890123456789012345678901234567890123"),
+        ];
+        for (err, bytes) in invalid_ids {
+            let id = Pkcs11Id(bytes.into());
             assert_eq!(
-                Id::new(id.to_owned()),
-                Err(InvalidIdError),
-                "'{id}' should be rejected"
+                NetHSMId::try_from(&id),
+                Err(err),
+                "'{bytes:?}' should be rejected"
             );
         }
     }

@@ -101,7 +101,7 @@ impl SignCtx {
             |conf| {
                 default_api::keys_key_id_sign_post(
                     conf,
-                    &self.key.id.clone(),
+                    self.key.id.as_str(),
                     nethsm_sdk_rs::models::SignRequestData::new(mode, b64_message),
                 )
             },

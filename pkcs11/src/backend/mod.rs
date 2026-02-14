@@ -21,6 +21,8 @@ pub mod session;
 pub mod sign;
 pub mod slot;
 
+use self::key::NetHSMId;
+
 macro_rules! pkcs11_error {
     (
         $(#[$outer:meta])*
@@ -130,7 +132,7 @@ pub enum Error {
     Pem(pem_rfc7468::Error),
     NotLoggedIn(UserMode),
     InvalidObjectHandle(CK_OBJECT_HANDLE),
-    InvalidMechanism((String, ObjectKind), Mechanism),
+    InvalidMechanism((NetHSMId, ObjectKind), Mechanism),
     InvalidAttribute(CK_ATTRIBUTE_TYPE),
     MissingAttribute(CK_ATTRIBUTE_TYPE),
     ObjectClassNotSupported,
