@@ -4,6 +4,7 @@ use nethsm_sdk_rs::apis::default_api;
 
 use super::{
     db::Object,
+    key::NetHSMId,
     login::{self, LoginCtx},
     mechanism::{MechMode, Mechanism},
     Error,
@@ -12,7 +13,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct DecryptCtx {
     pub mechanism: Mechanism,
-    pub key_id: String,
+    pub key_id: NetHSMId,
     pub data: Vec<u8>,
 }
 
@@ -68,12 +69,12 @@ impl DecryptCtx {
             .iv()
             .map(|iv| Base64::encode_string(iv.as_slice()));
 
-        let key_id = self.key_id.as_str();
-
         let mut request = nethsm_sdk_rs::models::DecryptRequestData::new(mode, b64_message);
         request.iv = iv;
         let output = login_ctx.try_(
-            |api_config| default_api::keys_key_id_decrypt_post(api_config, key_id, request),
+            |api_config| {
+                default_api::keys_key_id_decrypt_post(api_config, self.key_id.as_str(), request)
+            },
             login::UserMode::Operator,
         )?;
 

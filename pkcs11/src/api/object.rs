@@ -5,7 +5,11 @@ use log::{error, info, trace};
 
 use crate::{
     api::api_function,
-    backend::{db::attr::CkRawAttrTemplate, key::Id, Pkcs11Error},
+    backend::{
+        db::attr::CkRawAttrTemplate,
+        key::{NetHSMId, Pkcs11Id},
+        Pkcs11Error,
+    },
     data,
 };
 
@@ -288,15 +292,14 @@ fn set_attribute_value(
     // We already checked before that there is at least one attribute. As CKA_ID is the only
     // attribute we support, id cannot be None.
     let id = id.ok_or(Pkcs11Error::ArgumentsBad)?;
-    let id = Id::try_from(id.to_owned()).map_err(|_| {
+    let id = Pkcs11Id::from(id);
+    let id = NetHSMId::try_from(&id).map_err(|_| {
         error!("CKA_ID value is not a valid NetHSM ID: {id:?}");
         Pkcs11Error::AttributeValueInvalid
     })?;
 
-    info!("Changing ID to: {}", id.as_ref());
-    session
-        .rename_objects(&object.id, id.as_ref())
-        .map_err(From::from)
+    info!("Changing ID to: {}", id);
+    session.rename_objects(&object.id, &id).map_err(From::from)
 }
 
 #[cfg(test)]
@@ -433,7 +436,8 @@ mod tests {
         let slot = get_slot(0).unwrap();
         let size = 32;
         let mut db = Db::new();
-        let mut object = Object::default();
+        let id = NetHSMId::try_from("test".to_owned()).unwrap();
+        let mut object = Object::new(id);
         object.size = Some(size);
         let (object_handle, _) = db.add_object(object);
 
