@@ -113,7 +113,7 @@ jobs:
 
   tests:
     runs-on: ubuntu-latest
-    container: debian:12
+    container: debian:13
     env:
       RUST_BACKTRACE: full
       RUST_LOG: trace
@@ -166,7 +166,7 @@ jobs:
 
   fork-tests:
     runs-on: ubuntu-latest
-    container: debian:12
+    container: debian:13
     needs: build
     env:
       RUST_BACKTRACE: full
@@ -195,7 +195,7 @@ jobs:
 
   compatibility-tests:
     runs-on: ubuntu-latest
-    container: debian:12
+    container: debian:13
     needs: build
 
     strategy:

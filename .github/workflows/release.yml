@@ -239,7 +239,7 @@ jobs:
         include:
           - os: "alpine:3.18"
             name: musl
-          - os: "debian:12"
+          - os: "debian:13"
             name: glibc
           - os: "fedora:42"
             name: glibc
