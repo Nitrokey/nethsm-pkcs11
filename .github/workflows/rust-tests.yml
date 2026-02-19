@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+env:
+  WINDOWS_SDK_VERSION: "10.0.26100.0"
+
 jobs:
   check-formatting-linting:
     permissions:
@@ -38,6 +41,38 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --frozen --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
+
+  check-windows-version-file:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./pkcs11
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable-x86_64-pc-windows-msvc
+      - name: Check version file compilation
+        env:
+          WINDOWS_SDK_BIN_PATH: "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\${{ env.WINDOWS_SDK_VERSION }}\\x64"
+          WINDOWS_SDK_INCLUDE_BASE_PATH: "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\${{ env.WINDOWS_SDK_VERSION }}"
+        run: |
+          $Env:PATH += ";" + "$Env:WINDOWS_SDK_BIN_PATH"
+          $Env:INCLUDE += ";" + "$Env:WINDOWS_SDK_INCLUDE_BASE_PATH\um"
+          $Env:INCLUDE += ";" + "$Env:WINDOWS_SDK_INCLUDE_BASE_PATH\shared"
+          rc /fo version.res version.rc
+      - name: Check version accordance with package
+        run: |
+          $PACKAGE_VERSION = ( `
+            cargo metadata --no-deps --format-version=1 | `
+            ConvertFrom-Json).packages | `
+            Where-Object { $_.name -eq "nethsm_pkcs11" } | `
+            Select-Object -ExpandProperty version
+          $RC_VERSION = ((Select-String "^#define VER_PRODUCTVERSION\s+(\d+),(\d+),(\d+),(\d+)$" "version.rc" -List).Matches.Groups[1..3].Value) -join '.'
+          if ($PACKAGE_VERSION -eq $RC_VERSION) {exit 0} else {exit 1}
 
   check-windows:
     runs-on: windows-latest
