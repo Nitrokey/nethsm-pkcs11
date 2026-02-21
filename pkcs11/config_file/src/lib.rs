@@ -393,11 +393,11 @@ password: ""
                     description: Some("Local HSM (docker)".into()),
                     operator: Some(UserConfig {
                         username: "operator".into(),
-                        password: Some("localpass".into())
+                        password: None,
                     }),
                     administrator: Some(UserConfig {
                         username: "admin".into(),
-                        password: None
+                        password: None,
                     }),
                     instances: vec![InstanceConfig {
                         url: "https://keyfender:8443/api/v1".into(),
