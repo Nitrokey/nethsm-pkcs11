@@ -4,40 +4,24 @@
 
 -
 
-## [2.1.0-rc.3][] (2026-03-02)
-
-### Features
-
-- Add Windows version information for builds in the GitHub pipeline.
-
-[2.1.0-rc.3]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0-rc.3
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.1.0-rc.2...v2.1.0-rc.3)
-
-## [2.1.0-rc.2][] (2026-02-17)
-
-### Features
-
-- Encode PKCS11 IDs that are not valid NetHSM IDs ([#294](https://github.com/Nitrokey/nethsm-pkcs11/issues/294), requires NetHSM v3.0 or later).
-  These key IDs are representend on the NetHSM using the prefix `0---` and the hex-encoded PKCS11 ID.
-  Previously, using such key IDs caused an error.
-
-[2.1.0-rc.2]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0-rc.2
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.1.0-rc.1...v2.1.0-rc.2)
-
-## [2.1.0-rc.1] (2026-02-17)
+## [2.1.0][] (2026-02-27)
 
 ### Features
 
 - Add signing for Windows binary.
+- Encode PKCS11 IDs that are not valid NetHSM IDs ([#294](https://github.com/Nitrokey/nethsm-pkcs11/issues/294), requires NetHSM v3.0 or later).
+  These key IDs are representend on the NetHSM using the prefix `0---` and the hex-encoded PKCS11 ID.
+  Previously, using such key IDs caused an error.
+- Add Windows version information for builds in the GitHub pipeline.
 
-### Other changes
+### Other Changes
 
 - Updated CI pipeline to test with Fedora `42`, `43`, and Debian `13`.
 - Add default derive for ObjectKind enum.
 - Update `bytes`, `time`, `cryptoki-sys`, and `ureq` dependencies.
 
-[2.1.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0-rc.1
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0...v2.1.0-rc.1)
+[2.1.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.0.0...v2.1.0)
 
 ## [2.0.0][] (2025-10-15)
 
