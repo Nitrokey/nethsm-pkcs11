@@ -832,7 +832,7 @@ dependencies = [
 
 [[package]]
 name = "nethsm_pkcs11"
-version = "2.1.0-rc.2"
+version = "2.1.0-rc.3"
 dependencies = [
  "arc-swap",
  "base64ct",

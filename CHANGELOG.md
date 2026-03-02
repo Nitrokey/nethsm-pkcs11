@@ -2,7 +2,16 @@
 
 ## Unreleased
 
+-
+
+## [2.1.0-rc.3][] (2026-03-02)
+
+### Features
+
 - Add Windows version information for builds in the GitHub pipeline.
+
+[2.1.0-rc.3]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v2.1.0-rc.3
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.1.0-rc.2...v2.1.0-rc.3)
 
 ## [2.1.0-rc.2][] (2026-02-17)
 
