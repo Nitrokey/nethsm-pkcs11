@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+env:
+  WINDOWS_SDK_VERSION: "10.0.26100.0"
+
 jobs:
   check-formatting-linting:
     permissions:
@@ -54,7 +57,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build project
-        run: cargo build --release
+        env:
+          WINDOWS_SDK_BIN_PATH: "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\${{ env.WINDOWS_SDK_VERSION }}\\x64"
+          WINDOWS_SDK_INCLUDE_BASE_PATH: "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\${{ env.WINDOWS_SDK_VERSION }}"
+        run: |
+          $Env:PATH += ";" + "$Env:WINDOWS_SDK_BIN_PATH"
+          $Env:INCLUDE += ";" + "$Env:WINDOWS_SDK_INCLUDE_BASE_PATH\um"
+          $Env:INCLUDE += ";" + "$Env:WINDOWS_SDK_INCLUDE_BASE_PATH\shared"
+          cargo build --release
 
       - name: Archive Artifact
         uses: actions/upload-artifact@v4
