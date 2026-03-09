@@ -8,7 +8,7 @@ openssl genrsa -out _rsa_private.pem 2048
 
 KEYID=01
 
-NATIVE_KEYID=0--${KEYID}
+NATIVE_KEYID=0---${KEYID}
 
 HEXID=$(echo -n ${KEYID}| xxd -ps)
 
