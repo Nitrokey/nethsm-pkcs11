@@ -58,7 +58,7 @@ jobs:
       FILE_NAME_UNSIGNED: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows-unsigned.dll
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-unsigned
       - name: Sign artifact
@@ -87,7 +87,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-signed
       - name: Publish artifact
@@ -203,7 +203,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-unsigned
       - name: Install dependencies
@@ -224,7 +224,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos
       - name: Install dependencies
@@ -271,7 +271,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-x86_64-${{ matrix.name }}
       - name: Install dependencies

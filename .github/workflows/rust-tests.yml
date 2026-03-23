@@ -195,7 +195,7 @@ jobs:
         run: apt-get update && apt-get install -y gcc make
 
       - name: Download Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: nethsm-pkcs11-x86_64-linux-gnu.so
           path: target/release
@@ -230,7 +230,7 @@ jobs:
         run: apt-get update && apt-get install -y curl opensc openssl xxd jq gnutls-bin
 
       - name: Download Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: nethsm-pkcs11-x86_64-linux-gnu.so
           path: target/debug
