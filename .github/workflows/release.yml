@@ -19,7 +19,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -43,7 +43,7 @@ jobs:
         run: mv -Verbose target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-unsigned
           path: ${{ env.FILE_NAME }}
@@ -58,7 +58,7 @@ jobs:
       FILE_NAME_UNSIGNED: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows-unsigned.dll
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-unsigned
       - name: Sign artifact
@@ -75,7 +75,7 @@ jobs:
             -in ${{ env.FILE_NAME_UNSIGNED }} \
             -out ${{ env.FILE_NAME }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-signed
           path: ${{ env.FILE_NAME }}
@@ -87,7 +87,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-signed
       - name: Publish artifact
@@ -102,7 +102,7 @@ jobs:
       FILE_NAME_ARM: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         run: rustup install stable && rustup target install aarch64-apple-darwin && rustup target install x86_64-apple-darwin
@@ -121,7 +121,7 @@ jobs:
         run: mv -v target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos
           path: |
@@ -153,7 +153,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-linux-${{ matrix.name }}.so
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: install dependencies
         run: |
@@ -183,7 +183,7 @@ jobs:
         run: mv --verbose target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-x86_64-${{ matrix.name }}
           path: ${{ env.FILE_NAME }}
@@ -201,9 +201,9 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-unsigned
       - name: Install dependencies
@@ -222,9 +222,9 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos
       - name: Install dependencies
@@ -269,9 +269,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-x86_64-${{ matrix.name }}
       - name: Install dependencies
@@ -317,7 +317,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-linux-${{ matrix.name }}.so
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: uraimo/run-on-arch-action@v3
         name: Build artifact
         id: build
@@ -353,7 +353,7 @@ jobs:
             mv --verbose target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-${{ matrix.arch }}-${{ matrix.name }}
           path: artifacts/${{ env.FILE_NAME }}
@@ -366,7 +366,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -385,7 +385,7 @@ jobs:
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: licenses
           path: LICENSE
