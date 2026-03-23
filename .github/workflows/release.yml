@@ -19,7 +19,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -102,7 +102,7 @@ jobs:
       FILE_NAME_ARM: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         run: rustup install stable && rustup target install aarch64-apple-darwin && rustup target install x86_64-apple-darwin
@@ -153,7 +153,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-linux-${{ matrix.name }}.so
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: install dependencies
         run: |
@@ -201,7 +201,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-x86_64-windows.dll
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -222,7 +222,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-aarch64-macos.dylib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -269,7 +269,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -317,7 +317,7 @@ jobs:
       FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-linux-${{ matrix.name }}.so
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: uraimo/run-on-arch-action@v3
         name: Build artifact
         id: build
@@ -366,7 +366,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

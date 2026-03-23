@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -46,7 +46,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -77,7 +77,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
       - name: Install Rust
         run: rustup install stable && rustup target install aarch64-apple-darwin && rustup target install x86_64-apple-darwin
@@ -107,7 +107,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
@@ -134,7 +134,7 @@ jobs:
         ports:
           - 8443:8443
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: install opensc and dependencies
         run: apt-get update && apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make
@@ -189,7 +189,7 @@ jobs:
           - 8443:8443
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: install dependencies
         run: apt-get update && apt-get install -y gcc make
@@ -224,7 +224,7 @@ jobs:
       NETHSM_VERSION: ${{ matrix.nethsm }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: install dependencies
         run: apt-get update && apt-get install -y curl opensc openssl xxd jq gnutls-bin
@@ -256,7 +256,7 @@ jobs:
         ports:
           - 8443:8443
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: install opensc and dependencies
         run: sudo apt-get update && sudo apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make
