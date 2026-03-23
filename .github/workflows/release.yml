@@ -43,7 +43,7 @@ jobs:
         run: mv -Verbose target/release/nethsm_pkcs11.dll ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-unsigned
           path: ${{ env.FILE_NAME }}
@@ -75,7 +75,7 @@ jobs:
             -in ${{ env.FILE_NAME_UNSIGNED }} \
             -out ${{ env.FILE_NAME }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-signed
           path: ${{ env.FILE_NAME }}
@@ -121,7 +121,7 @@ jobs:
         run: mv -v target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib ${{ env.FILE_NAME_ARM }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos
           path: |
@@ -183,7 +183,7 @@ jobs:
         run: mv --verbose target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-x86_64-${{ matrix.name }}
           path: ${{ env.FILE_NAME }}
@@ -353,7 +353,7 @@ jobs:
             mv --verbose target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-${{ matrix.arch }}-${{ matrix.name }}
           path: artifacts/${{ env.FILE_NAME }}
@@ -385,7 +385,7 @@ jobs:
 
       - name: Upload artifacts
         if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: licenses
           path: LICENSE
