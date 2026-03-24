@@ -114,7 +114,7 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
             return Err(Pkcs11Error::CantLock);
         }
 
-        if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
+        if true {
             THREADS_ALLOWED.store(false, Ordering::Relaxed);
         } else {
             THREADS_ALLOWED.store(true, Ordering::Relaxed);
