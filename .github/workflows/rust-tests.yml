@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - disable-threads
 
 env:
   WINDOWS_SDK_VERSION: "10.0.26100.0"
