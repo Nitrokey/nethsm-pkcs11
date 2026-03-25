@@ -14,10 +14,6 @@ env:
 
 jobs:
   check-formatting-linting:
-    permissions:
-      contents: read
-      checks: write
-
     runs-on: ubuntu-latest
 
     steps:
@@ -36,10 +32,9 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --locked
 
-      - uses: actions-rs/clippy-check@v1
+      - uses: clechasseur/rs-clippy-check@v6.0.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --frozen --all-targets -p nethsm_pkcs11  -- -D warnings --no-deps
+          args: --frozen --all-targets -p nethsm_pkcs11 -- -D warnings --no-deps
 
   check-windows:
     runs-on: windows-latest
