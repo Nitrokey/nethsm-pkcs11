@@ -161,7 +161,7 @@ jobs:
               dnf install -y curl gcc
               ;;
             alpine*)
-              apk add curl musl-dev gcc 
+              apk add curl musl-dev gcc bash
               echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
               echo HOME=/root >> $GITHUB_ENV
               ;;
