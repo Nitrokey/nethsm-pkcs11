@@ -135,7 +135,57 @@ jobs:
             ${{ env.FILE_NAME }}
             ${{ env.FILE_NAME_ARM }}
 
-  build-linux:
+  build-linux-aarch64:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: "alpine:3.18"
+            name: musl
+          - os: redhat/ubi8
+            name: glibc
+    env:
+      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-aarch64-linux-${{ matrix.name }}.so
+    steps:
+      - name: Make NodeJS based GitHub Actions work on Alpine ARM64
+        uses: laverdet/alpine-arm64@v1 # Remove when solved: https://github.com/actions/runner/issues/801
+        if: contains(matrix.os, 'alpine')
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: install dependencies
+        run: |
+          case ${{matrix.os}} in 
+            redhat/ubi8*)
+              dnf install -y curl gcc
+              ;;
+            alpine*)
+              apk add curl musl-dev gcc bash tar
+              echo RUSTFLAGS="-C target-feature=-crt-static" >> $GITHUB_ENV
+              echo HOME=/root >> $GITHUB_ENV
+              ;;
+          esac
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build project
+        run: cargo build --release
+      - name: rename file
+        run: mv --verbose target/release/libnethsm_pkcs11.so ${{ env.FILE_NAME }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-aarch64-${{ matrix.name }}
+          path: ${{ env.FILE_NAME }}
+      - name: Upload to the release
+        if: ${{ github.event_name == 'release' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.FILE_NAME }}
+
+  build-linux-x64:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
@@ -234,9 +284,9 @@ jobs:
           pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots
           pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots | grep NetHSM
 
-  test-linux:
+  test-linux-x64:
     runs-on: ubuntu-latest
-    needs: build-linux
+    needs: build-linux-x64
     container:
       image: ${{ matrix.os }}
 
@@ -290,73 +340,6 @@ jobs:
           export P11NETHSM_CONFIG_FILE=p11nethsm.conf
           pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots
           pkcs11-tool --module ./${{ env.FILE_NAME }} --list-slots | grep NetHSM
-
-  cross-build-linux:
-    runs-on: ubuntu-latest
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
-    strategy:
-      matrix:
-        include:
-          - arch: aarch64
-            distro: ubuntu22.04
-            target: aarch64-unknown-linux-gnu
-            name: glibc
-          - arch: aarch64
-            distro: alpine_latest
-            target: aarch64-unknown-linux-musl
-            name: musl
-          # Not supported by ring
-          # - arch: riscv64
-          #   distro: ubuntu22.04
-          #   target: riscv64gc-unknown-linux-gnu
-    env:
-      FILE_NAME: nethsm-pkcs11-${{ github.ref_name }}-${{ matrix.arch }}-linux-${{ matrix.name }}.so
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: uraimo/run-on-arch-action@v3
-        name: Build artifact
-        id: build
-        with:
-          githubToken: ${{ github.token }}
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
-          setup: |
-            mkdir -p "${PWD}/artifacts"
-          dockerRunArgs: |
-            --volume "${PWD}/artifacts:/artifacts"
-          env: |
-            FILE_NAME: "${{env.FILE_NAME}}"
-            TARGET: "${{ matrix.target }}"
-            RUSTFLAGS: "-C target-feature=-crt-static"
-          shell: /bin/sh
-          install: |
-            case ${{matrix.distro}} in 
-              ubuntu*)
-                apt-get update
-                apt-get install -y curl gcc
-                ;;
-              alpine*)
-                apk add curl musl-dev gcc 
-                ;;
-            esac
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-            . $HOME/.cargo/env
-            rustup target add ${{ matrix.target }}
-          run: |
-            . $HOME/.cargo/env
-            cargo build --release --target ${{ matrix.target }}
-            mv --verbose target/${{ matrix.target }}/release/libnethsm_pkcs11.so /artifacts/${{env.FILE_NAME}}
-      - name: Upload artifacts
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: linux-${{ matrix.arch }}-${{ matrix.name }}
-          path: artifacts/${{ env.FILE_NAME }}
-      - uses: softprops/action-gh-release@v1
-        if: ${{ github.event_name == 'release' }}
-        with:
-          files: artifacts/${{ env.FILE_NAME }}
 
   upload-licenses:
     runs-on: ubuntu-latest
