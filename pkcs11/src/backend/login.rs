@@ -227,33 +227,26 @@ impl LoginCtx {
         accept_health_check: HealthCheck,
     ) -> (&InstanceData, ShouldHealthCheck) {
         let threads_allowed = THREADS_ALLOWED.load(Relaxed);
-        let index = self.slot.instance_balancer.fetch_add(1, Relaxed);
-        let index = index % self.slot.instances.len();
-        let instance = &self.slot.instances[index];
-        match (instance.should_try(), threads_allowed, accept_health_check) {
-            (InstanceAttempt::Failed, _, _)
-            | (InstanceAttempt::Retry, true, _)
-            | (InstanceAttempt::Retry, false, HealthCheck::Avoid) => {}
-            (InstanceAttempt::Working, _, _) => return (instance, ShouldHealthCheck::RunDirectly),
-            (InstanceAttempt::Retry, false, HealthCheck::Possible) => {
-                return (instance, ShouldHealthCheck::HealthCheckFirst)
-            }
-        }
-        for i in 0..self.slot.instances.len() - 1 {
-            let instance = &self.slot.instances[index + i];
-
+        let index = self.slot.instance_balancer.load(Relaxed);
+        let (head, tail) = self
+            .slot
+            .instances
+            .split_at((index + 1) % self.slot.instances.len());
+        for (i, instance) in tail.iter().chain(head).enumerate() {
+            // we split at index + 1, so we need to add i + 1 to the old index
+            let i = i + 1;
             match (instance.should_try(), threads_allowed, accept_health_check) {
                 (InstanceAttempt::Failed, _, _)
                 | (InstanceAttempt::Retry, true, _)
                 | (InstanceAttempt::Retry, false, HealthCheck::Avoid) => continue,
                 (InstanceAttempt::Working, _, _) => {
-                    // This not true round-robin in case of multithreaded acces
+                    // This not true round-robin in case of multithreaded access
                     // This is degraded mode so best-effort is attempted at best
                     self.slot.instance_balancer.fetch_add(i, Relaxed);
                     return (instance, ShouldHealthCheck::RunDirectly);
                 }
                 (InstanceAttempt::Retry, false, HealthCheck::Possible) => {
-                    // This not true round-robin in case of multithreaded acces
+                    // This not true round-robin in case of multithreaded access
                     // This is degraded mode so best-effort is attempted at best
                     self.slot.instance_balancer.fetch_add(i, Relaxed);
                     return (instance, ShouldHealthCheck::HealthCheckFirst);
