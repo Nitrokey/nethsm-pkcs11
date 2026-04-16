@@ -14,6 +14,7 @@ use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
     data::THREADS_ALLOWED,
+    utils::run_in_threadpool,
 };
 
 use super::{
@@ -562,19 +563,12 @@ impl Session {
             .entity;
 
         let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
-            use rayon::{prelude::*, ThreadPoolBuilder};
-            ThreadPoolBuilder::new()
-                .build_scoped(
-                    |t| t.run(),
-                    |pool| {
-                        pool.install(|| {
-                            keys.par_iter()
-                                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                                .collect()
-                        })
-                    },
-                )
-                .expect("ThreadPool error.")
+            use rayon::prelude::*;
+            run_in_threadpool(|| {
+                keys.par_iter()
+                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                    .collect()
+            })
         } else {
             keys.iter()
                 .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
