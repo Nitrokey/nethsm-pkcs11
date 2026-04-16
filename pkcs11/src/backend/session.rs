@@ -562,10 +562,23 @@ impl Session {
             .entity;
 
         let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
-            use rayon::prelude::*;
-            keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                .collect()
+            use rayon::{prelude::*, ThreadPoolBuilder};
+            std::thread::scope(|s| {
+                ThreadPoolBuilder::new()
+                    .build_scoped(
+                        |thread| {
+                            s.spawn(|| thread.run());
+                        },
+                        |pool| {
+                            pool.install(|| {
+                                keys.par_iter()
+                                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                                    .collect()
+                            })
+                        },
+                    )
+                    .expect("ThreadPool error.")
+            })
         } else {
             keys.iter()
                 .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
