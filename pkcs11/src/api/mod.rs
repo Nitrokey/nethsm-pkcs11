@@ -10,6 +10,7 @@ pub mod token;
 pub mod verify;
 
 use std::sync::atomic::Ordering;
+use std::sync::Once;
 use std::{ptr::addr_of_mut, sync::Arc};
 
 use crate::config::device::{start_background_timer, stop_background_timer};
@@ -77,7 +78,18 @@ api_function!(
     pInitArgs: CK_VOID_PTR,
 );
 
+#[cfg(debug_assertions)]
+static INITIALIZE_RAYON_THREADPOOL: Once = Once::new();
+
 fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
+    #[cfg(debug_assertions)]
+    INITIALIZE_RAYON_THREADPOOL.call_once(|| {
+        rayon::ThreadPoolBuilder::new()
+            .start_handler(|_| panic!("Using the global thread pool is not authorized, see https://github.com/Nitrokey/nethsm-pkcs11/pull/315"))
+            .build_global()
+            .unwrap()
+    });
+
     let device = crate::config::initialization::initialize().map_err(|err| {
         error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
         Pkcs11Error::FunctionFailed

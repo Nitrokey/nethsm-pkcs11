@@ -262,6 +262,6 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
       - name: build release
-        run: cargo build --release
+        run: cargo build --profile test-release
       - name: run network tests
         run: cargo t --features pkcs11-full-tests -p nethsm_pkcs11 --test basic -- --nocapture
