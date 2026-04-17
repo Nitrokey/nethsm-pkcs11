@@ -91,14 +91,11 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         debug!("No slots configured");
     }
 
-    if defs::CRYPTOKI_VERSION.major == 2
-        && defs::CRYPTOKI_VERSION.minor == 40
-        && !init_args_ptr.is_null()
-    {
+    if !init_args_ptr.is_null() {
         let args = init_args_ptr as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
         let args = unsafe { std::ptr::read(args) };
 
-        // for cryptoki 2.40 this should always be null
+        // for cryptoki 2.40 <-> 3.1 this should always be null
         if !(args).pReserved.is_null() {
             return Err(Pkcs11Error::ArgumentsBad);
         }
@@ -119,9 +116,11 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
             THREADS_ALLOWED.store(false, Ordering::Relaxed);
         } else {
             THREADS_ALLOWED.store(true, Ordering::Relaxed);
-            start_background_timer();
             initialize_threadpool();
+            start_background_timer();
         }
+    } else {
+        THREADS_ALLOWED.store(false, Ordering::Relaxed);
     }
 
     // Initialize the events manager
