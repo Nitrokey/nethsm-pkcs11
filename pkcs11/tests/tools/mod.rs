@@ -332,13 +332,14 @@ pub fn run_tests(
     let path = tmpfile.path();
     set_var(config_file::ENV_VAR_CONFIG_FILE, path);
     {
-        let mut ctx = Ctx::new_and_initialize("../target/release/libnethsm_pkcs11.so").unwrap();
+        let mut ctx =
+            Ctx::new_and_initialize("../target/test-release/libnethsm_pkcs11.so").unwrap();
         let f_cl = f.clone();
         f_cl(&mut test_dropper.context, &mut ctx);
         ctx.close_all_sessions(0).unwrap();
     }
     {
-        let mut ctx = Ctx::new("../target/release/libnethsm_pkcs11.so").unwrap();
+        let mut ctx = Ctx::new("../target/test-release/libnethsm_pkcs11.so").unwrap();
         ctx.initialize(Some(CK_C_INITIALIZE_ARGS {
             CreateMutex: None,
             DestroyMutex: None,
