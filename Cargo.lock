@@ -853,7 +853,6 @@ dependencies = [
  "log",
  "md-5",
  "nethsm-sdk-rs",
- "once_cell",
  "pem-rfc7468 1.0.0",
  "pkcs11",
  "rayon",

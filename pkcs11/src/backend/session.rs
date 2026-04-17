@@ -14,6 +14,7 @@ use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
     data::THREADS_ALLOWED,
+    utils::run_in_threadpool,
 };
 
 use super::{
@@ -563,9 +564,11 @@ impl Session {
 
         let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
             use rayon::prelude::*;
-            keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                .collect()
+            run_in_threadpool(|| {
+                keys.par_iter()
+                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                    .collect()
+            })
         } else {
             keys.iter()
                 .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
