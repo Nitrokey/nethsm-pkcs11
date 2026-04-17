@@ -23,15 +23,15 @@ hex = "0.4"
 der = { version = "0.7", default-features = false }
 pem-rfc7468 = "0.7"
 x509-cert = { features = ["pem"], default-features = false, version = "0.2" }
-sha2 = { default-features = false, version = "0.10" }
-sha1 = { default-features = false, version = "0.10" }
-digest = { default-features = false, version = "0.10" }
+sha2 = { default-features = false, version = "0.11" }
+sha1 = { default-features = false, version = "0.11" }
+digest = { default-features = false, version = "0.11" }
 rayon = "1.8.0"
 syslog = "6.1.1"
 thiserror = "2.0.12"
 arc-swap = "1.7.1"
 hex-literal = "1.0.0"
-md-5 = "0.10.6"
+md-5 = "0.11"
 
 config_file = { path = "config_file" }
 
