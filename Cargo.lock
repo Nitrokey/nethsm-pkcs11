@@ -849,7 +849,6 @@ dependencies = [
  "env_logger",
  "hex",
  "hex-literal",
- "lazy_static",
  "log",
  "md-5",
  "nethsm-sdk-rs",

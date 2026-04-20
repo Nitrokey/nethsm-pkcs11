@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard, RwLock};
+use std::sync::{atomic::AtomicBool, Arc, LazyLock, Mutex, MutexGuard, RwLock};
 
 use crate::backend::{events::EventsManager, Pkcs11Error};
 
@@ -10,7 +10,6 @@ use crate::{
 };
 use arc_swap::ArcSwapOption;
 use cryptoki_sys::{CK_FUNCTION_LIST, CK_SESSION_HANDLE, CK_SLOT_ID, CK_VERSION};
-use lazy_static::lazy_static;
 use log::error;
 
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
@@ -20,12 +19,12 @@ pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
 
 pub static DEVICE: ArcSwapOption<Device> = ArcSwapOption::const_empty();
 
-lazy_static! {
-    pub static ref SESSION_MANAGER : Mutex<SessionManager> =  Mutex::new(SessionManager::new());
+pub static SESSION_MANAGER: LazyLock<Mutex<SessionManager>> =
+    LazyLock::new(|| Mutex::new(SessionManager::new()));
 
-    // Token present or not (true = present)
-    pub static ref TOKENS_STATE : Mutex<HashMap<CK_SLOT_ID, bool>> = Mutex::new(HashMap::new());
-}
+// Token present or not (true = present)
+pub static TOKENS_STATE: LazyLock<Mutex<HashMap<CK_SLOT_ID, bool>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 // Storage of events
 pub static EVENTS_MANAGER: RwLock<EventsManager> = RwLock::new(EventsManager::new());
