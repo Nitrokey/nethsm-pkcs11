@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard, RwLock};
+use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use crate::backend::{events::EventsManager, Pkcs11Error};
 
@@ -29,9 +29,6 @@ lazy_static! {
 
 // Storage of events
 pub static EVENTS_MANAGER: RwLock<EventsManager> = RwLock::new(EventsManager::new());
-
-// If the calling application allows threads to be used
-pub static THREADS_ALLOWED: AtomicBool = AtomicBool::new(true);
 
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

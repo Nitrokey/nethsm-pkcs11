@@ -19,7 +19,7 @@ use crate::{
         config_file::{RetryConfig, UserConfig},
         device::{InstanceAttempt, InstanceData, Slot},
     },
-    data::THREADS_ALLOWED,
+    threads::THREADS_ALLOWED,
 };
 
 use super::{ApiError, Error, Pkcs11Error};

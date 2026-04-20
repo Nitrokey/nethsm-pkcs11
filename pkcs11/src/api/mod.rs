@@ -12,14 +12,13 @@ pub mod verify;
 use std::sync::atomic::Ordering;
 use std::{ptr::addr_of_mut, sync::Arc};
 
-use crate::config::device::{start_background_timer, stop_background_timer};
-use crate::utils::{close_threadpool, initialize_threadpool};
+use crate::threads::{disable_threads, enable_threads, stop_and_join_threads, THREADS_ALLOWED};
 use crate::{
     backend::{
         events::{fetch_slots_state, EventsManager},
         Pkcs11Error,
     },
-    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
+    data::{self, DEVICE, EVENTS_MANAGER, TOKENS_STATE},
     defs,
     utils::padded_str,
 };
@@ -113,14 +112,12 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         }
 
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
-            THREADS_ALLOWED.store(false, Ordering::Relaxed);
+            disable_threads();
         } else {
-            THREADS_ALLOWED.store(true, Ordering::Relaxed);
-            initialize_threadpool();
-            start_background_timer();
+            enable_threads();
         }
     } else {
-        THREADS_ALLOWED.store(false, Ordering::Relaxed);
+        disable_threads();
     }
 
     // Initialize the events manager
@@ -140,10 +137,9 @@ fn finalize(reserved_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         return Err(Pkcs11Error::ArgumentsBad);
     }
     DEVICE.store(None);
-    stop_background_timer();
     EVENTS_MANAGER.write().unwrap().finalized = true;
     if THREADS_ALLOWED.load(Ordering::Relaxed) {
-        close_threadpool();
+        stop_and_join_threads();
     }
     Ok(())
 }

@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{atomic::Ordering, Arc, Condvar, Mutex, MutexGuard},
+    sync::{Arc, Condvar, Mutex, MutexGuard},
 };
 
 use cryptoki_sys::{
@@ -13,8 +13,7 @@ use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
 use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
-    data::THREADS_ALLOWED,
-    utils::run_in_threadpool,
+    threads::RayonOperation,
 };
 
 use super::{
@@ -562,18 +561,20 @@ impl Session {
             )?
             .entity;
 
-        let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
-            use rayon::prelude::*;
-            run_in_threadpool(|| {
+        let results: Result<Vec<Vec<Object>>, _> = RayonOperation {
+            rayon: || {
+                use rayon::prelude::*;
                 keys.par_iter()
                     .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
                     .collect()
-            })
-        } else {
-            keys.iter()
-                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                .collect()
-        };
+            },
+            std: || {
+                keys.iter()
+                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                    .collect()
+            },
+        }
+        .run();
 
         let results = results?;
 
@@ -693,7 +694,9 @@ mod test {
             ApiError,
         },
         config::config_file::RetryConfig,
+        threads::THREADS_ALLOWED,
     };
+    use std::sync::atomic::Ordering;
     use std::thread;
 
     use super::*;
