@@ -7,6 +7,7 @@ pub mod utils;
 mod backend;
 mod config;
 mod defs;
+pub mod threads;
 mod ureq;
 
 #[cfg(panic = "abort")]

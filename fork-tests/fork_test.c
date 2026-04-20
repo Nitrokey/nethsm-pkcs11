@@ -6,7 +6,7 @@
 
 
 int main() {
-  void *handle = dlopen("../target/release/libnethsm_pkcs11.so", RTLD_LAZY)  ;
+  void *handle = dlopen("../target/test-release/libnethsm_pkcs11.so", RTLD_LAZY)  ;
   if (!handle) {
     fprintf(stderr, "%s\n", dlerror());
     return 1;
