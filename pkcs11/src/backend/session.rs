@@ -561,16 +561,17 @@ impl Session {
             )?
             .entity;
 
-        let results: Result<Vec<Vec<Object>>, _> = if THREADS_ALLOWED.load(Ordering::Relaxed) {
-            use rayon::prelude::*;
-            keys.par_iter()
-                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                .collect()
-        } else {
-            keys.iter()
-                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                .collect()
-        };
+        let results: Result<Vec<Vec<Object>>, _> =
+            if THREADS_ALLOWED.load(Ordering::Relaxed) && cfg!(not(target_os = "windows")) {
+                use rayon::prelude::*;
+                keys.par_iter()
+                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                    .collect()
+            } else {
+                keys.iter()
+                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                    .collect()
+            };
 
         let results = results?;
 
