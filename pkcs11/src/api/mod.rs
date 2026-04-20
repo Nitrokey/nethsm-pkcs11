@@ -14,10 +14,7 @@ use std::{ptr::addr_of_mut, sync::Arc};
 
 use crate::config::device::{start_background_timer, stop_background_timer};
 use crate::{
-    backend::{
-        events::{fetch_slots_state, EventsManager},
-        Pkcs11Error,
-    },
+    backend::{events::fetch_slots_state, Pkcs11Error},
     data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
     defs,
     utils::padded_str,
@@ -123,8 +120,8 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
     }
 
     // Initialize the events manager
-    *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
-    *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+    EVENTS_MANAGER.reset();
+    TOKENS_STATE.lock().unwrap().clear();
 
     fetch_slots_state()
 }
@@ -140,7 +137,7 @@ fn finalize(reserved_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
     }
     DEVICE.store(None);
     stop_background_timer();
-    EVENTS_MANAGER.write().unwrap().finalized = true;
+    EVENTS_MANAGER.reset();
     Ok(())
 }
 

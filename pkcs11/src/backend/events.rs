@@ -1,23 +1,33 @@
+use std::sync::Arc;
+
+use arc_swap::ArcSwap;
 use cryptoki_sys::CK_SLOT_ID;
 use nethsm_sdk_rs::{apis::default_api, models::SystemState};
+
+use crossbeam::channel::{bounded, Receiver, Sender, TrySendError};
 
 use crate::data::{self, EVENTS_MANAGER, TOKENS_STATE};
 
 use super::{login::LoginCtx, Pkcs11Error};
 
 pub struct EventsManager {
-    pub events: Vec<CK_SLOT_ID>, // list of slots that changed
-
-    // Used when CKF_DONT_BLOCK is clear and C_Finalize is called, then every blocking call to C_WaitForSlotEvent should return CKR_CRYPTOKI_NOT_INITIALIZED
-    pub finalized: bool,
+    pub sender: ArcSwap<Sender<CK_SLOT_ID>>,
+    pub receiver: ArcSwap<Receiver<CK_SLOT_ID>>,
 }
 
 impl EventsManager {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
+        let (tx, rx) = bounded(128);
         EventsManager {
-            events: Vec::new(),
-            finalized: false,
+            sender: ArcSwap::new(Arc::new(tx)),
+            receiver: ArcSwap::new(Arc::new(rx)),
         }
+    }
+
+    pub fn reset(&self) {
+        let (tx, rx) = bounded(128);
+        self.sender.store(Arc::new(tx));
+        self.receiver.store(Arc::new(rx));
     }
 }
 
@@ -28,7 +38,17 @@ pub fn update_slot_state(slot_id: CK_SLOT_ID, present: bool) {
             return;
         } else {
             // new event
-            EVENTS_MANAGER.write().unwrap().events.push(slot_id);
+            loop {
+                match EVENTS_MANAGER.sender.load().try_send(slot_id) {
+                    Ok(_) => break,
+                    Err(TrySendError::Full(_)) => {
+                        log::warn!("Dropping slot event to avoid filling up memory")
+                    }
+                    Err(TrySendError::Disconnected(_)) => {
+                        continue;
+                    }
+                };
+            }
         }
     }
     tokens_state.insert(slot_id, present);

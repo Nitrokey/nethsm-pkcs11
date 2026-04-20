@@ -39,6 +39,7 @@ config_file = { path = "config_file" }
 ureq = { version = "=3.3.0", default-features  = false }
 rustls-pki-types = "1.11.0"
 socket2 = { version = "0.6", features = ["all"] }
+crossbeam = "0.8.4"
 
 [dev-dependencies]
 once_cell = "1.19.0"
