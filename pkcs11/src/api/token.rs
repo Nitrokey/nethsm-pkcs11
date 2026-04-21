@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use crossbeam::channel::TryRecvError;
 use cryptoki_sys::{
     CKF_RNG, CKF_TOKEN_INITIALIZED, CKF_USER_PIN_INITIALIZED, CK_SLOT_ID, CK_SLOT_INFO,
     CK_TOKEN_INFO, CK_ULONG,
@@ -385,10 +388,19 @@ fn wait_for_slot_event(
 
     fetch_slots_state()?;
 
+    let recv = &EVENTS_MANAGER.receiver.load();
     loop {
         // check if there is an event in the queue
+        let slot = if flags & cryptoki_sys::CKF_DONT_BLOCK == cryptoki_sys::CKF_DONT_BLOCK {
+            match recv.try_recv() {
+                Ok(s) => Some(s),
+                Err(TryRecvError::Empty) => return Err(Pkcs11Error::NoEvent),
+                Err(TryRecvError::Disconnected) => return Err(Pkcs11Error::CryptokiNotInitialized),
+            }
+        } else {
+            recv.recv_timeout(Duration::from_secs(1)).ok()
+        };
 
-        let slot = EVENTS_MANAGER.write().unwrap().events.pop();
         if let Some(slot) = slot {
             unsafe {
                 std::ptr::write(slot_ptr, slot);
@@ -396,23 +408,7 @@ fn wait_for_slot_event(
             return Ok(());
         }
 
-        // if the dont block flag is set, return no event
-        if flags & cryptoki_sys::CKF_DONT_BLOCK == 1 {
-            return Err(Pkcs11Error::NoEvent);
-        } else {
-            // Otherwise, wait for an event
-
-            // If C_Finalize() has been called, return an error
-            if EVENTS_MANAGER.read().unwrap().finalized {
-                return Err(Pkcs11Error::CryptokiNotInitialized);
-            }
-
-            // sleep for 1 second
-            std::thread::sleep(std::time::Duration::from_secs(1));
-
-            // fetch the slots state so we get the latest events in the next iteration
-            fetch_slots_state()?;
-        }
+        fetch_slots_state()?;
     }
 }
 
@@ -422,10 +418,7 @@ mod tests {
 
     use crate::{
         api::C_Finalize,
-        backend::{
-            events::{update_slot_state, EventsManager},
-            slot::init_for_tests,
-        },
+        backend::{events::update_slot_state, slot::init_for_tests},
         data::{SESSION_MANAGER, TOKENS_STATE},
     };
 
@@ -437,8 +430,8 @@ mod tests {
     #[ignore]
     fn test_wait_for_slot_event_no_event() {
         let _guard = init_for_tests();
-        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
-        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+        EVENTS_MANAGER.reset();
+        TOKENS_STATE.lock().unwrap().clear();
 
         let mut slot = 0;
         let result = C_WaitForSlotEvent(CKF_DONT_BLOCK, &mut slot, std::ptr::null_mut());
@@ -451,13 +444,11 @@ mod tests {
     #[ignore]
     fn test_wait_for_slot_event_one_event() {
         let _guard = init_for_tests();
-        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
-        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+        EVENTS_MANAGER.reset();
+        TOKENS_STATE.lock().unwrap().clear();
 
         update_slot_state(0, false);
         update_slot_state(0, true);
-
-        println!("Events: {:?}", EVENTS_MANAGER.read().unwrap().events);
 
         let mut slot = 15;
         let result = C_WaitForSlotEvent(CKF_DONT_BLOCK, &mut slot, std::ptr::null_mut());
@@ -471,8 +462,8 @@ mod tests {
     #[ignore]
     fn test_wait_for_slot_event_blocking_one_event() {
         let _guard = init_for_tests();
-        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
-        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+        EVENTS_MANAGER.reset();
+        TOKENS_STATE.lock().unwrap().clear();
 
         // update the slot state in a separate thread
 
@@ -495,8 +486,8 @@ mod tests {
     #[ignore]
     fn test_wait_for_slot_event_blocking_finalize() {
         let _guard = init_for_tests();
-        *EVENTS_MANAGER.write().unwrap() = EventsManager::new();
-        *TOKENS_STATE.lock().unwrap() = std::collections::HashMap::new();
+        EVENTS_MANAGER.reset();
+        TOKENS_STATE.lock().unwrap().clear();
 
         // update the slot state in a separate thread
 

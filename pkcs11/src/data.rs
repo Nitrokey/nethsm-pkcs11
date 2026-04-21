@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard, RwLock};
+use std::sync::LazyLock;
+use std::sync::{atomic::AtomicBool, Arc, Mutex, MutexGuard};
 
 use crate::backend::{events::EventsManager, Pkcs11Error};
 
@@ -28,7 +29,7 @@ lazy_static! {
 }
 
 // Storage of events
-pub static EVENTS_MANAGER: RwLock<EventsManager> = RwLock::new(EventsManager::new());
+pub static EVENTS_MANAGER: LazyLock<EventsManager> = LazyLock::new(EventsManager::new);
 
 // If the calling application allows threads to be used
 pub static THREADS_ALLOWED: AtomicBool = AtomicBool::new(true);
