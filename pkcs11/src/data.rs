@@ -31,6 +31,7 @@ pub static EVENTS_MANAGER: RwLock<EventsManager> = RwLock::new(EventsManager::ne
 
 // If the calling application allows threads to be used
 pub static THREADS_ALLOWED: AtomicBool = AtomicBool::new(true);
+pub static THREAD_POOL_ALLOWED: AtomicBool = AtomicBool::new(true);
 
 pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     version: DEVICE_VERSION,

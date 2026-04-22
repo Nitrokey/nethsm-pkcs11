@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    config_file::{config_files, ConfigError, SlotConfig},
+    config_file::{config_files, ConfigError, P11Config, SlotConfig},
     device::{Device, Slot},
 };
 use arc_swap::ArcSwap;
@@ -40,7 +40,7 @@ pub enum InitializationError {
 
 pub fn initialize_with_configs(
     configs: Result<Vec<(Vec<u8>, PathBuf)>, ConfigError>,
-) -> Result<Device, InitializationError> {
+) -> Result<(Device, P11Config), InitializationError> {
     // Use a closure called immediately so that `?` can be used
     let config_res = (|| {
         let configs_files = configs.map_err(InitializationError::Config)?;
@@ -62,10 +62,10 @@ pub fn initialize_with_configs(
     for slot in config.slots.iter() {
         slots.push(Arc::new(slot_from_config(slot)?));
     }
-    Ok(Device { slots })
+    Ok((Device { slots }, config))
 }
 
-pub fn initialize() -> Result<Device, InitializationError> {
+pub fn initialize() -> Result<(Device, P11Config), InitializationError> {
     rustls::crypto::ring::default_provider()
         .install_default()
         .ok();
@@ -368,12 +368,14 @@ slots:
       count: 10
       delay_seconds: 1
     timeout_seconds: 10
+disable_thread_pool: true
             "#;
         let config_path = "/path/to/config.conf";
         let configs = vec![(config_content.into(), config_path.into())];
 
-        let device = initialize_with_configs(Ok(configs)).unwrap();
+        let (device, config) = initialize_with_configs(Ok(configs)).unwrap();
         assert_eq!(device.slots[0].certificate_format, CertificateFormat::Der);
+        assert_eq!(config.disable_thread_pool, Some(true));
 
         let config_bad_fingerprint_content = r#"
 slots:

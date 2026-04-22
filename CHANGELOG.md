@@ -2,10 +2,13 @@
 
 ## Unreleased
 
+### Features
+
+- Add `disable_threads` and `disable_thread_pool` config options
+
 ### Bugfixes
 
 - Fix panic if multiple instances are configured and too many instances become unavailable ([#313](https://github.com/Nitrokey/nethsm-pkcs11/issues/313))
-- Temporarily disable parallel key listing on Windows.
 - Fix argument handling in `C_Initialize`:
   - Remove unnecessary version check so that the argument is handled at all.
   - Correctly handle `null` arguments and initialize the thread state consistently.

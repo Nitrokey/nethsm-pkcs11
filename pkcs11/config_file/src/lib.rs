@@ -125,6 +125,10 @@ pub struct P11Config {
     pub log_level: Option<LogLevel>,
     #[merge(strategy = merge::vec::append)]
     pub slots: Vec<SlotConfig>,
+    #[merge(strategy = merge::option::overwrite_none)]
+    pub disable_threads: Option<bool>,
+    #[merge(strategy = merge::option::overwrite_none)]
+    pub disable_thread_pool: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -388,6 +392,8 @@ password: ""
                 syslog_process: None,
                 log_file: None,
                 log_level: Some(LogLevel::Debug),
+                disable_threads: None,
+                disable_thread_pool: None,
                 slots: vec![SlotConfig {
                     label: "LocalHSM".into(),
                     description: Some("Local HSM (docker)".into()),

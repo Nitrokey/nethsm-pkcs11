@@ -13,7 +13,7 @@ use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
 use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
     config::device::Slot,
-    data::THREADS_ALLOWED,
+    data::THREAD_POOL_ALLOWED,
 };
 
 use super::{
@@ -561,17 +561,16 @@ impl Session {
             )?
             .entity;
 
-        let results: Result<Vec<Vec<Object>>, _> =
-            if THREADS_ALLOWED.load(Ordering::Relaxed) && cfg!(not(target_os = "windows")) {
-                use rayon::prelude::*;
-                keys.par_iter()
-                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                    .collect()
-            } else {
-                keys.iter()
-                    .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
-                    .collect()
-            };
+        let results: Result<Vec<Vec<Object>>, _> = if THREAD_POOL_ALLOWED.load(Ordering::Relaxed) {
+            use rayon::prelude::*;
+            keys.par_iter()
+                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                .collect()
+        } else {
+            keys.iter()
+                .map(|k| super::key::fetch_one(k, &self.login_ctx, None))
+                .collect()
+        };
 
         let results = results?;
 
@@ -733,7 +732,7 @@ mod test {
     #[test]
     #[ignore]
     fn parrallel_fetch_all_keys_fail() {
-        THREADS_ALLOWED.store(false, Ordering::Relaxed);
+        THREAD_POOL_ALLOWED.store(false, Ordering::Relaxed);
         let _guard = init_for_tests();
         let mut slot = get_slot(0).unwrap();
         let mut sessions = Vec::new();

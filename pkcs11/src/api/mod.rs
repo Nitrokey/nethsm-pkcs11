@@ -18,7 +18,7 @@ use crate::{
         events::{fetch_slots_state, EventsManager},
         Pkcs11Error,
     },
-    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, TOKENS_STATE},
+    data::{self, DEVICE, EVENTS_MANAGER, THREADS_ALLOWED, THREAD_POOL_ALLOWED, TOKENS_STATE},
     defs,
     utils::padded_str,
 };
@@ -78,7 +78,7 @@ api_function!(
 );
 
 fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
-    let device = crate::config::initialization::initialize().map_err(|err| {
+    let (device, config) = crate::config::initialization::initialize().map_err(|err| {
         error!("NetHSM PKCS#11: Failed to initialize configuration: {err}");
         Pkcs11Error::FunctionFailed
     })?;
@@ -90,7 +90,8 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         debug!("No slots configured");
     }
 
-    let mut disable_threads = false;
+    let mut disable_threads = config.disable_threads.unwrap_or(false);
+    let disable_thread_pool = config.disable_thread_pool.unwrap_or(false);
 
     if !init_args_ptr.is_null() {
         let args = init_args_ptr as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
@@ -101,11 +102,15 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         }
 
         let flags = args.flags;
+        let create_mutex = args.CreateMutex;
+        let destroy_mutex = args.DestroyMutex;
+        let lock_mutex = args.LockMutex;
+        let unlock_mutex = args.UnlockMutex;
         let mutex_fields = [
-            args.CreateMutex.is_some(),
-            args.DestroyMutex.is_some(),
-            args.LockMutex.is_some(),
-            args.UnlockMutex.is_some(),
+            create_mutex.is_some(),
+            destroy_mutex.is_some(),
+            lock_mutex.is_some(),
+            unlock_mutex.is_some(),
         ];
 
         trace!("C_Initialize() called with flags: {flags:?}");
@@ -122,13 +127,13 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && mutex_fields_set {
             return Err(Pkcs11Error::CantLock);
         }
-
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
             disable_threads = true;
         }
     }
 
     THREADS_ALLOWED.store(!disable_threads, Ordering::Relaxed);
+    THREAD_POOL_ALLOWED.store(!disable_threads && !disable_thread_pool, Ordering::Relaxed);
     if !disable_threads {
         start_background_timer();
     }
@@ -188,6 +193,7 @@ mod test {
     fn assert_initialized(threads_allowed: bool) {
         assert!(DEVICE.load_full().is_some());
         assert_eq!(THREADS_ALLOWED.load(Ordering::Relaxed), threads_allowed);
+        assert_eq!(THREAD_POOL_ALLOWED.load(Ordering::Relaxed), threads_allowed);
         assert_eq!(RETRY_THREAD.read().unwrap().is_some(), threads_allowed);
         assert!(!EVENTS_MANAGER.read().unwrap().finalized);
     }
