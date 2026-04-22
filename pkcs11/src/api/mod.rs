@@ -90,36 +90,47 @@ fn initialize(init_args_ptr: CK_VOID_PTR) -> Result<(), Pkcs11Error> {
         debug!("No slots configured");
     }
 
-    if defs::CRYPTOKI_VERSION.major == 2
-        && defs::CRYPTOKI_VERSION.minor == 40
-        && !init_args_ptr.is_null()
-    {
+    let mut disable_threads = false;
+
+    if !init_args_ptr.is_null() {
         let args = init_args_ptr as cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR;
         let args = unsafe { std::ptr::read(args) };
 
-        // for cryptoki 2.40 this should always be null
-        if !(args).pReserved.is_null() {
+        if !args.pReserved.is_null() {
             return Err(Pkcs11Error::ArgumentsBad);
         }
 
         let flags = args.flags;
-        let create_mutex = args.CreateMutex;
+        let mutex_fields = [
+            args.CreateMutex.is_some(),
+            args.DestroyMutex.is_some(),
+            args.LockMutex.is_some(),
+            args.UnlockMutex.is_some(),
+        ];
 
         trace!("C_Initialize() called with flags: {flags:?}");
-        trace!("C_Initialize() called with CreateMutex: {create_mutex:?}");
+        trace!("C_Initialize() called with Create/Destroy/Lock/UnlockMutex: {mutex_fields:?}");
+
+        // Either all or none of the mutex fields must be set
+        let mutex_fields_set = mutex_fields.iter().any(|b| *b);
+        if mutex_fields_set && mutex_fields.iter().any(|b| !b) {
+            return Err(Pkcs11Error::ArgumentsBad);
+        }
 
         // currently we don't support custom locking
         // if the flag is not set and the mutex functions are not null, the program asks us to use only the mutex functions, we can't do that
-        if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && create_mutex.is_some() {
+        if flags & cryptoki_sys::CKF_OS_LOCKING_OK == 0 && mutex_fields_set {
             return Err(Pkcs11Error::CantLock);
         }
 
         if flags & cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS != 0 {
-            THREADS_ALLOWED.store(false, Ordering::Relaxed);
-        } else {
-            THREADS_ALLOWED.store(true, Ordering::Relaxed);
-            start_background_timer();
+            disable_threads = true;
         }
+    }
+
+    THREADS_ALLOWED.store(!disable_threads, Ordering::Relaxed);
+    if !disable_threads {
+        start_background_timer();
     }
 
     // Initialize the events manager
@@ -188,8 +199,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_finalize() {
         let _guard = init_lock();
 
@@ -221,8 +230,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_reserved() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: None,
@@ -238,8 +245,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_no_threads() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: None,
@@ -256,8 +261,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_bad_callbacks() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: Some(mutex_callback),
@@ -273,8 +276,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_case_1() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: None,
@@ -291,8 +292,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_case_2() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: None,
@@ -309,8 +308,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_case_3() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: Some(mutex_callback),
@@ -326,8 +323,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
     fn test_init_args_case_4() {
         let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
             CreateMutex: Some(mutex_callback),

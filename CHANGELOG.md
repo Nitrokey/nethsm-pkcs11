@@ -6,6 +6,10 @@
 
 - Fix panic if multiple instances are configured and too many instances become unavailable ([#313](https://github.com/Nitrokey/nethsm-pkcs11/issues/313))
 - Temporarily disable parallel key listing on Windows.
+- Fix argument handling in `C_Initialize`:
+  - Remove unnecessary version check so that the argument is handled at all.
+  - Correctly handle `null` arguments and initialize the thread state consistently.
+  - Return an error if some but not all of the `CreateMutex`, `DestroyMutex`, `LockMutex` and `UnlockMutex` fields are set.
 
 ## [2.1.0][] (2026-02-27)
 
