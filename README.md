@@ -43,6 +43,15 @@ Full compatibility means that all features of the NetHSM PKCS#11 module can be u
 Limited compatibility means that only some features are available for this version.
 See the [changelog](./CHANGELOG.md) for more detailed information on the version requirements for new features.
 
+## Known Issues
+
+- nethsm-pkcs11 uses a thread pool to speed up operations that need to query all keys from the NetHSM.
+  Currently, this thread pool is not closed properly if the library is unloaded (see [issue #327][]).
+  Until this issue is fixed, we recommend to use the `disable_thread_pool` option in the configuration file for applications that unload the library.
+  Alternatively, threading can be disabled entirely using the `disable_threads` option in the configuration file or the `CKF_LIBRARY_CANT_CRATE_OS_THREADS` flag in `C_Initialize`.
+
+[issue #327]: https://github.com/Nitrokey/nethsm-pkcs11/issues/327
+
 ## Debug Options
 
 Set the `RUST_LOG` env variable to `trace`, `debug`, `info`, `warn` or `err` to change the logging level.
