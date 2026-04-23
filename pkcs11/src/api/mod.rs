@@ -170,7 +170,226 @@ fn get_info(info_ptr: CK_INFO_PTR) -> Result<(), Pkcs11Error> {
 
 #[cfg(test)]
 mod test {
+    use crate::{backend::slot::init_lock, config::device::RETRY_THREAD};
+
     use super::*;
+
+    fn assert_initialized(threads_allowed: bool) {
+        assert!(DEVICE.load_full().is_some());
+        assert_eq!(THREADS_ALLOWED.load(Ordering::Relaxed), threads_allowed);
+        assert_eq!(RETRY_THREAD.read().unwrap().is_some(), threads_allowed);
+        assert!(!EVENTS_MANAGER.read().unwrap().finalized);
+    }
+
+    fn assert_uninitialized() {
+        assert!(DEVICE.load_full().is_none());
+        assert!(RETRY_THREAD.read().unwrap().is_none());
+        assert!(EVENTS_MANAGER.read().unwrap().finalized);
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_finalize() {
+        let _guard = init_lock();
+
+        let rv = C_Initialize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        assert_initialized(true);
+
+        let rv = C_Finalize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        assert_uninitialized();
+    }
+
+    fn init_with_args<F: FnOnce(cryptoki_sys::CK_RV)>(
+        mut args: cryptoki_sys::CK_C_INITIALIZE_ARGS,
+        callback: F,
+    ) {
+        let _guard = init_lock();
+        let args_ptr: cryptoki_sys::CK_C_INITIALIZE_ARGS_PTR = &mut args;
+        let rv = C_Initialize(args_ptr as _);
+        callback(rv);
+        if rv == cryptoki_sys::CKR_OK {
+            let rv = C_Finalize(std::ptr::null_mut());
+            assert_eq!(rv, cryptoki_sys::CKR_OK);
+        }
+    }
+
+    unsafe extern "C" fn mutex_callback<T>(_arg1: T) -> cryptoki_sys::CK_RV {
+        cryptoki_sys::CKR_FUNCTION_NOT_SUPPORTED
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_reserved() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: None,
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: 0,
+            pReserved: "test".as_ptr() as _,
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_no_threads() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: None,
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: cryptoki_sys::CKF_LIBRARY_CANT_CREATE_OS_THREADS,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_OK);
+            assert_initialized(false);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_bad_callbacks() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: Some(mutex_callback),
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: 0,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_case_1() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: None,
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: 0,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_OK);
+            assert_initialized(true);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_case_2() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: None,
+            DestroyMutex: None,
+            LockMutex: None,
+            UnlockMutex: None,
+            flags: cryptoki_sys::CKF_OS_LOCKING_OK,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_OK);
+            assert_initialized(true);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_case_3() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: Some(mutex_callback),
+            DestroyMutex: Some(mutex_callback),
+            LockMutex: Some(mutex_callback),
+            UnlockMutex: Some(mutex_callback),
+            flags: 0,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_CANT_LOCK);
+        });
+    }
+
+    #[test]
+    #[ignore]
+    // https://github.com/Nitrokey/nethsm-pkcs11/issues/325
+    fn test_init_args_case_4() {
+        let args = cryptoki_sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: Some(mutex_callback),
+            DestroyMutex: Some(mutex_callback),
+            LockMutex: Some(mutex_callback),
+            UnlockMutex: Some(mutex_callback),
+            flags: cryptoki_sys::CKF_OS_LOCKING_OK,
+            pReserved: std::ptr::null_mut(),
+        };
+        init_with_args(args, |rv| {
+            assert_eq!(rv, cryptoki_sys::CKR_OK);
+            assert_initialized(true);
+        });
+    }
+
+    #[test]
+    fn test_init_twice() {
+        let _guard = init_lock();
+
+        let rv = C_Initialize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        let rv = C_Initialize(std::ptr::null_mut());
+        // TODO: https://github.com/Nitrokey/nethsm-pkcs11/issues/324
+        // assert_eq!(rv, cryptoki_sys::CKR_CRYPTOKI_ALREADY_INITIALIZED);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        let rv = C_Finalize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+    }
+
+    #[test]
+    fn test_finalize() {
+        let _guard = init_lock();
+
+        let rv = C_Finalize(std::ptr::null_mut());
+        // TODO: https://github.com/Nitrokey/nethsm-pkcs11/issues/324
+        // assert_eq!(rv, cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+    }
+
+    #[test]
+    fn test_finalize_args() {
+        let _guard = init_lock();
+
+        let mut args = 0;
+        let args_ptr: *mut u8 = &mut args;
+        let rv = C_Finalize(args_ptr as _);
+        assert_eq!(rv, cryptoki_sys::CKR_ARGUMENTS_BAD);
+    }
+
+    #[test]
+    fn test_finalize_twice() {
+        let _guard = init_lock();
+
+        let rv = C_Initialize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        let rv = C_Finalize(std::ptr::null_mut());
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+        let rv = C_Finalize(std::ptr::null_mut());
+        // TODO: https://github.com/Nitrokey/nethsm-pkcs11/issues/324
+        // assert_eq!(rv, cryptoki_sys::CKR_CRYPTOKI_NOT_INITIALIZED);
+        assert_eq!(rv, cryptoki_sys::CKR_OK);
+    }
 
     #[test]
     fn test_get_function_list() {
