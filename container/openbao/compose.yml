@@ -1,0 +1,46 @@
+services:
+  nethsm:
+    image: nitrokey/nethsm:b64e0193
+    platform: linux/amd64
+    ports:
+      - "8443:8443"
+    networks:
+      - nethsm-network
+
+  nethsm-provisioner:
+    image: curlimages/curl:latest
+    depends_on:
+      - nethsm
+    volumes:
+      - ./provision.sh:/provision.sh:ro
+    command: ["/bin/sh", "/provision.sh"]
+    networks:
+      - nethsm-network
+    environment:
+      NETHSM_URL: https://nethsm:8443
+      NETHSM_AUTO_UNLOCK: "true"
+
+  openbao-hsm:
+    #image: ghcr.io/openbao/openbao-hsm-ubi:2.5.2
+    image: openbao-hsm-ubi-nethsm
+    depends_on:
+      nethsm-provisioner:
+        condition: service_completed_successfully
+    build:
+      context: ../..
+      dockerfile: container/openbao/Dockerfile
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./config/:/openbao-config/
+      - ./p11nethsm.conf:/etc/nitrokey/p11nethsm.conf:ro
+      - openbao-file:/openbao/file/
+    command: server --config=/openbao-config/
+    networks:
+      - nethsm-network
+
+volumes:
+  openbao-file:
+
+networks:
+  nethsm-network:
