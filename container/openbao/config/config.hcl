@@ -12,6 +12,5 @@ seal "pkcs11" {
   lib       = "/usr/lib/nitrokey/libnethsm_pkcs11.so"
   slot      = "0"
   key_label = "bao-root-rsa"
-  user      = "operator"
   pin       = "OperatorOperator"
 }
