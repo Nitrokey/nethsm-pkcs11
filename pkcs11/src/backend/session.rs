@@ -556,7 +556,7 @@ impl Session {
         let keys = self
             .login_ctx
             .try_(
-                |api_config| default_api::keys_get(api_config, None),
+                |api_config| default_api::keys_get(api_config, None, None),
                 super::login::UserMode::OperatorOrAdministrator,
             )?
             .entity;
