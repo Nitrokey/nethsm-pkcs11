@@ -10,7 +10,10 @@ openssl pkcs8 -topk8 -nocrypt -in _ec_private.pem -outform DER -out _ec_private.
 
 OUTPUT=$(pkcs11-tool --module target/debug/libnethsm_pkcs11.so -y privkey --write-object _ec_private.der --login --login-type so --so-pin Administrator)
 
-id=$(echo "$OUTPUT" | awk '/label:/{print $2}')
+hexid=$(echo "$OUTPUT" | grep -E -o "ID: +[0-9A-F:]+" | tr --squeeze-repeats " " | cut --delimiter=" " --fields=2 | sed "s/://g")
+echo $hexid
+id=$(echo "$hexid" | xxd -reverse -plain)
+echo $id
 
 curl -k --fail-with-body -u operator:opPassphrase -v -X GET \
   https://localhost:8443/api/v1/keys/$id/public.pem -o _public.pem

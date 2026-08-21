@@ -148,6 +148,7 @@ pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     pub kind: ObjectKind,
     pub id: NetHSMId,
+    pub label: Option<String>,
     pub size: Option<usize>, // the size of the object in bytes
     pub mechanisms: Vec<KeyMechanism>,
 }
@@ -159,6 +160,7 @@ impl Object {
             id,
             attrs: Default::default(),
             kind: Default::default(),
+            label: Default::default(),
             size: Default::default(),
             mechanisms: Default::default(),
         }
@@ -166,10 +168,8 @@ impl Object {
 
     pub fn rename(&mut self, id: NetHSMId) {
         let attr_id = self.attrs.get(&CKA_ID);
-        let attr_label = self.attrs.get(&CKA_LABEL);
-        info!("renaming {}/{attr_id:?}/{attr_label:?} to {}", self.id, id);
+        info!("renaming {}/{attr_id:?} to {}", self.id, id);
         let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
-        self.attrs.insert(CKA_LABEL, id_bytes.clone());
         self.attrs.insert(CKA_ID, id_bytes);
         self.id = id;
     }
@@ -322,11 +322,16 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
     );
     let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
-    attrs.insert(CKA_ID, id_bytes.clone());
-    attrs.insert(CKA_LABEL, id_bytes);
+    attrs.insert(CKA_ID, id_bytes);
     attrs.insert(
-        CKA_KEY_GEN_MECHANISM,
-        Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
+        CKA_LABEL,
+        Attr::Bytes(
+            key_data
+                .label
+                .clone()
+                .map(String::into_bytes)
+                .unwrap_or_default(),
+        ),
     );
     attrs.insert(CKA_LOCAL, Attr::CK_FALSE);
     attrs.insert(CKA_MODIFIABLE, Attr::CK_FALSE);
@@ -371,6 +376,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         attrs: attrs.clone(),
         kind: ObjectKind::PrivateKey,
         id: id.clone(),
+        label: key_data.label.clone(),
         size: key_attrs.key_size,
         mechanisms,
     };
@@ -388,6 +394,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         attrs: attrs.clone(),
         kind: ObjectKind::PublicKey,
         id,
+        label: key_data.label,
         size: key_attrs.key_size,
         mechanisms: vec![],
     };
@@ -428,6 +435,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
 }
 
 pub fn from_cert_data(
+    key_data: PublicKey,
     cert: Vec<u8>,
     key_id: NetHSMId,
     certificate_format: CertificateFormat,
@@ -455,7 +463,16 @@ pub fn from_cert_data(
     );
     let id_bytes = Attr::Bytes(Pkcs11Id::from(&key_id).into_bytes());
     attrs.insert(CKA_ID, id_bytes.clone());
-    attrs.insert(CKA_LABEL, id_bytes);
+    attrs.insert(
+        CKA_LABEL,
+        Attr::Bytes(
+            key_data
+                .label
+                .clone()
+                .map(String::into_bytes)
+                .unwrap_or_default(),
+        ),
+    );
     attrs.insert(
         CKA_KEY_GEN_MECHANISM,
         Attr::from_ck_mechanism_type(CK_UNAVAILABLE_INFORMATION),
@@ -500,6 +517,7 @@ pub fn from_cert_data(
         attrs,
         kind: ObjectKind::Certificate,
         id: key_id,
+        label: key_data.label,
         size: Some(length),
         mechanisms: vec![],
     })

@@ -14,8 +14,8 @@ curl -k -u admin:Administrator -v -X DELETE \
 
 openssl req -x509 -newkey rsa:2048 -keyout _cert.key -out _cert.pem -days 365 -nodes -subj "/CN=www.example.com"
 
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-privkey _cert.key
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-certificate _cert.pem
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-privkey _cert.key
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-certificate _cert.pem
 
 
 # check if the cert is there

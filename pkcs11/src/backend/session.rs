@@ -424,50 +424,30 @@ impl Session {
         &mut self,
         id: Option<&NetHSMId>,
         kind: Option<ObjectKind>,
+        label: Option<&str>,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
-        let result = match id {
-            Some(key_id) => {
-                // try to search in the db first
-                let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
-                    let db = self.db.0.lock()?;
-                    db.iter()
-                        .filter(|(_, obj)| {
-                            &obj.id == key_id && kind.map(|k| k == obj.kind).unwrap_or(true)
-                        })
-                        .map(|(handle, obj)| (handle, obj.clone()))
-                        .collect()
-                };
+        let result = if let Some(key_id) = id {
+            // try to search in the db first
+            let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
+                let db = self.db.0.lock()?;
+                db.iter()
+                    .filter(|(_, obj)| {
+                        &obj.id == key_id && kind.map(|k| k == obj.kind).unwrap_or(true)
+                    })
+                    .map(|(handle, obj)| (handle, obj.clone()))
+                    .collect()
+            };
 
-                // then try to fetch from the server
-                if results.is_empty() {
-                    if matches!(
-                        kind,
-                        None | Some(ObjectKind::Other)
-                            | Some(ObjectKind::PrivateKey)
-                            | Some(ObjectKind::PublicKey)
-                            | Some(ObjectKind::SecretKey)
-                    ) {
-                        results = fetch_key(key_id, &self.login_ctx, &self.db.0)?;
-                    }
-
-                    if (kind.is_none() && !results.is_empty())
-                        || matches!(kind, Some(ObjectKind::Certificate))
-                    {
-                        match fetch_certificate(key_id, &self.login_ctx, &self.db.0) {
-                            Ok(cert) => {
-                                trace!("Fetched certificate: {cert:?}");
-                                results.push(cert);
-                            }
-                            Err(err) => {
-                                debug!("Failed to fetch certificate: {err:?}");
-                            }
-                        }
-                    }
-                }
-                Ok(results)
+            // then try to fetch from the server
+            if results.is_empty() {
+                results = self.fetch_key_by_id(key_id, kind)?;
             }
 
-            None => self.fetch_all_keys(),
+            Ok(results)
+        } else if let Some(label) = label {
+            self.fetch_keys_by_label(label, kind)
+        } else {
+            self.fetch_all_keys()
         }?;
 
         Ok(result
@@ -479,8 +459,71 @@ impl Session {
                     true
                 }
             })
+            .filter(|(_, obj)| {
+                if let Some(label) = label {
+                    Some(label) == obj.label.as_deref()
+                } else {
+                    true
+                }
+            })
             .map(|(handle, _)| handle)
             .collect())
+    }
+
+    fn fetch_key_by_id(
+        &mut self,
+        key_id: &NetHSMId,
+        kind: Option<ObjectKind>,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+        // TODO: avoid potential duplicate key fetch
+        // TODO: de-duplicate db lock
+        let mut results = if matches!(
+            kind,
+            None | Some(ObjectKind::Other)
+                | Some(ObjectKind::PrivateKey)
+                | Some(ObjectKind::PublicKey)
+                | Some(ObjectKind::SecretKey)
+        ) {
+            fetch_key(key_id, &self.login_ctx, &self.db.0)?
+        } else {
+            Vec::new()
+        };
+
+        if (kind.is_none() && !results.is_empty()) || matches!(kind, Some(ObjectKind::Certificate))
+        {
+            match fetch_certificate(key_id, &self.login_ctx, &self.db.0) {
+                Ok(cert) => {
+                    trace!("Fetched certificate: {cert:?}");
+                    results.push(cert);
+                }
+                Err(err) => {
+                    debug!("Failed to fetch certificate: {err:?}");
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
+    fn fetch_keys_by_label(
+        &mut self,
+        label: &str,
+        kind: Option<ObjectKind>,
+    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+        let keys = self
+            .login_ctx
+            .try_(
+                |api_config| default_api::keys_get(api_config, None, Some(label)),
+                super::login::UserMode::OperatorOrAdministrator,
+            )?
+            .entity;
+
+        let mut objects = Vec::new();
+        for key in keys {
+            objects.extend(super::key::fetch_one(&key, &self.login_ctx, kind)?)
+        }
+        let mut db = self.db.0.lock()?;
+        Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
     }
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {

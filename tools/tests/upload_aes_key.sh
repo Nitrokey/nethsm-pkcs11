@@ -8,8 +8,9 @@ openssl rand -out _aes.key 32
 
 OUTPUT=$(pkcs11-tool --module target/debug/libnethsm_pkcs11.so -y secrkey --write-object _aes.key --login --login-type so --so-pin Administrator)
 
-id=$(echo "$OUTPUT" | awk '/label:/{print $2}')
-
+hexid=$(echo "$OUTPUT" | grep -E -o "ID: +[0-9A-F:]+" | tr --squeeze-repeats " " | cut --delimiter=" " --fields=2 | sed "s/://g")
+echo $hexid
+id=$(echo "$hexid" | xxd -reverse -plain)
 echo $id
 
 echo $OUTPUT

@@ -13,7 +13,7 @@ HEXID=$(echo -n ${KEYID}| xxd -ps)
 curl -k -u admin:Administrator -v -X DELETE \
   https://localhost:8443/api/v1/keys/$KEYID
 
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-privkey _rsa_private.pem
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-privkey _rsa_private.pem
 
 curl -k --fail-with-body -u operator:opPassphrase -v -X GET \
   https://localhost:8443/api/v1/keys/${KEYID}/public.pem -o _public.pem

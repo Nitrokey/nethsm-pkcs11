@@ -22,6 +22,7 @@ pub struct EnumCtx {
 pub struct KeyRequirements {
     pub kind: Option<ObjectKind>,
     pub id: Option<NetHSMId>,
+    pub label: Option<String>,
 }
 
 fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequirements, Error> {
@@ -29,6 +30,7 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
         Some(template) => {
             let mut key_id = None;
             let mut kind = None;
+            let mut label = None;
             for attr in template.iter() {
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
@@ -38,15 +40,26 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
                 if attr.type_() == CKA_ID {
                     key_id = Some(parse_nethsm_id(&attr)?);
                 }
-                if attr.type_() == CKA_LABEL && key_id.is_none() {
-                    key_id = Some(parse_nethsm_id(&attr)?);
+                if attr.type_() == CKA_LABEL {
+                    let Some(bytes) = attr.val_bytes() else {
+                        debug!("Skipping empty CKA_LABEL value");
+                        continue;
+                    };
+                    let s =
+                        str::from_utf8(bytes).map_err(|_| Error::InvalidAttribute(attr.type_()))?;
+                    label = Some(s.to_owned());
                 }
             }
-            Ok(KeyRequirements { kind, id: key_id })
+            Ok(KeyRequirements {
+                kind,
+                id: key_id,
+                label,
+            })
         }
         None => Ok(KeyRequirements {
             kind: None,
             id: None,
+            label: None,
         }),
     }
 }
@@ -65,7 +78,8 @@ impl EnumCtx {
         template: Option<CkRawAttrTemplate>,
     ) -> Result<Self, Error> {
         let key_req = parse_key_requirements(template)?;
-        let handles = session.find_key(key_req.id.as_ref(), key_req.kind)?;
+        let handles =
+            session.find_key(key_req.id.as_ref(), key_req.kind, key_req.label.as_deref())?;
         Ok(EnumCtx::new(handles))
     }
 
@@ -101,6 +115,7 @@ mod tests {
 
         assert_eq!(res.kind, None);
         assert_eq!(res.id, None);
+        assert_eq!(res.label, None);
 
         Ok(())
     }
@@ -124,12 +139,13 @@ mod tests {
 
         assert_eq!(res.kind, None);
         assert_eq!(res.id.as_ref().map(|id| id.as_str()), Some("0---00FF00FF"));
+        assert_eq!(res.label, None);
 
         Ok(())
     }
 
     #[test]
-    fn test_parse_key_requirements_id_from_label() -> Result<(), Error> {
+    fn test_parse_key_requirements_label() -> Result<(), Error> {
         let mut bytes = "test".to_string().into_bytes();
 
         let mut attributes = vec![CK_ATTRIBUTE {
@@ -146,7 +162,8 @@ mod tests {
         let res = parse_key_requirements(template)?;
 
         assert_eq!(res.kind, None);
-        assert_eq!(res.id.as_ref().map(|id| id.as_str()), Some("test"));
+        assert_eq!(res.id, None);
+        assert_eq!(res.label.as_deref(), Some("test"));
 
         Ok(())
     }

@@ -199,9 +199,9 @@ fn set_attribute_value() {
             let (public_id, public_label) = get_attributes(ctx, session, public_key);
             let (private_id, private_label) = get_attributes(ctx, session, private_key);
             assert_eq!(&public_id, new_id);
-            assert_eq!(&public_label, new_id);
+            assert_eq!(&public_label, "");
             assert_eq!(&private_id, new_id);
-            assert_eq!(&private_label, new_id);
+            assert_eq!(&private_label, "");
 
             ctx.destroy_object(session, private_key).unwrap();
         },

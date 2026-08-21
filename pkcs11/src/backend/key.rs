@@ -378,6 +378,7 @@ impl InvalidIdError {
 #[derive(Debug, Default)]
 pub struct ParsedAttributes {
     pub id: Option<NetHSMId>,
+    pub label: Option<String>,
     pub key_type: Option<CK_KEY_TYPE>,
     pub sign: bool,
     pub encrypt: bool,
@@ -422,13 +423,10 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             }
             CKA_LABEL => {
                 if let Some(bytes) = attr.val_bytes() {
-                    let pkcs11_id = Pkcs11Id::from(bytes);
-                    let id = NetHSMId::try_from(&pkcs11_id)
-                        .map_err(|_| Error::InvalidAttribute(CKA_LABEL))?;
-                    trace!("label: {id:?}");
-                    if parsed.id.is_none() {
-                        parsed.id = Some(id);
-                    }
+                    let label =
+                        str::from_utf8(bytes).map_err(|_| Error::InvalidAttribute(CKA_LABEL))?;
+                    trace!("label: {label}");
+                    parsed.label = Some(label.to_owned());
                 }
             }
 
@@ -637,7 +635,10 @@ pub fn create_key_from_template(
         }
     }
 
-    let private_key = PrivateKey::new(mechanisms, r#type.into(), key);
+    let mut private_key = PrivateKey::new(mechanisms, r#type.into(), key);
+    if let Some(label) = parsed.label {
+        private_key.label = Some(label);
+    }
 
     let id = if let Some(id) = parsed.id {
         if let Err(err) = login_ctx.try_(
@@ -725,6 +726,7 @@ pub fn generate_key_from_template(
     let api_mechs = api_mechs.into_iter().map(From::from).collect();
     let mut request = KeyGenerateRequestData::new(api_mechs, key_type.into());
     request.id = parsed.id.map(NetHSMId::into_string);
+    request.label = parsed.label;
     request.length = length.map(|length| length as i32);
     let id = login_ctx.try_(
         |api_config| default_api::keys_generate_post(api_config, request),
@@ -787,12 +789,17 @@ fn fetch_one_certificate(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Obje
         ));
     }
 
+    let key_data = login_ctx.try_(
+        |api_config| default_api::keys_key_id_get(api_config, key_id.as_str()),
+        super::login::UserMode::OperatorOrAdministrator,
+    )?;
     let cert_data = login_ctx.try_(
         |api_config| default_api::keys_key_id_cert_get(api_config, key_id.as_str()),
         super::login::UserMode::OperatorOrAdministrator,
     )?;
 
     let object = db::object::from_cert_data(
+        key_data.entity,
         cert_data.entity,
         key_id.clone(),
         login_ctx.slot().certificate_format,
@@ -836,6 +843,7 @@ pub fn fetch_one(
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
 ) -> Result<Vec<Object>, Error> {
+    // TODO: avoid potential duplicate key fetch
     let key_id = NetHSMId::try_from(key.id.clone())
         .inspect_err(|err| {
             error!("NetHSM returned invalid key ID: {err:?}");

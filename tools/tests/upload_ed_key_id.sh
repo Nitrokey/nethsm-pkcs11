@@ -15,7 +15,7 @@ openssl genpkey -algorithm Ed25519 -out _ed_private.pem
 
 # openssl pkcs8 -topk8 -nocrypt -in _ec_private.pem -outform DER -out _ec_private.der
 
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-privkey _ed_private.pem 
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-privkey _ed_private.pem
 
 curl -k --fail-with-body -u operator:opPassphrase -v -X GET \
   https://localhost:8443/api/v1/keys/$KEYID/public.pem -o _public.pem

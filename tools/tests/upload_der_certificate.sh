@@ -17,10 +17,10 @@ curl -k -u admin:Administrator -v -X DELETE \
 openssl req -x509 -newkey rsa:2048 -keyout _cert.key -out _cert.der -outform DER -days 365 -nodes -subj "/CN=www.example.com"
 openssl x509 -in _cert.der -out _cert.pem -inform DER -outform PEM
 
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-privkey _cert.key
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --load-certificate _cert.pem
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-privkey _cert.key
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --load-certificate _cert.pem
 
-p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write  --id $HEXID --label $KEYID --list-cert |grep 'Type: X.509 Certificate'
+p11tool --provider ${PWD}/target/debug/libnethsm_pkcs11.so --write --id $HEXID --label "" --list-cert |grep 'Type: X.509 Certificate'
 
 
 # check if the cert is there
