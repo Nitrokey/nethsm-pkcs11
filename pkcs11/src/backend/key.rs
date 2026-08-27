@@ -101,7 +101,7 @@ impl EcKeyType {
             Self::EcP256 => 256,
             Self::EcP384 => 384,
             Self::EcP521 => 521,
-            Self::Curve25519 => 255,
+            Self::Curve25519 => 256,
             Self::EcP256K1 => 256,
             Self::BrainpoolP256 => 256,
             Self::BrainpoolP384 => 384,
