@@ -72,6 +72,13 @@ impl Db {
             .map(|(handle, object)| (*handle, object))
     }
 
+    pub fn add_objects<I>(&mut self, objects: I) -> Vec<(CK_OBJECT_HANDLE, Object)>
+    where
+        I: IntoIterator<Item = Object>,
+    {
+        objects.into_iter().map(|o| self.add_object(o)).collect()
+    }
+
     pub fn add_object(&mut self, object: Object) -> (CK_OBJECT_HANDLE, Object) {
         // check if the object already exists
 

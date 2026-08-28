@@ -776,10 +776,7 @@ pub fn fetch_key(
     db: &Mutex<db::Db>,
 ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
     let objects = fetch_one_key(key_id, login_ctx)?;
-
-    let mut db = db.lock()?;
-
-    Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
+    Ok(db.lock()?.add_objects(objects))
 }
 
 fn fetch_one_certificate(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Object, Error> {
@@ -843,12 +840,20 @@ pub fn fetch_one(
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
 ) -> Result<Vec<Object>, Error> {
-    // TODO: avoid potential duplicate key fetch
     let key_id = NetHSMId::try_from(key.id.clone())
         .inspect_err(|err| {
             error!("NetHSM returned invalid key ID: {err:?}");
         })
         .map_err(|_| Error::InvalidData)?;
+    fetch_by_id(&key_id, login_ctx, kind)
+}
+
+pub fn fetch_by_id(
+    key_id: &NetHSMId,
+    login_ctx: &LoginCtx,
+    kind: Option<ObjectKind>,
+) -> Result<Vec<Object>, Error> {
+    // TODO: avoid potential duplicate key fetch
     let mut acc = Vec::new();
 
     if matches!(
@@ -858,12 +863,15 @@ pub fn fetch_one(
             | Some(ObjectKind::PublicKey)
             | Some(ObjectKind::SecretKey)
     ) {
-        acc = fetch_one_key(&key_id, login_ctx)?;
+        acc = fetch_one_key(key_id, login_ctx)?;
     }
 
     if matches!(kind, None | Some(ObjectKind::Certificate)) {
-        match fetch_one_certificate(&key_id, login_ctx) {
-            Ok(cert) => acc.push(cert),
+        match fetch_one_certificate(key_id, login_ctx) {
+            Ok(cert) => {
+                trace!("Fetched certificate: {cert:?}");
+                acc.push(cert);
+            }
             Err(err) => {
                 debug!("Failed to fetch certificate: {err:?}");
             }

@@ -475,34 +475,8 @@ impl Session {
         key_id: &NetHSMId,
         kind: Option<ObjectKind>,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
-        // TODO: avoid potential duplicate key fetch
-        // TODO: de-duplicate db lock
-        let mut results = if matches!(
-            kind,
-            None | Some(ObjectKind::Other)
-                | Some(ObjectKind::PrivateKey)
-                | Some(ObjectKind::PublicKey)
-                | Some(ObjectKind::SecretKey)
-        ) {
-            fetch_key(key_id, &self.login_ctx, &self.db.0)?
-        } else {
-            Vec::new()
-        };
-
-        if (kind.is_none() && !results.is_empty()) || matches!(kind, Some(ObjectKind::Certificate))
-        {
-            match fetch_certificate(key_id, &self.login_ctx, &self.db.0) {
-                Ok(cert) => {
-                    trace!("Fetched certificate: {cert:?}");
-                    results.push(cert);
-                }
-                Err(err) => {
-                    debug!("Failed to fetch certificate: {err:?}");
-                }
-            }
-        }
-
-        Ok(results)
+        let objects = super::key::fetch_by_id(key_id, &self.login_ctx, kind)?;
+        Ok(self.db.0.lock()?.add_objects(objects))
     }
 
     fn fetch_keys_by_label(
@@ -522,8 +496,7 @@ impl Session {
         for key in keys {
             objects.extend(super::key::fetch_one(&key, &self.login_ctx, kind)?)
         }
-        let mut db = self.db.0.lock()?;
-        Ok(objects.into_iter().map(|o| db.add_object(o)).collect())
+        Ok(self.db.0.lock()?.add_objects(objects))
     }
 
     fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
@@ -618,11 +591,7 @@ impl Session {
         let results = results?;
 
         let mut db = self.db.0.lock()?;
-        let handles = results
-            .into_iter()
-            .flatten()
-            .map(|o| db.add_object(o))
-            .collect();
+        let handles = db.add_objects(results.into_iter().flatten());
         guard.success(db);
 
         Ok(handles)
@@ -640,16 +609,13 @@ impl Session {
         }
 
         let key_info = create_key_from_template(template, &self.login_ctx)?;
-
-        let db = self.db.clone();
-
         match key_info.1 {
             ObjectKind::Certificate => Ok(vec![fetch_certificate(
                 &key_info.0,
                 &self.login_ctx,
-                &db.0,
+                &self.db.0,
             )?]),
-            _ => fetch_key(&key_info.0, &self.login_ctx, &db.0),
+            _ => fetch_key(&key_info.0, &self.login_ctx, &self.db.0),
         }
     }
 
