@@ -638,45 +638,44 @@ pub fn create_key_from_template(
         }
     }
 
+    let has_label = parsed.label.is_some();
     let mut private_key = PrivateKey::new(mechanisms, r#type.into(), key);
     if let Some(label) = parsed.label {
         private_key.label = Some(label);
     }
 
-    let id = if let Some(id) = parsed.id {
-        if let Err(err) = login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_put(
-                    api_config,
-                    id.as_str(),
-                    default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
-                )
-            },
-            login::UserMode::Administrator,
-        ) {
-            Err(err)
-        } else {
-            Ok(id)
-        }
+    let result = if let Some(id) = parsed.id {
+        login_ctx
+            .try_(
+                |api_config| {
+                    default_api::keys_key_id_put(
+                        api_config,
+                        id.as_str(),
+                        default_api::KeysKeyIdPutBody::ApplicationJson(private_key),
+                    )
+                },
+                login::UserMode::Administrator,
+            )
+            .map(|_| id)
     } else {
-        let resp = login_ctx.try_(
-            |api_config| {
-                default_api::keys_post(
-                    api_config,
-                    default_api::KeysPostBody::ApplicationJson(private_key),
-                )
-            },
-            login::UserMode::Administrator,
-        );
+        login_ctx
+            .try_(
+                |api_config| {
+                    default_api::keys_post(
+                        api_config,
+                        default_api::KeysPostBody::ApplicationJson(private_key),
+                    )
+                },
+                login::UserMode::Administrator,
+            )
+            .and_then(|response| extract_key_id_location_header(response.headers))
+    };
 
-        match resp {
-            Ok(resp) => {
-                let id = extract_key_id_location_header(resp.headers)?;
-                Ok(id)
-            }
-            Err(err) => Err(err),
+    let id = result.inspect_err(|err| {
+        if err.is_api_400() && has_label {
+            warn!("Setting CKA_LABEL is only supported with NetHSM v5.0 or later.");
         }
-    }?;
+    })?;
 
     Ok((id, key_class))
 }
@@ -844,15 +843,22 @@ pub fn generate_key_from_template(
         }
     }
 
+    let has_label = parsed.label.is_some();
     let api_mechs = api_mechs.into_iter().map(From::from).collect();
     let mut request = KeyGenerateRequestData::new(api_mechs, key_type.into());
     request.id = parsed.id.map(NetHSMId::into_string);
     request.label = parsed.label;
     request.length = length.map(|length| length as i32);
-    let response = login_ctx.try_(
+
+    let result = login_ctx.try_(
         |api_config| default_api::keys_generate_post(api_config, request),
         login::UserMode::Administrator,
-    )?;
+    );
+    let response = result.inspect_err(|err| {
+        if err.is_api_400() && has_label {
+            warn!("Setting CKA_LABEL is only supported with NetHSM v5.0 or later.");
+        }
+    })?;
 
     let key_id = extract_key_id_location_header(response.headers)?;
 

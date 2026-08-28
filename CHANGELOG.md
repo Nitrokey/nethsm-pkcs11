@@ -7,7 +7,6 @@
 - Add support for labels on the NetHSM (requires NetHSM v5.0 or later):
   - Don’t change `CKA_LABEL` when calling `C_SetAttributeValue` with `CKA_ID`
   - Map `CKA_LABEL` to the NetHSM label instead of the NetHSM key ID when enumerating, generating or importing keys and certiciates
-  - TODO: error handling
 
 ## [2.2.0][] (2026-04-23)
 

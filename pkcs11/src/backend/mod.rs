@@ -153,6 +153,13 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn is_api_400(&self) -> bool {
+        matches!(
+            self,
+            Error::Api(ApiError::ResponseError(ResponseContent { status: 400, .. }))
+        )
+    }
+
     pub fn is_api_404(&self) -> bool {
         matches!(
             self,
