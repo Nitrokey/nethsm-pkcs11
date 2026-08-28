@@ -20,7 +20,7 @@ use super::{
     db::{attr::CkRawAttrTemplate, object::ObjectKind, Db, Object},
     decrypt::DecryptCtx,
     encrypt::EncryptCtx,
-    key::{create_key_from_template, fetch_certificate, fetch_key, generate_key_from_template},
+    key::{create_key_from_template, generate_key_from_template, NetHSMKey},
     login::LoginCtx,
     mechanism::Mechanism,
     object::EnumCtx,
@@ -440,7 +440,7 @@ impl Session {
 
             // then try to fetch from the server
             if results.is_empty() {
-                results = self.fetch_key_by_id(key_id, kind)?;
+                results = self.fetch_key_by_id(key_id.clone(), kind)?;
             }
 
             Ok(results)
@@ -472,7 +472,7 @@ impl Session {
 
     fn fetch_key_by_id(
         &mut self,
-        key_id: &NetHSMId,
+        key_id: NetHSMId,
         kind: Option<ObjectKind>,
     ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
         let objects = super::key::fetch_by_id(key_id, &self.login_ctx, kind)?;
@@ -608,15 +608,14 @@ impl Session {
             return Err(Error::NotLoggedIn(super::login::UserMode::Administrator));
         }
 
-        let key_info = create_key_from_template(template, &self.login_ctx)?;
-        match key_info.1 {
-            ObjectKind::Certificate => Ok(vec![fetch_certificate(
-                &key_info.0,
-                &self.login_ctx,
-                &self.db.0,
-            )?]),
-            _ => fetch_key(&key_info.0, &self.login_ctx, &self.db.0),
-        }
+        let (key_id, kind) = create_key_from_template(template, &self.login_ctx)?;
+        let key = NetHSMKey::fetch(key_id, &self.login_ctx)?;
+        let objects = if kind == ObjectKind::Certificate {
+            vec![key.fetch_certificate(&self.login_ctx)?]
+        } else {
+            key.into_key_objects()?
+        };
+        Ok(self.db.0.lock()?.add_objects(objects))
     }
 
     pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), Error> {

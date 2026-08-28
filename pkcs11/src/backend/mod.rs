@@ -152,6 +152,15 @@ pub enum Error {
     InvalidEncryptedDataLength,
 }
 
+impl Error {
+    pub fn is_api_404(&self) -> bool {
+        matches!(
+            self,
+            Error::Api(ApiError::ResponseError(ResponseContent { status: 404, .. }))
+        )
+    }
+}
+
 impl From<ApiError> for Error {
     fn from(err: ApiError) -> Self {
         Error::Api(err)

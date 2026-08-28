@@ -10,7 +10,7 @@ use super::{
     login::{self, LoginCtx},
     Error,
 };
-use crate::backend::{self, db::object::ObjectKind, mechanism::Mechanism, ApiError};
+use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
 use cryptoki_sys::{
@@ -23,7 +23,10 @@ use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
     apis::default_api,
-    models::{KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType as RawKeyType, PrivateKey},
+    models::{
+        KeyGenerateRequestData, KeyItem, KeyPrivateData, KeyType as RawKeyType, PrivateKey,
+        PublicKey,
+    },
 };
 
 // Exhaustive version of nethsm_sdk_rs::models::KeyType
@@ -678,6 +681,124 @@ pub fn create_key_from_template(
     Ok((id, key_class))
 }
 
+/// A key on the NetHSM.
+///
+/// This key can be mapped to private key, public key and/or certificate objects in the PKCS11 space.
+#[derive(Clone, Debug)]
+pub struct NetHSMKey {
+    id: NetHSMId,
+    data: PublicKey,
+}
+
+impl NetHSMKey {
+    /// Fetches the metadata for key from the NetHSM.
+    ///
+    /// This function returns `Err` if the key does not exist or any other error occured while
+    /// fetching the key.
+    pub fn fetch(key_id: NetHSMId, login_ctx: &LoginCtx) -> Result<Self, Error> {
+        if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
+            return Err(Error::NotLoggedIn(
+                super::login::UserMode::OperatorOrAdministrator,
+            ));
+        }
+
+        login_ctx
+            .try_(
+                |api_config| default_api::keys_key_id_get(api_config, key_id.as_str()),
+                super::login::UserMode::OperatorOrAdministrator,
+            )
+            .map(|response| Self {
+                id: key_id,
+                data: response.entity,
+            })
+    }
+
+    /// Fetches the metadata for key from the NetHSM if it exists.
+    ///
+    /// This function returns `None` if the key does not exist and `Err` if any other error occured
+    /// while fetching the key.
+    pub fn try_fetch(key_id: NetHSMId, login_ctx: &LoginCtx) -> Result<Option<Self>, Error> {
+        Self::fetch(key_id, login_ctx).map(Some).or_else(|err| {
+            debug!("Failed to fetch key: {err:?}");
+            if err.is_api_404() {
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        })
+    }
+
+    /// Returns all PKCS11 objects for this key that match the given `ObjectKind` filter.
+    ///
+    /// If there are no objects matching the filter, an empty `Vec` is returned.
+    pub fn try_fetch_objects(
+        self,
+        login_ctx: &LoginCtx,
+        kind: Option<ObjectKind>,
+    ) -> Result<Vec<Object>, Error> {
+        if let Some(kind) = kind {
+            match kind {
+                ObjectKind::Other
+                | ObjectKind::PrivateKey
+                | ObjectKind::PublicKey
+                | ObjectKind::SecretKey => self.into_key_objects(),
+                ObjectKind::Certificate => {
+                    if let Some(cert) = self.try_fetch_certificate(login_ctx)? {
+                        Ok(vec![cert])
+                    } else {
+                        Ok(Vec::new())
+                    }
+                }
+            }
+        } else {
+            let mut objects = self.clone().into_key_objects()?;
+            if let Some(object) = self.try_fetch_certificate(login_ctx)? {
+                objects.push(object);
+            }
+            Ok(objects)
+        }
+    }
+
+    /// Converts this key to PKCS11 PrivateKey, PublicKey and/or SecretKey objects.
+    pub fn into_key_objects(self) -> Result<Vec<Object>, Error> {
+        db::object::from_key_data(self.data, self.id)
+    }
+
+    /// Fetches the certificate for this key from the NetHSM and converts it to a PKCS11
+    /// Certificate object.
+    ///
+    /// This function returns `Err` if the key does not exist, does not have a certificate or any
+    /// other error occured while fetching the certificate.
+    pub fn fetch_certificate(self, login_ctx: &LoginCtx) -> Result<Object, Error> {
+        let response = login_ctx.try_(
+            |api_config| default_api::keys_key_id_cert_get(api_config, self.id.as_str()),
+            super::login::UserMode::OperatorOrAdministrator,
+        )?;
+        db::object::from_cert_data(
+            self.data,
+            response.entity,
+            self.id,
+            login_ctx.slot().certificate_format,
+        )
+    }
+
+    /// Tries to fetch the certificate for this key from the NetHSM and converts it to a PKCS11
+    /// Certificate object.
+    ///
+    /// This function returns `None` if the key does not exist or does not have a certificate and
+    /// `Err` if any other error occured while fetching the certificate.
+    pub fn try_fetch_certificate(self, login_ctx: &LoginCtx) -> Result<Option<Object>, Error> {
+        self.fetch_certificate(login_ctx).map(Some).or_else(|err| {
+            debug!("Failed to fetch certificate: {err:?}");
+            if err.is_api_404() {
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        })
+    }
+}
+
 const KEYTYPE_EC_P256: ObjectIdentifier = der::oid::db::rfc5912::SECP_256_R_1;
 const KEYTYPE_EC_P384: ObjectIdentifier = der::oid::db::rfc5912::SECP_384_R_1;
 const KEYTYPE_EC_P521: ObjectIdentifier = der::oid::db::rfc5912::SECP_521_R_1;
@@ -728,92 +849,16 @@ pub fn generate_key_from_template(
     request.id = parsed.id.map(NetHSMId::into_string);
     request.label = parsed.label;
     request.length = length.map(|length| length as i32);
-    let id = login_ctx.try_(
+    let response = login_ctx.try_(
         |api_config| default_api::keys_generate_post(api_config, request),
         login::UserMode::Administrator,
     )?;
 
-    let id = extract_key_id_location_header(id.headers)?;
+    let key_id = extract_key_id_location_header(response.headers)?;
 
-    fetch_key(&id, login_ctx, db)
-}
-
-fn fetch_one_key(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Vec<Object>, Error> {
-    if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
-        return Err(Error::NotLoggedIn(
-            super::login::UserMode::OperatorOrAdministrator,
-        ));
-    }
-
-    let key_data = match login_ctx.try_(
-        |api_config| default_api::keys_key_id_get(api_config, key_id.as_str()),
-        super::login::UserMode::OperatorOrAdministrator,
-    ) {
-        Ok(key_data) => key_data.entity,
-        Err(err) => {
-            debug!("Failed to fetch key {key_id}: {err:?}");
-            if matches!(
-                err,
-                Error::Api(ApiError::ResponseError(backend::ResponseContent {
-                    status: 404,
-                    ..
-                }))
-            ) {
-                return Ok(vec![]);
-            }
-            return Err(err);
-        }
-    };
-
-    let objects = db::object::from_key_data(key_data, key_id.clone())?;
-
-    Ok(objects)
-}
-
-pub fn fetch_key(
-    key_id: &NetHSMId,
-    login_ctx: &LoginCtx,
-    db: &Mutex<db::Db>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
-    let objects = fetch_one_key(key_id, login_ctx)?;
+    let key = NetHSMKey::fetch(key_id, login_ctx)?;
+    let objects = key.into_key_objects()?;
     Ok(db.lock()?.add_objects(objects))
-}
-
-fn fetch_one_certificate(key_id: &NetHSMId, login_ctx: &LoginCtx) -> Result<Object, Error> {
-    if !login_ctx.can_run_mode(super::login::UserMode::OperatorOrAdministrator) {
-        return Err(Error::NotLoggedIn(
-            super::login::UserMode::OperatorOrAdministrator,
-        ));
-    }
-
-    let key_data = login_ctx.try_(
-        |api_config| default_api::keys_key_id_get(api_config, key_id.as_str()),
-        super::login::UserMode::OperatorOrAdministrator,
-    )?;
-    let cert_data = login_ctx.try_(
-        |api_config| default_api::keys_key_id_cert_get(api_config, key_id.as_str()),
-        super::login::UserMode::OperatorOrAdministrator,
-    )?;
-
-    let object = db::object::from_cert_data(
-        key_data.entity,
-        cert_data.entity,
-        key_id.clone(),
-        login_ctx.slot().certificate_format,
-    )?;
-
-    Ok(object)
-}
-
-pub fn fetch_certificate(
-    key_id: &NetHSMId,
-    login_ctx: &LoginCtx,
-    db: &Mutex<db::Db>,
-) -> Result<(CK_OBJECT_HANDLE, Object), Error> {
-    let object = fetch_one_certificate(key_id, login_ctx)?;
-    let r = db.lock()?.add_object(object);
-
-    Ok(r)
 }
 
 // get the id from the logation header value :
@@ -845,39 +890,19 @@ pub fn fetch_one(
             error!("NetHSM returned invalid key ID: {err:?}");
         })
         .map_err(|_| Error::InvalidData)?;
-    fetch_by_id(&key_id, login_ctx, kind)
+    fetch_by_id(key_id, login_ctx, kind)
 }
 
 pub fn fetch_by_id(
-    key_id: &NetHSMId,
+    key_id: NetHSMId,
     login_ctx: &LoginCtx,
     kind: Option<ObjectKind>,
 ) -> Result<Vec<Object>, Error> {
-    // TODO: avoid potential duplicate key fetch
-    let mut acc = Vec::new();
+    let Some(key) = NetHSMKey::try_fetch(key_id, login_ctx)? else {
+        return Ok(Vec::new());
+    };
 
-    if matches!(
-        kind,
-        None | Some(ObjectKind::Other)
-            | Some(ObjectKind::PrivateKey)
-            | Some(ObjectKind::PublicKey)
-            | Some(ObjectKind::SecretKey)
-    ) {
-        acc = fetch_one_key(key_id, login_ctx)?;
-    }
-
-    if matches!(kind, None | Some(ObjectKind::Certificate)) {
-        match fetch_one_certificate(key_id, login_ctx) {
-            Ok(cert) => {
-                trace!("Fetched certificate: {cert:?}");
-                acc.push(cert);
-            }
-            Err(err) => {
-                debug!("Failed to fetch certificate: {err:?}");
-            }
-        }
-    }
-    Ok(acc)
+    key.try_fetch_objects(login_ctx, kind)
 }
 
 #[cfg(test)]
