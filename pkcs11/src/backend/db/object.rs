@@ -459,6 +459,7 @@ pub fn from_cert_data(
             (parsed_cert, buf)
         }
     };
+    let tbs_cert = cert.tbs_certificate();
 
     let length = cert_der.len();
 
@@ -500,20 +501,15 @@ pub fn from_cert_data(
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
     attrs.insert(
         CKA_SUBJECT,
-        Attr::Bytes(cert.tbs_certificate.subject.to_der().map_err(Error::Der)?),
+        Attr::Bytes(tbs_cert.subject().to_der().map_err(Error::Der)?),
     );
     attrs.insert(
         CKA_ISSUER,
-        Attr::Bytes(cert.tbs_certificate.issuer.to_der().map_err(Error::Der)?),
+        Attr::Bytes(tbs_cert.issuer().to_der().map_err(Error::Der)?),
     );
     attrs.insert(
         CKA_SERIAL_NUMBER,
-        Attr::Bytes(
-            cert.tbs_certificate
-                .serial_number
-                .to_der()
-                .map_err(Error::Der)?,
-        ),
+        Attr::Bytes(tbs_cert.serial_number().to_der().map_err(Error::Der)?),
     );
     attrs.insert(CKA_TRUSTED, Attr::CK_TRUE);
     attrs.insert(CKA_CERTIFICATE_TYPE, Attr::from_ck_cert_type(CKC_X_509));

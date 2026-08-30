@@ -19,9 +19,9 @@ rustls = { version = "0.23", default-features = false }
 rustls-native-certs = "0.8"
 base64ct = { version = "1.6", default-features = false }
 hex = "0.4"
-der = { version = "0.7", default-features = false }
+der = { version = "0.8", default-features = false, features = ["heapless"] }
 pem-rfc7468 = { version = "1", features = ["alloc"] }
-x509-cert = { features = ["pem"], default-features = false, version = "0.2" }
+x509-cert = { features = ["pem"], default-features = false, version = "0.3" }
 sha2 = { default-features = false, version = "0.11" }
 sha1 = { default-features = false, version = "0.11" }
 digest = { default-features = false, version = "0.11" }
@@ -35,7 +35,7 @@ md-5 = "0.11"
 config_file = { path = "config_file" }
 
 # Needed to prevent breaking change with rustls updates
-ureq = { version = "=3.3.0", default-features  = false }
+ureq = { version = "=3.4.0", default-features  = false }
 rustls-pki-types = "1.11.0"
 socket2 = { version = "0.6", features = ["all"] }
 
