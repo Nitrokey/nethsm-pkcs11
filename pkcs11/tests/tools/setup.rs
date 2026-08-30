@@ -123,8 +123,10 @@ fn provision(host: &str, port: u16) {
             "Administrator".into(),
             time::OffsetDateTime::now_utc()
                 .format(
-                    &format_description::parse("[year]-[month]-[day]T[hour]:[minute]:[second]Z")
-                        .unwrap(),
+                    &format_description::parse_borrowed::<3>(
+                        "[year]-[month]-[day]T[hour]:[minute]:[second]Z",
+                    )
+                    .unwrap(),
                 )
                 .unwrap(),
         ),
