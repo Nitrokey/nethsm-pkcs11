@@ -28,8 +28,9 @@ nethsm-pkcs11 is compatible with these NetHSM versions:
 | [v2.1][nethsm-v2.1] | limited | |
 | [v2.2][nethsm-v2.2] | limited | |
 | [v3.0][nethsm-v3.0] | limited | RSA signatures using PKCS1 mechanisms do not work. |
-| [v3.1][nethsm-v3.1] | full | |
-| [v4.0][nethsm-v4.0] | full | |
+| [v3.1][nethsm-v3.1] | limited | |
+| [v4.0][nethsm-v4.0] | limited | |
+| [v5.0][nethsm-v5.0] | full | |
 
 [nethsm-v1.0]: https://github.com/Nitrokey/nethsm/releases/tag/v1.0
 [nethsm-v2.0]: https://github.com/Nitrokey/nethsm/releases/tag/v2.0
@@ -38,6 +39,7 @@ nethsm-pkcs11 is compatible with these NetHSM versions:
 [nethsm-v3.0]: https://github.com/Nitrokey/nethsm/releases/tag/v3.0
 [nethsm-v3.1]: https://github.com/Nitrokey/nethsm/releases/tag/v3.1
 [nethsm-v4.0]: https://github.com/Nitrokey/nethsm/releases/tag/v4.0
+[nethsm-v5.0]: https://github.com/Nitrokey/nethsm/releases/tag/v5.0
 
 Full compatibility means that all features of the NetHSM PKCS#11 module can be used with this version.
 Limited compatibility means that only some features are available for this version.

@@ -2,11 +2,34 @@
 
 ## Unreleased
 
+-
+
+## [3.0.0-rc.1][] (2026-08-30)
+
 ### Breaking Changes
 
 - Add support for labels on the NetHSM (requires NetHSM v5.0 or later):
   - Add support for `CKA_LABEL` to `C_SetAttributeValue`
   - Map `CKA_LABEL` to the NetHSM label instead of the NetHSM key ID when enumerating, generating, importing or changing keys and certiciates
+
+
+### Bugfixes
+
+- Return correct signature length for Curve25519 keys when calling `C_Sign` with `pSignature` set to a null pointer.
+
+### Compatibility
+
+- This release is fully compatible with NetHSM v5.0.
+- This release is generally compatible with NetHSM v1.0, v2.0, v2.1, v2.2, v3.0 and v4.0 but not all features are available on these versions (as indicated in the changelog entries).
+
+### Migration
+
+- For applications using `CKA_LABEL` attributes, the NetHSM must be updated to v5.0 before updating the PKCS11 module.
+  Also, the label must be set to the key ID for all keys used by the application.
+- If the application using the PKCS11 module does not use `CKA_LABEL` attributes, no special steps are required.
+
+[3.0.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v3.0.0-rc.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.2.0...v3.0.0-rc.1)
 
 ## [2.2.0][] (2026-04-23)
 
