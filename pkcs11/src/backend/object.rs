@@ -41,13 +41,13 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
                     key_id = Some(parse_nethsm_id(&attr)?);
                 }
                 if attr.type_() == CKA_LABEL {
-                    let Some(bytes) = attr.val_bytes() else {
-                        debug!("Skipping empty CKA_LABEL value");
-                        continue;
-                    };
-                    let s =
-                        str::from_utf8(bytes).map_err(|_| Error::InvalidAttribute(attr.type_()))?;
-                    label = Some(s.to_owned());
+                    if let Some(bytes) = attr.val_bytes() {
+                        let s = str::from_utf8(bytes)
+                            .map_err(|_| Error::InvalidAttribute(attr.type_()))?;
+                        label = Some(s.to_owned());
+                    } else {
+                        label = Some(String::new());
+                    }
                 }
             }
             Ok(KeyRequirements {

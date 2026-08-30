@@ -451,6 +451,7 @@ impl Session {
         kind: Option<ObjectKind>,
         label: Option<&str>,
     ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
+        debug!("Searching keys with id = {id:?}, kind = {kind:?}, label = {label:?}");
         let result = if let Some(key_id) = id {
             // try to search in the db first
             let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
@@ -477,20 +478,8 @@ impl Session {
 
         Ok(result
             .into_iter()
-            .filter(|(_, obj)| {
-                if let Some(kind) = kind {
-                    kind == obj.kind
-                } else {
-                    true
-                }
-            })
-            .filter(|(_, obj)| {
-                if let Some(label) = label {
-                    Some(label) == obj.label.as_deref()
-                } else {
-                    true
-                }
-            })
+            .filter(|(_, obj)| kind.map(|kind| kind == obj.kind).unwrap_or(true))
+            .filter(|(_, obj)| label.map(|label| label == obj.label).unwrap_or(true))
             .map(|(handle, _)| handle)
             .collect())
     }

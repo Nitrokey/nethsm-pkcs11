@@ -2,12 +2,16 @@
 
 pub mod tools;
 
+use std::sync::Mutex;
+
 use cryptoki::{
     mechanism::Mechanism,
     object::{Attribute, AttributeType, ObjectClass, ObjectHandle},
     session::Session,
 };
 use cryptoki_sys::CK_OBJECT_CLASS;
+
+static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
 #[derive(Clone, Debug, PartialEq)]
 struct Object {
@@ -155,6 +159,8 @@ fn assert_objects_eq(actual: impl IntoIterator<Item = Object>, expected: &[KeyPa
 
 #[test_log::test]
 fn set_attribute_value_id() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     tools::run_test(|pkcs11, slot| {
         let session = pkcs11.open_rw_session(slot).unwrap();
         let key = generate_rsa_key(&session, None);
@@ -176,6 +182,8 @@ fn set_attribute_value_id() {
 
 #[test_log::test]
 fn set_attribute_value_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     let label1 = "label1";
     let label2 = "label2";
 
@@ -215,6 +223,8 @@ fn set_attribute_value_label() {
 
 #[test_log::test]
 fn set_attribute_value_id_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     let label1 = "label1";
     let label2 = "label2";
 
@@ -254,6 +264,8 @@ fn set_attribute_value_id_label() {
 
 #[test_log::test]
 fn delete() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     tools::run_test(|pkcs11, slot| {
         let session = pkcs11.open_rw_session(slot).unwrap();
 
@@ -274,6 +286,8 @@ fn delete() {
 
 #[test_log::test]
 fn generate_no_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     tools::run_test(|pkcs11, slot| {
         let session = pkcs11.open_rw_session(slot).unwrap();
         let key = generate_rsa_key(&session, None);
@@ -287,6 +301,8 @@ fn generate_no_label() {
 
 #[test_log::test]
 fn generate_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     tools::run_test(|pkcs11, slot| {
         let label = "testlabel123";
 
@@ -302,6 +318,8 @@ fn generate_label() {
 
 #[test_log::test]
 fn generate_empty_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     tools::run_test(|pkcs11, slot| {
         let label = "";
 
@@ -317,6 +335,8 @@ fn generate_empty_label() {
 
 #[test_log::test]
 fn list_by_label() {
+    let _guard = TEST_MUTEX.lock().unwrap();
+
     // TODO: add certificates
     // TODO: filter by object type
 
@@ -331,7 +351,7 @@ fn list_by_label() {
     });
     let [objects1, objects2, objects3, objects4] = all_objects.clone();
 
-    let labels = [label1, label2, label3, ""];
+    let labels = [Some(label1), Some(label2), Some(label3), Some(""), None];
     let ids: &[Option<&str>] = &[
         Some(&all_objects[0].private.id),
         Some(&all_objects[1].private.id),
@@ -355,14 +375,17 @@ fn list_by_label() {
                         assert_objects_eq(objects, &all_objects);
                     }
 
-                    let mut attributes = vec![Attribute::Label(label.as_bytes().to_owned())];
+                    let mut attributes = Vec::new();
+                    if let Some(label) = label {
+                        attributes.push(Attribute::Label(label.as_bytes().to_owned()));
+                    }
                     if let Some(id) = id {
                         attributes.push(Attribute::Id(id.as_bytes().to_owned()));
                     }
                     let objects = find_objects(&session, &attributes);
                     let expected: Vec<_> = all_objects
                         .iter()
-                        .filter(|o| label.is_empty() || o.private.label == label)
+                        .filter(|o| label.map(|label| o.private.label == label).unwrap_or(true))
                         .filter(|o| id.map(|id| o.private.id == id).unwrap_or(true))
                         .cloned()
                         .collect();

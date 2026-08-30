@@ -148,7 +148,7 @@ pub struct Object {
     attrs: HashMap<cryptoki_sys::CK_ATTRIBUTE_TYPE, Attr>,
     pub kind: ObjectKind,
     pub id: NetHSMId,
-    pub label: Option<String>,
+    pub label: String,
     pub size: Option<usize>, // the size of the object in bytes
     pub mechanisms: Vec<KeyMechanism>,
 }
@@ -176,7 +176,7 @@ impl Object {
         if let Some(label) = label {
             self.attrs
                 .insert(CKA_LABEL, Attr::Bytes(label.clone().into_bytes()));
-            self.label = if label.is_empty() { None } else { Some(label) };
+            self.label = label;
         }
     }
 }
@@ -382,7 +382,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         attrs: attrs.clone(),
         kind: ObjectKind::PrivateKey,
         id: id.clone(),
-        label: key_data.label.clone(),
+        label: key_data.label.clone().unwrap_or_default(),
         size: key_attrs.key_size,
         mechanisms,
     };
@@ -400,7 +400,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         attrs: attrs.clone(),
         kind: ObjectKind::PublicKey,
         id,
-        label: key_data.label,
+        label: key_data.label.unwrap_or_default(),
         size: key_attrs.key_size,
         mechanisms: vec![],
     };
@@ -523,7 +523,7 @@ pub fn from_cert_data(
         attrs,
         kind: ObjectKind::Certificate,
         id: key_id,
-        label: key_data.label,
+        label: key_data.label.unwrap_or_default(),
         size: Some(length),
         mechanisms: vec![],
     })
