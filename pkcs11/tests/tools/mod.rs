@@ -7,7 +7,7 @@ use cryptoki::{
     slot::Slot,
 };
 
-pub fn run_test<F: FnOnce(&Pkcs11, Slot)>(f: F) {
+pub fn run_test<F: FnOnce(&Pkcs11, Slot) -> R, R>(f: F) -> R {
     let _guard = setup::setup();
     setup::with_default_pkcs11_config(|| {
         let pkcs11 = Pkcs11::new("../target/release/libnethsm_pkcs11.so").unwrap();
