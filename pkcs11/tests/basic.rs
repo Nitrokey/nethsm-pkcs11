@@ -2,122 +2,115 @@
 
 pub mod tools;
 
-use pkcs11::{
-    types::{CK_ATTRIBUTE, CK_OBJECT_HANDLE, CK_SESSION_HANDLE},
-    Ctx,
+use cryptoki::{
+    mechanism::Mechanism,
+    object::{Attribute, AttributeType, ObjectHandle},
+    session::Session,
 };
 
-use tools::constants::{RSA_MECHANISM, RSA_PRIVATE_KEY_ATTRIBUTES, RSA_PUBLIC_KEY_ATTRIBUTES};
+struct KeyPair {
+    public: ObjectHandle,
+    private: ObjectHandle,
+}
+
+impl KeyPair {
+    fn destroy(&self, session: &Session) {
+        session.destroy_object(self.private).unwrap();
+    }
+}
+
+fn generate_rsa_key(session: &Session) -> KeyPair {
+    let pub_key_template = &[
+        Attribute::Verify(true),
+        Attribute::ModulusBits(2048.into()),
+        Attribute::Token(false),
+        Attribute::PublicExponent(vec![0x01, 0x00, 0x01]),
+    ];
+    let priv_key_template = &[Attribute::Sign(true), Attribute::Token(false)];
+    let (public, private) = session
+        .generate_key_pair(&Mechanism::RsaPkcs, pub_key_template, priv_key_template)
+        .unwrap();
+    KeyPair { public, private }
+}
+
+fn get_id_label(session: &Session, object: ObjectHandle) -> (String, String) {
+    // TODO: ID should be Vec<u8>, not String
+    let attributes = session
+        .get_attributes(object, &[AttributeType::Id, AttributeType::Label])
+        .unwrap();
+    assert_eq!(attributes.len(), 2);
+
+    let Attribute::Id(id) = &attributes[0] else {
+        panic!("Unexpected attribute returned for ID: {:?}", attributes[0]);
+    };
+    let Attribute::Label(label) = &attributes[1] else {
+        panic!(
+            "Unexpected attribute returned for label: {:?}",
+            attributes[1]
+        );
+    };
+    let id = str::from_utf8(id).unwrap().to_owned();
+    let label = str::from_utf8(label).unwrap().to_owned();
+    (id, label)
+}
+
+fn assert_objects(session: &Session, expected: &[ObjectHandle]) {
+    let mut objects: Vec<_> = session
+        .find_objects(&[])
+        .unwrap()
+        .into_iter()
+        .map(|o| o.handle())
+        .collect();
+    let mut expected_objects: Vec<_> = expected.iter().map(ObjectHandle::handle).collect();
+    objects.sort();
+    expected_objects.sort();
+    assert_eq!(objects, expected_objects);
+}
 
 #[test_log::test]
 fn set_attribute_value() {
-    tools::run_test(|ctx| {
-        fn get_attributes(
-            ctx: &Ctx,
-            session: CK_SESSION_HANDLE,
-            object: CK_OBJECT_HANDLE,
-        ) -> (String, String) {
-            let mut buffer1 = [0; 128];
-            let mut buffer2 = [0; 128];
-            let mut attributes = vec![
-                CK_ATTRIBUTE {
-                    attrType: pkcs11::types::CKA_ID,
-                    pValue: buffer1.as_mut_ptr() as _,
-                    ulValueLen: buffer1.len().try_into().unwrap(),
-                },
-                CK_ATTRIBUTE {
-                    attrType: pkcs11::types::CKA_LABEL,
-                    pValue: buffer2.as_mut_ptr() as _,
-                    ulValueLen: buffer2.len().try_into().unwrap(),
-                },
-            ];
-            ctx.get_attribute_value(session, object, &mut attributes)
-                .unwrap();
-            let id = String::from_utf8(attributes[0].get_bytes().unwrap()).unwrap();
-            let label = String::from_utf8(attributes[1].get_bytes().unwrap()).unwrap();
-            (id, label)
-        }
+    tools::run_test(|pkcs11, slot| {
+        let session = pkcs11.open_rw_session(slot).unwrap();
+        let key = generate_rsa_key(&session);
 
-        let slot = 0;
-        let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-        let (public_key, private_key) = ctx
-            .generate_key_pair(
-                session,
-                &RSA_MECHANISM,
-                RSA_PUBLIC_KEY_ATTRIBUTES,
-                RSA_PRIVATE_KEY_ATTRIBUTES,
-            )
-            .unwrap();
-
-        let (public_id, public_label) = get_attributes(ctx, session, public_key);
+        let (public_id, public_label) = get_id_label(&session, key.public);
         println!("public key: id = {public_id}, label = {public_label}");
-        let (private_id, private_label) = get_attributes(ctx, session, private_key);
+        let (private_id, private_label) = get_id_label(&session, key.private);
         println!("private key: id = {private_id}, label = {private_label}");
 
         let new_id = "mynewkeyid";
-        ctx.set_attribute_value(
-            session,
-            private_key,
-            &[CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(new_id.as_bytes())],
-        )
-        .unwrap();
+        session
+            .update_attributes(key.private, &[Attribute::Id(new_id.as_bytes().to_owned())])
+            .unwrap();
 
-        let (public_id, public_label) = get_attributes(ctx, session, public_key);
-        let (private_id, private_label) = get_attributes(ctx, session, private_key);
+        let (public_id, public_label) = get_id_label(&session, key.public);
+        let (private_id, private_label) = get_id_label(&session, key.private);
+
         assert_eq!(&public_id, new_id);
         assert_eq!(&public_label, "");
         assert_eq!(&private_id, new_id);
         assert_eq!(&private_label, "");
 
-        ctx.destroy_object(session, private_key).unwrap();
+        key.destroy(&session);
     })
 }
 
 #[test_log::test]
 fn delete() {
-    tools::run_test(|ctx| {
-        fn assert_objects(ctx: &Ctx, session: CK_SESSION_HANDLE, expected: &[CK_OBJECT_HANDLE]) {
-            ctx.find_objects_init(session, &[]).unwrap();
-            let mut objects = ctx.find_objects(session, 10).unwrap();
-            ctx.find_objects_final(session).unwrap();
+    tools::run_test(|pkcs11, slot| {
+        let session = pkcs11.open_rw_session(slot).unwrap();
 
-            let mut expected_objects = expected.to_vec();
-            objects.sort();
-            expected_objects.sort();
-            assert_eq!(objects, expected_objects);
-        }
-
-        let slot = 0;
-        let session = ctx.open_session(slot, 0x04, None, None).unwrap();
-        let (public_key1, private_key1) = ctx
-            .generate_key_pair(
-                session,
-                &RSA_MECHANISM,
-                RSA_PUBLIC_KEY_ATTRIBUTES,
-                RSA_PRIVATE_KEY_ATTRIBUTES,
-            )
-            .unwrap();
-        let (public_key2, private_key2) = ctx
-            .generate_key_pair(
-                session,
-                &RSA_MECHANISM,
-                RSA_PUBLIC_KEY_ATTRIBUTES,
-                RSA_PRIVATE_KEY_ATTRIBUTES,
-            )
-            .unwrap();
-
+        let key1 = generate_rsa_key(&session);
+        let key2 = generate_rsa_key(&session);
         assert_objects(
-            ctx,
-            session,
-            &[public_key1, public_key2, private_key1, private_key2],
+            &session,
+            &[key1.public, key1.private, key2.public, key2.private],
         );
 
-        ctx.destroy_object(session, private_key1).unwrap();
+        key1.destroy(&session);
+        assert_objects(&session, &[key2.public, key2.private]);
 
-        assert_objects(ctx, session, &[public_key2, private_key2]);
-
-        ctx.destroy_object(session, private_key2).unwrap();
-
-        assert_objects(ctx, session, &[]);
+        key2.destroy(&session);
+        assert_objects(&session, &[]);
     })
 }
