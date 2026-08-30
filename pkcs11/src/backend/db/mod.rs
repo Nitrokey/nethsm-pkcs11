@@ -110,14 +110,19 @@ impl Db {
         self.objects.remove(&handle)
     }
 
-    pub fn rename(&mut self, old_id: &NetHSMId, new_id: &NetHSMId) {
+    pub fn update(
+        &mut self,
+        old_id: &NetHSMId,
+        new_id: Option<&NetHSMId>,
+        new_label: Option<&str>,
+    ) {
         for object in self.objects.values_mut() {
             if &object.id == old_id {
                 info!(
-                    "Renaming object {:?}:{} to {}",
-                    object.kind, object.id, new_id
+                    "Updating object {:?}:{} with id = {new_id:?}, label = {new_label:?}",
+                    object.kind, object.id,
                 );
-                object.rename(new_id.clone());
+                object.update(new_id.cloned(), new_label.map(|s| s.to_owned()));
             }
         }
     }

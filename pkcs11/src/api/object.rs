@@ -265,41 +265,77 @@ fn set_attribute_value(
     let attrs = unsafe { slice::from_raw_parts(template_ptr, n) };
 
     let mut id = None;
+    let mut label = None;
+
     for attr in attrs {
-        if attr.type_ != cryptoki_sys::CKA_ID {
-            error!("C_SetAttributeValue() is supported only on CKA_ID");
-            return Err(Pkcs11Error::AttributeReadOnly);
-        }
-        if id.is_some() {
-            error!("CKA_ID cannot be set twice in C_SetAttributeValue");
+        let attr_type = attr.type_;
+
+        let var = match attr_type {
+            cryptoki_sys::CKA_ID => &mut id,
+            cryptoki_sys::CKA_LABEL => &mut label,
+            _ => {
+                error!("C_SetAttributeValue() is not supported for attribute {attr_type}",);
+                return Err(Pkcs11Error::AttributeReadOnly);
+            }
+        };
+
+        if var.is_some() {
+            error!("Attribute {attr_type} cannot be set twice in C_SetAttributeValue",);
             return Err(Pkcs11Error::TemplateInconsistent);
         }
-        if attr.ulValueLen == 0
-            || attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION
-            || attr.pValue.is_null()
-        {
-            error!("CKA_ID value may not be empty in C_SetAttributeValue");
+        if attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION {
+            error!(
+                "Attribute {attr_type} cannot be set with unavailable information in C_SetAttributeValue",
+            );
             return Err(Pkcs11Error::AttributeValueInvalid);
         }
-        let Ok(n) = usize::try_from(attr.ulValueLen) else {
-            error!("CKA_ID value is too long in C_SetAttributeValue");
-            return Err(Pkcs11Error::AttributeValueInvalid);
+        let value = if attr.ulValueLen == 0 {
+            &[]
+        } else {
+            if attr.pValue.is_null() {
+                error!("Null pointer passed for attribute {attr_type} in C_SetAttributeValue",);
+                return Err(Pkcs11Error::AttributeValueInvalid);
+            }
+            let Ok(n) = usize::try_from(attr.ulValueLen) else {
+                error!("Value for attribute {attr_type} is too long in C_SetAttributeValue",);
+                return Err(Pkcs11Error::AttributeValueInvalid);
+            };
+            // SAFETY: The caller must provide a byte slice of the correct size for all supported
+            // attributes. We already checked for null pointers and length zero above.
+            unsafe { slice::from_raw_parts(attr.pValue as *const u8, n) }
         };
-        // SAFETY: The caller must provide a byte slice of the correct size for CKA_ID attributes.
-        // We already checked for null pointers and length zero above.
-        id = Some(unsafe { slice::from_raw_parts(attr.pValue as *const u8, n) });
+        *var = Some(value);
     }
-    // We already checked before that there is at least one attribute. As CKA_ID is the only
-    // attribute we support, id cannot be None.
-    let id = id.ok_or(Pkcs11Error::ArgumentsBad)?;
-    let id = Pkcs11Id::from(id);
-    let id = NetHSMId::try_from(&id).map_err(|_| {
-        error!("CKA_ID value is not a valid NetHSM ID: {id:?}");
-        Pkcs11Error::AttributeValueInvalid
-    })?;
 
-    info!("Changing ID to: {}", id);
-    session.rename_objects(&object.id, &id).map_err(From::from)
+    let id = id
+        .map(|id| {
+            if id.is_empty() {
+                error!("CKA_ID value may not be empty in C_SetAttributeValue");
+                return Err(Pkcs11Error::AttributeValueInvalid);
+            }
+            let id = Pkcs11Id::from(id);
+            NetHSMId::try_from(&id).map_err(|_| {
+                error!("CKA_ID value is not a valid NetHSM ID: {id:?}");
+                Pkcs11Error::AttributeValueInvalid
+            })
+        })
+        .transpose()?;
+    let label = label
+        .map(|label| {
+            str::from_utf8(label).map_err(|_| {
+                error!("CKA_LABEL value is not a valid UTF-8 string: {id:?}");
+                Pkcs11Error::AttributeValueInvalid
+            })
+        })
+        .transpose()?;
+
+    info!(
+        "Updating object {} with id = {id:?}, label = {label:?}",
+        object.id
+    );
+    session
+        .update_objects(&object.id, id.as_ref(), label)
+        .map_err(From::from)
 }
 
 #[cfg(test)]

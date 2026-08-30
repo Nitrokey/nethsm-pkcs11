@@ -166,12 +166,18 @@ impl Object {
         }
     }
 
-    pub fn rename(&mut self, id: NetHSMId) {
-        let attr_id = self.attrs.get(&CKA_ID);
-        info!("renaming {}/{attr_id:?} to {}", self.id, id);
-        let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
-        self.attrs.insert(CKA_ID, id_bytes);
-        self.id = id;
+    pub fn update(&mut self, id: Option<NetHSMId>, label: Option<String>) {
+        info!("updating {} with id = {id:?}, label = {label:?}", self.id);
+        if let Some(id) = id {
+            let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
+            self.attrs.insert(CKA_ID, id_bytes);
+            self.id = id;
+        }
+        if let Some(label) = label {
+            self.attrs
+                .insert(CKA_LABEL, Attr::Bytes(label.clone().into_bytes()));
+            self.label = if label.is_empty() { None } else { Some(label) };
+        }
     }
 }
 

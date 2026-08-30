@@ -8,7 +8,10 @@ use cryptoki_sys::{
     CK_USER_TYPE,
 };
 use log::{debug, error, trace};
-use nethsm_sdk_rs::{apis::default_api, models::MoveKeyRequest};
+use nethsm_sdk_rs::{
+    apis::default_api,
+    models::{KeySetLabel, MoveKeyRequest},
+};
 
 use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
@@ -397,19 +400,41 @@ impl Session {
         self.decrypt_ctx = None;
     }
 
-    pub fn rename_objects(&self, old_id: &NetHSMId, new_id: &NetHSMId) -> Result<(), Error> {
-        self.login_ctx.try_(
-            |api_config| {
-                default_api::keys_key_id_move_post(
-                    api_config,
-                    old_id.as_str(),
-                    MoveKeyRequest::new(new_id.clone().into_string()),
-                )
-            },
-            crate::backend::login::UserMode::Administrator,
-        )?;
+    pub fn update_objects(
+        &self,
+        old_id: &NetHSMId,
+        new_id: Option<&NetHSMId>,
+        new_label: Option<&str>,
+    ) -> Result<(), Error> {
+        // TODO: What if rename succeeds but setting the label fails?
+        let mut id = old_id;
+        if let Some(new_id) = new_id {
+            self.login_ctx.try_(
+                |api_config| {
+                    default_api::keys_key_id_move_post(
+                        api_config,
+                        id.as_str(),
+                        MoveKeyRequest::new(new_id.clone().into_string()),
+                    )
+                },
+                crate::backend::login::UserMode::Administrator,
+            )?;
+            id = new_id;
+        }
+        if let Some(label) = new_label {
+            self.login_ctx.try_(
+                |api_config| {
+                    default_api::keys_key_id_label_put(
+                        api_config,
+                        id.as_str(),
+                        KeySetLabel::new(label.to_owned()),
+                    )
+                },
+                crate::backend::login::UserMode::Administrator,
+            )?;
+        }
         let mut db = self.db.0.lock().unwrap();
-        db.rename(old_id, new_id);
+        db.update(old_id, new_id, new_label);
         Ok(())
     }
 

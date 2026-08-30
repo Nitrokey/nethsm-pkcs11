@@ -154,7 +154,7 @@ fn assert_objects_eq(actual: impl IntoIterator<Item = Object>, expected: &[KeyPa
 }
 
 #[test_log::test]
-fn set_attribute_value() {
+fn set_attribute_value_id() {
     tools::run_test(|pkcs11, slot| {
         let session = pkcs11.open_rw_session(slot).unwrap();
         let key = generate_rsa_key(&session, None);
@@ -171,6 +171,84 @@ fn set_attribute_value() {
         old_objects.private.id = new_id.to_owned();
         old_objects.public.id = new_id.to_owned();
         assert_eq!(old_objects, new_objects);
+    })
+}
+
+#[test_log::test]
+fn set_attribute_value_label() {
+    let label1 = "label1";
+    let label2 = "label2";
+
+    tools::run_test(|pkcs11, slot| {
+        let session = pkcs11.open_rw_session(slot).unwrap();
+        let key = generate_rsa_key(&session, Some(label1));
+
+        let mut old_objects = key.get_objects(&session);
+
+        session
+            .update_attributes(
+                key.private,
+                &[Attribute::Label(label2.as_bytes().to_owned())],
+            )
+            .unwrap();
+        let new_objects = key.get_objects(&session);
+
+        old_objects.private.label = label2.to_owned();
+        old_objects.public.label = label2.to_owned();
+        assert_eq!(old_objects, new_objects);
+
+        let objects = find_objects(&session, &[Attribute::Label(label2.as_bytes().to_owned())]);
+        assert_objects_eq(objects, &[old_objects.clone()]);
+
+        session
+            .update_attributes(key.private, &[Attribute::Label(Vec::new())])
+            .unwrap();
+        let new_objects = key.get_objects(&session);
+
+        old_objects.private.label = String::new();
+        old_objects.public.label = String::new();
+        assert_eq!(old_objects, new_objects);
+
+        key.destroy(&session);
+    })
+}
+
+#[test_log::test]
+fn set_attribute_value_id_label() {
+    let label1 = "label1";
+    let label2 = "label2";
+
+    tools::run_test(|pkcs11, slot| {
+        let session = pkcs11.open_rw_session(slot).unwrap();
+        let key = generate_rsa_key(&session, Some(label1));
+
+        let mut old_objects = key.get_objects(&session);
+
+        let new_id = "mynewkeyid";
+        session
+            .update_attributes(
+                key.private,
+                &[
+                    Attribute::Label(label2.as_bytes().to_owned()),
+                    Attribute::Id(new_id.as_bytes().to_owned()),
+                ],
+            )
+            .unwrap();
+        let new_objects = key.get_objects(&session);
+
+        old_objects.private.id = new_id.to_owned();
+        old_objects.public.id = new_id.to_owned();
+        old_objects.private.label = label2.to_owned();
+        old_objects.public.label = label2.to_owned();
+        assert_eq!(old_objects, new_objects);
+
+        let objects = find_objects(&session, &[Attribute::Label(label2.as_bytes().to_owned())]);
+        assert_objects_eq(objects, &[old_objects.clone()]);
+
+        let objects = find_objects(&session, &[Attribute::Id(new_id.as_bytes().to_owned())]);
+        assert_objects_eq(objects, &[old_objects.clone()]);
+
+        key.destroy(&session);
     })
 }
 
