@@ -6,10 +6,11 @@ use crate::backend::{events::EventsManager, Pkcs11Error};
 use crate::{
     api,
     backend::session::{Session, SessionManager},
+    ck::CkSessionHandle,
     config::device::Device,
 };
 use arc_swap::ArcSwapOption;
-use cryptoki_sys::{CK_FUNCTION_LIST, CK_SESSION_HANDLE, CK_SLOT_ID, CK_VERSION};
+use cryptoki_sys::{CK_FUNCTION_LIST, CK_SLOT_ID, CK_VERSION};
 use log::error;
 
 pub const DEVICE_VERSION: CK_VERSION = CK_VERSION {
@@ -105,7 +106,7 @@ pub static mut FN_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     C_WaitForSlotEvent: Some(api::token::C_WaitForSlotEvent),
 };
 
-pub fn get_session(handle: CK_SESSION_HANDLE) -> Result<Arc<Mutex<Session>>, Pkcs11Error> {
+pub fn get_session(handle: CkSessionHandle) -> Result<Arc<Mutex<Session>>, Pkcs11Error> {
     let session_manager = SESSION_MANAGER.lock().map_err(|e| {
         error!("Failed to lock session manager: {e:?}");
         Pkcs11Error::FunctionFailed

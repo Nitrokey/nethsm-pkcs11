@@ -3,10 +3,7 @@ use std::{
     sync::{atomic::Ordering, Arc, Condvar, Mutex, MutexGuard},
 };
 
-use cryptoki_sys::{
-    CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_SESSION_HANDLE, CK_SESSION_INFO, CK_SLOT_ID,
-    CK_USER_TYPE,
-};
+use cryptoki_sys::{CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_SESSION_INFO, CK_SLOT_ID, CK_USER_TYPE};
 use log::{debug, error, trace};
 use nethsm_sdk_rs::{
     apis::default_api,
@@ -15,6 +12,7 @@ use nethsm_sdk_rs::{
 
 use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
+    ck::CkSessionHandle,
     config::device::Slot,
     data::THREAD_POOL_ALLOWED,
 };
@@ -32,15 +30,15 @@ use super::{
 
 #[derive(Debug)]
 pub struct SessionManager {
-    pub sessions: HashMap<CK_SESSION_HANDLE, Arc<Mutex<Session>>>,
-    pub next_session_handle: CK_SESSION_HANDLE,
+    pub sessions: HashMap<CkSessionHandle, Arc<Mutex<Session>>>,
+    pub next_session_handle: CkSessionHandle,
 }
 
 impl SessionManager {
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
-            next_session_handle: 1,
+            next_session_handle: CkSessionHandle::FIRST,
         }
     }
 
@@ -49,24 +47,24 @@ impl SessionManager {
         slot_id: CK_SLOT_ID,
         slot: Arc<Slot>,
         flags: CK_FLAGS,
-    ) -> CK_SESSION_HANDLE {
+    ) -> CkSessionHandle {
         let session = Session::new(slot_id, slot, flags);
         let handle = self.next_session_handle;
         self.sessions.insert(handle, Arc::new(Mutex::new(session)));
 
-        self.next_session_handle += 1;
+        self.next_session_handle = handle.next();
         handle
     }
 
-    pub fn get_session(&self, handle: CK_SESSION_HANDLE) -> Option<Arc<Mutex<Session>>> {
+    pub fn get_session(&self, handle: CkSessionHandle) -> Option<Arc<Mutex<Session>>> {
         trace!("Opening session {handle}");
         self.sessions.get(&handle).cloned()
     }
 
     pub fn delete_session(
         &mut self,
-        handle: CK_SESSION_HANDLE,
-    ) -> Option<(CK_SESSION_HANDLE, Arc<Mutex<Session>>)> {
+        handle: CkSessionHandle,
+    ) -> Option<(CkSessionHandle, Arc<Mutex<Session>>)> {
         self.sessions.remove_entry(&handle)
     }
 
@@ -83,9 +81,8 @@ impl SessionManager {
     }
 
     // test only function to setup a session how we want it
-    #[allow(dead_code)]
     #[cfg(test)]
-    pub fn set_session(&mut self, handle: CK_SESSION_HANDLE, session: Session) {
+    pub fn set_session(&mut self, handle: CkSessionHandle, session: Session) {
         self.sessions.insert(handle, Arc::new(Mutex::new(session)));
     }
 
@@ -107,6 +104,7 @@ impl SessionManager {
             }),
             0,
         )
+        .into()
     }
 }
 
@@ -172,7 +170,7 @@ impl Session {
         Ok(())
     }
 
-    pub fn enum_next_chunk(&mut self, count: usize) -> Result<Vec<CK_SESSION_HANDLE>, Error> {
+    pub fn enum_next_chunk(&mut self, count: usize) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
         match self.enum_ctx {
             Some(ref mut enum_ctx) => Ok(enum_ctx.next_chunck(count)),
             None => Err(Error::OperationNotInitialized),

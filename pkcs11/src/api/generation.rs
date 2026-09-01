@@ -9,12 +9,13 @@ use crate::{
         mechanism::{CkRawMechanism, Mechanism},
         Pkcs11Error,
     },
+    ck::CkSessionHandle,
     data,
 };
 
 api_function!(
     C_GenerateKey = generate_key;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
@@ -22,7 +23,7 @@ api_function!(
 );
 
 fn generate_key(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
@@ -71,7 +72,7 @@ fn generate_key(
 
 api_function!(
     C_GenerateKeyPair = generate_key_pair;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     pPublicKeyTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulPublicKeyAttributeCount: cryptoki_sys::CK_ULONG,
@@ -83,7 +84,7 @@ api_function!(
 
 #[allow(clippy::too_many_arguments)]
 fn generate_key_pair(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     public_key_template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     public_key_attribute_count: cryptoki_sys::CK_ULONG,
@@ -152,7 +153,7 @@ fn generate_key_pair(
 
 api_function!(
     C_WrapKey = wrap_key;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hWrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -161,7 +162,7 @@ api_function!(
 );
 
 fn wrap_key(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     _wrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
     _key: cryptoki_sys::CK_OBJECT_HANDLE,
@@ -173,7 +174,7 @@ fn wrap_key(
 
 api_function!(
     C_UnwrapKey = unwrap_key;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hUnwrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
     pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
@@ -185,7 +186,7 @@ api_function!(
 
 #[allow(clippy::too_many_arguments)]
 fn unwrap_key(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     _unwrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
     _wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -199,7 +200,7 @@ fn unwrap_key(
 
 api_function!(
     C_DeriveKey = derive_key;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hBaseKey: cryptoki_sys::CK_OBJECT_HANDLE,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -208,7 +209,7 @@ api_function!(
 );
 
 fn derive_key(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     _base_key: cryptoki_sys::CK_OBJECT_HANDLE,
     _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -220,14 +221,14 @@ fn derive_key(
 
 api_function!(
     C_SeedRandom = seed_random;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pSeed: cryptoki_sys::CK_BYTE_PTR,
     ulSeedLen: cryptoki_sys::CK_ULONG,
 );
 
 // we silently ignore this function as NetHSM handles the random number generation
 fn seed_random(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _seed_ptr: cryptoki_sys::CK_BYTE_PTR,
     _seed_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -236,13 +237,13 @@ fn seed_random(
 
 api_function!(
     C_GenerateRandom = generate_random;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pRandomData: cryptoki_sys::CK_BYTE_PTR,
     ulRandomLen: cryptoki_sys::CK_ULONG,
 );
 
 fn generate_random(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     random_data_ptr: cryptoki_sys::CK_BYTE_PTR,
     random_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {

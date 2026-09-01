@@ -9,18 +9,19 @@ use crate::{
         session::Session,
         Pkcs11Error,
     },
+    ck::CkSessionHandle,
     data,
 };
 
 api_function!(
     C_EncryptInit = encrypt_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 );
 
 fn encrypt_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
@@ -40,7 +41,7 @@ fn encrypt_init(
 
 api_function!(
     C_Encrypt = encrypt;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pData: cryptoki_sys::CK_BYTE_PTR,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
@@ -48,7 +49,7 @@ api_function!(
 );
 
 fn encrypt(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     data_ptr: cryptoki_sys::CK_BYTE_PTR,
     data_len: cryptoki_sys::CK_ULONG,
     encrypted_data_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -133,7 +134,7 @@ fn encrypt_impl(
 
 api_function!(
     C_EncryptUpdate = encrypt_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
@@ -141,7 +142,7 @@ api_function!(
 );
 
 fn encrypt_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     part_ptr: cryptoki_sys::CK_BYTE_PTR,
     part_len: cryptoki_sys::CK_ULONG,
     encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -221,13 +222,13 @@ fn encrypt_update_impl(
 
 api_function!(
     C_EncryptFinal = encrypt_final;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pLastEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     pulLastEncryptedPartLen: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn encrypt_final(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     last_encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     last_encrypted_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
@@ -332,7 +333,7 @@ mod tests {
     #[test]
     fn test_encrypt_init_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(1);
+        SESSION_MANAGER.lock().unwrap().delete_session(1.into());
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
@@ -347,7 +348,7 @@ mod tests {
     #[test]
     fn test_encrypt_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(1);
+        SESSION_MANAGER.lock().unwrap().delete_session(1.into());
 
         let mut data: Vec<u8> = Vec::new();
         let mut encrypted_data: Vec<u8> = Vec::new();
@@ -366,7 +367,7 @@ mod tests {
     #[test]
     fn test_encrypt_update_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(1);
+        SESSION_MANAGER.lock().unwrap().delete_session(1.into());
 
         let mut data: Vec<u8> = Vec::new();
         let mut encrypted_data: Vec<u8> = Vec::new();
@@ -385,7 +386,7 @@ mod tests {
     #[test]
     fn test_encrypt_final_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(1);
+        SESSION_MANAGER.lock().unwrap().delete_session(1.into());
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         let mut encrypted_data_len: CK_ULONG = 0;

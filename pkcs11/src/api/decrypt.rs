@@ -8,18 +8,19 @@ use crate::{
         session::Session,
         Pkcs11Error,
     },
+    ck::CkSessionHandle,
     data,
 };
 
 api_function!(
     C_DecryptInit = decrypt_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
     hKey: cryptoki_sys::CK_OBJECT_HANDLE,
 );
 
 fn decrypt_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
     key: cryptoki_sys::CK_OBJECT_HANDLE,
 ) -> Result<(), Pkcs11Error> {
@@ -39,7 +40,7 @@ fn decrypt_init(
 
 api_function!(
     C_Decrypt = decrypt;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pEncryptedData: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedDataLen: cryptoki_sys::CK_ULONG,
     pData: cryptoki_sys::CK_BYTE_PTR,
@@ -47,7 +48,7 @@ api_function!(
 );
 
 fn decrypt(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     encrypted_data_ptr: cryptoki_sys::CK_BYTE_PTR,
     encrypted_data_len: cryptoki_sys::CK_ULONG,
     data_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -125,7 +126,7 @@ fn decrypt_impl(
 
 api_function!(
     C_DecryptUpdate = decrypt_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -133,7 +134,7 @@ api_function!(
 );
 
 fn decrypt_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     encrypted_part_len: cryptoki_sys::CK_ULONG,
     part_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -181,13 +182,13 @@ fn decrypt_update_impl(
 
 api_function!(
     C_DecryptFinal = decrypt_final;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pLastPart: cryptoki_sys::CK_BYTE_PTR,
     pulLastPartLen: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn decrypt_final(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     last_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     last_part_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
@@ -252,7 +253,7 @@ fn decrypt_final_impl(
 
 api_function!(
     C_DecryptVerifyUpdate = decrypt_verify_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -260,7 +261,7 @@ api_function!(
 );
 
 fn decrypt_verify_update(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     _encrypted_part_len: cryptoki_sys::CK_ULONG,
     _part_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -302,7 +303,7 @@ mod tests {
     #[test]
     fn test_decrypt_init_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut mech = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
@@ -317,7 +318,7 @@ mod tests {
     #[test]
     fn test_decrypt_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let rv = C_Decrypt(
             0,
@@ -385,7 +386,7 @@ mod tests {
     #[test]
     fn test_decrypt_update_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let rv = C_DecryptUpdate(
             0,
@@ -455,7 +456,7 @@ mod tests {
     #[test]
     fn test_decrypt_final_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut last_part_len = 0;
 
