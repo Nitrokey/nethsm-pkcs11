@@ -166,6 +166,44 @@ impl_enum!(
 );
 
 impl_enum!(
+    CkMechanismType = CK_MECHANISM_TYPE [
+        AesCbc = CKM_AES_CBC,
+        AesKeyGen = CKM_AES_KEY_GEN,
+        Ecdsa = CKM_ECDSA,
+        EcdsaSha1 = CKM_ECDSA_SHA1,
+        EcdsaSha224 = CKM_ECDSA_SHA224,
+        EcdsaSha256 = CKM_ECDSA_SHA256,
+        EcdsaSha384 = CKM_ECDSA_SHA384,
+        EcdsaSha512 = CKM_ECDSA_SHA512,
+        EcEdwardsKeyPairGen = CKM_EC_EDWARDS_KEY_PAIR_GEN,
+        EcKeyPairGen = CKM_EC_KEY_PAIR_GEN,
+        Eddsa = CKM_EDDSA,
+        GenericSecretKeyGen = CKM_GENERIC_SECRET_KEY_GEN,
+        Md5 = CKM_MD5,
+        RsaPkcs = CKM_RSA_PKCS,
+        RsaPkcsKeyPairGen = CKM_RSA_PKCS_KEY_PAIR_GEN,
+        RsaPkcsOaep = CKM_RSA_PKCS_OAEP,
+        RsaPkcsPss = CKM_RSA_PKCS_PSS,
+        RsaX509 = CKM_RSA_X_509,
+        Sha1 = CKM_SHA_1,
+        Sha1RsaPkcs = CKM_SHA1_RSA_PKCS,
+        Sha1RsaPkcsPss = CKM_SHA1_RSA_PKCS_PSS,
+        Sha224 = CKM_SHA224,
+        Sha224RsaPkcs = CKM_SHA224_RSA_PKCS,
+        Sha224RsaPkcsPss = CKM_SHA224_RSA_PKCS_PSS,
+        Sha256 = CKM_SHA256,
+        Sha256RsaPkcs = CKM_SHA256_RSA_PKCS,
+        Sha256RsaPkcsPss = CKM_SHA256_RSA_PKCS_PSS,
+        Sha384 = CKM_SHA384,
+        Sha384RsaPkcs = CKM_SHA384_RSA_PKCS,
+        Sha384RsaPkcsPss = CKM_SHA384_RSA_PKCS_PSS,
+        Sha512 = CKM_SHA512,
+        Sha512RsaPkcs = CKM_SHA512_RSA_PKCS,
+        Sha512RsaPkcsPss = CKM_SHA512_RSA_PKCS_PSS,
+    ]
+);
+
+impl_enum!(
     CkObjectClass = CK_OBJECT_CLASS [
         PrivateKey = CKO_PRIVATE_KEY,
         PublicKey = CKO_PUBLIC_KEY,

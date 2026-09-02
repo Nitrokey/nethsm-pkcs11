@@ -13,7 +13,7 @@ use crate::{
         slot::get_slot,
         Pkcs11Error,
     },
-    ck::CkSessionHandle,
+    ck::{CkMechanismType, CkSessionHandle},
     data::{self, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     utils::{padded_str, version_struct_from_str},
@@ -274,7 +274,7 @@ fn get_mechanism_list(
     // list the ids
     let id_list: Vec<cryptoki_sys::CK_MECHANISM_TYPE> = MECHANISM_LIST
         .iter()
-        .map(|mechanism| mechanism.ck_type())
+        .map(|mechanism| mechanism.ck_type().into())
         .collect();
 
     unsafe {
@@ -287,13 +287,13 @@ fn get_mechanism_list(
 api_function!(
     C_GetMechanismInfo = get_mechanism_info;
     slotID: cryptoki_sys::CK_SLOT_ID,
-    type_: cryptoki_sys::CK_MECHANISM_TYPE,
+    type_: cryptoki_sys::CK_MECHANISM_TYPE = CkMechanismType,
     pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 );
 
 fn get_mechanism_info(
     slot_id: cryptoki_sys::CK_SLOT_ID,
-    type_: cryptoki_sys::CK_MECHANISM_TYPE,
+    type_: CkMechanismType,
     info_ptr: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
     get_slot(slot_id)?;

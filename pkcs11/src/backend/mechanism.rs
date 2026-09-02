@@ -2,12 +2,13 @@
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
 
-use cryptoki_sys::{CKM_RSA_PKCS_OAEP, CK_MECHANISM_TYPE, CK_ULONG};
+use cryptoki_sys::CK_ULONG;
 use hex_literal::hex;
 use log::trace;
 use nethsm_sdk_rs::models::{DecryptMode, EncryptMode, KeyMechanism as RawKeyMechanism, SignMode};
 
 use super::key::{EcKeyType, KeyType};
+use crate::ck::CkMechanismType;
 
 // Exhaustive version of nethsm_sdk_rs::models::KeyMechanism
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -150,8 +151,8 @@ impl CkRawMechanism {
         Some(Self { ptr })
     }
 
-    pub fn type_(&self) -> cryptoki_sys::CK_MECHANISM_TYPE {
-        unsafe { (*self.ptr).mechanism }
+    pub fn type_(&self) -> CkMechanismType {
+        unsafe { (*self.ptr).mechanism }.into()
     }
 
     // Note: marking this unsafe, even if it breaks our pattern of using object constructors
@@ -176,16 +177,16 @@ impl CkRawMechanism {
 #[derive(Debug)]
 pub enum Error {
     CkRaw(CkRawError),
-    UnknownMech(CK_MECHANISM_TYPE),
-    UnknownDigest(CK_MECHANISM_TYPE),
+    UnknownMech(CkMechanismType),
+    UnknownDigest(CkMechanismType),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self {
             Error::CkRaw(e) => write!(f, "CkRaw error: {e:?}"),
-            Error::UnknownMech(t) => write!(f, "Unknown mechanism {t}"),
-            Error::UnknownDigest(t) => write!(f, "Unknown digest {t}"),
+            Error::UnknownMech(t) => write!(f, "Unknown mechanism {t:?}"),
+            Error::UnknownDigest(t) => write!(f, "Unknown digest {t:?}"),
         }
     }
 }
@@ -200,17 +201,21 @@ pub enum MechDigest {
     Sha512,
 }
 
-impl MechDigest {
-    pub fn from_ck_mech(mech: CK_MECHANISM_TYPE) -> Option<Self> {
-        match mech {
-            cryptoki_sys::CKM_MD5 => Some(Self::Md5),
-            cryptoki_sys::CKM_SHA_1 => Some(Self::Sha1),
-            cryptoki_sys::CKM_SHA224 => Some(Self::Sha224),
-            cryptoki_sys::CKM_SHA256 => Some(Self::Sha256),
-            cryptoki_sys::CKM_SHA384 => Some(Self::Sha384),
-            cryptoki_sys::CKM_SHA512 => Some(Self::Sha512),
-            _ => None,
-        }
+impl TryFrom<CkMechanismType> for MechDigest {
+    type Error = Error;
+
+    fn try_from(mech: CkMechanismType) -> Result<Self, Self::Error> {
+        Ok(match mech {
+            CkMechanismType::Md5 => Self::Md5,
+            CkMechanismType::Sha1 => Self::Sha1,
+            CkMechanismType::Sha224 => Self::Sha224,
+            CkMechanismType::Sha256 => Self::Sha256,
+            CkMechanismType::Sha384 => Self::Sha384,
+            CkMechanismType::Sha512 => Self::Sha512,
+            _ => {
+                return Err(Error::UnknownDigest(mech));
+            }
+        })
     }
 }
 
@@ -413,12 +418,12 @@ impl Mechanism {
 
     pub fn from_ckraw_mech(raw_mech: &CkRawMechanism) -> Result<Self, Error> {
         let mech = match raw_mech.type_() {
-            cryptoki_sys::CKM_AES_KEY_GEN => Self::GenerateAes,
-            cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN => Self::GenerateRsa,
-            cryptoki_sys::CKM_EC_KEY_PAIR_GEN => Self::GenerateEc,
-            cryptoki_sys::CKM_EC_EDWARDS_KEY_PAIR_GEN => Self::GenerateEd,
-            cryptoki_sys::CKM_GENERIC_SECRET_KEY_GEN => Self::GenerateGeneric,
-            cryptoki_sys::CKM_AES_CBC => {
+            CkMechanismType::AesKeyGen => Self::GenerateAes,
+            CkMechanismType::RsaPkcsKeyPairGen => Self::GenerateRsa,
+            CkMechanismType::EcKeyPairGen => Self::GenerateEc,
+            CkMechanismType::EcEdwardsKeyPairGen => Self::GenerateEd,
+            CkMechanismType::GenericSecretKeyGen => Self::GenerateGeneric,
+            CkMechanismType::AesCbc => {
                 let params = unsafe { raw_mech.params::<[cryptoki_sys::CK_BYTE; 16]>() }
                     .map_err(Error::CkRaw)?;
 
@@ -427,102 +432,102 @@ impl Mechanism {
                 Self::AesCbc(Some(params))
             }
 
-            cryptoki_sys::CKM_RSA_PKCS => Self::RsaPkcs(None),
-            cryptoki_sys::CKM_SHA1_RSA_PKCS => Self::RsaPkcs(Some(MechDigest::Sha1)),
-            cryptoki_sys::CKM_SHA224_RSA_PKCS => Self::RsaPkcs(Some(MechDigest::Sha224)),
-            cryptoki_sys::CKM_SHA256_RSA_PKCS => Self::RsaPkcs(Some(MechDigest::Sha256)),
-            cryptoki_sys::CKM_SHA384_RSA_PKCS => Self::RsaPkcs(Some(MechDigest::Sha384)),
-            cryptoki_sys::CKM_SHA512_RSA_PKCS => Self::RsaPkcs(Some(MechDigest::Sha512)),
+            CkMechanismType::RsaPkcs => Self::RsaPkcs(None),
+            CkMechanismType::Sha1RsaPkcs => Self::RsaPkcs(Some(MechDigest::Sha1)),
+            CkMechanismType::Sha224RsaPkcs => Self::RsaPkcs(Some(MechDigest::Sha224)),
+            CkMechanismType::Sha256RsaPkcs => Self::RsaPkcs(Some(MechDigest::Sha256)),
+            CkMechanismType::Sha384RsaPkcs => Self::RsaPkcs(Some(MechDigest::Sha384)),
+            CkMechanismType::Sha512RsaPkcs => Self::RsaPkcs(Some(MechDigest::Sha512)),
 
-            cryptoki_sys::CKM_RSA_PKCS_PSS => {
+            CkMechanismType::RsaPkcsPss => {
                 let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_PSS_PARAMS>() }
                     .map_err(Error::CkRaw)?;
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
 
-                let hash_alg = params.hashAlg;
-
+                let hash_alg = CkMechanismType::from(params.hashAlg);
                 trace!("params.hashAlg: {hash_alg:?}");
-                Self::RsaPkcsPss(
-                    MechDigest::from_ck_mech(params.hashAlg)
-                        .ok_or(Error::UnknownDigest(hash_alg))?,
-                    false,
-                )
+                Self::RsaPkcsPss(hash_alg.try_into()?, false)
             }
-            cryptoki_sys::CKM_SHA1_RSA_PKCS_PSS => Self::RsaPkcsPss(MechDigest::Sha1, true),
-            cryptoki_sys::CKM_SHA224_RSA_PKCS_PSS => Self::RsaPkcsPss(MechDigest::Sha224, true),
-            cryptoki_sys::CKM_SHA256_RSA_PKCS_PSS => Self::RsaPkcsPss(MechDigest::Sha256, true),
-            cryptoki_sys::CKM_SHA384_RSA_PKCS_PSS => Self::RsaPkcsPss(MechDigest::Sha384, true),
-            cryptoki_sys::CKM_SHA512_RSA_PKCS_PSS => Self::RsaPkcsPss(MechDigest::Sha512, true),
+            CkMechanismType::Sha1RsaPkcsPss => Self::RsaPkcsPss(MechDigest::Sha1, true),
+            CkMechanismType::Sha224RsaPkcsPss => Self::RsaPkcsPss(MechDigest::Sha224, true),
+            CkMechanismType::Sha256RsaPkcsPss => Self::RsaPkcsPss(MechDigest::Sha256, true),
+            CkMechanismType::Sha384RsaPkcsPss => Self::RsaPkcsPss(MechDigest::Sha384, true),
+            CkMechanismType::Sha512RsaPkcsPss => Self::RsaPkcsPss(MechDigest::Sha512, true),
 
-            cryptoki_sys::CKM_RSA_PKCS_OAEP => {
+            CkMechanismType::RsaPkcsOaep => {
                 let params = unsafe { raw_mech.params::<cryptoki_sys::CK_RSA_PKCS_OAEP_PARAMS>() }
                     .map_err(Error::CkRaw)?;
                 let params = params.ok_or(Error::CkRaw(CkRawError::NullPtrDeref))?;
 
-                Self::RsaPkcsOaep(
-                    MechDigest::from_ck_mech(params.hashAlg)
-                        .ok_or(Error::UnknownDigest(params.hashAlg))?,
-                )
+                let hash_alg = CkMechanismType::from(params.hashAlg);
+                trace!("params.hashAlg: {hash_alg:?}");
+                Self::RsaPkcsOaep(hash_alg.try_into()?)
             }
 
-            cryptoki_sys::CKM_RSA_X_509 => Self::RsaX509,
-            cryptoki_sys::CKM_ECDSA => Self::Ecdsa(None),
-            cryptoki_sys::CKM_ECDSA_SHA1 => Self::Ecdsa(Some(MechDigest::Sha1)),
-            cryptoki_sys::CKM_ECDSA_SHA224 => Self::Ecdsa(Some(MechDigest::Sha224)),
-            cryptoki_sys::CKM_ECDSA_SHA256 => Self::Ecdsa(Some(MechDigest::Sha256)),
-            cryptoki_sys::CKM_ECDSA_SHA384 => Self::Ecdsa(Some(MechDigest::Sha384)),
-            cryptoki_sys::CKM_ECDSA_SHA512 => Self::Ecdsa(Some(MechDigest::Sha512)),
-            cryptoki_sys::CKM_EDDSA => Self::EdDsa,
-            _ => return Err(Error::UnknownMech(raw_mech.type_())),
+            CkMechanismType::RsaX509 => Self::RsaX509,
+            CkMechanismType::Ecdsa => Self::Ecdsa(None),
+            CkMechanismType::EcdsaSha1 => Self::Ecdsa(Some(MechDigest::Sha1)),
+            CkMechanismType::EcdsaSha224 => Self::Ecdsa(Some(MechDigest::Sha224)),
+            CkMechanismType::EcdsaSha256 => Self::Ecdsa(Some(MechDigest::Sha256)),
+            CkMechanismType::EcdsaSha384 => Self::Ecdsa(Some(MechDigest::Sha384)),
+            CkMechanismType::EcdsaSha512 => Self::Ecdsa(Some(MechDigest::Sha512)),
+            CkMechanismType::Eddsa => Self::EdDsa,
+            CkMechanismType::Md5
+            | CkMechanismType::Sha1
+            | CkMechanismType::Sha224
+            | CkMechanismType::Sha256
+            | CkMechanismType::Sha384
+            | CkMechanismType::Sha512
+            | CkMechanismType::Other(_) => return Err(Error::UnknownMech(raw_mech.type_())),
         };
 
         Ok(mech)
     }
 
-    pub fn ck_type(&self) -> cryptoki_sys::CK_MECHANISM_TYPE {
+    pub fn ck_type(&self) -> CkMechanismType {
         match self {
-            Self::AesCbc(_) => cryptoki_sys::CKM_AES_CBC,
+            Self::AesCbc(_) => CkMechanismType::AesCbc,
             Self::RsaPkcs(digest) => match digest {
-                Some(MechDigest::Sha1) => cryptoki_sys::CKM_SHA1_RSA_PKCS,
-                Some(MechDigest::Sha224) => cryptoki_sys::CKM_SHA224_RSA_PKCS,
-                Some(MechDigest::Sha256) => cryptoki_sys::CKM_SHA256_RSA_PKCS,
-                Some(MechDigest::Sha384) => cryptoki_sys::CKM_SHA384_RSA_PKCS,
-                Some(MechDigest::Sha512) => cryptoki_sys::CKM_SHA512_RSA_PKCS,
-                _ => cryptoki_sys::CKM_RSA_PKCS,
+                Some(MechDigest::Sha1) => CkMechanismType::Sha1RsaPkcs,
+                Some(MechDigest::Sha224) => CkMechanismType::Sha224RsaPkcs,
+                Some(MechDigest::Sha256) => CkMechanismType::Sha256RsaPkcs,
+                Some(MechDigest::Sha384) => CkMechanismType::Sha384RsaPkcs,
+                Some(MechDigest::Sha512) => CkMechanismType::Sha512RsaPkcs,
+                _ => CkMechanismType::RsaPkcs,
             },
 
             Self::RsaPkcsPss(digest, pre_hash) => {
                 if *pre_hash {
                     match digest {
-                        MechDigest::Sha1 => cryptoki_sys::CKM_SHA1_RSA_PKCS_PSS,
-                        MechDigest::Sha224 => cryptoki_sys::CKM_SHA224_RSA_PKCS_PSS,
-                        MechDigest::Sha256 => cryptoki_sys::CKM_SHA256_RSA_PKCS_PSS,
-                        MechDigest::Sha384 => cryptoki_sys::CKM_SHA384_RSA_PKCS_PSS,
-                        MechDigest::Sha512 => cryptoki_sys::CKM_SHA512_RSA_PKCS_PSS,
-                        _ => cryptoki_sys::CKM_RSA_PKCS_PSS,
+                        MechDigest::Sha1 => CkMechanismType::Sha1RsaPkcsPss,
+                        MechDigest::Sha224 => CkMechanismType::Sha224RsaPkcsPss,
+                        MechDigest::Sha256 => CkMechanismType::Sha256RsaPkcsPss,
+                        MechDigest::Sha384 => CkMechanismType::Sha384RsaPkcsPss,
+                        MechDigest::Sha512 => CkMechanismType::Sha512RsaPkcsPss,
+                        _ => CkMechanismType::RsaPkcsPss,
                     }
                 } else {
-                    cryptoki_sys::CKM_RSA_PKCS_PSS
+                    CkMechanismType::RsaPkcsPss
                 }
             }
-            Self::RsaPkcsOaep(_) => CKM_RSA_PKCS_OAEP,
+            Self::RsaPkcsOaep(_) => CkMechanismType::RsaPkcsOaep,
 
-            Self::RsaX509 => cryptoki_sys::CKM_RSA_X_509,
-            Self::Ecdsa(None) => cryptoki_sys::CKM_ECDSA,
-            Self::Ecdsa(Some(MechDigest::Sha1)) => cryptoki_sys::CKM_ECDSA_SHA1,
-            Self::Ecdsa(Some(MechDigest::Sha224)) => cryptoki_sys::CKM_ECDSA_SHA224,
-            Self::Ecdsa(Some(MechDigest::Sha256)) => cryptoki_sys::CKM_ECDSA_SHA256,
-            Self::Ecdsa(Some(MechDigest::Sha384)) => cryptoki_sys::CKM_ECDSA_SHA384,
-            Self::Ecdsa(Some(MechDigest::Sha512)) => cryptoki_sys::CKM_ECDSA_SHA512,
+            Self::RsaX509 => CkMechanismType::RsaX509,
+            Self::Ecdsa(None) => CkMechanismType::Ecdsa,
+            Self::Ecdsa(Some(MechDigest::Sha1)) => CkMechanismType::EcdsaSha1,
+            Self::Ecdsa(Some(MechDigest::Sha224)) => CkMechanismType::EcdsaSha224,
+            Self::Ecdsa(Some(MechDigest::Sha256)) => CkMechanismType::EcdsaSha256,
+            Self::Ecdsa(Some(MechDigest::Sha384)) => CkMechanismType::EcdsaSha384,
+            Self::Ecdsa(Some(MechDigest::Sha512)) => CkMechanismType::EcdsaSha512,
             // should not exist
-            Self::Ecdsa(Some(MechDigest::Md5)) => cryptoki_sys::CKM_ECDSA,
-            Self::EdDsa => cryptoki_sys::CKM_EDDSA,
+            Self::Ecdsa(Some(MechDigest::Md5)) => CkMechanismType::Ecdsa,
+            Self::EdDsa => CkMechanismType::Eddsa,
 
-            Self::GenerateAes => cryptoki_sys::CKM_AES_KEY_GEN,
-            Self::GenerateRsa => cryptoki_sys::CKM_RSA_PKCS_KEY_PAIR_GEN,
-            Self::GenerateEc => cryptoki_sys::CKM_EC_KEY_PAIR_GEN,
-            Self::GenerateEd => cryptoki_sys::CKM_EC_EDWARDS_KEY_PAIR_GEN,
-            Self::GenerateGeneric => cryptoki_sys::CKM_GENERIC_SECRET_KEY_GEN,
+            Self::GenerateAes => CkMechanismType::AesKeyGen,
+            Self::GenerateRsa => CkMechanismType::RsaPkcsKeyPairGen,
+            Self::GenerateEc => CkMechanismType::EcKeyPairGen,
+            Self::GenerateEd => CkMechanismType::EcEdwardsKeyPairGen,
+            Self::GenerateGeneric => CkMechanismType::GenericSecretKeyGen,
         }
     }
 

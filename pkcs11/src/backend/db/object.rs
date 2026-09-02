@@ -3,7 +3,7 @@ use config_file::CertificateFormat;
 // Copyright 2020-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // Copyright 2023 Nitrokey
 // SPDX-License-Identifier: Apache-2.0
-use cryptoki_sys::{CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION};
+use cryptoki_sys::{CK_ULONG, CK_UNAVAILABLE_INFORMATION};
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
 use log::{debug, error, info, trace, warn};
 use nethsm_sdk_rs::models::PublicKey;
@@ -16,7 +16,10 @@ use crate::{
         mechanism::{KeyMechanism, Mechanism},
         Error, Pkcs11Error,
     },
-    ck::{CkAttributeType, CkCertificateCategory, CkCertificateType, CkKeyType, CkObjectClass},
+    ck::{
+        CkAttributeType, CkCertificateCategory, CkCertificateType, CkKeyType, CkMechanismType,
+        CkObjectClass,
+    },
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -103,9 +106,13 @@ impl Attr {
     }
 
     #[allow(dead_code)]
-    fn from_ck_mechanism_type_vec(src: Vec<cryptoki_sys::CK_MECHANISM_TYPE>) -> Self {
+    fn from_ck_mechanism_type_vec(src: Vec<CkMechanismType>) -> Self {
         #[cfg(target_endian = "little")]
-        Self::Bytes(src.iter().flat_map(|x| x.to_le_bytes()).collect())
+        Self::Bytes(
+            src.iter()
+                .flat_map(|x| cryptoki_sys::CK_MECHANISM_TYPE::from(*x).to_le_bytes())
+                .collect(),
+        )
     }
 
     fn from_ck_object_class(src: CkObjectClass) -> Self {
@@ -395,7 +402,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
     };
     attrs.extend(key_attrs.attrs);
 
-    let ck_mech_list: Vec<CK_MECHANISM_TYPE> = mechanisms
+    let ck_mech_list: Vec<_> = mechanisms
         .iter()
         .flat_map(|mech| Mechanism::try_from(*mech).ok())
         .map(|m: Mechanism| m.ck_type())
