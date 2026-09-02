@@ -12,15 +12,14 @@ use super::{
 };
 use crate::{
     backend::{db::object::ObjectKind, mechanism::Mechanism},
-    ck::{CkObjectClass, CkObjectHandle},
+    ck::{CkKeyType, CkObjectClass, CkObjectHandle},
 };
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
     CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
-    CKA_VALUE_LEN, CKK_EC, CKK_EC_EDWARDS, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE,
-    CK_OBJECT_CLASS, CK_ULONG,
+    CKA_VALUE_LEN, CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG,
 };
 use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace, warn};
@@ -385,7 +384,7 @@ impl InvalidIdError {
 pub struct ParsedAttributes {
     pub id: Option<NetHSMId>,
     pub label: Option<String>,
-    pub key_type: Option<CK_KEY_TYPE>,
+    pub key_type: Option<CkKeyType>,
     pub sign: bool,
     pub encrypt: bool,
     pub decrypt: bool,
@@ -430,10 +429,9 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
             }
 
             CKA_KEY_TYPE => {
-                let ktype = match unsafe { attr.read_value::<CK_KEY_TYPE>() } {
-                    Some(val) => val,
-                    None => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
-                };
+                let ktype = unsafe { attr.read_value::<CK_KEY_TYPE>() }
+                    .ok_or(Error::InvalidAttribute(CKA_KEY_TYPE))?
+                    .into();
                 parsed.key_type = Some(ktype);
             }
             CKA_EC_PARAMS => {
@@ -553,7 +551,7 @@ pub fn create_key_from_template(
         .key_type
         .ok_or(Error::InvalidAttribute(CKA_KEY_TYPE))?
     {
-        CKK_RSA => {
+        CkKeyType::Rsa => {
             trace!("Creating RSA key");
 
             let prime_p =
@@ -574,7 +572,7 @@ pub fn create_key_from_template(
             key.public_exponent = Some(public_exponent);
             (KeyType::Rsa, key)
         }
-        CKK_EC | CKK_EC_EDWARDS => {
+        CkKeyType::Ec | CkKeyType::EcEdwards => {
             let ec_params = parsed
                 .ec_params
                 .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?;
@@ -597,7 +595,7 @@ pub fn create_key_from_template(
             key.data = Some(b64_private);
             (KeyType::Ec(ec_type), key)
         }
-        CKK_GENERIC_SECRET => {
+        CkKeyType::GenericSecret => {
             let b64_private = Base64::encode_string(
                 parsed
                     .value
@@ -611,7 +609,7 @@ pub fn create_key_from_template(
             (KeyType::Generic, key)
         }
 
-        _ => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
+        CkKeyType::Other(_) => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
     };
 
     let mechs = Mechanism::from_key_type(r#type);

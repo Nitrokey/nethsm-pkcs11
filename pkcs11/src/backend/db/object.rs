@@ -11,8 +11,7 @@ use cryptoki_sys::{
     CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
     CKA_SERIAL_NUMBER, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
     CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
-    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG,
-    CK_UNAVAILABLE_INFORMATION,
+    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
 use log::{debug, error, info, trace, warn};
@@ -26,7 +25,7 @@ use crate::{
         mechanism::{KeyMechanism, Mechanism},
         Error, Pkcs11Error,
     },
-    ck::CkObjectClass,
+    ck::{CkKeyType, CkObjectClass},
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -87,7 +86,8 @@ impl Attr {
         Self::CkByte(src.to_le_bytes())
     }
 
-    fn from_ck_key_type(src: cryptoki_sys::CK_KEY_TYPE) -> Self {
+    fn from_ck_key_type(src: CkKeyType) -> Self {
+        let src: cryptoki_sys::CK_KEY_TYPE = src.into();
         #[cfg(target_endian = "little")]
         Self::CkKeyType(src.to_le_bytes())
     }
@@ -197,7 +197,7 @@ impl Object {
 }
 
 struct KeyData {
-    key_type: CK_KEY_TYPE,
+    key_type: CkKeyType,
     key_size: Option<usize>,
     attrs: HashMap<CK_ATTRIBUTE_TYPE, Attr>,
 }
@@ -222,7 +222,7 @@ fn configure_rsa(key_data: &PublicKey, mechanisms: &[KeyMechanism]) -> Result<Ke
     let mut attrs = HashMap::new();
 
     let size = modulus.len();
-    attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(cryptoki_sys::CKK_RSA));
+    attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(CkKeyType::Rsa));
     attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
     attrs.insert(
         CKA_DECRYPT,
@@ -243,7 +243,7 @@ fn configure_rsa(key_data: &PublicKey, mechanisms: &[KeyMechanism]) -> Result<Ke
     );
 
     Ok(KeyData {
-        key_type: cryptoki_sys::CKK_RSA,
+        key_type: CkKeyType::Rsa,
         key_size: Some(size),
         attrs,
     })
@@ -281,8 +281,8 @@ fn configure_ec(key_data: &PublicKey, key_type: EcKeyType) -> Result<KeyData, Er
     let ec_params = key_params.to_der().map_err(Error::Der)?;
 
     let key_type = match key_type {
-        EcKeyType::Curve25519 => cryptoki_sys::CKK_EC_EDWARDS,
-        _ => cryptoki_sys::CKK_EC,
+        EcKeyType::Curve25519 => CkKeyType::EcEdwards,
+        _ => CkKeyType::Ec,
     };
 
     let mut attrs = HashMap::new();
@@ -314,7 +314,7 @@ fn configure_generic(mechanisms: &[KeyMechanism]) -> Result<KeyData, Error> {
     );
     attrs.insert(
         CKA_KEY_TYPE,
-        Attr::from_ck_key_type(cryptoki_sys::CKK_GENERIC_SECRET),
+        Attr::from_ck_key_type(CkKeyType::GenericSecret),
     );
     attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
     attrs.insert(
@@ -334,7 +334,7 @@ fn configure_generic(mechanisms: &[KeyMechanism]) -> Result<KeyData, Error> {
     attrs.insert(CKA_VERIFY, Attr::CK_FALSE);
 
     Ok(KeyData {
-        key_type: cryptoki_sys::CKK_GENERIC_SECRET,
+        key_type: CkKeyType::GenericSecret,
         key_size: None,
         attrs,
     })

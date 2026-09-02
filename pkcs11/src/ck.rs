@@ -100,6 +100,15 @@ macro_rules! impl_enum {
 }
 
 impl_enum!(
+    CkKeyType = CK_KEY_TYPE [
+        Ec = CKK_EC,
+        EcEdwards = CKK_EC_EDWARDS,
+        GenericSecret = CKK_GENERIC_SECRET,
+        Rsa = CKK_RSA,
+    ]
+);
+
+impl_enum!(
     CkObjectClass = CK_OBJECT_CLASS [
         PrivateKey = CKO_PRIVATE_KEY,
         PublicKey = CKO_PUBLIC_KEY,
