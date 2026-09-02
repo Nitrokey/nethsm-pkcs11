@@ -100,6 +100,12 @@ macro_rules! impl_enum {
 }
 
 impl_enum!(
+    CkCertificateCategory = CK_CERTIFICATE_CATEGORY [
+        Unspecified = CK_CERTIFICATE_CATEGORY_UNSPECIFIED,
+    ]
+);
+
+impl_enum!(
     CkCertificateType = CK_CERTIFICATE_TYPE [
         X509 = CKC_X_509,
     ]

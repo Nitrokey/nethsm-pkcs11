@@ -25,7 +25,7 @@ use crate::{
         mechanism::{KeyMechanism, Mechanism},
         Error, Pkcs11Error,
     },
-    ck::{CkCertificateType, CkKeyType, CkObjectClass},
+    ck::{CkCertificateCategory, CkCertificateType, CkKeyType, CkObjectClass},
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -100,7 +100,8 @@ impl Attr {
     }
 
     #[allow(dead_code)]
-    fn from_ck_cert_category(src: cryptoki_sys::CK_ULONG) -> Self {
+    fn from_ck_cert_category(src: CkCertificateCategory) -> Self {
+        let src: cryptoki_sys::CK_CERTIFICATE_CATEGORY = src.into();
         #[cfg(target_endian = "little")]
         Self::CkCertCategory(src.to_le_bytes())
     }
@@ -544,7 +545,10 @@ pub fn from_cert_data(
         CKA_CERTIFICATE_TYPE,
         Attr::from_ck_cert_type(CkCertificateType::X509),
     );
-    attrs.insert(CKA_CERTIFICATE_CATEGORY, Attr::from_ck_cert_category(0));
+    attrs.insert(
+        CKA_CERTIFICATE_CATEGORY,
+        Attr::from_ck_cert_category(CkCertificateCategory::Unspecified),
+    );
 
     Ok(Object {
         attrs,
