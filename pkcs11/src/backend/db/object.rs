@@ -11,7 +11,7 @@ use cryptoki_sys::{
     CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
     CKA_SERIAL_NUMBER, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
     CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
-    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
+    CK_ATTRIBUTE_TYPE, CK_MECHANISM_TYPE, CK_ULONG, CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
 use log::{debug, error, info, trace, warn};
@@ -25,7 +25,7 @@ use crate::{
         mechanism::{KeyMechanism, Mechanism},
         Error, Pkcs11Error,
     },
-    ck::{CkKeyType, CkObjectClass},
+    ck::{CkCertificateType, CkKeyType, CkObjectClass},
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -93,7 +93,8 @@ impl Attr {
     }
 
     #[allow(dead_code)]
-    fn from_ck_cert_type(src: cryptoki_sys::CK_CERTIFICATE_TYPE) -> Self {
+    fn from_ck_cert_type(src: CkCertificateType) -> Self {
+        let src: cryptoki_sys::CK_CERTIFICATE_TYPE = src.into();
         #[cfg(target_endian = "little")]
         Self::CkCertType(src.to_le_bytes())
     }
@@ -522,7 +523,7 @@ pub fn from_cert_data(
     attrs.insert(CKA_PRIVATE, Attr::CK_FALSE);
     attrs.insert(
         CKA_CERTIFICATE_TYPE,
-        Attr::from_ck_cert_type(cryptoki_sys::CKC_X_509),
+        Attr::from_ck_cert_type(CkCertificateType::X509),
     );
     attrs.insert(CKA_VALUE, Attr::Bytes(cert_der));
     attrs.insert(CKA_VALUE_LEN, Attr::from_ck_ulong(length as CK_ULONG));
@@ -539,7 +540,10 @@ pub fn from_cert_data(
         Attr::Bytes(tbs_cert.serial_number().to_der().map_err(Error::Der)?),
     );
     attrs.insert(CKA_TRUSTED, Attr::CK_TRUE);
-    attrs.insert(CKA_CERTIFICATE_TYPE, Attr::from_ck_cert_type(CKC_X_509));
+    attrs.insert(
+        CKA_CERTIFICATE_TYPE,
+        Attr::from_ck_cert_type(CkCertificateType::X509),
+    );
     attrs.insert(CKA_CERTIFICATE_CATEGORY, Attr::from_ck_cert_category(0));
 
     Ok(Object {

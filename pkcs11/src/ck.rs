@@ -100,6 +100,12 @@ macro_rules! impl_enum {
 }
 
 impl_enum!(
+    CkCertificateType = CK_CERTIFICATE_TYPE [
+        X509 = CKC_X_509,
+    ]
+);
+
+impl_enum!(
     CkKeyType = CK_KEY_TYPE [
         Ec = CKK_EC,
         EcEdwards = CKK_EC_EDWARDS,
