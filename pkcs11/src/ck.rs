@@ -32,6 +32,16 @@ macro_rules! impl_newtype {
     };
 }
 
+impl_newtype!(CkObjectHandle = CK_OBJECT_HANDLE);
+
+impl CkObjectHandle {
+    pub const FIRST: Self = Self(1);
+
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
 impl_newtype!(CkSessionHandle = CK_SESSION_HANDLE);
 
 impl CkSessionHandle {

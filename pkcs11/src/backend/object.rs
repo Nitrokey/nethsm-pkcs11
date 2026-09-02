@@ -1,4 +1,4 @@
-use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_OBJECT_HANDLE};
+use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS};
 use log::{debug, trace};
 
 use super::{
@@ -10,11 +10,12 @@ use super::{
     session::Session,
     Error,
 };
+use crate::ck::CkObjectHandle;
 
 // context to find objects
 #[derive(Clone, Debug)]
 pub struct EnumCtx {
-    pub handles: Vec<CK_OBJECT_HANDLE>,
+    pub handles: Vec<CkObjectHandle>,
     index: usize,
 }
 
@@ -83,10 +84,10 @@ impl EnumCtx {
         Ok(EnumCtx::new(handles))
     }
 
-    pub fn new(handles: Vec<CK_OBJECT_HANDLE>) -> Self {
+    pub fn new(handles: Vec<CkObjectHandle>) -> Self {
         Self { handles, index: 0 }
     }
-    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CK_OBJECT_HANDLE> {
+    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CkObjectHandle> {
         let mut result = Vec::new();
         for _ in 0..chunk_size {
             trace!("index: {}", self.index);

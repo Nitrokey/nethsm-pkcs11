@@ -10,14 +10,17 @@ use super::{
     login::{self, LoginCtx},
     Error,
 };
-use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
+use crate::{
+    backend::{db::object::ObjectKind, mechanism::Mechanism},
+    ck::CkObjectHandle,
+};
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
 use cryptoki_sys::{
     CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
     CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
     CKA_VALUE_LEN, CKK_EC, CKK_EC_EDWARDS, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE,
-    CK_OBJECT_CLASS, CK_OBJECT_HANDLE, CK_ULONG,
+    CK_OBJECT_CLASS, CK_ULONG,
 };
 use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace, warn};
@@ -822,7 +825,7 @@ pub fn generate_key_from_template(
     mechanism: &Mechanism,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 

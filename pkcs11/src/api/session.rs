@@ -3,7 +3,7 @@ use log::{error, trace};
 use crate::{
     api::api_function,
     backend::{slot::get_slot, Pkcs11Error},
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     data::{self, SESSION_MANAGER},
 };
 
@@ -130,16 +130,16 @@ api_function!(
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pOperationState: cryptoki_sys::CK_BYTE_PTR,
     ulOperationStateLen: cryptoki_sys::CK_ULONG,
-    hEncryptionKey: cryptoki_sys::CK_OBJECT_HANDLE,
-    hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hEncryptionKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
+    hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn set_operation_state(
     _session: CkSessionHandle,
     _operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
     _operation_state_len: cryptoki_sys::CK_ULONG,
-    _encryption_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    _authentication_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _encryption_key: CkObjectHandle,
+    _authentication_key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

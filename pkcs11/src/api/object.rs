@@ -10,7 +10,7 @@ use crate::{
         key::{NetHSMId, Pkcs11Id},
         Pkcs11Error,
     },
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     data,
 };
 
@@ -65,8 +65,10 @@ fn find_objects(
 
     let returned_count = objects.len();
 
+    let object_handles: Vec<cryptoki_sys::CK_OBJECT_HANDLE> =
+        objects.into_iter().map(From::from).collect();
     unsafe {
-        std::ptr::copy_nonoverlapping(objects.as_ptr(), object_ptr, returned_count);
+        std::ptr::copy_nonoverlapping(object_handles.as_ptr(), object_ptr, returned_count);
         std::ptr::write(object_count_ptr, returned_count as CK_ULONG);
     }
 
@@ -90,14 +92,14 @@ fn find_objects_final(session: CkSessionHandle) -> Result<(), Pkcs11Error> {
 api_function!(
     C_GetAttributeValue = get_attribute_value;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 );
 
 fn get_attribute_value(
     session: CkSessionHandle,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    object: CkObjectHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -128,13 +130,13 @@ fn get_attribute_value(
 api_function!(
     C_GetObjectSize = get_object_size;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pulSize: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn get_object_size(
     session: CkSessionHandle,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    object: CkObjectHandle,
     size_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     if size_ptr.is_null() {
@@ -189,7 +191,7 @@ fn create_object(
     }
 
     unsafe {
-        std::ptr::write(object_ptr, objects[0].0);
+        std::ptr::write(object_ptr, objects[0].0.into());
     }
 
     Ok(())
@@ -198,7 +200,7 @@ fn create_object(
 api_function!(
     C_CopyObject = copy_object;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -206,7 +208,7 @@ api_function!(
 
 fn copy_object(
     _session: CkSessionHandle,
-    _object: cryptoki_sys::CK_OBJECT_HANDLE,
+    _object: CkObjectHandle,
     _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     _count: cryptoki_sys::CK_ULONG,
     _new_object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -217,13 +219,10 @@ fn copy_object(
 api_function!(
     C_DestroyObject = destroy_object;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
-fn destroy_object(
-    session: CkSessionHandle,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> Result<(), Pkcs11Error> {
+fn destroy_object(session: CkSessionHandle, object: CkObjectHandle) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
@@ -233,14 +232,14 @@ fn destroy_object(
 api_function!(
     C_SetAttributeValue = set_attribute_value;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 );
 
 fn set_attribute_value(
     session: CkSessionHandle,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    object: CkObjectHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -498,7 +497,7 @@ mod tests {
 
         let mut object_size: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_GetObjectSize(session_handle, object_handle, &mut object_size);
+        let rv = C_GetObjectSize(session_handle, object_handle.into(), &mut object_size);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
         assert_eq!(object_size, size as CK_ULONG);
     }

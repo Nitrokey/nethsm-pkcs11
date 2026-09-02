@@ -3,7 +3,7 @@ use std::{
     sync::{atomic::Ordering, Arc, Condvar, Mutex, MutexGuard},
 };
 
-use cryptoki_sys::{CKR_OK, CK_FLAGS, CK_OBJECT_HANDLE, CK_SESSION_INFO, CK_SLOT_ID, CK_USER_TYPE};
+use cryptoki_sys::{CKR_OK, CK_FLAGS, CK_SESSION_INFO, CK_SLOT_ID, CK_USER_TYPE};
 use log::{debug, error, trace};
 use nethsm_sdk_rs::{
     apis::default_api,
@@ -12,7 +12,7 @@ use nethsm_sdk_rs::{
 
 use crate::{
     backend::{key::NetHSMId, login::UserMode, Error, Pkcs11Error},
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     config::device::Slot,
     data::THREAD_POOL_ALLOWED,
 };
@@ -170,7 +170,7 @@ impl Session {
         Ok(())
     }
 
-    pub fn enum_next_chunk(&mut self, count: usize) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
+    pub fn enum_next_chunk(&mut self, count: usize) -> Result<Vec<CkObjectHandle>, Error> {
         match self.enum_ctx {
             Some(ref mut enum_ctx) => Ok(enum_ctx.next_chunck(count)),
             None => Err(Error::OperationNotInitialized),
@@ -183,7 +183,7 @@ impl Session {
     pub fn sign_init(
         &mut self,
         mechanism: &Mechanism,
-        key_handle: CK_OBJECT_HANDLE,
+        key_handle: CkObjectHandle,
     ) -> Result<(), Error> {
         if self.sign_ctx.is_some() {
             return Err(Error::OperationActive);
@@ -251,7 +251,7 @@ impl Session {
     pub fn encrypt_init(
         &mut self,
         mechanism: &Mechanism,
-        key_handle: CK_OBJECT_HANDLE,
+        key_handle: CkObjectHandle,
     ) -> Result<(), Error> {
         if self.encrypt_ctx.is_some() {
             return Err(Error::OperationActive);
@@ -330,7 +330,7 @@ impl Session {
     pub fn decrypt_init(
         &mut self,
         mechanism: &Mechanism,
-        key_handle: CK_OBJECT_HANDLE,
+        key_handle: CkObjectHandle,
     ) -> Result<(), Error> {
         if self.decrypt_ctx.is_some() {
             return Err(Error::OperationActive);
@@ -436,7 +436,7 @@ impl Session {
         Ok(())
     }
 
-    pub fn get_object(&self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
+    pub fn get_object(&self, handle: CkObjectHandle) -> Option<Object> {
         trace!("Accessing object {handle}");
         let db = self.db.0.lock().unwrap();
 
@@ -448,11 +448,11 @@ impl Session {
         id: Option<&NetHSMId>,
         kind: Option<ObjectKind>,
         label: Option<&str>,
-    ) -> Result<Vec<CK_OBJECT_HANDLE>, Error> {
+    ) -> Result<Vec<CkObjectHandle>, Error> {
         debug!("Searching keys with id = {id:?}, kind = {kind:?}, label = {label:?}");
         let result = if let Some(key_id) = id {
             // try to search in the db first
-            let mut results: Vec<(CK_OBJECT_HANDLE, Object)> = {
+            let mut results: Vec<(CkObjectHandle, Object)> = {
                 let db = self.db.0.lock()?;
                 db.iter()
                     .filter(|(_, obj)| {
@@ -486,7 +486,7 @@ impl Session {
         &mut self,
         key_id: NetHSMId,
         kind: Option<ObjectKind>,
-    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    ) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
         let objects = super::key::fetch_by_id(key_id, &self.login_ctx, kind)?;
         Ok(self.db.0.lock()?.add_objects(objects))
     }
@@ -495,7 +495,7 @@ impl Session {
         &mut self,
         label: &str,
         kind: Option<ObjectKind>,
-    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    ) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
         let keys = self
             .login_ctx
             .try_(
@@ -511,7 +511,7 @@ impl Session {
         Ok(self.db.0.lock()?.add_objects(objects))
     }
 
-    fn fetch_all_keys(&mut self) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    fn fetch_all_keys(&mut self) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
         let condvar = &self.db.1;
 
         {
@@ -612,7 +612,7 @@ impl Session {
     pub fn create_object(
         &mut self,
         template: CkRawAttrTemplate,
-    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    ) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
         if !self
             .login_ctx
             .can_run_mode(super::login::UserMode::Administrator)
@@ -630,7 +630,7 @@ impl Session {
         Ok(self.db.0.lock()?.add_objects(objects))
     }
 
-    pub fn delete_object(&mut self, handle: CK_OBJECT_HANDLE) -> Result<(), Error> {
+    pub fn delete_object(&mut self, handle: CkObjectHandle) -> Result<(), Error> {
         trace!("Deleting object {handle}");
         if !self.login_ctx.can_run_mode(UserMode::Administrator) {
             return Err(Error::NotLoggedIn(UserMode::Administrator));
@@ -687,7 +687,7 @@ impl Session {
         template: &CkRawAttrTemplate,
         public_template: Option<&CkRawAttrTemplate>,
         mechanism: &Mechanism,
-    ) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+    ) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
         if !self.login_ctx.can_run_mode(UserMode::Administrator) {
             return Err(Error::NotLoggedIn(UserMode::Administrator));
         }

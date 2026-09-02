@@ -2,19 +2,23 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use crate::{api::api_function, backend::Pkcs11Error, ck::CkSessionHandle};
+use crate::{
+    api::api_function,
+    backend::Pkcs11Error,
+    ck::{CkObjectHandle, CkSessionHandle},
+};
 
 api_function!(
     C_VerifyInit = verify_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn verify_init(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
@@ -72,13 +76,13 @@ api_function!(
     C_VerifyRecoverInit = verify_recover_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn verify_recover_init(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

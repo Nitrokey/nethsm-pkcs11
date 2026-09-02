@@ -9,7 +9,7 @@ use crate::{
         mechanism::{CkRawMechanism, Mechanism},
         Pkcs11Error,
     },
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     data,
 };
 
@@ -64,7 +64,7 @@ fn generate_key(
     }
 
     unsafe {
-        std::ptr::write(key_ptr, key[0].0);
+        std::ptr::write(key_ptr, key[0].0.into());
     }
 
     Ok(())
@@ -144,8 +144,8 @@ fn generate_key_pair(
     }
 
     unsafe {
-        std::ptr::write(public_key_ptr, keys[0].0);
-        std::ptr::write(private_key_ptr, keys[1].0);
+        std::ptr::write(public_key_ptr, keys[0].0.into());
+        std::ptr::write(private_key_ptr, keys[1].0.into());
     }
 
     Ok(())
@@ -155,8 +155,8 @@ api_function!(
     C_WrapKey = wrap_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hWrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hWrappingKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
     pulWrappedKeyLen: cryptoki_sys::CK_ULONG_PTR,
 );
@@ -164,8 +164,8 @@ api_function!(
 fn wrap_key(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _wrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _wrapping_key: CkObjectHandle,
+    _key: CkObjectHandle,
     _wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
     _wrapped_key_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
@@ -176,7 +176,7 @@ api_function!(
     C_UnwrapKey = unwrap_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hUnwrappingKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hUnwrappingKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pWrappedKey: cryptoki_sys::CK_BYTE_PTR,
     ulWrappedKeyLen: cryptoki_sys::CK_ULONG,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -188,7 +188,7 @@ api_function!(
 fn unwrap_key(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _unwrapping_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _unwrapping_key: CkObjectHandle,
     _wrapped_key_ptr: cryptoki_sys::CK_BYTE_PTR,
     _wrapped_key_len: cryptoki_sys::CK_ULONG,
     _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
@@ -202,7 +202,7 @@ api_function!(
     C_DeriveKey = derive_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hBaseKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hBaseKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulAttributeCount: cryptoki_sys::CK_ULONG,
     phKey: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -211,7 +211,7 @@ api_function!(
 fn derive_key(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _base_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _base_key: CkObjectHandle,
     _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     _attribute_count: cryptoki_sys::CK_ULONG,
     _key_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,

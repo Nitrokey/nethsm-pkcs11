@@ -8,7 +8,7 @@ use crate::{
         session::Session,
         Pkcs11Error,
     },
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     data,
 };
 
@@ -16,13 +16,13 @@ api_function!(
     C_SignInit = sign_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn sign_init(
     session: CkSessionHandle,
     mechanism_ptr: *mut cryptoki_sys::CK_MECHANISM,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
+    key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     trace!("C_SignInit() called with hKey {key} and session {session}");
 
@@ -247,13 +247,13 @@ api_function!(
     C_SignRecoverInit = sign_recover_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn sign_recover_init(
     _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }

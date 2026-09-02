@@ -9,7 +9,7 @@ use crate::{
         session::Session,
         Pkcs11Error,
     },
-    ck::CkSessionHandle,
+    ck::{CkObjectHandle, CkSessionHandle},
     data,
 };
 
@@ -17,13 +17,13 @@ api_function!(
     C_EncryptInit = encrypt_init;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn encrypt_init(
     session: CkSessionHandle,
     mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
+    key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     let raw_mech =
         unsafe { CkRawMechanism::from_raw_ptr(mechanism_ptr) }.ok_or(Pkcs11Error::ArgumentsBad)?;

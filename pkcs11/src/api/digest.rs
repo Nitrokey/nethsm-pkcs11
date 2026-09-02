@@ -2,7 +2,11 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use crate::{api::api_function, backend::Pkcs11Error, ck::CkSessionHandle};
+use crate::{
+    api::api_function,
+    backend::Pkcs11Error,
+    ck::{CkObjectHandle, CkSessionHandle},
+};
 
 api_function!(
     C_DigestInit = digest_init;
@@ -85,13 +89,10 @@ fn digest_final(
 api_function!(
     C_DigestKey = digest_key;
     hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
-fn digest_key(
-    _session: CkSessionHandle,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> Result<(), Pkcs11Error> {
+fn digest_key(_session: CkSessionHandle, _key: CkObjectHandle) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 
