@@ -10,7 +10,7 @@ use crate::{
         key::{NetHSMId, Pkcs11Id},
         Pkcs11Error,
     },
-    ck::{CkObjectHandle, CkSessionHandle},
+    ck::{CkAttributeType, CkObjectHandle, CkSessionHandle},
     data,
 };
 
@@ -268,24 +268,24 @@ fn set_attribute_value(
     let mut label = None;
 
     for attr in attrs {
-        let attr_type = attr.type_;
+        let attr_type = CkAttributeType::from(attr.type_);
 
         let var = match attr_type {
-            cryptoki_sys::CKA_ID => &mut id,
-            cryptoki_sys::CKA_LABEL => &mut label,
+            CkAttributeType::Id => &mut id,
+            CkAttributeType::Label => &mut label,
             _ => {
-                error!("C_SetAttributeValue() is not supported for attribute {attr_type}",);
+                error!("C_SetAttributeValue() is not supported for attribute {attr_type:?}",);
                 return Err(Pkcs11Error::AttributeReadOnly);
             }
         };
 
         if var.is_some() {
-            error!("Attribute {attr_type} cannot be set twice in C_SetAttributeValue",);
+            error!("Attribute {attr_type:?} cannot be set twice in C_SetAttributeValue",);
             return Err(Pkcs11Error::TemplateInconsistent);
         }
         if attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION {
             error!(
-                "Attribute {attr_type} cannot be set with unavailable information in C_SetAttributeValue",
+                "Attribute {attr_type:?} cannot be set with unavailable information in C_SetAttributeValue",
             );
             return Err(Pkcs11Error::AttributeValueInvalid);
         }
@@ -293,11 +293,11 @@ fn set_attribute_value(
             &[]
         } else {
             if attr.pValue.is_null() {
-                error!("Null pointer passed for attribute {attr_type} in C_SetAttributeValue",);
+                error!("Null pointer passed for attribute {attr_type:?} in C_SetAttributeValue",);
                 return Err(Pkcs11Error::AttributeValueInvalid);
             }
             let Ok(n) = usize::try_from(attr.ulValueLen) else {
-                error!("Value for attribute {attr_type} is too long in C_SetAttributeValue",);
+                error!("Value for attribute {attr_type:?} is too long in C_SetAttributeValue",);
                 return Err(Pkcs11Error::AttributeValueInvalid);
             };
             // SAFETY: The caller must provide a byte slice of the correct size for all supported

@@ -6,6 +6,8 @@ use std::iter::Iterator;
 
 use cryptoki_sys::{CK_ULONG, CK_UNAVAILABLE_INFORMATION};
 
+use crate::ck::CkAttributeType;
+
 pub enum Error {
     BufTooSmall,
     NullPtrDeref,
@@ -21,8 +23,8 @@ impl CkRawAttr {
         Some(Self(ptr))
     }
 
-    pub fn type_(&self) -> cryptoki_sys::CK_ATTRIBUTE_TYPE {
-        unsafe { (*self.0).type_ }
+    pub fn type_(&self) -> CkAttributeType {
+        unsafe { (*self.0).type_ }.into()
     }
 
     pub fn val_bytes(&self) -> Option<&[u8]> {

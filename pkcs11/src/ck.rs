@@ -67,7 +67,7 @@ macro_rules! impl_enum {
             $(,)?
         ]
     ) => {
-        #[derive(Clone, Copy, Debug, PartialEq)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
         pub enum $name {
             $(
                 $variant,
@@ -98,6 +98,51 @@ macro_rules! impl_enum {
         }
     }
 }
+
+impl_enum!(
+    CkAttributeType = CK_ATTRIBUTE_TYPE [
+        AllowedMechanisms = CKA_ALLOWED_MECHANISMS,
+        AlwaysAuthenticate = CKA_ALWAYS_AUTHENTICATE,
+        AlwaysSensitive = CKA_ALWAYS_SENSITIVE,
+        CertificateCategory = CKA_CERTIFICATE_CATEGORY,
+        CertificateType = CKA_CERTIFICATE_TYPE,
+        Class = CKA_CLASS,
+        Decrypt = CKA_DECRYPT,
+        Derive = CKA_DERIVE,
+        EcParams = CKA_EC_PARAMS,
+        EcPoint = CKA_EC_POINT,
+        Encrypt = CKA_ENCRYPT,
+        Extractable = CKA_EXTRACTABLE,
+        Id = CKA_ID,
+        Issuer = CKA_ISSUER,
+        KeyGenMechanism = CKA_KEY_GEN_MECHANISM,
+        KeyType = CKA_KEY_TYPE,
+        Label = CKA_LABEL,
+        Local = CKA_LOCAL,
+        Modifiable = CKA_MODIFIABLE,
+        Modulus = CKA_MODULUS,
+        ModulusBits = CKA_MODULUS_BITS,
+        NeverExtractable = CKA_NEVER_EXTRACTABLE,
+        Prime1 = CKA_PRIME_1,
+        Prime2 = CKA_PRIME_2,
+        Private = CKA_PRIVATE,
+        PublicExponent = CKA_PUBLIC_EXPONENT,
+        Sensitive = CKA_SENSITIVE,
+        SerialNumber = CKA_SERIAL_NUMBER,
+        Sign = CKA_SIGN,
+        SignRecover = CKA_SIGN_RECOVER,
+        Subject = CKA_SUBJECT,
+        Token = CKA_TOKEN,
+        Trusted = CKA_TRUSTED,
+        Unwrap = CKA_UNWRAP,
+        Value = CKA_VALUE,
+        ValueLen = CKA_VALUE_LEN,
+        Verify = CKA_VERIFY,
+        VerifyRecover = CKA_VERIFY_RECOVER,
+        Wrap = CKA_WRAP,
+        WrapWithTrusted = CKA_WRAP_WITH_TRUSTED,
+    ]
+);
 
 impl_enum!(
     CkCertificateCategory = CK_CERTIFICATE_CATEGORY [
