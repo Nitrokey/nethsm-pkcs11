@@ -11,19 +11,22 @@ use cryptoki_sys::{
     CKA_MODULUS_BITS, CKA_NEVER_EXTRACTABLE, CKA_PRIVATE, CKA_PUBLIC_EXPONENT, CKA_SENSITIVE,
     CKA_SERIAL_NUMBER, CKA_SIGN, CKA_SIGN_RECOVER, CKA_SUBJECT, CKA_TOKEN, CKA_TRUSTED, CKA_UNWRAP,
     CKA_VALUE, CKA_VALUE_LEN, CKA_VERIFY, CKA_VERIFY_RECOVER, CKA_WRAP, CKA_WRAP_WITH_TRUSTED,
-    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_OBJECT_CLASS, CK_ULONG,
+    CKC_X_509, CK_ATTRIBUTE_TYPE, CK_KEY_TYPE, CK_MECHANISM_TYPE, CK_ULONG,
     CK_UNAVAILABLE_INFORMATION,
 };
 use der::{asn1::OctetString, Decode, DecodePem, Encode};
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 use nethsm_sdk_rs::models::PublicKey;
 use std::collections::HashMap;
 use std::mem::size_of;
 
-use crate::backend::{
-    key::{EcKeyType, KeyType, NetHSMId, Pkcs11Id},
-    mechanism::{KeyMechanism, Mechanism},
-    Error, Pkcs11Error,
+use crate::{
+    backend::{
+        key::{EcKeyType, KeyType, NetHSMId, Pkcs11Id},
+        mechanism::{KeyMechanism, Mechanism},
+        Error, Pkcs11Error,
+    },
+    ck::CkObjectClass,
 };
 
 use super::attr::{self, CkRawAttrTemplate};
@@ -112,7 +115,8 @@ impl Attr {
         Self::Bytes(src.iter().flat_map(|x| x.to_le_bytes()).collect())
     }
 
-    fn from_ck_object_class(src: cryptoki_sys::CK_OBJECT_CLASS) -> Self {
+    fn from_ck_object_class(src: CkObjectClass) -> Self {
+        let src: cryptoki_sys::CK_OBJECT_CLASS = src.into();
         #[cfg(target_endian = "little")]
         Self::CkObjectClass(src.to_le_bytes())
     }
@@ -129,25 +133,28 @@ impl PartialEq<Attr> for Attr {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ObjectKind {
     PrivateKey,
     PublicKey,
     SecretKey,
     Certificate,
-    #[default]
-    Other,
 }
 
-impl From<CK_OBJECT_CLASS> for ObjectKind {
-    fn from(src: CK_OBJECT_CLASS) -> Self {
-        match src {
-            cryptoki_sys::CKO_PRIVATE_KEY => Self::PrivateKey,
-            cryptoki_sys::CKO_PUBLIC_KEY => Self::PublicKey,
-            cryptoki_sys::CKO_SECRET_KEY => Self::SecretKey,
-            cryptoki_sys::CKO_CERTIFICATE => Self::Certificate,
-            _ => Self::Other,
-        }
+impl TryFrom<CkObjectClass> for ObjectKind {
+    type Error = Error;
+
+    fn try_from(class: CkObjectClass) -> Result<Self, Self::Error> {
+        Ok(match class {
+            CkObjectClass::PrivateKey => Self::PrivateKey,
+            CkObjectClass::PublicKey => Self::PublicKey,
+            CkObjectClass::SecretKey => Self::SecretKey,
+            CkObjectClass::Certificate => Self::Certificate,
+            CkObjectClass::Other(value) => {
+                warn!("Object class not supported: {value}");
+                return Err(Error::ObjectClassNotSupported);
+            }
+        })
     }
 }
 
@@ -167,7 +174,7 @@ impl Object {
         Self {
             id,
             attrs: Default::default(),
-            kind: Default::default(),
+            kind: ObjectKind::PrivateKey,
             label: Default::default(),
             size: Default::default(),
             mechanisms: Default::default(),
@@ -303,7 +310,7 @@ fn configure_generic(mechanisms: &[KeyMechanism]) -> Result<KeyData, Error> {
 
     attrs.insert(
         CKA_CLASS,
-        Attr::from_ck_object_class(cryptoki_sys::CKO_SECRET_KEY),
+        Attr::from_ck_object_class(CkObjectClass::SecretKey),
     );
     attrs.insert(
         CKA_KEY_TYPE,
@@ -345,7 +352,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
     let mut attrs = HashMap::new();
     attrs.insert(
         CKA_CLASS,
-        Attr::from_ck_object_class(cryptoki_sys::CKO_PRIVATE_KEY),
+        Attr::from_ck_object_class(CkObjectClass::PrivateKey),
     );
     let id_bytes = Attr::Bytes(Pkcs11Id::from(&id).into_bytes());
     attrs.insert(CKA_ID, id_bytes);
@@ -430,7 +437,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
         .insert(CKA_ALLOWED_MECHANISMS, Attr::Bytes(vec![]));
     public_key.attrs.insert(
         CKA_CLASS,
-        Attr::from_ck_object_class(cryptoki_sys::CKO_PUBLIC_KEY),
+        Attr::from_ck_object_class(CkObjectClass::PublicKey),
     );
     public_key
         .attrs
@@ -486,7 +493,7 @@ pub fn from_cert_data(
     let mut attrs = HashMap::new();
     attrs.insert(
         CKA_CLASS,
-        Attr::from_ck_object_class(cryptoki_sys::CKO_CERTIFICATE),
+        Attr::from_ck_object_class(CkObjectClass::Certificate),
     );
     let id_bytes = Attr::Bytes(Pkcs11Id::from(&key_id).into_bytes());
     attrs.insert(CKA_ID, id_bytes.clone());

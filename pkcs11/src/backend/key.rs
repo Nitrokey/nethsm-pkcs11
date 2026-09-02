@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     backend::{db::object::ObjectKind, mechanism::Mechanism},
-    ck::CkObjectHandle,
+    ck::{CkObjectClass, CkObjectHandle},
 };
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
@@ -389,7 +389,7 @@ pub struct ParsedAttributes {
     pub sign: bool,
     pub encrypt: bool,
     pub decrypt: bool,
-    pub key_class: Option<ObjectKind>,
+    pub key_class: Option<CkObjectClass>,
     pub ec_params: Option<Vec<u8>>,
     pub value: Option<Vec<u8>>,
     pub public_exponent: Option<Vec<u8>>,
@@ -406,19 +406,12 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
         let t = attr.type_();
 
         match t {
-            CKA_CLASS => match unsafe { attr.read_value::<CK_OBJECT_CLASS>() } {
-                Some(val) => {
-                    parsed.key_class = match ObjectKind::from(val) {
-                        ObjectKind::Other => {
-                            debug!("Class not supported: {val:?}");
-                            None
-                        }
-
-                        k => Some(k),
-                    }
-                }
-                None => return Err(Error::InvalidAttribute(CKA_CLASS)),
-            },
+            CKA_CLASS => {
+                let class = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }
+                    .ok_or(Error::InvalidAttribute(CKA_CLASS))?
+                    .into();
+                parsed.key_class = Some(class);
+            }
             CKA_ID => {
                 if let Some(bytes) = attr.val_bytes() {
                     let pkcs11_id = Pkcs11Id::from(bytes);
@@ -538,20 +531,22 @@ pub fn create_key_from_template(
     debug!("key_class: {:?}", parsed.key_class);
     debug!("key_type: {:?}", parsed.key_type);
 
-    let key_class = if let Some(ref key_class) = parsed.key_class {
-        let key_class = *key_class;
-        if key_class == ObjectKind::Other || key_class == ObjectKind::PublicKey {
+    let object_kind: ObjectKind = parsed
+        .key_class
+        .ok_or(Error::ObjectClassNotSupported)?
+        .try_into()?;
+    match object_kind {
+        ObjectKind::PublicKey => {
             // Supported object types are Certificates, Private keys and keypairs
-            warn!("Creating object of class {key_class:?} is not supported by the nethsm");
+            warn!("Creating object of class {object_kind:?} is not supported by the nethsm");
             return Err(Error::ObjectClassNotSupported);
         }
-        key_class
-    } else {
-        return Err(Error::ObjectClassNotSupported);
-    };
-
-    if key_class == ObjectKind::Certificate {
-        return upload_certificate(&parsed, login_ctx);
+        ObjectKind::Certificate => {
+            return upload_certificate(&parsed, login_ctx);
+        }
+        ObjectKind::PrivateKey | ObjectKind::SecretKey => {
+            // implemented by the remaining function
+        }
     }
 
     let (r#type, key) = match parsed
@@ -680,7 +675,7 @@ pub fn create_key_from_template(
         }
     })?;
 
-    Ok((id, key_class))
+    Ok((id, object_kind))
 }
 
 /// A key on the NetHSM.
@@ -740,10 +735,9 @@ impl NetHSMKey {
     ) -> Result<Vec<Object>, Error> {
         if let Some(kind) = kind {
             match kind {
-                ObjectKind::Other
-                | ObjectKind::PrivateKey
-                | ObjectKind::PublicKey
-                | ObjectKind::SecretKey => self.into_key_objects(),
+                ObjectKind::PrivateKey | ObjectKind::PublicKey | ObjectKind::SecretKey => {
+                    self.into_key_objects()
+                }
                 ObjectKind::Certificate => {
                     if let Some(cert) = self.try_fetch_certificate(login_ctx)? {
                         Ok(vec![cert])

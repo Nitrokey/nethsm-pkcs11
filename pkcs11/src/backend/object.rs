@@ -10,7 +10,7 @@ use super::{
     session::Session,
     Error,
 };
-use crate::ck::CkObjectHandle;
+use crate::ck::{CkObjectClass, CkObjectHandle};
 
 // context to find objects
 #[derive(Clone, Debug)]
@@ -21,7 +21,7 @@ pub struct EnumCtx {
 
 #[derive(Clone, Debug)]
 pub struct KeyRequirements {
-    pub kind: Option<ObjectKind>,
+    pub class: Option<CkObjectClass>,
     pub id: Option<NetHSMId>,
     pub label: Option<String>,
 }
@@ -30,13 +30,13 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
     match template {
         Some(template) => {
             let mut key_id = None;
-            let mut kind = None;
+            let mut class = None;
             let mut label = None;
             for attr in template.iter() {
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
                 if attr.type_() == CKA_CLASS {
-                    kind = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }.map(ObjectKind::from)
+                    class = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }.map(CkObjectClass::from)
                 }
                 if attr.type_() == CKA_ID {
                     key_id = Some(parse_nethsm_id(&attr)?);
@@ -52,13 +52,13 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
                 }
             }
             Ok(KeyRequirements {
-                kind,
+                class,
                 id: key_id,
                 label,
             })
         }
         None => Ok(KeyRequirements {
-            kind: None,
+            class: None,
             id: None,
             label: None,
         }),
@@ -79,8 +79,13 @@ impl EnumCtx {
         template: Option<CkRawAttrTemplate>,
     ) -> Result<Self, Error> {
         let key_req = parse_key_requirements(template)?;
-        let handles =
-            session.find_key(key_req.id.as_ref(), key_req.kind, key_req.label.as_deref())?;
+        let kind = key_req.class.map(ObjectKind::try_from).transpose();
+        let handles = if let Ok(kind) = kind {
+            session.find_key(key_req.id.as_ref(), kind, key_req.label.as_deref())?
+        } else {
+            // searching for an unsupported object class can never return results
+            Vec::new()
+        };
         Ok(EnumCtx::new(handles))
     }
 
@@ -114,7 +119,7 @@ mod tests {
         let template = None;
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id, None);
         assert_eq!(res.label, None);
 
@@ -138,7 +143,7 @@ mod tests {
 
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id.as_ref().map(|id| id.as_str()), Some("0---00FF00FF"));
         assert_eq!(res.label, None);
 
@@ -162,7 +167,7 @@ mod tests {
 
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id, None);
         assert_eq!(res.label.as_deref(), Some("test"));
 
