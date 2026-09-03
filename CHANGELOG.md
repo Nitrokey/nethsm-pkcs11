@@ -4,7 +4,7 @@
 
 -
 
-## [3.0.0-rc.1][] (2026-08-30)
+## [3.0.0][] (2026-09-03)
 
 ### Breaking Changes
 
@@ -28,8 +28,8 @@
   Also, the label must be set to the key ID for all keys used by the application.
 - If the application using the PKCS11 module does not use `CKA_LABEL` attributes, no special steps are required.
 
-[3.0.0-rc.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v3.0.0-rc.1
-[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.2.0...v3.0.0-rc.1)
+[3.0.0]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v3.0.0
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v2.2.0...v3.0.0)
 
 ## [2.2.0][] (2026-04-23)
 
