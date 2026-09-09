@@ -39,3 +39,9 @@ Here is an example of how to configure an RSA key for later use in the transit s
 ```
 docker exec -it vault_vault-hsm_1 vault write -address="http://127.0.0.1:8200" sys/managed-keys/pkcs11/transit-rsa-key library=nethsm slot=0 pin=OperatorOperator key_label="vault-rsa-key" allow_generate_key=true mechanism=0x0001  allow_store_key=true key_bits=2048 any_mount=false
 ```
+
+# Tested Versions
+
+|nethsm-pkcs11|nethsm container|vault-enterprise|
+|-|-|-|
+|v3.0.0|testing-v5.0|2.1.0-ent.hsm|
