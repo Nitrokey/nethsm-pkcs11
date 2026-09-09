@@ -25,3 +25,4 @@ pkcs11-proxy-slow
 pkcs11-thread-bench
 stress-test
 certutil-db
+*.hclic

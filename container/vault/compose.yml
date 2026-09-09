@@ -1,0 +1,49 @@
+services:
+  nethsm:
+    image: nitrokey/nethsm:testing-v5.0
+    platform: linux/amd64
+    ports:
+      - "8443:8443"
+    networks:
+      - nethsm-network
+
+  nethsm-provisioner:
+    image: curlimages/curl:latest
+    depends_on:
+      - nethsm
+    volumes:
+      - ./provision.sh:/provision.sh:ro
+    command: ["/bin/sh", "/provision.sh"]
+    networks:
+      - nethsm-network
+    environment:
+      NETHSM_URL: https://nethsm:8443
+      NETHSM_AUTO_UNLOCK: "true"
+
+  vault-hsm:
+    image: vault-enterprise-hsm-nethsm
+    depends_on:
+      nethsm-provisioner:
+        condition: service_completed_successfully
+    build:
+      context: ../..
+      dockerfile: container/vault/Dockerfile
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./config/:/vault/config/
+      - ./p11nethsm.conf:/etc/nitrokey/p11nethsm.conf:ro
+      - vault-file:/vault/file/
+      - vault-logs:/vault/logs/
+    command: server -log-level=trace
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - nethsm-network
+
+volumes:
+  vault-file:
+  vault-logs:
+
+networks:
+  nethsm-network:
