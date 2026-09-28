@@ -86,7 +86,7 @@ impl std::fmt::Display for LoginError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LoginError::InvalidUser => write!(f, "User type not supported"),
-            LoginError::UserNotPresent => write!(f, "Username not cofigured for this user"),
+            LoginError::UserNotPresent => write!(f, "Username not configured for this user"),
             LoginError::BadArgument => write!(f, "Bad argument"),
             LoginError::IncorrectPin => write!(f, "Incorrect pin"),
         }
