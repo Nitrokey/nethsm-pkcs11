@@ -2,7 +2,7 @@
 
 ## Unreleased
 
--
+- Add missing environment variable to error message
 
 ## [3.0.0][] (2026-09-03)
 

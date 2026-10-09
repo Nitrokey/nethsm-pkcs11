@@ -253,9 +253,12 @@ where
 {
     match Option::<String>::deserialize(deserializer)? {
         Some(s) => {
-            if s.starts_with(PASSWORD_ENV_PREFIX) {
-                let var = s.trim_start_matches(PASSWORD_ENV_PREFIX);
-                let val = std::env::var(var).map_err(serde::de::Error::custom)?;
+            if let Some(var) = s.strip_prefix(PASSWORD_ENV_PREFIX) {
+                let val = std::env::var(var).map_err(|err| {
+                    serde::de::Error::custom(format!(
+                        "failed to read environment variable `{var}`: {err}"
+                    ))
+                })?;
                 return Ok(Some(val));
             }
             if s.is_empty() {
@@ -344,6 +347,21 @@ password: env:TEST_PASSWORD
         let config: super::UserConfig = serde_yaml::from_str(config).unwrap();
         assert_eq!(config.username, "test");
         assert_eq!(config.password, Some("test_password".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_password_env_unset() {
+        let config = r#"
+username: test
+password: env:TEST_PASSWORD_UNSET
+"#;
+
+        std::env::remove_var("TEST_PASSWORD_UNSET");
+        let err = serde_yaml::from_str::<super::UserConfig>(config).unwrap_err();
+        assert!(
+            err.to_string().contains("TEST_PASSWORD_UNSET"),
+            "error message does not mention the variable: {err}"
+        );
     }
 
     #[test]
