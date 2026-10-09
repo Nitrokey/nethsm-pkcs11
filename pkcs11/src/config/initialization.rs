@@ -28,7 +28,7 @@ const DEFAULT_USER_AGENT: &str = concat!("pkcs11-rs/", env!("CARGO_PKG_VERSION")
 
 #[derive(Debug, thiserror::Error)]
 pub enum InitializationError {
-    #[error("Failed to load config")]
+    #[error("Failed to load config: {0}")]
     Config(crate::config::config_file::ConfigError),
     #[error("Failed to load certificates")]
     NoCerts,
