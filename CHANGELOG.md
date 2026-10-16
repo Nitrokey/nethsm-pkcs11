@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add missing environment variable to error message
+- Add `v5.0` tag to test matrix
 
 ## [3.0.0][] (2026-09-03)
 
