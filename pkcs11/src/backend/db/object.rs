@@ -267,7 +267,7 @@ fn configure_ec(key_data: &PublicKey, key_type: EcKeyType) -> Result<KeyData, Er
     let mut attrs = HashMap::new();
 
     attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(key_type));
-    attrs.insert(CKA_DERIVE, Attr::CK_TRUE);
+    attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
     attrs.insert(CKA_DECRYPT, Attr::CK_FALSE);
     attrs.insert(CKA_SIGN, Attr::CK_TRUE);
     attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);

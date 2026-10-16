@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add missing environment variable to error message
+- Do not report `CKA_DERIVE` as true for EC keys (ECDSA, EdDSA and Brainpool), as NetHSM only supports signing with them
 
 ## [3.0.0][] (2026-09-03)
 
