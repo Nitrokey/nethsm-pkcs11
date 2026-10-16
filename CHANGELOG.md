@@ -4,6 +4,7 @@
 
 - Add missing environment variable to error message
 - Add `v5.0` tag to test matrix
+- Do not report `CKA_DERIVE` as true for EC keys (ECDSA, EdDSA and Brainpool), as NetHSM only supports signing with them
 
 ## [3.0.0][] (2026-09-03)
 
