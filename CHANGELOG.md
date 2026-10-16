@@ -4,6 +4,7 @@
 
 - Add missing environment variable to error message
 - Do not report `CKA_DERIVE` as true for EC keys (ECDSA, EdDSA and Brainpool), as NetHSM only supports signing with them
+- Set `CKA_DECRYPT` and `CKA_SIGN` for RSA keys according to the key mechanisms reported by the NetHSM instead of always setting them to true
 
 ## [3.0.0][] (2026-09-03)
 

@@ -55,6 +55,14 @@ impl Attr {
     const CK_TRUE: Self = Self::CkBbool([cryptoki_sys::CK_TRUE; 1]);
     const CK_FALSE: Self = Self::CkBbool([cryptoki_sys::CK_FALSE; 1]);
 
+    fn from_bool(value: bool) -> Self {
+        if value {
+            Self::CK_TRUE
+        } else {
+            Self::CK_FALSE
+        }
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             Self::CkBbool(v) => v,
@@ -187,7 +195,7 @@ struct KeyData {
     attrs: HashMap<CK_ATTRIBUTE_TYPE, Attr>,
 }
 
-fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
+fn configure_rsa(key_data: &PublicKey, mechanisms: &[KeyMechanism]) -> Result<KeyData, Error> {
     let key_data = key_data
         .public
         .as_ref()
@@ -209,8 +217,14 @@ fn configure_rsa(key_data: &PublicKey) -> Result<KeyData, Error> {
     let size = modulus.len();
     attrs.insert(CKA_KEY_TYPE, Attr::from_ck_key_type(cryptoki_sys::CKK_RSA));
     attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
-    attrs.insert(CKA_DECRYPT, Attr::CK_TRUE);
-    attrs.insert(CKA_SIGN, Attr::CK_TRUE);
+    attrs.insert(
+        CKA_DECRYPT,
+        Attr::from_bool(mechanisms.iter().any(KeyMechanism::is_rsa_decryption)),
+    );
+    attrs.insert(
+        CKA_SIGN,
+        Attr::from_bool(mechanisms.iter().any(KeyMechanism::is_rsa_signature)),
+    );
     attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
     attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
     attrs.insert(CKA_WRAP_WITH_TRUSTED, Attr::CK_FALSE);
@@ -353,19 +367,19 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
     attrs.insert(CKA_TRUSTED, Attr::CK_FALSE);
     attrs.insert(CKA_WRAP, Attr::CK_FALSE);
 
-    let key_attrs = match key_type {
-        KeyType::Rsa => configure_rsa(&key_data)?,
-        KeyType::Ec(ty) => configure_ec(&key_data, ty)?,
-        KeyType::Generic => configure_generic()?,
-    };
-    attrs.extend(key_attrs.attrs);
-
     let mechanisms: Vec<_> = key_data
         .mechanisms
         .iter()
         .copied()
         .flat_map(TryFrom::try_from)
         .collect();
+
+    let key_attrs = match key_type {
+        KeyType::Rsa => configure_rsa(&key_data, &mechanisms)?,
+        KeyType::Ec(ty) => configure_ec(&key_data, ty)?,
+        KeyType::Generic => configure_generic()?,
+    };
+    attrs.extend(key_attrs.attrs);
 
     let ck_mech_list: Vec<CK_MECHANISM_TYPE> = mechanisms
         .iter()
