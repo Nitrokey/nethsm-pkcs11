@@ -2,7 +2,7 @@
 
 set -e
 
-KEYID=rsakey
+KEYID=rsakey3
 
 HEXID=$(echo -n ${KEYID} | xxd -ps)
 

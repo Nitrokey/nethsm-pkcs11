@@ -34,6 +34,37 @@ pub enum KeyMechanism {
     AesDecryptionCbc,
 }
 
+impl KeyMechanism {
+    /// Returns true if this mechanism allows decrypting data with an RSA key.
+    pub fn is_rsa_decryption(&self) -> bool {
+        matches!(
+            self,
+            Self::RsaDecryptionRaw
+                | Self::RsaDecryptionPkcs1
+                | Self::RsaDecryptionOaepMd5
+                | Self::RsaDecryptionOaepSha1
+                | Self::RsaDecryptionOaepSha224
+                | Self::RsaDecryptionOaepSha256
+                | Self::RsaDecryptionOaepSha384
+                | Self::RsaDecryptionOaepSha512
+        )
+    }
+
+    /// Returns true if this mechanism allows signing data with an RSA key.
+    pub fn is_rsa_signature(&self) -> bool {
+        matches!(
+            self,
+            Self::RsaSignaturePkcs1
+                | Self::RsaSignaturePssMd5
+                | Self::RsaSignaturePssSha1
+                | Self::RsaSignaturePssSha224
+                | Self::RsaSignaturePssSha256
+                | Self::RsaSignaturePssSha384
+                | Self::RsaSignaturePssSha512
+        )
+    }
+}
+
 impl From<KeyMechanism> for RawKeyMechanism {
     fn from(mechanism: KeyMechanism) -> Self {
         match mechanism {

@@ -19,4 +19,4 @@ curl -k -i --fail-with-body -w '\n' -u admin:Administrator -X POST \
 "RSA_Signature_PSS_SHA256",
 "RSA_Signature_PSS_SHA384",
 "RSA_Signature_PSS_SHA512"
-],  "type": "RSA",  "length": 2048, "id": "rsakey" }'
+],  "type": "RSA",  "length": 2048, "id": "rsakey3" }'

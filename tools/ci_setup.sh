@@ -13,7 +13,9 @@ echo "Provisioning the HSM"
 ./tools/create_ec_p521_key.sh
 ./tools/create_ec_p256k1_key.sh
 ./tools/create_ed_key.sh
-./tools/create_rsa_key.sh
+./tools/create_rsa_key_decrypt.sh
+./tools/create_rsa_key_sign.sh
+./tools/create_rsa_key_decrypt_sign.sh
 ./tools/create_web_key.sh
 
 
