@@ -6,6 +6,7 @@
 - Add `v5.0` tag to test matrix
 - Do not report `CKA_DERIVE` as true for EC keys (ECDSA, EdDSA and Brainpool), as NetHSM only supports signing with them
 - Set `CKA_DECRYPT` and `CKA_SIGN` for RSA keys according to the key mechanisms reported by the NetHSM
+- Set `CKA_DECRYPT` and `CKA_SIGN` for AES keys according to the key mechanisms reported by the NetHSM
 
 ## [3.0.0][] (2026-09-03)
 

@@ -298,7 +298,7 @@ fn configure_ec(key_data: &PublicKey, key_type: EcKeyType) -> Result<KeyData, Er
 }
 
 // should be an aes key ??
-fn configure_generic() -> Result<KeyData, Error> {
+fn configure_generic(mechanisms: &[KeyMechanism]) -> Result<KeyData, Error> {
     let mut attrs = HashMap::new();
 
     attrs.insert(
@@ -310,8 +310,14 @@ fn configure_generic() -> Result<KeyData, Error> {
         Attr::from_ck_key_type(cryptoki_sys::CKK_GENERIC_SECRET),
     );
     attrs.insert(CKA_DERIVE, Attr::CK_FALSE);
-    attrs.insert(CKA_DECRYPT, Attr::CK_TRUE);
-    attrs.insert(CKA_ENCRYPT, Attr::CK_TRUE);
+    attrs.insert(
+        CKA_DECRYPT,
+        Attr::from_bool(mechanisms.contains(&KeyMechanism::AesDecryptionCbc)),
+    );
+    attrs.insert(
+        CKA_ENCRYPT,
+        Attr::from_bool(mechanisms.contains(&KeyMechanism::AesEncryptionCbc)),
+    );
     attrs.insert(CKA_SIGN, Attr::CK_FALSE);
     attrs.insert(CKA_SIGN_RECOVER, Attr::CK_FALSE);
     attrs.insert(CKA_UNWRAP, Attr::CK_FALSE);
@@ -377,7 +383,7 @@ pub fn from_key_data(key_data: PublicKey, id: NetHSMId) -> Result<Vec<Object>, E
     let key_attrs = match key_type {
         KeyType::Rsa => configure_rsa(&key_data, &mechanisms)?,
         KeyType::Ec(key_type) => configure_ec(&key_data, key_type)?,
-        KeyType::Generic => configure_generic()?,
+        KeyType::Generic => configure_generic(&mechanisms)?,
     };
     attrs.extend(key_attrs.attrs);
 
