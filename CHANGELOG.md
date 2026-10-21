@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include `HostNotFound` into network errors
+
 ## [3.0.1][] (2026-10-21)
 
 - Explicitely reject compromised emSign intermediary certificates
