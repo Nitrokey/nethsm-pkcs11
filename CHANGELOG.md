@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+## [3.0.1][] (2026-10-21)
+
+- Explicitely reject compromised emSign intermediary certificates
 - Add missing environment variable to error message
 - Add `v5.0` tag to test matrix
 - Do not report `CKA_DERIVE` as true for EC keys (ECDSA, EdDSA and Brainpool), as NetHSM only supports signing with them
 - Set `CKA_DECRYPT` and `CKA_SIGN` for RSA keys according to the key mechanisms reported by the NetHSM
 - Set `CKA_DECRYPT` and `CKA_SIGN` for AES keys according to the key mechanisms reported by the NetHSM
+
+[3.0.1]: https://github.com/Nitrokey/nethsm-pkcs11/releases/tag/v3.0.1
+[Full Changelog](https://github.com/Nitrokey/nethsm-pkcs11/compare/v3.0.0...v3.0.1)
 
 ## [3.0.0][] (2026-09-03)
 
