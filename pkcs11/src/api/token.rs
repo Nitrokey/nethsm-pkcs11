@@ -3,10 +3,7 @@ use cryptoki_sys::{
     CK_TOKEN_INFO, CK_ULONG,
 };
 use log::{debug, error, trace, warn};
-use nethsm_sdk_rs::{
-    apis::default_api,
-    models::{HealthStateData, InfoData, SystemState},
-};
+use nethsm_sdk_rs::{apis::default_api, models::SystemState};
 
 use crate::{
     api::api_function,
@@ -96,35 +93,29 @@ fn get_slot_info(
 
     let login_ctx = LoginCtx::new(slot.clone(), false, false);
 
-    let result = login_ctx.try_(
-        default_api::info_get,
-        crate::backend::login::UserMode::Guest,
-    );
-
     // fetch info from the device
+    let info = login_ctx
+        .try_(
+            default_api::info_get,
+            crate::backend::login::UserMode::Guest,
+        )
+        .map_err(|err| {
+            error!("Error getting info: {err:?}");
+            Pkcs11Error::from(err)
+        })?
+        .entity;
 
-    let info = match result {
-        Ok(info) => info.entity,
-        Err(e) => {
-            trace!("Error getting info: {e:?}");
-            InfoData::new("unknown".to_owned(), "unknown".to_owned())
-        }
-    };
-
-    let result = login_ctx.try_(
-        default_api::health_state_get,
-        crate::backend::login::UserMode::Guest,
-    );
-
-    // fetch the sysem state
-
-    let system_state = match result {
-        Ok(info) => info.entity,
-        Err(e) => {
-            trace!("Error getting system state: {e:?}");
-            HealthStateData::new(SystemState::Unprovisioned)
-        }
-    };
+    // fetch the system state
+    let system_state = login_ctx
+        .try_(
+            default_api::health_state_get,
+            crate::backend::login::UserMode::Guest,
+        )
+        .map_err(|err| {
+            error!("Error getting system state: {err:?}");
+            Pkcs11Error::from(err)
+        })?
+        .entity;
 
     if system_state.state == SystemState::Operational {
         flags |= cryptoki_sys::CKF_TOKEN_PRESENT;
