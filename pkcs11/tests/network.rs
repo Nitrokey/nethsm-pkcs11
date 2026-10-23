@@ -411,3 +411,89 @@ fn pool_not_reused() {
         },
     )
 }
+
+#[test_log::test]
+fn slot_info_connection_refused() {
+    tools::network::run_tests(
+        &[],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![InstanceConfig {
+                    url: "https://localhost:8499/api/v1".into(),
+                    danger_insecure_cert: true,
+                    sha256_fingerprints: Vec::new(),
+                    max_idle_connections: None,
+                }],
+                certificate_format: CertificateFormat::Pem,
+                retries: None,
+                timeout_seconds: Some(5),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
+            }],
+            ..Default::default()
+        },
+        |_test_ctx, ctx| {
+            let err = ctx.get_slot_info(0).unwrap_err();
+            assert!(
+                matches!(
+                    err,
+                    pkcs11::errors::Error::Pkcs11(cryptoki_sys::CKR_DEVICE_REMOVED)
+                ),
+                "Unexpected result: {err:?}"
+            );
+        },
+    )
+}
+
+#[test_log::test]
+fn slot_info_name_resolution_failure() {
+    tools::network::run_tests(
+        &[],
+        P11Config {
+            slots: vec![SlotConfig {
+                label: "Test slot".into(),
+                operator: Some(UserConfig {
+                    username: "operator".into(),
+                    password: Some("opPassphrase".into()),
+                }),
+                administrator: Some(UserConfig {
+                    username: "admin".into(),
+                    password: Some("Administrator".into()),
+                }),
+                description: Some("Test slot".into()),
+                instances: vec![InstanceConfig {
+                    url: "https://nethsm.invalid:8443/api/v1".into(),
+                    danger_insecure_cert: true,
+                    sha256_fingerprints: Vec::new(),
+                    max_idle_connections: None,
+                }],
+                certificate_format: CertificateFormat::Pem,
+                retries: None,
+                timeout_seconds: Some(5),
+                connections_max_idle_duration: None,
+                tcp_keepalive: None,
+            }],
+            ..Default::default()
+        },
+        |_test_ctx, ctx| {
+            let err = ctx.get_slot_info(0).unwrap_err();
+            assert!(
+                matches!(
+                    err,
+                    pkcs11::errors::Error::Pkcs11(cryptoki_sys::CKR_DEVICE_REMOVED)
+                ),
+                "Unexpected result: {err:?}"
+            );
+        },
+    )
+}

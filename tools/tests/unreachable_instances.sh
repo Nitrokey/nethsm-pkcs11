@@ -8,4 +8,4 @@ output=$(pkcs11-tool --module ./target/debug/libnethsm_pkcs11.so -O 2>&1 || true
 echo "$output"
 
 ! grep --quiet panic <<< "$output"
-grep --quiet "No slot with a token was found" <<< "$output"
+grep --quiet "C_GetSlotInfo failed: rv = CKR_DEVICE_REMOVED" <<< "$output"

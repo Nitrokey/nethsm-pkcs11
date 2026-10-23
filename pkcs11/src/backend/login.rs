@@ -413,6 +413,7 @@ impl LoginCtx {
                 // {
                 Err(apis::Error::Ureq(
                     err @ (ureq::Error::Io(_)
+                    | ureq::Error::HostNotFound
                     | ureq::Error::ConnectionFailed
                     | ureq::Error::Timeout(_)
                     | ureq::Error::ConnectProxyFailed(_)),

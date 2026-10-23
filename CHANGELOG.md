@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Return network errors as `CKR_DEVICE_REMOVED` from `C_GetSlotInfo`
+- Include `HostNotFound` into network errors
+
 ## [3.0.1][] (2026-10-21)
 
 - Explicitely reject compromised emSign intermediary certificates
