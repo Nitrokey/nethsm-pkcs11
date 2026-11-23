@@ -45,9 +45,7 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --locked
 
-      - uses: clechasseur/rs-clippy-check@v6.0.1
-        with:
-          args: --frozen --all-targets -p nethsm_pkcs11 -- -D warnings --no-deps
+      - run: cargo clippy --frozen --all-targets -p nethsm_pkcs11 -- -D warnings --no-deps
 
   check-windows:
     runs-on: windows-latest

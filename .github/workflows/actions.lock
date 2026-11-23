@@ -16,7 +16,6 @@ workflows:
         - 'actions/checkout@v7'
         - 'actions/download-artifact@v8'
         - 'actions/upload-artifact@v7'
-        - 'clechasseur/rs-clippy-check@v6.0.1'
         - 'codecov/codecov-action@v7'
         - 'dtolnay/rust-toolchain@master'
         - 'dtolnay/rust-toolchain@stable'
@@ -42,11 +41,6 @@ dependencies:
         commit: 'sha1-cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         owner_id: 44036562
         repo_id: 192625955
-    'clechasseur/rs-clippy-check@v6.0.1':
-        ref: 'v6.0.1'
-        commit: 'sha1-9190480d27706dc2fd75d122753936cafafa2154'
-        owner_id: 1435551
-        repo_id: 658170910
     'codecov/codecov-action@v7':
         ref: 'v7'
         commit: 'sha1-303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
