@@ -65,7 +65,7 @@ impl<In: Transport> Connector<In> for RustlsConnector {
         let conn = ClientConnection::new(config, name)?;
         let stream = StreamOwned {
             conn,
-            sock: TransportAdapter::new(transport),
+            sock: TransportAdapter::new(transport, details.current_time.clone()),
         };
 
         let buffers = LazyBuffers::new(
