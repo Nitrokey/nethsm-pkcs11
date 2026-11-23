@@ -13,11 +13,24 @@ env:
   WINDOWS_SDK_VERSION: "10.0.26100.0"
 
 jobs:
+  verify-lockfile:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.4.1
+      - run: gh actions-lock --verify
+
   check-formatting-linting:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -40,7 +53,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -60,7 +73,7 @@ jobs:
           cargo build --release
 
       - name: Archive Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nethsm-pkcs11-x86_64-windows.dll
           path: target/release/nethsm_pkcs11.dll
@@ -70,7 +83,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust
         run: rustup install stable && rustup target install aarch64-apple-darwin && rustup target install x86_64-apple-darwin
@@ -81,7 +94,7 @@ jobs:
         run: cargo build --release --target x86_64-apple-darwin
 
       - name: Archive Artifact x86_64
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nethsm-pkcs11-x86_64-apple.dylib
           path: target/x86_64-apple-darwin/release/libnethsm_pkcs11.dylib
@@ -91,7 +104,7 @@ jobs:
         run: cargo build --release --target aarch64-apple-darwin
 
       - name: Archive Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nethsm-pkcs11-aarch64-apple.dylib
           path: target/aarch64-apple-darwin/release/libnethsm_pkcs11.dylib
@@ -100,14 +113,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
       - name: build release
         run: cargo build --release
       - name: Archive Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nethsm-pkcs11-x86_64-linux-gnu.so
           path:  target/release/libnethsm_pkcs11.so
@@ -127,7 +140,7 @@ jobs:
         ports:
           - 8443:8443
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: install opensc and dependencies
         run: apt-get update && apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make git gnupg
@@ -161,7 +174,7 @@ jobs:
         run: ./tools/get_coverage.sh
 
       - name: upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.txt
           verbose: true
@@ -181,7 +194,7 @@ jobs:
           - 8443:8443
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: install dependencies
         run: apt-get update && apt-get install -y gcc make
@@ -216,7 +229,7 @@ jobs:
       NETHSM_VERSION: ${{ matrix.nethsm }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: install dependencies
         run: apt-get update && apt-get install -y curl opensc openssl xxd jq gnutls-bin
@@ -248,7 +261,7 @@ jobs:
         ports:
           - 8443:8443
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: install opensc and dependencies
         run: sudo apt-get update && sudo apt-get install -y curl opensc openssl gcc xxd jq gnutls-bin make
