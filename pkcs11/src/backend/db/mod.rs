@@ -5,18 +5,18 @@
 
 pub mod attr;
 pub mod object;
-use cryptoki_sys::CK_OBJECT_HANDLE;
 use log::info;
 use std::{collections::HashMap, time::SystemTime};
 
 use super::key::NetHSMId;
+use crate::ck::CkObjectHandle;
 
 pub use object::Object;
 
 #[derive(Debug)]
 pub struct Db {
-    objects: HashMap<CK_OBJECT_HANDLE, Object>,
-    next_handle: CK_OBJECT_HANDLE,
+    objects: HashMap<CkObjectHandle, Object>,
+    next_handle: CkObjectHandle,
     last_fetchall_timestamp: Option<SystemTime>,
     is_being_fetched: bool,
 }
@@ -25,8 +25,7 @@ impl Db {
     pub fn new() -> Self {
         Self {
             objects: HashMap::new(),
-            // 0 means invalid handle, we need to start from 1
-            next_handle: 1,
+            next_handle: CkObjectHandle::FIRST,
             last_fetchall_timestamp: None,
             is_being_fetched: false,
         }
@@ -66,20 +65,20 @@ impl Db {
         self.objects.clear();
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (CK_OBJECT_HANDLE, &Object)> {
+    pub fn iter(&self) -> impl Iterator<Item = (CkObjectHandle, &Object)> {
         self.objects
             .iter()
             .map(|(handle, object)| (*handle, object))
     }
 
-    pub fn add_objects<I>(&mut self, objects: I) -> Vec<(CK_OBJECT_HANDLE, Object)>
+    pub fn add_objects<I>(&mut self, objects: I) -> Vec<(CkObjectHandle, Object)>
     where
         I: IntoIterator<Item = Object>,
     {
         objects.into_iter().map(|o| self.add_object(o)).collect()
     }
 
-    pub fn add_object(&mut self, object: Object) -> (CK_OBJECT_HANDLE, Object) {
+    pub fn add_object(&mut self, object: Object) -> (CkObjectHandle, Object) {
         // check if the object already exists
 
         let found = self
@@ -95,18 +94,18 @@ impl Db {
         // increment the handle
 
         let handle = self.next_handle;
-        self.next_handle += 1;
+        self.next_handle = handle.next();
 
         self.objects.insert(handle, object);
 
         (handle, self.objects.get(&handle).unwrap().clone())
     }
 
-    pub fn object(&self, handle: CK_OBJECT_HANDLE) -> Option<&Object> {
+    pub fn object(&self, handle: CkObjectHandle) -> Option<&Object> {
         self.objects.get(&handle)
     }
 
-    pub fn remove(&mut self, handle: CK_OBJECT_HANDLE) -> Option<Object> {
+    pub fn remove(&mut self, handle: CkObjectHandle) -> Option<Object> {
         self.objects.remove(&handle)
     }
 

@@ -13,6 +13,7 @@ use crate::{
         slot::get_slot,
         Pkcs11Error,
     },
+    ck::{CkMechanismType, CkSessionHandle},
     data::{self, EVENTS_MANAGER},
     defs::{DEFAULT_FIRMWARE_VERSION, DEFAULT_HARDWARE_VERSION, MECHANISM_LIST},
     utils::{padded_str, version_struct_from_str},
@@ -273,7 +274,7 @@ fn get_mechanism_list(
     // list the ids
     let id_list: Vec<cryptoki_sys::CK_MECHANISM_TYPE> = MECHANISM_LIST
         .iter()
-        .map(|mechanism| mechanism.ck_type())
+        .map(|mechanism| mechanism.ck_type().into())
         .collect();
 
     unsafe {
@@ -286,13 +287,13 @@ fn get_mechanism_list(
 api_function!(
     C_GetMechanismInfo = get_mechanism_info;
     slotID: cryptoki_sys::CK_SLOT_ID,
-    type_: cryptoki_sys::CK_MECHANISM_TYPE,
+    type_: cryptoki_sys::CK_MECHANISM_TYPE = CkMechanismType,
     pInfo: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 );
 
 fn get_mechanism_info(
     slot_id: cryptoki_sys::CK_SLOT_ID,
-    type_: cryptoki_sys::CK_MECHANISM_TYPE,
+    type_: CkMechanismType,
     info_ptr: cryptoki_sys::CK_MECHANISM_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
     get_slot(slot_id)?;
@@ -317,14 +318,14 @@ fn get_mechanism_info(
 
 api_function!(
     C_Login = login;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     userType: cryptoki_sys::CK_USER_TYPE,
     pPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulPinLen: cryptoki_sys::CK_ULONG,
 );
 
 fn login(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     user_type: cryptoki_sys::CK_USER_TYPE,
     pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
     pin_len: cryptoki_sys::CK_ULONG,
@@ -348,10 +349,10 @@ fn login(
 
 api_function!(
     C_Logout = logout;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
 );
 
-fn logout(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn logout(session: CkSessionHandle) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
@@ -662,7 +663,7 @@ mod tests {
     #[test]
     fn test_login_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut pin = "1234".to_string();
 
@@ -673,7 +674,7 @@ mod tests {
     #[test]
     fn test_logout_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let result = C_Logout(0);
         assert_eq!(result, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);

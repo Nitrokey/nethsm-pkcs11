@@ -2,16 +2,20 @@
     We won't implement these function as it is not a feature of NetHSM.
 */
 
-use crate::{api::api_function, backend::Pkcs11Error};
+use crate::{
+    api::api_function,
+    backend::Pkcs11Error,
+    ck::{CkObjectHandle, CkSessionHandle},
+};
 
 api_function!(
     C_DigestInit = digest_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
 );
 
 fn digest_init(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     mechanism_ptr: *mut cryptoki_sys::CK_MECHANISM,
 ) -> Result<(), Pkcs11Error> {
     if mechanism_ptr.is_null() {
@@ -23,7 +27,7 @@ fn digest_init(
 
 api_function!(
     C_Digest = digest;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pData: *mut cryptoki_sys::CK_BYTE,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pDigest: *mut cryptoki_sys::CK_BYTE,
@@ -31,7 +35,7 @@ api_function!(
 );
 
 fn digest(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     data_ptr: *mut cryptoki_sys::CK_BYTE,
     _data_len: cryptoki_sys::CK_ULONG,
     digest_ptr: *mut cryptoki_sys::CK_BYTE,
@@ -46,13 +50,13 @@ fn digest(
 
 api_function!(
     C_DigestUpdate = digest_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pPart: *mut cryptoki_sys::CK_BYTE,
     ulPartLen: cryptoki_sys::CK_ULONG,
 );
 
 fn digest_update(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     part_ptr: *mut cryptoki_sys::CK_BYTE,
     _part_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -65,13 +69,13 @@ fn digest_update(
 
 api_function!(
     C_DigestFinal = digest_final;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pDigest: *mut cryptoki_sys::CK_BYTE,
     pulDigestLen: *mut cryptoki_sys::CK_ULONG,
 );
 
 fn digest_final(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     digest_ptr: *mut cryptoki_sys::CK_BYTE,
     digest_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -84,20 +88,17 @@ fn digest_final(
 
 api_function!(
     C_DigestKey = digest_key;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
-fn digest_key(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> Result<(), Pkcs11Error> {
+fn digest_key(_session: CkSessionHandle, _key: CkObjectHandle) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 
 api_function!(
     C_DigestEncryptUpdate = digest_encrypt_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
@@ -105,7 +106,7 @@ api_function!(
 );
 
 fn digest_encrypt_update(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _part_ptr: cryptoki_sys::CK_BYTE_PTR,
     _part_len: cryptoki_sys::CK_ULONG,
     _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -116,7 +117,7 @@ fn digest_encrypt_update(
 
 api_function!(
     C_DecryptDigestUpdate = decrypt_digest_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
     ulEncryptedPartLen: cryptoki_sys::CK_ULONG,
     pPart: cryptoki_sys::CK_BYTE_PTR,
@@ -124,7 +125,7 @@ api_function!(
 );
 
 fn decrypt_digest_update(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
     _encrypted_part_len: cryptoki_sys::CK_ULONG,
     _part_ptr: cryptoki_sys::CK_BYTE_PTR,

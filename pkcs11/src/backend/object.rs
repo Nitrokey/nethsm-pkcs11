@@ -1,4 +1,4 @@
-use cryptoki_sys::{CKA_CLASS, CKA_ID, CKA_LABEL, CK_OBJECT_CLASS, CK_SESSION_HANDLE};
+use cryptoki_sys::CK_OBJECT_CLASS;
 use log::{debug, trace};
 
 use super::{
@@ -10,17 +10,18 @@ use super::{
     session::Session,
     Error,
 };
+use crate::ck::{CkAttributeType, CkObjectClass, CkObjectHandle};
 
 // context to find objects
 #[derive(Clone, Debug)]
 pub struct EnumCtx {
-    pub handles: Vec<CK_SESSION_HANDLE>,
+    pub handles: Vec<CkObjectHandle>,
     index: usize,
 }
 
 #[derive(Clone, Debug)]
 pub struct KeyRequirements {
-    pub kind: Option<ObjectKind>,
+    pub class: Option<CkObjectClass>,
     pub id: Option<NetHSMId>,
     pub label: Option<String>,
 }
@@ -29,35 +30,39 @@ fn parse_key_requirements(template: Option<CkRawAttrTemplate>) -> Result<KeyRequ
     match template {
         Some(template) => {
             let mut key_id = None;
-            let mut kind = None;
+            let mut class = None;
             let mut label = None;
             for attr in template.iter() {
                 debug!("attr {:?}: {:?}", attr.type_(), attr.val_bytes());
 
-                if attr.type_() == CKA_CLASS {
-                    kind = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }.map(ObjectKind::from)
-                }
-                if attr.type_() == CKA_ID {
-                    key_id = Some(parse_nethsm_id(&attr)?);
-                }
-                if attr.type_() == CKA_LABEL {
-                    if let Some(bytes) = attr.val_bytes() {
-                        let s = str::from_utf8(bytes)
-                            .map_err(|_| Error::InvalidAttribute(attr.type_()))?;
-                        label = Some(s.to_owned());
-                    } else {
-                        label = Some(String::new());
+                match attr.type_() {
+                    CkAttributeType::Class => {
+                        class =
+                            unsafe { attr.read_value::<CK_OBJECT_CLASS>() }.map(CkObjectClass::from)
                     }
+                    CkAttributeType::Id => {
+                        key_id = Some(parse_nethsm_id(&attr)?);
+                    }
+                    CkAttributeType::Label => {
+                        if let Some(bytes) = attr.val_bytes() {
+                            let s = str::from_utf8(bytes)
+                                .map_err(|_| Error::InvalidAttribute(attr.type_()))?;
+                            label = Some(s.to_owned());
+                        } else {
+                            label = Some(String::new());
+                        }
+                    }
+                    _ => {}
                 }
             }
             Ok(KeyRequirements {
-                kind,
+                class,
                 id: key_id,
                 label,
             })
         }
         None => Ok(KeyRequirements {
-            kind: None,
+            class: None,
             id: None,
             label: None,
         }),
@@ -78,15 +83,20 @@ impl EnumCtx {
         template: Option<CkRawAttrTemplate>,
     ) -> Result<Self, Error> {
         let key_req = parse_key_requirements(template)?;
-        let handles =
-            session.find_key(key_req.id.as_ref(), key_req.kind, key_req.label.as_deref())?;
+        let kind = key_req.class.map(ObjectKind::try_from).transpose();
+        let handles = if let Ok(kind) = kind {
+            session.find_key(key_req.id.as_ref(), kind, key_req.label.as_deref())?
+        } else {
+            // searching for an unsupported object class can never return results
+            Vec::new()
+        };
         Ok(EnumCtx::new(handles))
     }
 
-    pub fn new(handles: Vec<CK_SESSION_HANDLE>) -> Self {
+    pub fn new(handles: Vec<CkObjectHandle>) -> Self {
         Self { handles, index: 0 }
     }
-    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CK_SESSION_HANDLE> {
+    pub fn next_chunck(&mut self, chunk_size: usize) -> Vec<CkObjectHandle> {
         let mut result = Vec::new();
         for _ in 0..chunk_size {
             trace!("index: {}", self.index);
@@ -104,7 +114,7 @@ impl EnumCtx {
 
 #[cfg(test)]
 mod tests {
-    use cryptoki_sys::CK_ATTRIBUTE;
+    use cryptoki_sys::{CKA_ID, CKA_LABEL, CK_ATTRIBUTE};
 
     use super::*;
 
@@ -113,7 +123,7 @@ mod tests {
         let template = None;
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id, None);
         assert_eq!(res.label, None);
 
@@ -132,12 +142,12 @@ mod tests {
 
         let template = Some(
             unsafe { CkRawAttrTemplate::from_raw_ptr(attributes.as_mut_ptr(), 1) }
-                .ok_or(Error::InvalidAttribute(CKA_ID))?,
+                .ok_or(Error::InvalidAttribute(CkAttributeType::Id))?,
         );
 
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id.as_ref().map(|id| id.as_str()), Some("0---00FF00FF"));
         assert_eq!(res.label, None);
 
@@ -156,12 +166,12 @@ mod tests {
 
         let template = Some(
             unsafe { CkRawAttrTemplate::from_raw_ptr(attributes.as_mut_ptr(), 1) }
-                .ok_or(Error::InvalidAttribute(CKA_ID))?,
+                .ok_or(Error::InvalidAttribute(CkAttributeType::Label))?,
         );
 
         let res = parse_key_requirements(template)?;
 
-        assert_eq!(res.kind, None);
+        assert_eq!(res.class, None);
         assert_eq!(res.id, None);
         assert_eq!(res.label.as_deref(), Some("test"));
 

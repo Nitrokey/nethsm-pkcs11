@@ -29,7 +29,7 @@ macro_rules! api_function {
     (
         $c_fn:ident = $rust_fn:ident;
         $(
-            $arg:ident: $ty:ty,
+            $arg:ident: $ty:ty$( = $newty:ty)?,
         )+
         $(,)?
     ) => {
@@ -37,6 +37,11 @@ macro_rules! api_function {
         #[allow(non_snake_case)]
         pub extern "C" fn $c_fn($($arg: $ty,)*) -> ::cryptoki_sys::CK_RV {
             ::log::trace!("{} called", stringify!($c_fn));
+            $(
+                $(
+                    let $arg = <$newty as From<_>>::from($arg);
+                )?
+            )+
             let result = $rust_fn($($arg,)*);
             match result {
                 Ok(()) => {

@@ -3,6 +3,7 @@ use log::{error, trace};
 use crate::{
     api::api_function,
     backend::{slot::get_slot, Pkcs11Error},
+    ck::{CkObjectHandle, CkSessionHandle},
     data::{self, SESSION_MANAGER},
 };
 
@@ -44,7 +45,7 @@ fn open_session(
     trace!("C_OpenSession() created session: {session:?}");
 
     unsafe {
-        std::ptr::write(session_ptr, session);
+        std::ptr::write(session_ptr, session.into());
     }
 
     Ok(())
@@ -52,10 +53,10 @@ fn open_session(
 
 api_function!(
     C_CloseSession = close_session;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
 );
 
-fn close_session(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn close_session(session: CkSessionHandle) -> Result<(), Pkcs11Error> {
     trace!("C_CloseSession() called with session handle {session}.");
 
     let mut manager = SESSION_MANAGER.lock().unwrap();
@@ -87,12 +88,12 @@ fn close_all_sessions(slot_id: cryptoki_sys::CK_SLOT_ID) -> Result<(), Pkcs11Err
 
 api_function!(
     C_GetSessionInfo = get_session_info;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pInfo: cryptoki_sys::CK_SESSION_INFO_PTR,
 );
 
 fn get_session_info(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     info_ptr: cryptoki_sys::CK_SESSION_INFO_PTR,
 ) -> Result<(), Pkcs11Error> {
     if info_ptr.is_null() {
@@ -111,13 +112,13 @@ fn get_session_info(
 
 api_function!(
     C_GetOperationState = get_operation_state;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pOperationState: cryptoki_sys::CK_BYTE_PTR,
     pulOperationStateLen: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn get_operation_state(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
     _operation_state_len_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
@@ -126,38 +127,38 @@ fn get_operation_state(
 
 api_function!(
     C_SetOperationState = set_operation_state;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pOperationState: cryptoki_sys::CK_BYTE_PTR,
     ulOperationStateLen: cryptoki_sys::CK_ULONG,
-    hEncryptionKey: cryptoki_sys::CK_OBJECT_HANDLE,
-    hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hEncryptionKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
+    hAuthenticationKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn set_operation_state(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _operation_state_ptr: cryptoki_sys::CK_BYTE_PTR,
     _operation_state_len: cryptoki_sys::CK_ULONG,
-    _encryption_key: cryptoki_sys::CK_OBJECT_HANDLE,
-    _authentication_key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _encryption_key: CkObjectHandle,
+    _authentication_key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 
 api_function!(
     C_GetFunctionStatus = get_function_status;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
 );
 
-fn get_function_status(_session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn get_function_status(_session: CkSessionHandle) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotParallel)
 }
 
 api_function!(
     C_CancelFunction = cancel_function;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
 );
 
-fn cancel_function(_session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn cancel_function(_session: CkSessionHandle) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotParallel)
 }
 
@@ -191,7 +192,7 @@ mod tests {
     #[test]
     fn test_delete_session_invalid() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let rv = C_CloseSession(0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -224,7 +225,7 @@ mod tests {
     #[test]
     fn test_get_session_info_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut info = cryptoki_sys::CK_SESSION_INFO::default();
         let rv = C_GetSessionInfo(0, &mut info);

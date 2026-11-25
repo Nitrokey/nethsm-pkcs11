@@ -8,20 +8,21 @@ use crate::{
         session::Session,
         Pkcs11Error,
     },
+    ck::{CkObjectHandle, CkSessionHandle},
     data,
 };
 
 api_function!(
     C_SignInit = sign_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: *mut cryptoki_sys::CK_MECHANISM,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn sign_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     mechanism_ptr: *mut cryptoki_sys::CK_MECHANISM,
-    key: cryptoki_sys::CK_OBJECT_HANDLE,
+    key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     trace!("C_SignInit() called with hKey {key} and session {session}");
 
@@ -41,7 +42,7 @@ fn sign_init(
 
 api_function!(
     C_Sign = sign;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pData: *mut cryptoki_sys::CK_BYTE,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pSignature: *mut cryptoki_sys::CK_BYTE,
@@ -49,7 +50,7 @@ api_function!(
 );
 
 fn sign(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     data_ptr: *mut cryptoki_sys::CK_BYTE,
     data_len: cryptoki_sys::CK_ULONG,
     signature_ptr: *mut cryptoki_sys::CK_BYTE,
@@ -133,13 +134,13 @@ fn sign_impl(
 
 api_function!(
     C_SignUpdate = sign_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pPart: *mut cryptoki_sys::CK_BYTE,
     ulPartLen: cryptoki_sys::CK_ULONG,
 );
 
 fn sign_update(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     part_ptr: *mut cryptoki_sys::CK_BYTE,
     part_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -171,13 +172,13 @@ fn sign_update_impl(
 
 api_function!(
     C_SignFinal = sign_final;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pSignature: *mut cryptoki_sys::CK_BYTE,
     pulSignatureLen: *mut cryptoki_sys::CK_ULONG,
 );
 
 fn sign_final(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     signature_ptr: *mut cryptoki_sys::CK_BYTE,
     signature_len_ptr: *mut cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -244,22 +245,22 @@ fn sign_final_impl(
 
 api_function!(
     C_SignRecoverInit = sign_recover_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pMechanism: cryptoki_sys::CK_MECHANISM_PTR,
-    hKey: cryptoki_sys::CK_OBJECT_HANDLE,
+    hKey: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
 fn sign_recover_init(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _mechanism_ptr: cryptoki_sys::CK_MECHANISM_PTR,
-    _key: cryptoki_sys::CK_OBJECT_HANDLE,
+    _key: CkObjectHandle,
 ) -> Result<(), Pkcs11Error> {
     Err(Pkcs11Error::FunctionNotSupported)
 }
 
 api_function!(
     C_SignRecover = sign_recover;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pData: cryptoki_sys::CK_BYTE_PTR,
     ulDataLen: cryptoki_sys::CK_ULONG,
     pSignature: cryptoki_sys::CK_BYTE_PTR,
@@ -267,7 +268,7 @@ api_function!(
 );
 
 fn sign_recover(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _data_ptr: cryptoki_sys::CK_BYTE_PTR,
     _data_len: cryptoki_sys::CK_ULONG,
     _signature_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -278,7 +279,7 @@ fn sign_recover(
 
 api_function!(
     C_SignEncryptUpdate = sign_encrypt_update;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pPart: cryptoki_sys::CK_BYTE_PTR,
     ulPartLen: cryptoki_sys::CK_ULONG,
     pEncryptedPart: cryptoki_sys::CK_BYTE_PTR,
@@ -286,7 +287,7 @@ api_function!(
 );
 
 fn sign_encrypt_update(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _part_ptr: cryptoki_sys::CK_BYTE_PTR,
     _part_len: cryptoki_sys::CK_ULONG,
     _encrypted_part_ptr: cryptoki_sys::CK_BYTE_PTR,
@@ -328,7 +329,7 @@ mod tests {
     #[test]
     fn test_sign_init_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut mechanism = cryptoki_sys::CK_MECHANISM {
             mechanism: 0,
@@ -343,7 +344,7 @@ mod tests {
     #[test]
     fn test_sign_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut data = [0u8; 32];
         let mut signature = [0u8; 32];
@@ -435,7 +436,7 @@ mod tests {
     #[test]
     fn test_sign_update_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut data = [0u8; 32];
 
@@ -466,7 +467,7 @@ mod tests {
     #[test]
     fn test_sign_final_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut signature = [0u8; 32];
         let mut signature_len = 32;

@@ -1,16 +1,16 @@
 use log::error;
 
-use crate::{api::api_function, backend::Pkcs11Error, data};
+use crate::{api::api_function, backend::Pkcs11Error, ck::CkSessionHandle, data};
 
 api_function!(
     C_InitPIN = init_pin;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     uPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulPinLen: cryptoki_sys::CK_ULONG,
 );
 
 fn init_pin(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
+    _session: CkSessionHandle,
     _pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
     _pin_len: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -19,7 +19,7 @@ fn init_pin(
 
 api_function!(
     C_SetPIN = set_pin;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pOldPin: cryptoki_sys::CK_UTF8CHAR_PTR,
     ulOldLen: cryptoki_sys::CK_ULONG,
     pNewPin: cryptoki_sys::CK_UTF8CHAR_PTR,
@@ -27,7 +27,7 @@ api_function!(
 );
 
 fn set_pin(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     old_pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
     old_len: cryptoki_sys::CK_ULONG,
     new_pin_ptr: cryptoki_sys::CK_UTF8CHAR_PTR,
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_set_pin_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let old_pin = "12345678";
         let new_pin = "12345678";

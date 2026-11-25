@@ -10,15 +10,13 @@ use super::{
     login::{self, LoginCtx},
     Error,
 };
-use crate::backend::{db::object::ObjectKind, mechanism::Mechanism};
+use crate::{
+    backend::{db::object::ObjectKind, mechanism::Mechanism},
+    ck::{CkAttributeType, CkKeyType, CkObjectClass, CkObjectHandle},
+};
 use base64ct::{Base64, Encoding};
 use config_file::CertificateFormat;
-use cryptoki_sys::{
-    CKA_CLASS, CKA_DECRYPT, CKA_EC_PARAMS, CKA_ENCRYPT, CKA_ID, CKA_KEY_TYPE, CKA_LABEL,
-    CKA_MODULUS_BITS, CKA_PRIME_1, CKA_PRIME_2, CKA_PUBLIC_EXPONENT, CKA_SIGN, CKA_VALUE,
-    CKA_VALUE_LEN, CKK_EC, CKK_EC_EDWARDS, CKK_GENERIC_SECRET, CKK_RSA, CK_KEY_TYPE,
-    CK_OBJECT_CLASS, CK_OBJECT_HANDLE, CK_ULONG,
-};
+use cryptoki_sys::{CK_KEY_TYPE, CK_OBJECT_CLASS, CK_ULONG};
 use der::{oid::ObjectIdentifier, Decode};
 use log::{debug, error, trace, warn};
 use nethsm_sdk_rs::{
@@ -382,11 +380,11 @@ impl InvalidIdError {
 pub struct ParsedAttributes {
     pub id: Option<NetHSMId>,
     pub label: Option<String>,
-    pub key_type: Option<CK_KEY_TYPE>,
+    pub key_type: Option<CkKeyType>,
     pub sign: bool,
     pub encrypt: bool,
     pub decrypt: bool,
-    pub key_class: Option<ObjectKind>,
+    pub key_class: Option<CkObjectClass>,
     pub ec_params: Option<Vec<u8>>,
     pub value: Option<Vec<u8>>,
     pub public_exponent: Option<Vec<u8>>,
@@ -403,84 +401,73 @@ pub fn parse_attributes(template: &CkRawAttrTemplate) -> Result<ParsedAttributes
         let t = attr.type_();
 
         match t {
-            CKA_CLASS => match unsafe { attr.read_value::<CK_OBJECT_CLASS>() } {
-                Some(val) => {
-                    parsed.key_class = match ObjectKind::from(val) {
-                        ObjectKind::Other => {
-                            debug!("Class not supported: {val:?}");
-                            None
-                        }
-
-                        k => Some(k),
-                    }
-                }
-                None => return Err(Error::InvalidAttribute(CKA_CLASS)),
-            },
-            CKA_ID => {
+            CkAttributeType::Class => {
+                let class = unsafe { attr.read_value::<CK_OBJECT_CLASS>() }
+                    .ok_or(Error::InvalidAttribute(t))?
+                    .into();
+                parsed.key_class = Some(class);
+            }
+            CkAttributeType::Id => {
                 if let Some(bytes) = attr.val_bytes() {
                     let pkcs11_id = Pkcs11Id::from(bytes);
-                    let id = NetHSMId::try_from(&pkcs11_id)
-                        .map_err(|_| Error::InvalidAttribute(CKA_ID))?;
+                    let id =
+                        NetHSMId::try_from(&pkcs11_id).map_err(|_| Error::InvalidAttribute(t))?;
                     parsed.id = Some(id);
                 }
             }
-            CKA_LABEL => {
+            CkAttributeType::Label => {
                 if let Some(bytes) = attr.val_bytes() {
-                    let label =
-                        str::from_utf8(bytes).map_err(|_| Error::InvalidAttribute(CKA_LABEL))?;
+                    let label = str::from_utf8(bytes).map_err(|_| Error::InvalidAttribute(t))?;
                     trace!("label: {label}");
                     parsed.label = Some(label.to_owned());
                 }
             }
-
-            CKA_KEY_TYPE => {
-                let ktype = match unsafe { attr.read_value::<CK_KEY_TYPE>() } {
-                    Some(val) => val,
-                    None => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
-                };
+            CkAttributeType::KeyType => {
+                let ktype = unsafe { attr.read_value::<CK_KEY_TYPE>() }
+                    .ok_or(Error::InvalidAttribute(t))?
+                    .into();
                 parsed.key_type = Some(ktype);
             }
-            CKA_EC_PARAMS => {
+            CkAttributeType::EcParams => {
                 parsed.ec_params = attr.val_bytes().map(|val| val.to_vec());
             }
-            CKA_VALUE => {
+            CkAttributeType::Value => {
                 parsed.value = attr.val_bytes().map(|val| val.to_vec());
             }
-
-            CKA_SIGN => {
+            CkAttributeType::Sign => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
                         parsed.sign = true;
                     }
                 }
             }
-            CKA_ENCRYPT => {
+            CkAttributeType::Encrypt => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
                         parsed.encrypt = true;
                     }
                 }
             }
-            CKA_DECRYPT => {
+            CkAttributeType::Decrypt => {
                 if let Some(val) = attr.val_bytes() {
                     if val[0] == 1 {
                         parsed.decrypt = true;
                     }
                 }
             }
-            CKA_PUBLIC_EXPONENT => {
+            CkAttributeType::PublicExponent => {
                 parsed.public_exponent = attr.val_bytes().map(|val| val.to_vec());
             }
-            CKA_PRIME_1 => {
+            CkAttributeType::Prime1 => {
                 parsed.prime_p = attr.val_bytes().map(|val| val.to_vec());
             }
-            CKA_PRIME_2 => {
+            CkAttributeType::Prime2 => {
                 parsed.prime_q = attr.val_bytes().map(|val| val.to_vec());
             }
-            CKA_VALUE_LEN => {
+            CkAttributeType::ValueLen => {
                 parsed.value_len = unsafe { attr.read_value::<CK_ULONG>() };
             }
-            CKA_MODULUS_BITS => {
+            CkAttributeType::ModulusBits => {
                 parsed.modulus_bits = unsafe { attr.read_value::<CK_ULONG>() };
             }
 
@@ -500,11 +487,11 @@ fn upload_certificate(
     let cert = parsed_template
         .value
         .as_ref()
-        .ok_or(Error::MissingAttribute(CKA_VALUE))?;
+        .ok_or(Error::MissingAttribute(CkAttributeType::Value))?;
 
     let id = parsed_template.id.clone().ok_or_else(|| {
         error!("A key ID is required");
-        Error::MissingAttribute(CKA_ID)
+        Error::MissingAttribute(CkAttributeType::Id)
     })?;
 
     let certificate_format = login_ctx.slot().certificate_format;
@@ -535,39 +522,47 @@ pub fn create_key_from_template(
     debug!("key_class: {:?}", parsed.key_class);
     debug!("key_type: {:?}", parsed.key_type);
 
-    let key_class = if let Some(ref key_class) = parsed.key_class {
-        let key_class = *key_class;
-        if key_class == ObjectKind::Other || key_class == ObjectKind::PublicKey {
+    let object_kind: ObjectKind = parsed
+        .key_class
+        .ok_or(Error::ObjectClassNotSupported)?
+        .try_into()?;
+    match object_kind {
+        ObjectKind::PublicKey => {
             // Supported object types are Certificates, Private keys and keypairs
-            warn!("Creating object of class {key_class:?} is not supported by the nethsm");
+            warn!("Creating object of class {object_kind:?} is not supported by the nethsm");
             return Err(Error::ObjectClassNotSupported);
         }
-        key_class
-    } else {
-        return Err(Error::ObjectClassNotSupported);
-    };
-
-    if key_class == ObjectKind::Certificate {
-        return upload_certificate(&parsed, login_ctx);
+        ObjectKind::Certificate => {
+            return upload_certificate(&parsed, login_ctx);
+        }
+        ObjectKind::PrivateKey | ObjectKind::SecretKey => {
+            // implemented by the remaining function
+        }
     }
 
     let (r#type, key) = match parsed
         .key_type
-        .ok_or(Error::InvalidAttribute(CKA_KEY_TYPE))?
+        .ok_or(Error::InvalidAttribute(CkAttributeType::KeyType))?
     {
-        CKK_RSA => {
+        CkKeyType::Rsa => {
             trace!("Creating RSA key");
 
-            let prime_p =
-                Base64::encode_string(&parsed.prime_p.ok_or(Error::MissingAttribute(CKA_PRIME_1))?);
+            let prime_p = Base64::encode_string(
+                &parsed
+                    .prime_p
+                    .ok_or(Error::MissingAttribute(CkAttributeType::Prime1))?,
+            );
 
-            let prime_q =
-                Base64::encode_string(&parsed.prime_q.ok_or(Error::MissingAttribute(CKA_PRIME_2))?);
+            let prime_q = Base64::encode_string(
+                &parsed
+                    .prime_q
+                    .ok_or(Error::MissingAttribute(CkAttributeType::Prime2))?,
+            );
 
             let public_exponent = Base64::encode_string(
                 &parsed
                     .public_exponent
-                    .ok_or(Error::MissingAttribute(CKA_PUBLIC_EXPONENT))?,
+                    .ok_or(Error::MissingAttribute(CkAttributeType::PublicExponent))?,
             );
 
             let mut key = KeyPrivateData::new();
@@ -576,17 +571,19 @@ pub fn create_key_from_template(
             key.public_exponent = Some(public_exponent);
             (KeyType::Rsa, key)
         }
-        CKK_EC | CKK_EC_EDWARDS => {
+        CkKeyType::Ec | CkKeyType::EcEdwards => {
             let ec_params = parsed
                 .ec_params
-                .ok_or(Error::MissingAttribute(CKA_EC_PARAMS))?;
+                .ok_or(Error::MissingAttribute(CkAttributeType::EcParams))?;
             let oid: der::oid::ObjectIdentifier = der::oid::ObjectIdentifier::from_der(&ec_params)
-                .map_err(|_| Error::InvalidAttribute(CKA_EC_PARAMS))?;
-            let ec_type =
-                EcKeyType::try_from(oid).map_err(|_| Error::InvalidAttribute(CKA_EC_PARAMS))?;
+                .map_err(|_| Error::InvalidAttribute(CkAttributeType::EcParams))?;
+            let ec_type = EcKeyType::try_from(oid)
+                .map_err(|_| Error::InvalidAttribute(CkAttributeType::EcParams))?;
 
             let size = ec_type.key_size();
-            let mut value = parsed.value.ok_or(Error::MissingAttribute(CKA_VALUE))?;
+            let mut value = parsed
+                .value
+                .ok_or(Error::MissingAttribute(CkAttributeType::Value))?;
 
             // add padding
             while value.len() < size {
@@ -599,12 +596,12 @@ pub fn create_key_from_template(
             key.data = Some(b64_private);
             (KeyType::Ec(ec_type), key)
         }
-        CKK_GENERIC_SECRET => {
+        CkKeyType::GenericSecret => {
             let b64_private = Base64::encode_string(
                 parsed
                     .value
                     .as_ref()
-                    .ok_or(Error::MissingAttribute(CKA_VALUE))?
+                    .ok_or(Error::MissingAttribute(CkAttributeType::Value))?
                     .as_slice(),
             );
 
@@ -613,7 +610,7 @@ pub fn create_key_from_template(
             (KeyType::Generic, key)
         }
 
-        _ => return Err(Error::InvalidAttribute(CKA_KEY_TYPE)),
+        CkKeyType::Other(_) => return Err(Error::InvalidAttribute(CkAttributeType::KeyType)),
     };
 
     let mechs = Mechanism::from_key_type(r#type);
@@ -677,7 +674,7 @@ pub fn create_key_from_template(
         }
     })?;
 
-    Ok((id, key_class))
+    Ok((id, object_kind))
 }
 
 /// A key on the NetHSM.
@@ -737,10 +734,9 @@ impl NetHSMKey {
     ) -> Result<Vec<Object>, Error> {
         if let Some(kind) = kind {
             match kind {
-                ObjectKind::Other
-                | ObjectKind::PrivateKey
-                | ObjectKind::PublicKey
-                | ObjectKind::SecretKey => self.into_key_objects(),
+                ObjectKind::PrivateKey | ObjectKind::PublicKey | ObjectKind::SecretKey => {
+                    self.into_key_objects()
+                }
                 ObjectKind::Certificate => {
                     if let Some(cert) = self.try_fetch_certificate(login_ctx)? {
                         Ok(vec![cert])
@@ -822,7 +818,7 @@ pub fn generate_key_from_template(
     mechanism: &Mechanism,
     login_ctx: &LoginCtx,
     db: &Mutex<db::Db>,
-) -> Result<Vec<(CK_OBJECT_HANDLE, Object)>, Error> {
+) -> Result<Vec<(CkObjectHandle, Object)>, Error> {
     let parsed = parse_attributes(template)?;
     let parsed_public = public_template.map(parse_attributes).transpose()?;
 
@@ -838,8 +834,8 @@ pub fn generate_key_from_template(
 
     if let Some(public) = parsed_public {
         if let Some(ec_params) = public.ec_params {
-            key_type =
-                key_type_from_params(&ec_params).ok_or(Error::InvalidAttribute(CKA_EC_PARAMS))?;
+            key_type = key_type_from_params(&ec_params)
+                .ok_or(Error::InvalidAttribute(CkAttributeType::EcParams))?;
         }
     }
 

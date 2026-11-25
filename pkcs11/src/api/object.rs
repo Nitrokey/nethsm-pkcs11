@@ -10,18 +10,19 @@ use crate::{
         key::{NetHSMId, Pkcs11Id},
         Pkcs11Error,
     },
+    ck::{CkAttributeType, CkObjectHandle, CkSessionHandle},
     data,
 };
 
 api_function!(
     C_FindObjectsInit = find_objects_init;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 );
 
 fn find_objects_init(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -39,14 +40,14 @@ fn find_objects_init(
 
 api_function!(
     C_FindObjects = find_objects;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
     ulMaxObjectCount: cryptoki_sys::CK_ULONG,
     pulObjectCount: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn find_objects(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
     max_object_count: cryptoki_sys::CK_ULONG,
     object_count_ptr: cryptoki_sys::CK_ULONG_PTR,
@@ -64,8 +65,10 @@ fn find_objects(
 
     let returned_count = objects.len();
 
+    let object_handles: Vec<cryptoki_sys::CK_OBJECT_HANDLE> =
+        objects.into_iter().map(From::from).collect();
     unsafe {
-        std::ptr::copy_nonoverlapping(objects.as_ptr(), object_ptr, returned_count);
+        std::ptr::copy_nonoverlapping(object_handles.as_ptr(), object_ptr, returned_count);
         std::ptr::write(object_count_ptr, returned_count as CK_ULONG);
     }
 
@@ -74,10 +77,10 @@ fn find_objects(
 
 api_function!(
     C_FindObjectsFinal = find_objects_final;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
 );
 
-fn find_objects_final(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pkcs11Error> {
+fn find_objects_final(session: CkSessionHandle) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
@@ -88,15 +91,15 @@ fn find_objects_final(session: cryptoki_sys::CK_SESSION_HANDLE) -> Result<(), Pk
 
 api_function!(
     C_GetAttributeValue = get_attribute_value;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 );
 
 fn get_attribute_value(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: CkSessionHandle,
+    object: CkObjectHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -126,14 +129,14 @@ fn get_attribute_value(
 
 api_function!(
     C_GetObjectSize = get_object_size;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pulSize: cryptoki_sys::CK_ULONG_PTR,
 );
 
 fn get_object_size(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: CkSessionHandle,
+    object: CkObjectHandle,
     size_ptr: cryptoki_sys::CK_ULONG_PTR,
 ) -> Result<(), Pkcs11Error> {
     if size_ptr.is_null() {
@@ -157,14 +160,14 @@ fn get_object_size(
 
 api_function!(
     C_CreateObject = create_object;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 );
 
 fn create_object(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
+    session: CkSessionHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
     object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -188,7 +191,7 @@ fn create_object(
     }
 
     unsafe {
-        std::ptr::write(object_ptr, objects[0].0);
+        std::ptr::write(object_ptr, objects[0].0.into());
     }
 
     Ok(())
@@ -196,16 +199,16 @@ fn create_object(
 
 api_function!(
     C_CopyObject = copy_object;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
     phNewObject: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
 );
 
 fn copy_object(
-    _session: cryptoki_sys::CK_SESSION_HANDLE,
-    _object: cryptoki_sys::CK_OBJECT_HANDLE,
+    _session: CkSessionHandle,
+    _object: CkObjectHandle,
     _template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     _count: cryptoki_sys::CK_ULONG,
     _new_object_ptr: cryptoki_sys::CK_OBJECT_HANDLE_PTR,
@@ -215,14 +218,11 @@ fn copy_object(
 
 api_function!(
     C_DestroyObject = destroy_object;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
 );
 
-fn destroy_object(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
-) -> Result<(), Pkcs11Error> {
+fn destroy_object(session: CkSessionHandle, object: CkObjectHandle) -> Result<(), Pkcs11Error> {
     let session = data::get_session(session)?;
     let mut session = data::lock_session(&session)?;
 
@@ -231,15 +231,15 @@ fn destroy_object(
 
 api_function!(
     C_SetAttributeValue = set_attribute_value;
-    hSession: cryptoki_sys::CK_SESSION_HANDLE,
-    hObject: cryptoki_sys::CK_OBJECT_HANDLE,
+    hSession: cryptoki_sys::CK_SESSION_HANDLE = CkSessionHandle,
+    hObject: cryptoki_sys::CK_OBJECT_HANDLE = CkObjectHandle,
     pTemplate: cryptoki_sys::CK_ATTRIBUTE_PTR,
     ulCount: cryptoki_sys::CK_ULONG,
 );
 
 fn set_attribute_value(
-    session: cryptoki_sys::CK_SESSION_HANDLE,
-    object: cryptoki_sys::CK_OBJECT_HANDLE,
+    session: CkSessionHandle,
+    object: CkObjectHandle,
     template_ptr: cryptoki_sys::CK_ATTRIBUTE_PTR,
     count: cryptoki_sys::CK_ULONG,
 ) -> Result<(), Pkcs11Error> {
@@ -268,24 +268,24 @@ fn set_attribute_value(
     let mut label = None;
 
     for attr in attrs {
-        let attr_type = attr.type_;
+        let attr_type = CkAttributeType::from(attr.type_);
 
         let var = match attr_type {
-            cryptoki_sys::CKA_ID => &mut id,
-            cryptoki_sys::CKA_LABEL => &mut label,
+            CkAttributeType::Id => &mut id,
+            CkAttributeType::Label => &mut label,
             _ => {
-                error!("C_SetAttributeValue() is not supported for attribute {attr_type}",);
+                error!("C_SetAttributeValue() is not supported for attribute {attr_type:?}",);
                 return Err(Pkcs11Error::AttributeReadOnly);
             }
         };
 
         if var.is_some() {
-            error!("Attribute {attr_type} cannot be set twice in C_SetAttributeValue",);
+            error!("Attribute {attr_type:?} cannot be set twice in C_SetAttributeValue",);
             return Err(Pkcs11Error::TemplateInconsistent);
         }
         if attr.ulValueLen == cryptoki_sys::CK_UNAVAILABLE_INFORMATION {
             error!(
-                "Attribute {attr_type} cannot be set with unavailable information in C_SetAttributeValue",
+                "Attribute {attr_type:?} cannot be set with unavailable information in C_SetAttributeValue",
             );
             return Err(Pkcs11Error::AttributeValueInvalid);
         }
@@ -293,11 +293,11 @@ fn set_attribute_value(
             &[]
         } else {
             if attr.pValue.is_null() {
-                error!("Null pointer passed for attribute {attr_type} in C_SetAttributeValue",);
+                error!("Null pointer passed for attribute {attr_type:?} in C_SetAttributeValue",);
                 return Err(Pkcs11Error::AttributeValueInvalid);
             }
             let Ok(n) = usize::try_from(attr.ulValueLen) else {
-                error!("Value for attribute {attr_type} is too long in C_SetAttributeValue",);
+                error!("Value for attribute {attr_type:?} is too long in C_SetAttributeValue",);
                 return Err(Pkcs11Error::AttributeValueInvalid);
             };
             // SAFETY: The caller must provide a byte slice of the correct size for all supported
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_find_objects_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
         let mut object_count: cryptoki_sys::CK_ULONG = 0;
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn test_find_objects_final_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let rv = C_FindObjectsFinal(0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);
@@ -407,7 +407,7 @@ mod tests {
     #[test]
     fn test_get_attribute_value_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut template = vec![];
 
@@ -438,7 +438,7 @@ mod tests {
     #[test]
     fn test_get_object_size_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let mut size: cryptoki_sys::CK_ULONG = 0;
 
@@ -493,11 +493,11 @@ mod tests {
         SESSION_MANAGER
             .lock()
             .unwrap()
-            .set_session(session_handle, session);
+            .set_session(session_handle.into(), session);
 
         let mut object_size: cryptoki_sys::CK_ULONG = 0;
 
-        let rv = C_GetObjectSize(session_handle, object_handle, &mut object_size);
+        let rv = C_GetObjectSize(session_handle, object_handle.into(), &mut object_size);
         assert_eq!(rv, cryptoki_sys::CKR_OK);
         assert_eq!(object_size, size as CK_ULONG);
     }
@@ -505,7 +505,7 @@ mod tests {
     #[test]
     fn test_create_object_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
         let mut template = vec![];
         let mut object: cryptoki_sys::CK_OBJECT_HANDLE = 0;
 
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     fn test_destroy_object_invalid_session() {
         let _guard = init_for_tests();
-        SESSION_MANAGER.lock().unwrap().delete_session(0);
+        SESSION_MANAGER.lock().unwrap().delete_session(0.into());
 
         let rv = C_DestroyObject(0, 0);
         assert_eq!(rv, cryptoki_sys::CKR_SESSION_HANDLE_INVALID);

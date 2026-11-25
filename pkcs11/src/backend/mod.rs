@@ -5,7 +5,8 @@ use self::{
     login::{LoginError, UserMode},
     mechanism::{MechMode, Mechanism},
 };
-use cryptoki_sys::{CK_ATTRIBUTE_TYPE, CK_OBJECT_HANDLE, CK_RV};
+use crate::ck::{CkAttributeType, CkObjectHandle};
+use cryptoki_sys::CK_RV;
 use log::error;
 use nethsm_sdk_rs::apis;
 
@@ -131,10 +132,10 @@ pub enum Error {
     Der(der::Error),
     Pem(pem_rfc7468::Error),
     NotLoggedIn(UserMode),
-    InvalidObjectHandle(CK_OBJECT_HANDLE),
+    InvalidObjectHandle(CkObjectHandle),
     InvalidMechanism((NetHSMId, ObjectKind), Mechanism),
-    InvalidAttribute(CK_ATTRIBUTE_TYPE),
-    MissingAttribute(CK_ATTRIBUTE_TYPE),
+    InvalidAttribute(CkAttributeType),
+    MissingAttribute(CkAttributeType),
     ObjectClassNotSupported,
     InvalidMechanismMode(MechMode, Mechanism),
     Api(ApiError),
